@@ -29,6 +29,14 @@
 - Messergebnisse mit Hardware hier eintragen.
 
 ## Messprotokoll
-| Datum | Hardware | Monitor | Modus | Frame-Zeit p99 | Verpasste Frames |
+| Datum | Hardware | Monitor | Modus | Ergebnis | Hinweis |
 |---|---|---|---|---|---|
-| – | – | – | – | – | – |
+| 2026-10-30 | RTX 3060 Ti | 1080p, 60 Hz | Vollbild 2× (M1) | 60,4 fps (171 Frames / 2,8 s) | p99 noch nicht gemessen; Start per Hotkey ≈ 215 ms (Pipeline-Aufbau) |
+
+## Bekannte Abweichungen (offen)
+- **Allokation pro neuem Desktop-Frame:** `DesktopDuplicator.Update` erzeugt bei jedem
+  geänderten Desktop-Bild zwei kleine COM-Wrapper (Vortice `IDXGIResource` +
+  `QueryInterface<ID3D11Texture2D>`). Verstößt gegen „0 B im Render-Loop“ → in M2 messen und
+  über Raw-Pointer-Aufruf oder gecachte Wrapper beseitigen.
+- **Zoom an ≈ 215 ms** statt „nächster Frame“: M1 baut die Pipeline bei jedem Einschalten neu
+  auf. M2 hält sie warm und blendet nur weich ein/aus.

@@ -1,7 +1,13 @@
 using Microsoft.Extensions.DependencyInjection;
 using ZoomIN.App.Views;
+using ZoomIN.App.Zoom;
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Hotkeys;
+using ZoomIN.Core.Tracking;
+using ZoomIN.Core.Zoom;
 using ZoomIN.Platform.Diagnostics;
+using ZoomIN.Platform.Input;
+using ZoomIN.Rendering.RenderLoop;
 
 namespace ZoomIN.App.Composition;
 
@@ -13,6 +19,10 @@ internal static class ServiceRegistration
         var services = new ServiceCollection();
 
         services.AddSingleton<ILog, FileLog>();
+        services.AddSingleton<ICursorSource, Win32CursorSource>();
+        services.AddSingleton<IHotkeyService, Win32HotkeyService>();
+        services.AddSingleton<IZoomOutput, ZoomEngine>();
+        services.AddSingleton<ZoomController>();
         services.AddTransient<MainWindow>();
 
         return services.BuildServiceProvider();

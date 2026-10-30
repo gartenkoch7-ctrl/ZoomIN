@@ -38,5 +38,8 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
 | Secure Desktop (UAC, Strg+Alt+Entf) | nicht erfassbar ohne Systemdienst – nicht im MVP |
 
 ## Shader-Regeln
-- HLSL-Dateien in `ZoomIN.Rendering/Shaders/`, beim Build vorkompiliert (`fxc`/`dxc`).
+- HLSL-Dateien in `ZoomIN.Rendering/Shaders/`, als Embedded Resource eingebettet und beim
+  Start mit dem in Windows enthaltenen D3DCompiler übersetzt (Entscheidung M1: kein SDK-Tool
+  im Build/CI nötig). Vorkompilieren erst, falls die Startzeit es verlangt.
+- Shader werden auf WARP getestet (`tests/ZoomIN.Rendering.Tests`).
 - Max. 300 Zeilen pro Shader-Datei; Gemeinsames in `*.hlsli`.

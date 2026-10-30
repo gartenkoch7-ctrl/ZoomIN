@@ -9,17 +9,50 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
+    <!-- M1 diagnostics view; replaced by the settings UI in M7. -->
     <StackPanel
+        MaxWidth="420"
         HorizontalAlignment="Center"
         VerticalAlignment="Center"
-        Spacing="12">
+        Spacing="16">
         <TextBlock
             HorizontalAlignment="Center"
             Style="{StaticResource TitleLargeTextBlockStyle}"
             Text="ZoomIN" />
-        <TextBlock
-            x:Name="GpuStatusText"
-            HorizontalAlignment="Center"
-            Style="{StaticResource BodyTextBlockStyle}" />
+
+        <Grid ColumnSpacing="16" RowSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+
+            <TextBlock Text="Zoom" />
+            <TextBlock x:Name="ZoomStateText" Grid.Column="1" FontWeight="SemiBold" />
+            <TextBlock Grid.Row="1" Text="Bildrate" />
+            <TextBlock x:Name="FpsText" Grid.Row="1" Grid.Column="1" />
+            <TextBlock Grid.Row="2" Text="Unsichtbar bei Freigabe" />
+            <TextBlock x:Name="CaptureText" Grid.Row="2" Grid.Column="1" />
+            <TextBlock Grid.Row="3" Text="Tastenkürzel" />
+            <TextBlock x:Name="HotkeyText" Grid.Row="3" Grid.Column="1" />
+        </Grid>
+
+        <Button
+            x:Name="ToggleButton"
+            HorizontalAlignment="Stretch"
+            Click="OnToggleClick"
+            Content="Zoom an/aus"
+            Style="{StaticResource AccentButtonStyle}" />
+
+        <InfoBar
+            x:Name="ErrorBar"
+            Title="Zoom konnte nicht gestartet werden"
+            IsClosable="False"
+            Severity="Error" />
     </StackPanel>
 </Window>

@@ -37,4 +37,8 @@ Ergebnisse mit Windows-Build und App-Versionen hier eintragen.
 ## Testprotokoll
 | Datum | Windows-Build | Tool | Ergebnis |
 |---|---|---|---|
-| – | – | – | – |
+| 2026-10-30 | 22631 | GDI `CopyFromScreen` (BitBlt), automatisiert | ✅ unsichtbar – Bild mit 2×-Zoom = Bild ohne Zoom (0,14 % Abweichung, Rauschen 0,08 %); Overlay `affinity=0x11` |
+| – | 22631 | Teams / Zoom / Discord / Browser-Freigabe | offen – manueller Test (SuperNova vorher beenden!) |
+
+Hinweis: Beim Testen darf **keine andere Lupe** (SuperNova, Windows-Bildschirmlupe) aktiv sein,
+sonst ist nicht unterscheidbar, wessen Zoom zu sehen ist.

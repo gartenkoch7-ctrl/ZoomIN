@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- GPU tests on WARP (software D3D11): run locally and in CI without a graphics card. -->
+  <PropertyGroup>
+    <TargetFramework>$(ZoomInWindowsTfm)</TargetFramework>
+    <SupportedOSPlatformVersion>$(ZoomInMinWindows)</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ZoomIN.Rendering\ZoomIN.Rendering.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="Vortice.Direct3D11" />
+  </ItemGroup>
+</Project>
