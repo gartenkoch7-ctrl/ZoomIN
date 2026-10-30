@@ -1,4 +1,6 @@
 using Vortice.DXGI;
+using Vortice.Mathematics;
+using ZoomIN.Core.Modes;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Viewport;
 using ZoomIN.Rendering.Capture;
@@ -13,6 +15,10 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// </summary>
 internal sealed class RenderSession : IDisposable
 {
+    // Frame around lens and docked view, in physical pixels.
+    private const double FrameThickness = 4;
+    private static readonly Color4 s_transparent = new(0, 0, 0, 0);
+
     // Owned resources in creation order; disposed in reverse.
     private readonly List<IDisposable> _owned = [];
     private readonly ICursorSource _cursor;
@@ -63,7 +69,7 @@ internal sealed class RenderSession : IDisposable
     /// <summary>Renders one frame, paced by the compositor.</summary>
     /// <returns>False if the compositor did not request a frame in time.</returns>
     /// <exception cref="DisplayChangedException">The pipeline no longer matches the monitors.</exception>
-    public bool RenderFrame(double zoom)
+    public bool RenderFrame(ZoomMode mode, double zoom, LensSize lens, DockLayout dock)
     {
         if (OverlayWindow.DisplayChangeCount != _displayGeneration)
         {
@@ -84,10 +90,8 @@ internal sealed class RenderSession : IDisposable
             _lastCursor = cursor;
         }
 
-        var source = ViewportCalculator.SourceRect(_monitor.Bounds, _lastCursor, zoom);
-        var constants = MagnifyConstants.FromSourceRect(source, _monitor.Bounds);
-
-        _pass.Draw(_gpu.Context, _duplicator.ShaderResource, _swapchain.RenderTarget, _swapchain.Width, _swapchain.Height, constants);
+        var frame = ModeGeometry.Compute(mode, _monitor.Bounds, _lastCursor, zoom, lens, dock);
+        Draw(frame);
         _swapchain.Present();
 
         // Show the window only after the first frame so it never flashes empty.
@@ -98,6 +102,38 @@ internal sealed class RenderSession : IDisposable
         }
 
         return true;
+    }
+
+    private void Draw(in ModeFrame frame)
+    {
+        var monitor = _monitor.Bounds;
+        if (!frame.HasFrame)
+        {
+            _pass.Draw(_gpu.Context, _duplicator.ShaderResource, _swapchain.RenderTarget, _swapchain.Width, _swapchain.Height,
+                MagnifyConstants.FromSourceRect(frame.Source, monitor));
+            return;
+        }
+
+        // Lens/docked: everything outside the target stays transparent (and click-through).
+        _gpu.Context.ClearRenderTargetView(_swapchain.RenderTarget, s_transparent);
+        var viewport = Expand(frame.Target, FrameThickness, monitor);
+        var constants = MagnifyConstants.WithFrame(frame.Source, monitor, frame.Target, viewport, FrameColor.Default);
+        _pass.Draw(
+            _gpu.Context,
+            _duplicator.ShaderResource,
+            _swapchain.RenderTarget,
+            (float)(viewport.X - monitor.X),
+            (float)(viewport.Y - monitor.Y),
+            (float)viewport.Width,
+            (float)viewport.Height,
+            constants);
+    }
+
+    private static PhysicalRect Expand(PhysicalRect rect, double by, PhysicalRect within)
+    {
+        var x = Math.Max(rect.X - by, within.X);
+        var y = Math.Max(rect.Y - by, within.Y);
+        return new PhysicalRect(x, y, Math.Min(rect.Right + by, within.Right) - x, Math.Min(rect.Bottom + by, within.Bottom) - y);
     }
 
     public void Dispose()

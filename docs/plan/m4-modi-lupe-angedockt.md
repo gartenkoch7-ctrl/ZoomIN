@@ -5,43 +5,49 @@
 **Voraussetzungen:** M3.
 
 ## Entscheidungen (Grilling 2026-10-30)
-- Lupe: **Rechteck**, Größe anpassbar (`Strg+Alt+Umschalt+Pfeiltasten`); rund erst nach MVP
-- Angedockt: **Platz reservieren** per AppBar – Fenster passen sich in den Restbereich ein
-- **Ein Hotkey je Modus:** `Strg+Alt+F` Vollbild, `Strg+Alt+L` Lupe, `Strg+Alt+D` Angedockt
-  → [ADR-0008](../adr/0008-tastenkuerzel-strg-alt.md)
+- Lupe: **Rechteck**, Standard **40 % × 30 %** des Monitors, per `Strg+Alt+Umschalt+Pfeile`
+  in 5-%-Schritten (10–90 %); rund erst nach MVP
+- Angedockt: Standard **oben, 40 %**, auf dem **Monitor der Maus** beim Einschalten; Platz wird
+  per **AppBar reserviert**; der Streifen ist reine Anzeige
+- **Ein Hotkey je Modus** (`Strg+Alt+F/L/D`): wechselt in den Modus **und schaltet ein**; derselbe
+  Hotkey im aktiven Modus schaltet aus; `Strg+Alt+Z` nutzt den zuletzt benutzten Modus
+- **Eigene Zoomstufe je Modus** (weiterhin pro Monitor): Start Vollbild 2×, Lupe/Angedockt 3×
+- Rahmen um Lupe und Streifen: 4 px Bernstein (Farbe einstellbar ab M5/M7)
 
 ## Aufgaben
 
-### 1. Abstraktion (`Core/Modes/`)
-- [ ] `IZoomMode`: pro Frame Ziel-Rechteck (wo gezeichnet) und Quell-Rechteck (was vergrößert)
-- [ ] `FullscreenMode` (bestehende Logik umziehen), `ModeSwitcher` mit Übergangsanimation
-- [ ] Modus im `RenderSnapshot`, aktiver Modus wird gespeichert
+### 1. Core (`Core/Modes/`, `Core/Zoom/`)
+- [x] `ZoomMode`, `DockEdge`, `LensSize`, `DockLayout`, `ModeFrame`
+- [x] `ModeGeometry`: Vollbild, Lupe (Fixpunkt Maus, im Monitor gehalten), Angedockt
+      (Quelle nur aus dem Restbereich, nie aus dem Streifen), `DockRect`/`RestRect`
+- [x] `ZoomLevels` (Stufe je Modus, geteilt/pro Monitor), `ZoomModel` mit `Activate`, `ResizeLens`
+- [x] Tests: Geometrie inkl. Fixpunkt-Beweis für die Lupe, Modell inkl. Modi und Andocken, 0 B
 
-### 2. Lupe (`Core/Modes/Lens/`, `Rendering/Overlay/`)
-- [ ] Rechteck um den Mauszeiger, Standard 600×300 (physische px, DPI-skaliert)
-- [ ] Fixpunkt Maus → Klicks treffen; am Monitorrand Lupe im Monitor halten (Tests!)
-- [ ] Transparent außerhalb (DComp-Alpha aus ADR-0006), Rahmen im Shader
-- [ ] Größe per Hotkey in Schritten, Min/Max
+### 2. Rendering
+- [x] Shader mit optionalem Rahmen (Viewport = Ziel + Rahmen), Rest transparent (Clear)
+- [x] `RenderSession` zeichnet den Modus-Frame; Vollbild unverändert ohne Clear/Rahmen
+- [x] WARP-Tests: transparenter Rest, Rahmenfarbe, vergrößerter Inhalt
 
-### 3. Angedockt (`Core/Modes/Docked/`, `Platform/Shell/`)
-- [ ] Position oben/unten/links/rechts, Größe in Prozent (Standard: oben, 40 %)
-- [ ] Platz per `SHAppBarMessage` reservieren; bei Beenden freigeben
-- [ ] Watchdog gibt AppBar nach Absturz frei
-- [ ] Zeigt Vergrößerung um die Maus im Restbereich; Klicks im angedockten Bereich sind
-      reine Anzeige (dokumentieren)
-- [ ] Angedockter Bereich wird nicht selbst mit vergrößert
+### 3. Angedockt (`Platform/Shell/AppBarReservation`)
+- [x] AppBar auf eigenem Thread mit Nachrichtenschleife, transparentes Fenster
+- [x] `ABM_QUERYPOS`/`ABM_SETPOS`, Dicke bleibt bei Verschiebung durch andere AppBars
+- [x] Fenster-Handle in `%LocalAppData%\ZoomIN\appbar.hwnd`; Watchdog-Schritt `AppBarCleanup`
+- [x] `DockedStripSync` (App) reserviert/gibt frei passend zum Modell
 
-### 4. Tests & Doku
-- [ ] Unit-Tests aller Rechteck-Berechnungen inkl. Ränder und Multi-Monitor
-- [ ] WARP-Test: Lupe mit Rahmen und Transparenz
-- [ ] KB: Modi-Abschnitt in `eingabe-und-tracking.md`
+### 4. App
+- [x] Hotkeys F/L/D und Lupengröße, Einstellungen (Modus, Stufen je Modus, Lupe, Andocken)
+- [x] Statusfenster zeigt Modus und Stufen
 
 ## Akzeptanzkriterien
-- [ ] Alle drei Modi auf jedem Monitor, Wechsel per Direkt-Hotkey ohne Flackern
-- [ ] Klicks treffen in Vollbild und Lupe
-- [ ] Angedockt: maximierte Fenster passen in den Restbereich
-- [ ] Alle Modi in Teams/Zoom/Discord/Browser-Freigabe unsichtbar
-- [ ] Nach Beenden **und** nach Absturz ist der AppBar-Platz wieder frei
+- [x] Modus-Hotkeys schalten an/aus und wechseln (automatisch geprüft)
+- [x] Angedockt: Arbeitsbereich oben um 40 % verkleinert (`0,432–1920,1032`), danach zurück
+- [x] Nach Beenden **und** nach Absturz ist der AppBar-Platz wieder frei (automatisch geprüft)
+- [x] Klicks treffen in der Lupe (Fixpunkt per Test bewiesen)
+- [ ] Sichttest: Lupe/Rahmen/Streifen sehen richtig aus, Wechsel ohne Flackern
+- [ ] Alle Modi bei Bildschirmfreigabe unsichtbar (inkl. Rahmen) – mit M1-Freigabetest
+- [ ] Mehrere Monitore (mit virtuellem Monitor aus M3)
 
 ## Offene Fragen / Risiken
-- Taskleiste und AppBar auf derselben Seite → Reihenfolge testen.
+- Ist die Taskleiste oben, verschiebt die Shell den Streifen nach unten; die Overlay-Geometrie
+  rechnet noch mit dem Monitorrand → bei Bedarf das von der Shell gemeldete Rechteck übernehmen.
+- Umschalten Lupe ↔ Vollbild wechselt die Geometrie sofort, nur die Stufe gleitet.

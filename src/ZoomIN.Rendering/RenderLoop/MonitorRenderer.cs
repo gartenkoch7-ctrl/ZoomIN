@@ -120,7 +120,7 @@ internal sealed class MonitorRenderer : IDisposable
             lastFrame = now;
             animator.Advance(delta, _model.AnimationSeconds);
 
-            if (session.RenderFrame(animator.Current))
+            if (session.RenderFrame(_model.Mode, animator.Current, _model.Lens, _model.Dock))
             {
                 frames++;
             }

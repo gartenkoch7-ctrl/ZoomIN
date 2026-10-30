@@ -1,10 +1,14 @@
-// Magnifies a rectangle of the captured desktop onto the whole render target.
+// Magnifies a rectangle of the captured desktop into the viewport, optionally with a frame.
+// The viewport covers the target plus its frame; the "inner" rectangle is the target itself.
 // Single pass: later milestones add colour filters and highlights here (M5).
 
 cbuffer MagnifyConstants : register(b0)
 {
-    float2 SourceOffset; // top-left of the source rectangle, in texture UV space
-    float2 SourceScale;  // size of the source rectangle, in texture UV space
+    float2 SourceOffset; // top-left of the source rectangle, in desktop texture UV space
+    float2 SourceScale;  // size of the source rectangle, in desktop texture UV space
+    float2 InnerOffset;  // top-left of the target inside the viewport, in viewport UV space
+    float2 InnerScale;   // size of the target inside the viewport, in viewport UV space
+    float4 FrameColor;   // premultiplied colour of the frame around the target
 };
 
 Texture2D Desktop : register(t0);
@@ -27,7 +31,13 @@ VertexOutput VSMain(uint id : SV_VertexID)
 
 float4 PSMain(VertexOutput input) : SV_Target
 {
-    float2 uv = SourceOffset + input.Uv * SourceScale;
+    float2 inner = (input.Uv - InnerOffset) / InnerScale;
+    if (any(inner < 0) || any(inner > 1))
+    {
+        return FrameColor;
+    }
+
+    float2 uv = SourceOffset + inner * SourceScale;
 
     // The overlay is premultiplied-alpha; the desktop is opaque.
     return float4(Desktop.Sample(LinearSampler, uv).rgb, 1);

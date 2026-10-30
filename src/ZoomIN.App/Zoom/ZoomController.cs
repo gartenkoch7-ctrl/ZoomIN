@@ -1,5 +1,6 @@
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Hotkeys;
+using ZoomIN.Core.Modes;
 using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
@@ -9,8 +10,8 @@ namespace ZoomIN.App.Zoom;
 
 /// <summary>
 /// Connects hotkeys, the mouse wheel and the UI to the <see cref="ZoomModel"/>, starts the zoom
-/// output and persists the zoom levels (debounced, and once more on shutdown).
-/// Steps apply to the monitor under the mouse.
+/// output, keeps the docked strip reserved and persists the settings (debounced, and on shutdown).
+/// Commands apply to the monitor under the mouse.
 /// </summary>
 public sealed class ZoomController : IDisposable
 {
@@ -23,6 +24,7 @@ public sealed class ZoomController : IDisposable
     private readonly ICursorSource _cursor;
     private readonly ISettingsStore _store;
     private readonly ILog _log;
+    private readonly DockedStripSync _dockedStrip;
     private readonly Timer _saveTimer;
     private readonly AppSettings _settings;
 
@@ -34,6 +36,7 @@ public sealed class ZoomController : IDisposable
         IMouseWheelHook wheel,
         IMonitorProvider monitors,
         ICursorSource cursor,
+        IScreenReservation reservation,
         ISettingsStore store,
         ILog log)
     {
@@ -46,6 +49,7 @@ public sealed class ZoomController : IDisposable
         _cursor = cursor;
         _store = store;
         _log = log;
+        _dockedStrip = new DockedStripSync(model, monitors, reservation);
         _saveTimer = new Timer(_ => Save());
     }
 
@@ -61,50 +65,58 @@ public sealed class ZoomController : IDisposable
     public void Initialize()
     {
         var unavailable = new List<HotkeyGesture>();
-        Register(_settings.ToggleHotkey, Toggle, repeat: false, unavailable);
-        Register(_settings.ZoomInHotkey, () => Step(1), repeat: true, unavailable);
-        Register(_settings.ZoomOutHotkey, () => Step(-1), repeat: true, unavailable);
+        void Register(HotkeyGesture gesture, Action action, bool repeat = false)
+        {
+            if (_hotkeys.Register(gesture, action, repeat))
+            {
+                _log.Info($"Hotkey {gesture} registered");
+            }
+            else
+            {
+                unavailable.Add(gesture);
+            }
+        }
+
+        Register(_settings.ToggleHotkey, Toggle);
+        Register(_settings.ZoomInHotkey, () => Step(1), repeat: true);
+        Register(_settings.ZoomOutHotkey, () => Step(-1), repeat: true);
+        Register(_settings.FullscreenHotkey, () => Activate(ZoomMode.Fullscreen));
+        Register(_settings.LensHotkey, () => Activate(ZoomMode.Lens));
+        Register(_settings.DockedHotkey, () => Activate(ZoomMode.Docked));
+        Register(HotkeyGesture.LensWider, () => Model.ResizeLens(1, 0), repeat: true);
+        Register(HotkeyGesture.LensNarrower, () => Model.ResizeLens(-1, 0), repeat: true);
+        Register(HotkeyGesture.LensTaller, () => Model.ResizeLens(0, 1), repeat: true);
+        Register(HotkeyGesture.LensShorter, () => Model.ResizeLens(0, -1), repeat: true);
         UnavailableHotkeys = unavailable;
 
         _wheel.Start(_settings.WheelModifiers, Step);
-        Model.Changed += ScheduleSave;
+        Model.Changed += OnModelChanged;
         _output.Start();
     }
 
-    public void Toggle() => Model.Toggle(_monitors.MonitorIds());
+    public void Toggle() => Model.Toggle(MonitorAtMouse(), _monitors.MonitorIds());
+
+    public void Activate(ZoomMode mode) => Model.Activate(mode, MonitorAtMouse(), _monitors.MonitorIds());
 
     public void Dispose()
     {
-        Model.Changed -= ScheduleSave;
+        Model.Changed -= OnModelChanged;
         _saveTimer.Dispose();
         Save();
     }
 
-    private void Step(double notches)
+    private void Step(double notches) => Model.Step(notches, MonitorAtMouse(), _monitors.MonitorIds());
+
+    private string MonitorAtMouse() =>
+        _monitors.MonitorAt(_cursor.TryGetPosition(out var position) ? position : default);
+
+    private void OnModelChanged()
     {
-        var at = _cursor.TryGetPosition(out var position) ? position : default;
-        Model.Step(notches, _monitors.MonitorAt(at), _monitors.MonitorIds());
+        _dockedStrip.Update();
+
+        // Wheel zooming changes the level many times per second; write the file once it settles.
+        _saveTimer.Change(SaveDelay, Timeout.InfiniteTimeSpan);
     }
 
-    private void Register(HotkeyGesture gesture, Action action, bool repeat, List<HotkeyGesture> unavailable)
-    {
-        if (_hotkeys.Register(gesture, action, repeat))
-        {
-            _log.Info($"Hotkey {gesture} registered");
-        }
-        else
-        {
-            unavailable.Add(gesture);
-        }
-    }
-
-    // Wheel zooming changes the level many times per second; write the file once it settles.
-    private void ScheduleSave() => _saveTimer.Change(SaveDelay, Timeout.InfiniteTimeSpan);
-
-    private void Save() => _store.Save(_settings with
-    {
-        LastZoomLevel = Model.SharedLastLevel,
-        MonitorZoomLevels = Model.LastLevels(),
-        PerMonitorZoom = Model.PerMonitor,
-    });
+    private void Save() => _store.Save(ZoomModelFactory.Apply(_settings, Model));
 }

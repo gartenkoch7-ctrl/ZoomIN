@@ -103,7 +103,16 @@ public sealed class JsonSettingsStoreTests : IDisposable
     private static void AssertEquivalent(AppSettings expected, AppSettings actual)
     {
         Assert.Equal(expected.MonitorZoomLevels, actual.MonitorZoomLevels);
-        Assert.Equal(expected with { MonitorZoomLevels = actual.MonitorZoomLevels }, actual);
+        Assert.Equal(expected.LensMonitorZoomLevels, actual.LensMonitorZoomLevels);
+        Assert.Equal(expected.DockedMonitorZoomLevels, actual.DockedMonitorZoomLevels);
+        Assert.Equal(
+            expected with
+            {
+                MonitorZoomLevels = actual.MonitorZoomLevels,
+                LensMonitorZoomLevels = actual.LensMonitorZoomLevels,
+                DockedMonitorZoomLevels = actual.DockedMonitorZoomLevels,
+            },
+            actual);
     }
 
     public void Dispose()

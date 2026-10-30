@@ -2,6 +2,7 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using ZoomIN.Platform.Diagnostics;
 using ZoomIN.Watchdog;
+using ZoomIN.Watchdog.Crashes;
 
 namespace ZoomIN.App;
 
@@ -16,7 +17,7 @@ public static class Program
     {
         if (WatchdogArguments.TryParse(args, out var processId))
         {
-            return WatchdogRunner.Run(processId, Environment.ProcessPath!, new FileLog(), cleanup: []);
+            return WatchdogRunner.Run(processId, Environment.ProcessPath!, new FileLog(), cleanup: [new AppBarCleanup()]);
         }
 
         WinRT.ComWrappersSupport.InitializeComWrappers();

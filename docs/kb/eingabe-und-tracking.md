@@ -16,6 +16,15 @@ angezeigt(x) = p + z · (x − p)      ⇒   angezeigt(p) = p
   Desktop bleibt erreichbar.
 - Funktioniert ohne UIAccess, ohne Signatur, ohne Installation in `Program Files`.
 
+## Modi und Klicks (M4)
+| Modus | Geometrie | Klicks |
+|---|---|---|
+| Vollbild | ganzer Monitor, Fixpunkt Maus | treffen |
+| Lupe | Rechteck um die Maus (im Monitor gehalten), Quelle = p + (Ziel − p) / z | treffen (Fixpunkt) |
+| Angedockt | reservierter Streifen zeigt Umgebung der Maus aus dem Restbereich | im Streifen: reine Anzeige |
+
+Rechnung in `Core/Modes/ModeGeometry.cs`, Beweis per Test (`Lens_CursorPixel_IsDisplayedAtCursor`).
+
 ## Tracking durch Fokus/Caret
 Springt der Viewport zum Tastaturfokus/Caret, stimmen Bild und Mausposition nicht mehr
 überein. MVP-Verhalten: Beim Fokus-Tracking wird die Maus **nicht** bewegt; sobald die Maus

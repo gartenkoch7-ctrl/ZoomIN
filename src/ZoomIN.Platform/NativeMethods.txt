@@ -21,6 +21,16 @@ WM_HOTKEY
 WM_APP
 WM_QUIT
 
+// Shell/AppBarReservation
+SHAppBarMessage
+APPBARDATA
+CreateWindowEx
+DestroyWindow
+SetLayeredWindowAttributes
+MoveWindow
+ShowWindow
+PostMessage
+
 // Input/Win32WheelHook
 SetWindowsHookEx
 CallNextHookEx

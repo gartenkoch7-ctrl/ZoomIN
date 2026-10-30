@@ -3,6 +3,7 @@ using ZoomIN.App.Views;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Hotkeys;
+using ZoomIN.Core.Modes;
 using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
@@ -11,6 +12,7 @@ using ZoomIN.Platform.Diagnostics;
 using ZoomIN.Platform.Input;
 using ZoomIN.Platform.Monitors;
 using ZoomIN.Platform.Settings;
+using ZoomIN.Platform.Shell;
 using ZoomIN.Rendering.RenderLoop;
 
 namespace ZoomIN.App.Composition;
@@ -25,18 +27,11 @@ internal static class ServiceRegistration
         services.AddSingleton<ILog, FileLog>();
         services.AddSingleton<ISettingsStore, JsonSettingsStore>();
         services.AddSingleton(sp => sp.GetRequiredService<ISettingsStore>().Load());
-        services.AddSingleton(sp =>
-        {
-            var settings = sp.GetRequiredService<AppSettings>();
-            return new ZoomModel(
-                settings.LastZoomLevel,
-                settings.MonitorZoomLevels,
-                settings.PerMonitorZoom,
-                settings.AnimationMilliseconds / 1000.0);
-        });
+        services.AddSingleton(sp => ZoomModelFactory.Create(sp.GetRequiredService<AppSettings>()));
 
         services.AddSingleton<ICursorSource, Win32CursorSource>();
         services.AddSingleton<IMonitorProvider, Win32MonitorProvider>();
+        services.AddSingleton<IScreenReservation, AppBarReservation>();
         services.AddSingleton<IHotkeyService, Win32HotkeyService>();
         services.AddSingleton<IMouseWheelHook, Win32WheelHook>();
         services.AddSingleton<IZoomOutput, ZoomEngine>();

@@ -4,6 +4,8 @@
     <TargetFramework>$(ZoomInWindowsTfm)</TargetFramework>
     <SupportedOSPlatformVersion>$(ZoomInMinWindows)</SupportedOSPlatformVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- APPBARDATA's layout depends on the CPU; ZoomIN ships x64 only (ADR-0009). -->
+    <CsWin32PlatformTarget>x64</CsWin32PlatformTarget>
   </PropertyGroup>
 
   <ItemGroup>

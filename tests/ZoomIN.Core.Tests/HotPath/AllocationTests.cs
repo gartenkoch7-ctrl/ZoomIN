@@ -1,3 +1,4 @@
+using ZoomIN.Core.Modes;
 using ZoomIN.Core.Viewport;
 using ZoomIN.Core.Zoom;
 
@@ -47,18 +48,39 @@ public sealed class AllocationTests
     [Fact]
     public void ZoomModel_Reads_DoNotAllocate()
     {
-        var model = new ZoomModel(2, new Dictionary<string, double>(), true, 0.15);
+        var model = new ZoomModel(new ZoomLevels(), ZoomMode.Lens, true, 0.15);
         string[] monitors = [@"\\.\DISPLAY1"];
-        model.Toggle(monitors);
-        var sum = model.TargetFor(monitors[0]) + model.AnimationSeconds; // warm-up / JIT
+        model.Toggle(monitors[0], monitors);
+        var sum = Read(model, monitors[0]); // warm-up / JIT
 
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var i = 0; i < Frames; i++)
         {
-            sum += model.TargetFor(monitors[0]) + model.AnimationSeconds;
+            sum += Read(model, monitors[0]);
         }
 
         Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
         Assert.True(sum > 0);
     }
+
+    [Fact]
+    public void ModeGeometry_DoesNotAllocate()
+    {
+        var monitor = new PhysicalRect(0, 0, 1920, 1080);
+        var sum = ModeGeometry.Compute(ZoomMode.Lens, monitor, new PhysicalPoint(5, 5), 2, LensSize.Default, DockLayout.Default).Target.X;
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < Frames; i++)
+        {
+            var mode = (ZoomMode)(i % 3);
+            sum += ModeGeometry.Compute(mode, monitor, new PhysicalPoint(i % 1920, i % 1080), 1 + (i % 8), LensSize.Default, DockLayout.Default).Source.X;
+        }
+
+        Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+        Assert.True(sum >= 0);
+    }
+
+    // Everything a render thread reads from the model per frame.
+    private static double Read(ZoomModel model, string monitor) =>
+        model.TargetFor(monitor) + model.AnimationSeconds + (int)model.Mode + model.Lens.WidthFraction + model.Dock.Fraction;
 }

@@ -1,10 +1,11 @@
 using ZoomIN.Core.Hotkeys;
+using ZoomIN.Core.Modes;
 using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.Core.Settings;
 
 /// <summary>
-/// Persisted user settings (ADR-0004). M2/M3 keep only what zoom and input need; M7 adds the
+/// Persisted user settings (ADR-0004). M2–M4 keep only what zoom and input need; M7 adds the
 /// rest and the settings UI. Bump <see cref="CurrentSchemaVersion"/> and add a migration on
 /// breaking changes; new optional properties with defaults need no migration.
 /// </summary>
@@ -19,14 +20,35 @@ public sealed record AppSettings
 
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
 
-    /// <summary>Last level in shared mode, and the start level for monitors without their own.</summary>
-    public double LastZoomLevel { get; set; } = ZoomLimits.DefaultLevel;
+    /// <summary>Mode used by Strg+Alt+Z.</summary>
+    public ZoomMode LastMode { get; set; } = ZoomMode.Fullscreen;
 
     /// <summary>Each monitor keeps its own zoom level (M3 decision: default on).</summary>
     public bool PerMonitorZoom { get; set; } = true;
 
-    /// <summary>Last level per monitor device name, e.g. "\\.\DISPLAY1".</summary>
+    /// <summary>Fullscreen: shared level, and the start level for monitors without their own.</summary>
+    public double LastZoomLevel { get; set; } = ZoomLevels.Defaults[ZoomMode.Fullscreen];
+
+    /// <summary>Fullscreen: last level per monitor device name, e.g. "\\.\DISPLAY1".</summary>
     public IReadOnlyDictionary<string, double> MonitorZoomLevels { get; set; } = new Dictionary<string, double>();
+
+    public double LensZoomLevel { get; set; } = ZoomLevels.Defaults[ZoomMode.Lens];
+
+    public IReadOnlyDictionary<string, double> LensMonitorZoomLevels { get; set; } = new Dictionary<string, double>();
+
+    public double DockedZoomLevel { get; set; } = ZoomLevels.Defaults[ZoomMode.Docked];
+
+    public IReadOnlyDictionary<string, double> DockedMonitorZoomLevels { get; set; } = new Dictionary<string, double>();
+
+    /// <summary>Lens size as fractions of the monitor (M4 decision: 40 % × 30 %).</summary>
+    public double LensWidth { get; set; } = LensSize.Default.WidthFraction;
+
+    public double LensHeight { get; set; } = LensSize.Default.HeightFraction;
+
+    public DockEdge DockEdge { get; set; } = DockLayout.Default.Edge;
+
+    /// <summary>Docked strip size as a fraction of the monitor (M4 decision: 40 %).</summary>
+    public double DockFraction { get; set; } = DockLayout.Default.Fraction;
 
     /// <summary>Glide duration for zoom changes in milliseconds; 0 = instant.</summary>
     public int AnimationMilliseconds { get; set; } = 150;
@@ -36,6 +58,12 @@ public sealed record AppSettings
     public HotkeyGesture ZoomInHotkey { get; set; } = HotkeyGesture.ZoomIn;
 
     public HotkeyGesture ZoomOutHotkey { get; set; } = HotkeyGesture.ZoomOut;
+
+    public HotkeyGesture FullscreenHotkey { get; set; } = HotkeyGesture.Fullscreen;
+
+    public HotkeyGesture LensHotkey { get; set; } = HotkeyGesture.Lens;
+
+    public HotkeyGesture DockedHotkey { get; set; } = HotkeyGesture.Docked;
 
     public HotkeyModifiers WheelModifiers { get; set; } = HotkeyModifiers.Control;
 }

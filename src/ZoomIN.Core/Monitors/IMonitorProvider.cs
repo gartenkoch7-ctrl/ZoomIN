@@ -12,4 +12,7 @@ public interface IMonitorProvider
 
     /// <summary>Monitor containing the point, or the nearest one.</summary>
     string MonitorAt(PhysicalPoint point);
+
+    /// <summary>Bounds in physical desktop pixels; null if the monitor is gone.</summary>
+    PhysicalRect? BoundsOf(string monitorId);
 }

@@ -6,3 +6,7 @@ CreateWindowEx
 DestroyWindow
 LoadIcon
 NOTIFYICONDATAW
+
+// Crashes/AppBarCleanup
+SHAppBarMessage
+APPBARDATA

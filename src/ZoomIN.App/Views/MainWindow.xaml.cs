@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using ZoomIN.App.Zoom;
+using ZoomIN.Core.Modes;
 
 namespace ZoomIN.App.Views;
 
@@ -17,7 +18,7 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
 
         HotkeyText.Text = controller.UnavailableHotkeys.Count == 0
-            ? "Strg+Alt+Z · Strg+Mausrad · Strg+Alt+Bild↑/↓"
+            ? "Strg+Alt+Z an/aus · F/L/D Modus · Strg+Mausrad · Strg+Alt+Bild↑/↓"
             : "Teilweise belegt: " + string.Join(", ", controller.UnavailableHotkeys);
 
         // Status is polled: the render thread must never call into the UI.
@@ -39,9 +40,10 @@ public sealed partial class MainWindow : Window
     {
         var model = _controller.Model;
         var status = _controller.Status;
+        var mode = model.Mode;
         var levels = _controller.MonitorIds().Select(id =>
-            string.Create(CultureInfo.CurrentCulture, $"{id.TrimStart('\\', '.')} {(model.IsOn ? model.TargetFor(id) : model.LastLevelFor(id)):0.##}×"));
-        ZoomStateText.Text = (model.IsOn ? "an: " : "aus, zuletzt: ") + string.Join(" · ", levels);
+            string.Create(CultureInfo.CurrentCulture, $"{id.TrimStart('\\', '.')} {(model.IsOn ? model.TargetFor(id) : model.LastLevelFor(mode, id)):0.##}×"));
+        ZoomStateText.Text = $"{ModeName(mode)} – " + (model.IsOn ? "an: " : "aus, zuletzt: ") + string.Join(" · ", levels);
         FpsText.Text = status.IsVisible
             ? string.Create(CultureInfo.CurrentCulture, $"{status.FramesPerSecond} fps ({status.MonitorCount} Monitor(e))")
             : string.Create(CultureInfo.CurrentCulture, $"– ({status.MonitorCount} Monitor(e) bereit)");
@@ -50,4 +52,11 @@ public sealed partial class MainWindow : Window
         ErrorBar.IsOpen = status.LastError is not null;
         ErrorBar.Message = status.LastError ?? string.Empty;
     }
+
+    private static string ModeName(ZoomMode mode) => mode switch
+    {
+        ZoomMode.Lens => "Lupe",
+        ZoomMode.Docked => "Angedockt",
+        _ => "Vollbild",
+    };
 }

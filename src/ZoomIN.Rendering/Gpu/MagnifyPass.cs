@@ -19,21 +19,34 @@ internal sealed class MagnifyPass : IDisposable
         _vertexShader = device.CreateVertexShader(ShaderSource.Compile("Magnify.hlsl", "VSMain", "vs_4_0").Span);
         _pixelShader = device.CreatePixelShader(ShaderSource.Compile("Magnify.hlsl", "PSMain", "ps_4_0").Span);
         _sampler = device.CreateSamplerState(SamplerDescription.LinearClamp);
-        _constants = device.CreateBuffer(new BufferDescription(16, BindFlags.ConstantBuffer, ResourceUsage.Default));
+        _constants = device.CreateBuffer(new BufferDescription(MagnifyConstants.SizeInBytes, BindFlags.ConstantBuffer, ResourceUsage.Default));
     }
 
+    /// <summary>Draws into the whole render target.</summary>
     public void Draw(
         ID3D11DeviceContext context,
         ID3D11ShaderResourceView source,
         ID3D11RenderTargetView target,
         int targetWidth,
         int targetHeight,
+        in MagnifyConstants constants) =>
+        Draw(context, source, target, 0, 0, targetWidth, targetHeight, constants);
+
+    /// <summary>Draws into the viewport (x, y, width, height) of the render target; the rest is untouched.</summary>
+    public void Draw(
+        ID3D11DeviceContext context,
+        ID3D11ShaderResourceView source,
+        ID3D11RenderTargetView target,
+        float x,
+        float y,
+        float width,
+        float height,
         in MagnifyConstants constants)
     {
         context.UpdateSubresource(constants, _constants);
 
         context.OMSetRenderTargets(target);
-        context.RSSetViewport(0, 0, targetWidth, targetHeight);
+        context.RSSetViewport(x, y, width, height);
         context.IASetInputLayout(null);
         context.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
         context.VSSetShader(_vertexShader);

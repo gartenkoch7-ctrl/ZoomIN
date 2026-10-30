@@ -41,9 +41,12 @@ public sealed class JsonSettingsStore : ISettingsStore
                 var settings = JsonSerializer.Deserialize(json, SettingsJsonContext.Default.AppSettings) ?? new AppSettings();
 
                 // A hand-edited file may contain "null" for the levels.
-                return settings.MonitorZoomLevels is null
-                    ? settings with { MonitorZoomLevels = new Dictionary<string, double>() }
-                    : settings;
+                return settings with
+                {
+                    MonitorZoomLevels = settings.MonitorZoomLevels ?? new Dictionary<string, double>(),
+                    LensMonitorZoomLevels = settings.LensMonitorZoomLevels ?? new Dictionary<string, double>(),
+                    DockedMonitorZoomLevels = settings.DockedMonitorZoomLevels ?? new Dictionary<string, double>(),
+                };
             }
             catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
             {
