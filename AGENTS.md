@@ -25,6 +25,7 @@ Lade nur die Dateien, die deine Aufgabe betreffen. Index: [docs/kb/README.md](do
 | Performance-Budget | [docs/kb/performance.md](docs/kb/performance.md) | du im Hot Path arbeitest |
 | SuperNova-Analyse | [docs/kb/supernova-analyse.md](docs/kb/supernova-analyse.md) | du ein Verhalten nachbaust |
 | Architekturentscheidungen | [docs/adr/](docs/adr/) | du eine Entscheidung infrage stellst |
+| **Roadmap & Meilensteinpläne** | [docs/plan/README.md](docs/plan/README.md) | du eine Aufgabe beginnst – arbeite im aktuellen Meilenstein, hake erledigte Punkte ab |
 
 **Pflege:** Wer etwas Neues lernt (API-Eigenheit, Messwert, Verhaltensbeobachtung),
 schreibt es in die passende KB-Datei. Neue Grundsatzentscheidungen → neues ADR

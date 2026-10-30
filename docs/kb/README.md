@@ -13,7 +13,7 @@ Thematisch aufgeteilt, damit Agents nur laden, was sie brauchen. Jede Datei blei
 | [performance.md](performance.md) | Budgets, Messung, Regeln für den Hot Path |
 | [supernova-analyse.md](supernova-analyse.md) | Black-Box-Beobachtungen zum Vorbild |
 
-Architekturentscheidungen: [../adr/](../adr/)
+Architekturentscheidungen: [../adr/](../adr/) · Roadmap & Meilensteine: [../plan/](../plan/README.md)
 
 ## Pflege-Regeln
 - Fakten mit Quelle (Microsoft-Docs-Link, Messung mit Hardware, Beobachtung mit Version).
