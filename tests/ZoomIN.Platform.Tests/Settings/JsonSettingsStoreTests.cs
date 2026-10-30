@@ -16,7 +16,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
     {
         var store = new JsonSettingsStore(NullLog.Instance, SettingsPath);
 
-        Assert.Equal(new AppSettings(), store.Load());
+        AssertEquivalent(new AppSettings(), store.Load());
     }
 
     [Fact]
@@ -29,11 +29,13 @@ public sealed class JsonSettingsStoreTests : IDisposable
             AnimationMilliseconds = 0,
             ToggleHotkey = new HotkeyGesture(HotkeyModifiers.Control | HotkeyModifiers.Shift, 0x51),
             WheelModifiers = HotkeyModifiers.Alt,
+            PerMonitorZoom = false,
+            MonitorZoomLevels = new Dictionary<string, double> { [@"\\.\DISPLAY1"] = 2.5, [@"\\.\DISPLAY2"] = 4 },
         };
 
         store.Save(settings);
 
-        Assert.Equal(settings, store.Load());
+        AssertEquivalent(settings, store.Load());
     }
 
     [Fact]
@@ -56,8 +58,35 @@ public sealed class JsonSettingsStoreTests : IDisposable
 
         var settings = store.Load();
 
-        Assert.Equal(new AppSettings(), settings);
+        AssertEquivalent(new AppSettings(), settings);
         Assert.True(File.Exists(SettingsPath + ".broken"));
+    }
+
+    [Fact]
+    public void Load_OlderFileWithoutNewProperties_KeepsTheirDefaults()
+    {
+        // Settings file as written by M2: no PerMonitorZoom, no MonitorZoomLevels.
+        Directory.CreateDirectory(_directory);
+        File.WriteAllText(SettingsPath, """{ "SchemaVersion": 1, "LastZoomLevel": 3.0, "WheelModifiers": "Control" }""");
+        var store = new JsonSettingsStore(NullLog.Instance, SettingsPath);
+
+        var settings = store.Load();
+
+        Assert.Equal(3.0, settings.LastZoomLevel);
+        Assert.True(settings.PerMonitorZoom);
+        Assert.Equal(150, settings.AnimationMilliseconds);
+        Assert.NotNull(settings.MonitorZoomLevels);
+        Assert.Equal(HotkeyGesture.ToggleZoom, settings.ToggleHotkey);
+    }
+
+    [Fact]
+    public void Load_NullLevels_BecomeEmpty()
+    {
+        Directory.CreateDirectory(_directory);
+        File.WriteAllText(SettingsPath, """{ "MonitorZoomLevels": null }""");
+        var store = new JsonSettingsStore(NullLog.Instance, SettingsPath);
+
+        Assert.Empty(store.Load().MonitorZoomLevels);
     }
 
     [Fact]
@@ -68,6 +97,13 @@ public sealed class JsonSettingsStoreTests : IDisposable
         store.Save(new AppSettings());
 
         Assert.False(File.Exists(SettingsPath + ".tmp"));
+    }
+
+    // Records compare dictionaries by reference; compare the levels by content instead.
+    private static void AssertEquivalent(AppSettings expected, AppSettings actual)
+    {
+        Assert.Equal(expected.MonitorZoomLevels, actual.MonitorZoomLevels);
+        Assert.Equal(expected with { MonitorZoomLevels = actual.MonitorZoomLevels }, actual);
     }
 
     public void Dispose()

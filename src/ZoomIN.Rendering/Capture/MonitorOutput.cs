@@ -3,20 +3,26 @@ using ZoomIN.Core.Viewport;
 
 namespace ZoomIN.Rendering.Capture;
 
-/// <summary>A DXGI output (monitor) together with the adapter it is attached to.</summary>
+/// <summary>
+/// A DXGI output (monitor) together with the adapter it is attached to. Identified by its
+/// device name ("\\.\DISPLAYn"), the same id the Platform layer uses.
+/// </summary>
 internal sealed class MonitorOutput : IDisposable
 {
-    public MonitorOutput(IDXGIAdapter1 adapter, IDXGIOutput1 output)
+    private MonitorOutput(IDXGIAdapter1 adapter, IDXGIOutput1 output, OutputDescription description)
     {
         Adapter = adapter;
         Output = output;
-        var r = output.Description.DesktopCoordinates;
+        DeviceName = description.DeviceName;
+        var r = description.DesktopCoordinates;
         Bounds = new PhysicalRect(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
     }
 
     public IDXGIAdapter1 Adapter { get; }
 
     public IDXGIOutput1 Output { get; }
+
+    public string DeviceName { get; }
 
     /// <summary>Monitor rectangle in physical desktop pixels.</summary>
     public PhysicalRect Bounds { get; }
@@ -25,33 +31,65 @@ internal sealed class MonitorOutput : IDisposable
 
     public int Height => (int)Bounds.Height;
 
-    /// <summary>The monitor whose desktop rectangle starts at (0,0) is the primary one.</summary>
-    public static MonitorOutput FindPrimary(IDXGIFactory1 factory)
+    /// <summary>Device names of all monitors attached to the desktop, on every adapter.</summary>
+    public static IReadOnlyList<string> AttachedDeviceNames(IDXGIFactory1 factory)
     {
-        for (uint a = 0; factory.EnumAdapters1(a, out var adapter).Success; a++)
+        var names = new List<string>();
+        Visit(factory, (adapter, output, desc) =>
         {
-            for (uint o = 0; adapter.EnumOutputs(o, out var output).Success; o++)
-            {
-                var desc = output.Description;
-                if (desc.AttachedToDesktop && desc.DesktopCoordinates.Left == 0 && desc.DesktopCoordinates.Top == 0)
-                {
-                    var output1 = output.QueryInterface<IDXGIOutput1>();
-                    output.Dispose();
-                    return new MonitorOutput(adapter, output1);
-                }
+            names.Add(desc.DeviceName);
+            return false;
+        });
+        return names;
+    }
 
-                output.Dispose();
+    /// <summary>Opens the monitor with the given device name on the adapter that drives it.</summary>
+    public static MonitorOutput Find(IDXGIFactory1 factory, string deviceName)
+    {
+        MonitorOutput? found = null;
+        Visit(factory, (adapter, output, desc) =>
+        {
+            if (desc.DeviceName != deviceName)
+            {
+                return false;
             }
 
-            adapter.Dispose();
-        }
-
-        throw new InvalidOperationException("No primary monitor found.");
+            found = new MonitorOutput(adapter, output.QueryInterface<IDXGIOutput1>(), desc);
+            return true;
+        });
+        return found ?? throw new DisplayGoneException(deviceName);
     }
 
     public void Dispose()
     {
         Output.Dispose();
         Adapter.Dispose();
+    }
+
+    /// <summary>Calls <paramref name="visitor"/> for every attached output; it returns true to keep the adapter.</summary>
+    private static void Visit(IDXGIFactory1 factory, Func<IDXGIAdapter1, IDXGIOutput, OutputDescription, bool> visitor)
+    {
+        for (uint a = 0; factory.EnumAdapters1(a, out var adapter).Success; a++)
+        {
+            var keepAdapter = false;
+            for (uint o = 0; adapter.EnumOutputs(o, out var output).Success; o++)
+            {
+                var desc = output.Description;
+                var stop = desc.AttachedToDesktop && visitor(adapter, output, desc);
+                output.Dispose();
+                if (stop)
+                {
+                    keepAdapter = true;
+                    break;
+                }
+            }
+
+            if (keepAdapter)
+            {
+                return;
+            }
+
+            adapter.Dispose();
+        }
     }
 }

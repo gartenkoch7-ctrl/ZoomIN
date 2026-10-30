@@ -28,6 +28,7 @@ internal sealed unsafe class OverlayWindow : IDisposable
     private static readonly WNDPROC s_wndProc = WndProc;
     private static readonly Lock s_classGate = new();
     private static bool s_classRegistered;
+    private static int s_displayChanges;
 
     private readonly PhysicalRect _bounds;
     private readonly Thread _thread;
@@ -45,6 +46,12 @@ internal sealed unsafe class OverlayWindow : IDisposable
             throw new InvalidOperationException("Overlay window could not be created.", _createError);
         }
     }
+
+    /// <summary>
+    /// Incremented whenever Windows reports a display or DPI change to any overlay window.
+    /// The render thread compares it per frame (one volatile read) to know when to rebuild.
+    /// </summary>
+    public static int DisplayChangeCount => Volatile.Read(ref s_displayChanges);
 
     public HWND Handle { get; private set; }
 
@@ -160,6 +167,11 @@ internal sealed unsafe class OverlayWindow : IDisposable
         if (msg == PInvoke.WM_NCHITTEST)
         {
             return new LRESULT(HitTransparent);
+        }
+
+        if (msg == PInvoke.WM_DISPLAYCHANGE || msg == PInvoke.WM_DPICHANGED)
+        {
+            Interlocked.Increment(ref s_displayChanges);
         }
 
         if (msg == PInvoke.WM_DESTROY)

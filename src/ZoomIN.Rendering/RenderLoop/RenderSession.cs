@@ -22,15 +22,21 @@ internal sealed class RenderSession : IDisposable
     private readonly OverlayWindow _overlay;
     private readonly CompositionSwapchain _swapchain;
     private readonly MagnifyPass _pass;
+    private readonly int _displayGeneration;
+    private PhysicalPoint _lastCursor;
     private bool _shown;
 
-    public RenderSession(ICursorSource cursor)
+    public RenderSession(ICursorSource cursor, string deviceName)
     {
         _cursor = cursor;
+
+        // Taken before enumerating outputs so a change during construction is not missed.
+        _displayGeneration = OverlayWindow.DisplayChangeCount;
         try
         {
             var factory = Own(DXGI.CreateDXGIFactory2<IDXGIFactory2>(false));
-            _monitor = Own(MonitorOutput.FindPrimary(factory));
+            _monitor = Own(MonitorOutput.Find(factory, deviceName));
+            _lastCursor = new PhysicalPoint(_monitor.Bounds.X + (_monitor.Width / 2), _monitor.Bounds.Y + (_monitor.Height / 2));
             _gpu = Own(GpuDevice.CreateForAdapter(_monitor.Adapter));
             _duplicator = Own(new DesktopDuplicator(_gpu, _monitor));
             _overlay = Own(new OverlayWindow(_monitor.Bounds));
@@ -56,8 +62,14 @@ internal sealed class RenderSession : IDisposable
 
     /// <summary>Renders one frame, paced by the compositor.</summary>
     /// <returns>False if the compositor did not request a frame in time.</returns>
+    /// <exception cref="DisplayChangedException">The pipeline no longer matches the monitors.</exception>
     public bool RenderFrame(double zoom)
     {
+        if (OverlayWindow.DisplayChangeCount != _displayGeneration)
+        {
+            throw new DisplayChangedException();
+        }
+
         if (!_swapchain.WaitForNextFrame(100))
         {
             return false;
@@ -66,7 +78,13 @@ internal sealed class RenderSession : IDisposable
         _duplicator.Update();
 
         // Read the cursor as late as possible: it decides what is shown under the pointer.
-        var source = ViewportCalculator.SourceRect(_monitor.Bounds, _cursor.GetPosition(), zoom);
+        // A monitor without the mouse keeps its last view (M3 decision).
+        if (_cursor.TryGetPosition(out var cursor) && _monitor.Bounds.Contains(cursor))
+        {
+            _lastCursor = cursor;
+        }
+
+        var source = ViewportCalculator.SourceRect(_monitor.Bounds, _lastCursor, zoom);
         var constants = MagnifyConstants.FromSourceRect(source, _monitor.Bounds);
 
         _pass.Draw(_gpu.Context, _duplicator.ShaderResource, _swapchain.RenderTarget, _swapchain.Width, _swapchain.Height, constants);

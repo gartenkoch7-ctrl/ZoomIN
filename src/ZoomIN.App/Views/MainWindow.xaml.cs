@@ -39,12 +39,12 @@ public sealed partial class MainWindow : Window
     {
         var model = _controller.Model;
         var status = _controller.Status;
-        ZoomStateText.Text = model.IsOn
-            ? string.Create(CultureInfo.CurrentCulture, $"an ({model.Target:0.##}×)")
-            : string.Create(CultureInfo.CurrentCulture, $"aus (zuletzt {model.LastLevel:0.##}×)");
+        var levels = _controller.MonitorIds().Select(id =>
+            string.Create(CultureInfo.CurrentCulture, $"{id.TrimStart('\\', '.')} {(model.IsOn ? model.TargetFor(id) : model.LastLevelFor(id)):0.##}×"));
+        ZoomStateText.Text = (model.IsOn ? "an: " : "aus, zuletzt: ") + string.Join(" · ", levels);
         FpsText.Text = status.IsVisible
-            ? string.Create(CultureInfo.CurrentCulture, $"{status.FramesPerSecond} fps")
-            : "–";
+            ? string.Create(CultureInfo.CurrentCulture, $"{status.FramesPerSecond} fps ({status.MonitorCount} Monitor(e))")
+            : string.Create(CultureInfo.CurrentCulture, $"– ({status.MonitorCount} Monitor(e) bereit)");
         CaptureText.Text = status.IsCaptureExcluded ? "ja" : "–";
 
         ErrorBar.IsOpen = status.LastError is not null;

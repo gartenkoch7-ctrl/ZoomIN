@@ -47,13 +47,15 @@ public sealed class AllocationTests
     [Fact]
     public void ZoomModel_Reads_DoNotAllocate()
     {
-        var model = new ZoomModel(2, 0.15);
-        var sum = model.Target + model.AnimationSeconds; // warm-up / JIT
+        var model = new ZoomModel(2, new Dictionary<string, double>(), true, 0.15);
+        string[] monitors = [@"\\.\DISPLAY1"];
+        model.Toggle(monitors);
+        var sum = model.TargetFor(monitors[0]) + model.AnimationSeconds; // warm-up / JIT
 
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var i = 0; i < Frames; i++)
         {
-            sum += model.Target + model.AnimationSeconds;
+            sum += model.TargetFor(monitors[0]) + model.AnimationSeconds;
         }
 
         Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);

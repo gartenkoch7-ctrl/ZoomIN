@@ -2,6 +2,7 @@ using System.Reflection;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Platform.Diagnostics;
 using ZoomIN.Rendering.Gpu;
+using ZoomIN.Watchdog;
 
 namespace ZoomIN.Architecture.Tests;
 
@@ -14,5 +15,7 @@ internal static class Layers
 
     public static Assembly Rendering { get; } = typeof(GpuSupport).Assembly;
 
-    public static IEnumerable<Assembly> All => [Core, Platform, Rendering];
+    public static Assembly Watchdog { get; } = typeof(WatchdogRunner).Assembly;
+
+    public static IEnumerable<Assembly> All => [Core, Platform, Rendering, Watchdog];
 }

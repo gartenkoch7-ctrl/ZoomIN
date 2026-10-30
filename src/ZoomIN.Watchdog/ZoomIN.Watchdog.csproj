@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Watchdog logic (ADR-0007). Runs inside ZoomIN.exe started in watchdog mode
+       (see WatchdogArguments), so no extra executable has to be shipped. References Core only. -->
+  <PropertyGroup>
+    <TargetFramework>$(ZoomInWindowsTfm)</TargetFramework>
+    <SupportedOSPlatformVersion>$(ZoomInMinWindows)</SupportedOSPlatformVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- NOTIFYICONDATA's layout depends on the CPU; ZoomIN ships x64 only (ADR-0009). -->
+    <CsWin32PlatformTarget>x64</CsWin32PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZoomIN.Core\ZoomIN.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.CsWin32" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

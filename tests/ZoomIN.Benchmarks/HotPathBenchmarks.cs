@@ -9,7 +9,7 @@ public class HotPathBenchmarks
 {
     private readonly PhysicalRect _monitor = new(0, 0, 3840, 2160);
     private readonly ZoomAnimator _animator = new();
-    private readonly ZoomModel _model = new(4, 0.15);
+    private readonly ZoomModel _model = new(4, new Dictionary<string, double>(), true, 0.15);
     private int _frame;
 
     [Benchmark]
@@ -28,5 +28,5 @@ public class HotPathBenchmarks
     }
 
     [Benchmark]
-    public double ModelRead() => _model.Target + _model.AnimationSeconds;
+    public double ModelRead() => _model.TargetFor(@"\\.\DISPLAY1") + _model.AnimationSeconds;
 }

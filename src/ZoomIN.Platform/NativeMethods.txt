@@ -4,6 +4,12 @@
 // Input/Win32CursorSource
 GetCursorPos
 
+// Monitors/Win32MonitorProvider
+EnumDisplayMonitors
+MonitorFromPoint
+GetMonitorInfo
+MONITORINFOEXW
+
 // Input/Win32HotkeyService
 RegisterHotKey
 UnregisterHotKey

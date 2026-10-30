@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using ZoomIN.App.Composition;
+using ZoomIN.App.Lifecycle;
 using ZoomIN.App.Views;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Diagnostics;
@@ -22,7 +23,9 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        _services.GetRequiredService<ILog>().Info("ZoomIN started");
+        var log = _services.GetRequiredService<ILog>();
+        log.Info("ZoomIN started");
+        WatchdogStarter.Start(log);
         _services.GetRequiredService<ZoomController>().Initialize();
 
         _mainWindow = _services.GetRequiredService<MainWindow>();

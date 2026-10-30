@@ -3,6 +3,7 @@ using Vortice.Direct3D11;
 using Vortice.DXGI;
 using ZoomIN.Rendering.Gpu;
 using ZoomIN.Rendering.Interop;
+using ZoomIN.Rendering.RenderLoop;
 
 namespace ZoomIN.Rendering.Capture;
 
@@ -91,6 +92,15 @@ internal sealed class DesktopDuplicator : IDisposable
     {
         try
         {
+            // ACCESS_LOST is also raised for resolution and orientation changes; our copy texture
+            // and the overlay would no longer fit, so the whole pipeline has to be rebuilt.
+            var r = _monitor.Output.Description.DesktopCoordinates;
+            if (r.Left != _monitor.Bounds.X || r.Top != _monitor.Bounds.Y
+                || r.Right - r.Left != _monitor.Width || r.Bottom - r.Top != _monitor.Height)
+            {
+                throw new DisplayChangedException("Monitor bounds changed.");
+            }
+
             _duplication = _monitor.Output.DuplicateOutput(_gpu.Device);
             return true;
         }

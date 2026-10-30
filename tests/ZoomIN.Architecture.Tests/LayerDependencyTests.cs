@@ -43,6 +43,12 @@ public sealed class LayerDependencyTests
     }
 
     [Fact]
+    public void Watchdog_ReferencesOnlyCore()
+    {
+        AssertNoZoomInReferences(Layers.Watchdog, allowed: "ZoomIN.Core");
+    }
+
+    [Fact]
     public void Platform_DoesNotDependOnRenderingOrApp()
     {
         var result = Types.InAssembly(Layers.Platform)

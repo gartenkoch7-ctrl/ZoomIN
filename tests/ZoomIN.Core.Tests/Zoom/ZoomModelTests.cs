@@ -4,82 +4,111 @@ namespace ZoomIN.Core.Tests.Zoom;
 
 public sealed class ZoomModelTests
 {
+    private const string Left = @"\\.\DISPLAY1";
+    private const string Right = @"\\.\DISPLAY2";
+    private static readonly string[] s_both = [Left, Right];
+
     [Fact]
-    public void StartsOff_WithGivenLastLevel()
+    public void StartsOff()
     {
-        var model = new ZoomModel(3.0, 0.15);
+        var model = Create();
 
         Assert.False(model.IsOn);
-        Assert.Equal(1.0, model.Target);
-        Assert.Equal(3.0, model.LastLevel);
+        Assert.Equal(1.0, model.TargetFor(Left));
     }
 
     [Theory]
     [InlineData(1.0)]
     [InlineData(0.5)]
-    public void InvalidLastLevel_FallsBackToDefault(double lastLevel)
+    public void InvalidLevels_FallBackToDefault(double level)
     {
-        var model = new ZoomModel(lastLevel, 0.15);
+        var model = new ZoomModel(level, new Dictionary<string, double> { [Left] = level }, true, 0.15);
 
-        Assert.Equal(ZoomLimits.DefaultLevel, model.LastLevel);
+        Assert.Equal(ZoomLimits.DefaultLevel, model.SharedLastLevel);
+        Assert.Equal(ZoomLimits.DefaultLevel, model.LastLevelFor(Left));
     }
 
     [Fact]
-    public void Toggle_SwitchesBetweenOffAndLastLevel()
+    public void Toggle_PerMonitor_UsesEachMonitorsLastLevel()
     {
-        var model = new ZoomModel(3.0, 0.15);
+        var model = Create(levels: new Dictionary<string, double> { [Left] = 3.0 });
 
-        model.Toggle();
-        Assert.Equal(3.0, model.Target);
+        model.Toggle(s_both);
 
-        model.Toggle();
-        Assert.Equal(1.0, model.Target);
-        Assert.Equal(3.0, model.LastLevel);
+        Assert.Equal(3.0, model.TargetFor(Left));
+        Assert.Equal(2.0, model.TargetFor(Right)); // no own level yet: shared start level
     }
 
     [Fact]
-    public void StepUpFromOff_StartsAtOneAndGrows()
+    public void Toggle_WhenAnyMonitorIsZoomed_SwitchesAllOff()
     {
-        var model = new ZoomModel(4.0, 0.15);
+        var model = Create();
+        model.Step(1, Left, s_both);
 
-        model.Step(1);
-
-        Assert.Equal(1.25, model.Target, 9);
-        Assert.Equal(1.25, model.LastLevel, 9);
-    }
-
-    [Fact]
-    public void StepDownToOne_SwitchesOff_AndKeepsLastLevelAboveOne()
-    {
-        var model = new ZoomModel(2.0, 0.15);
-        model.Step(1);
-
-        model.Step(-1);
+        model.Toggle(s_both);
 
         Assert.False(model.IsOn);
-        Assert.Equal(1.25, model.LastLevel, 9);
+        Assert.Equal(1.25, model.LastLevelFor(Left), 9);
+    }
+
+    [Fact]
+    public void Step_PerMonitor_ChangesOnlyThatMonitor()
+    {
+        var model = Create();
+        model.Toggle(s_both);
+
+        model.Step(1, Left, s_both);
+
+        Assert.Equal(2.5, model.TargetFor(Left), 9);
+        Assert.Equal(2.0, model.TargetFor(Right), 9);
+    }
+
+    [Fact]
+    public void Step_Shared_ChangesAllMonitors_AndSharedLevel()
+    {
+        var model = Create(perMonitor: false);
+        model.Toggle(s_both);
+
+        model.Step(1, Left, s_both);
+
+        Assert.Equal(2.5, model.TargetFor(Right), 9);
+        Assert.Equal(2.5, model.SharedLastLevel, 9);
+    }
+
+    [Fact]
+    public void StepUpFromOff_StartsAtOne_StepDownToOne_StopsThatMonitor()
+    {
+        var model = Create();
+
+        model.Step(1, Left, s_both);
+        Assert.Equal(1.25, model.TargetFor(Left), 9);
+        Assert.True(model.IsOn);
+
+        model.Step(-1, Left, s_both);
+        Assert.False(model.IsOn);
+        Assert.Equal(1.25, model.LastLevelFor(Left), 9);
     }
 
     [Fact]
     public void Step_IsClampedAtMax()
     {
-        var model = new ZoomModel(2.0, 0.15);
+        var model = Create();
 
-        model.Step(100);
+        model.Step(100, Left, s_both);
 
-        Assert.Equal(ZoomLimits.Max, model.Target);
+        Assert.Equal(ZoomLimits.Max, model.TargetFor(Left));
     }
 
     [Fact]
-    public void Changed_IsRaised_OnlyWhenTargetChanges()
+    public void Changed_IsRaised_OnlyOnRealChanges()
     {
-        var model = new ZoomModel(2.0, 0.15);
+        var model = Create();
         var raised = 0;
         model.Changed += () => raised++;
 
-        model.Step(-1); // already off: no change
-        model.Toggle();
-        model.Step(1);
+        model.Step(-1, Left, s_both); // already at 1×: no change
+        model.Toggle(s_both);
+        model.Step(1, Left, s_both);
 
         Assert.Equal(2, raised);
     }
@@ -87,7 +116,7 @@ public sealed class ZoomModelTests
     [Fact]
     public void AnimationSeconds_IsNeverNegative()
     {
-        var model = new ZoomModel(2.0, -1) { AnimationSeconds = -5 };
+        var model = new ZoomModel(2, new Dictionary<string, double>(), true, -1) { AnimationSeconds = -5 };
 
         Assert.Equal(0, model.AnimationSeconds);
     }
@@ -98,4 +127,7 @@ public sealed class ZoomModelTests
         Assert.Equal(2.5, ZoomLimits.Step(2.0, 1), 9);
         Assert.Equal(1.6, ZoomLimits.Step(2.0, -1), 9);
     }
+
+    private static ZoomModel Create(IReadOnlyDictionary<string, double>? levels = null, bool perMonitor = true) =>
+        new(2.0, levels ?? new Dictionary<string, double>(), perMonitor, 0.15);
 }

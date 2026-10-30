@@ -1,27 +1,28 @@
-using System.Diagnostics;
+using Vortice.DXGI;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Zoom;
+using ZoomIN.Rendering.Capture;
 
 namespace ZoomIN.Rendering.RenderLoop;
 
 /// <summary>
-/// Follows a <see cref="ZoomModel"/> on its own high-priority thread (AGENTS.md 2.3).
-/// The pipeline stays warm while zoom is off: the thread sleeps on an event (no capture, no
-/// rendering) and switching on is visible in the next frame (M2 decision).
+/// Runs one <see cref="MonitorRenderer"/> per attached monitor (ADR-0010) and rebuilds them all
+/// when the display configuration changes. Pipelines stay warm while zoom is off (M2 decision).
 /// </summary>
 public sealed class ZoomEngine : IZoomOutput
 {
-    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(2);
+    // Windows sends several display messages per change; wait until the layout has settled.
+    private static readonly TimeSpan SettleDelay = TimeSpan.FromMilliseconds(500);
 
     private readonly ZoomModel _model;
     private readonly ICursorSource _cursor;
     private readonly ILog _log;
-    private readonly AutoResetEvent _wake = new(false);
-    private readonly Lock _statusGate = new();
-    private ZoomStatus _status = ZoomStatus.Idle;
-    private Thread? _thread;
-    private volatile bool _stopRequested;
+    private readonly Lock _gate = new();
+    private MonitorRenderer[] _renderers = [];
+    private int _rebuildPending;
+    private bool _started;
+    private bool _disposed;
 
     public ZoomEngine(ZoomModel model, ICursorSource cursor, ILog log)
     {
@@ -35,108 +36,96 @@ public sealed class ZoomEngine : IZoomOutput
     {
         get
         {
-            lock (_statusGate)
-            {
-                return _status;
-            }
+            var statuses = Volatile.Read(ref _renderers).Select(r => r.Status).ToList();
+            var visible = statuses.Where(s => s.IsVisible).ToList();
+            return new ZoomStatus(
+                visible.Count > 0,
+                statuses.Count > 0 && statuses.All(s => s.IsCaptureExcluded),
+                visible.Count > 0 ? visible.Min(s => s.FramesPerSecond) : 0,
+                statuses.Select(s => s.LastError).FirstOrDefault(e => e is not null))
+            { MonitorCount = statuses.Count };
         }
     }
 
     public void Start()
     {
-        if (_thread is not null)
+        lock (_gate)
         {
-            return;
-        }
+            if (_started)
+            {
+                return;
+            }
 
-        _thread = new Thread(Run) { IsBackground = true, Name = "ZoomIN Render", Priority = ThreadPriority.Highest };
-        _thread.Start();
+            _started = true;
+            StartRenderers();
+        }
     }
 
     public void Dispose()
     {
         _model.Changed -= Wake;
-        _stopRequested = true;
-        _wake.Set();
-        _thread?.Join(TimeSpan.FromSeconds(3));
-        _wake.Dispose();
-    }
-
-    private void Wake() => _wake.Set();
-
-    private void Run()
-    {
-        using var mmcss = MmcssScope.Enter();
-        while (!_stopRequested)
+        lock (_gate)
         {
-            try
-            {
-                using var session = new RenderSession(_cursor);
-                _log.Info("Zoom pipeline ready");
-                SetStatus(ZoomStatus.Idle with { IsCaptureExcluded = true });
-                RunSession(session);
-            }
-            catch (Exception ex) when (ex is not OutOfMemoryException)
-            {
-                // E.g. device removed or no duplication available: rebuild the pipeline.
-                _log.Error("Zoom pipeline failed", ex);
-                SetStatus(ZoomStatus.Idle with { LastError = ex.Message });
-                _wake.WaitOne(_model.IsOn ? RetryDelay : Timeout.InfiniteTimeSpan);
-            }
+            _disposed = true;
+            StopRenderers();
         }
     }
 
-    private void RunSession(RenderSession session)
+    private void Wake()
     {
-        var animator = new ZoomAnimator();
-        var frames = 0;
-        var lastFrame = Stopwatch.GetTimestamp();
-        var secondStart = lastFrame;
-
-        while (!_stopRequested)
+        foreach (var renderer in Volatile.Read(ref _renderers))
         {
-            animator.SetTarget(_model.Target);
-            if (animator.IsSettled && animator.Current == ZoomLimits.Min)
+            renderer.Wake();
+        }
+    }
+
+    /// <summary>Called from a render thread; the rebuild runs elsewhere so that thread can end.</summary>
+    private void RequestRebuild()
+    {
+        if (Interlocked.Exchange(ref _rebuildPending, 1) == 1)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(SettleDelay).ConfigureAwait(false);
+            lock (_gate)
             {
-                if (session.IsVisible)
+                Volatile.Write(ref _rebuildPending, 0);
+                if (_disposed)
                 {
-                    session.Hide();
-                    SetStatus(ZoomStatus.Idle with { IsCaptureExcluded = true });
+                    return;
                 }
 
-                // Zoom is off: sleep without capturing or rendering until the model changes.
-                _wake.WaitOne();
-                lastFrame = Stopwatch.GetTimestamp();
-                secondStart = lastFrame;
-                frames = 0;
-                continue;
+                StopRenderers();
+                StartRenderers();
             }
-
-            var now = Stopwatch.GetTimestamp();
-            var delta = Math.Min(Stopwatch.GetElapsedTime(lastFrame, now).TotalSeconds, 0.1);
-            lastFrame = now;
-            animator.Advance(delta, _model.AnimationSeconds);
-
-            if (session.RenderFrame(animator.Current))
-            {
-                frames++;
-            }
-
-            // Status is published once per second; the per-frame path stays lock-free.
-            if (Stopwatch.GetElapsedTime(secondStart).TotalSeconds >= 1)
-            {
-                SetStatus(new ZoomStatus(session.IsVisible, true, frames, null));
-                frames = 0;
-                secondStart = Stopwatch.GetTimestamp();
-            }
-        }
+        });
     }
 
-    private void SetStatus(ZoomStatus status)
+    private void StartRenderers()
     {
-        lock (_statusGate)
+        using var factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
+        var names = MonitorOutput.AttachedDeviceNames(factory);
+        _log.Info($"Monitors: {string.Join(", ", names)}");
+
+        var renderers = names.Select(name => new MonitorRenderer(name, _model, _cursor, _log, RequestRebuild)).ToArray();
+        foreach (var renderer in renderers)
         {
-            _status = status;
+            renderer.Start();
+        }
+
+        Volatile.Write(ref _renderers, renderers);
+    }
+
+    private void StopRenderers()
+    {
+        var renderers = Volatile.Read(ref _renderers);
+        Volatile.Write(ref _renderers, []);
+        foreach (var renderer in renderers)
+        {
+            renderer.Dispose();
         }
     }
 }

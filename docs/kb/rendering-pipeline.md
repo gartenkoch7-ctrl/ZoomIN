@@ -23,10 +23,13 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
 - Zoom-Animation: Zielwert und aktueller Wert in `ZoomState`; pro Frame Easing anhand der
   echten Frame-Zeit (`Stopwatch`), nicht anhand fester Schritte.
 
-## Multi-Monitor
-- Ein `DesktopDuplicator` + eine Overlay-Swapchain pro Monitor.
-- Alle Monitore an derselben GPU teilen ein `ID3D11Device`. Bei Hybrid-GPU (Laptop):
-  Duplication muss auf dem Adapter laufen, an dem der Monitor hängt. ⚠️ unverifiziert, testen.
+## Multi-Monitor (ADR-0010)
+- Pro Monitor ein `MonitorRenderer`: eigener Thread, eigenes Device auf dem Adapter des
+  Monitors, eigene Duplication, eigenes Overlay, eigene Swapchain.
+- Monitor-ID = Gerätename `\\.\DISPLAYn` (DXGI `OutputDescription.DeviceName` = GDI `szDevice`).
+- Anzeigeänderung → `DisplayChangedException` → `ZoomEngine` baut nach 500 ms alle Renderer neu.
+- Monitore ohne Maus behalten ihren letzten Ausschnitt.
+- Hybrid-GPU: Duplication auf dem Adapter des Monitors. ⚠️ unverifiziert (keine Hardware).
 
 ## Fehlerfälle (müssen behandelt werden)
 | Ereignis | Reaktion |

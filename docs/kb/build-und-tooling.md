@@ -32,6 +32,17 @@ Erkenntnisse aus M0 (2026-10-30, .NET SDK 10.0.302).
 ## Solution
 - `.slnx` funktioniert mit dem .NET 10 SDK (CLI und CI) ohne Probleme.
 
+## JSON-Einstellungen: kein `init`
+Der `System.Text.Json`-Source-Generator weist **fehlenden `init`-Eigenschaften `default(T)` zu**
+– Standardwerte aus dem Code gehen verloren, wenn eine ältere Datei eine neue Eigenschaft nicht
+enthält (M3: `null`-Dictionary → Absturz beim Start). Deshalb haben `AppSettings`-Eigenschaften
+`set`; Regressionstest `Load_OlderFileWithoutNewProperties_KeepsTheirDefaults`.
+
+## Watchdog beim Testen
+Skripte, die ZoomIN per `Stop-Process` beenden, gelten für den Watchdog als Absturz: Er startet
+neu und schreibt `%LocalAppData%\ZoomIN\crashes.log`. Nach Tests die Datei löschen, sonst
+blockieren echte Abstürze schneller.
+
 ## Analyzer
 - `AnalysisLevel=latest-recommended` + `TreatWarningsAsErrors`.
 - Bewusst abgeschaltet (`.editorconfig`): CA1716 (VB-Schlüsselwörter, irrelevant für C#);

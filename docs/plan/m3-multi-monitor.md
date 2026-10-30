@@ -7,55 +7,61 @@ nahtlos; Prozess abschießen → Watchdog startet ZoomIN neu.
 **Voraussetzungen:** M2.
 
 ## Entscheidungen (Grilling 2026-10-30)
-- Nicht aktive Monitore **behalten ihren letzten Ausschnitt**; Option „nur aktiver Monitor zoomt“
-- Testen mit **virtuellen Monitoren** (Indirect Display Driver) – nur ein echter Monitor vorhanden
+- Nicht aktive Monitore **behalten ihren letzten Ausschnitt**
+- **Zoomstufe pro Monitor** (Standard), umschaltbar auf „eine Stufe für alle“
+  (`PerMonitorZoom` in `settings.json`; UI-Schalter in M7). Strg+Alt+Z schaltet alle Monitore
+  gemeinsam; Mausrad und Bild↑/↓ wirken auf den Monitor unter der Maus
+- Testen mit **virtuellem Monitor** (Virtual Display Driver, installiert der Nutzer)
 - **Remote Desktop:** versuchen; scheitert Desktop Duplication → klare Meldung, kein Absturz
-- **HDR:** bekannte Einschränkung im MVP (Hinweis bei aktivem HDR)
-- **Watchdog** wird hier gebaut → [ADR-0007](../adr/0007-ein-prozess-mit-watchdog.md)
+- **HDR:** bekannte Einschränkung im MVP
+- **Watchdog:** dieselbe EXE mit `--watchdog <pid>`; gibt nach 3 Neustarts in 5 min auf und
+  zeigt eine **Windows-Benachrichtigung** ([ADR-0007](../adr/0007-ein-prozess-mit-watchdog.md))
+- Reihenfolge: **Robustheit zuerst**, dann Multi-Monitor
+- Ein Render-Thread + Device pro Monitor → [ADR-0010](../adr/0010-ein-render-thread-pro-monitor.md)
 
 ## Aufgaben
 
-### 0. Testumgebung zuerst
-- [ ] Open-Source-Treiber für virtuelle Monitore installieren, 2. Monitor mit 150 % DPI anlegen
-- [ ] **Prüfen:** liefert Desktop Duplication auf dem virtuellen Monitor Frames? Ergebnis in
-      [testumgebung.md](../kb/testumgebung.md). Wenn nein → Multi-Monitor nur mit Unit-Tests
-      absichern und als „ungetestet“ kennzeichnen
+### 1. Robustheit
+- [x] Anzeigeänderung (`WM_DISPLAYCHANGE`, `WM_DPICHANGED`) → alle Pipelines neu aufbauen
+- [x] Auflösungs-/Ausrichtungswechsel bei ACCESS_LOST erkannt → Neuaufbau
+- [x] Monitor verschwunden (`DisplayGoneException`) → Neuaufbau
+- [x] Sonstige Pipeline-Fehler (z. B. Device Removed) → Neuaufbau nach 2 s, solange gezoomt
+- [x] Treiber-Reset (`Win+Strg+Umschalt+B`): Pipeline neu, Zoom sichtbar, kein Prozess-Neustart
+- [x] Auflösungswechsel 1920×1080 → 1280×720 → zurück: je ein Neuaufbau, Zoom sichtbar
+- [ ] Manuell (Nutzer): `Win+L`, Ruhezustand
+- [ ] RDP prüfen, HDR-Hinweis
 
-### 1. Monitor-Modell
-- [ ] `Core/Monitors/MonitorInfo`, `IMonitorProvider` + Änderungs-Event
-- [ ] `Platform/Monitors/Win32MonitorProvider`: `EnumDisplayMonitors`, `GetDpiForMonitor`,
-      Zuordnung `HMONITOR` ↔ DXGI-Output
-- [ ] Änderungen: `WM_DISPLAYCHANGE`, `WM_DPICHANGED`, Geräte-Benachrichtigung
+### 2. Watchdog (`src/ZoomIN.Watchdog`, `Core/Lifecycle/RestartPolicy`)
+- [x] Gleiche EXE im Watchdog-Modus, eigener `Program.Main`
+- [x] Exit-Code 0 = regulär; sonst Aufräumen (Schritte für M4/M5 vorbereitet) + Neustart
+- [x] Max. 3 Neustarts in 5 min (`crashes.log`), dann Windows-Benachrichtigung
+- [x] Kein Watchdog, solange ein Debugger hängt
+- [x] Architekturtest: Watchdog kennt nur Core
 
-### 2. Pipeline pro Monitor
-- [ ] `MonitorPipeline` (Duplicator + Overlay + Swapchain) je Monitor, `PipelineManager`
-- [ ] Ein Device pro Adapter
-- [ ] Ein Render-Thread pro Monitor vs. einer für alle → messen, **ADR-0010**
-
-### 3. Verhalten über Monitore
-- [ ] `Core`: Viewport-Zustand pro Monitor, letzter Ausschnitt bleibt erhalten
-- [ ] Setting „nur aktiver Monitor zoomt“
-- [ ] Übergang am Monitorrand ohne Sprung
-
-### 4. Fehlerfälle
-- [ ] `DXGI_ERROR_DEVICE_REMOVED` (Test: `Win+Strg+Umschalt+B`)
-- [ ] Ruhezustand/Wiederaufnahme, Auflösungs-/Ausrichtungswechsel
-- [ ] Monitor an/aus, `Win+P`
-- [ ] RDP: Verhalten prüfen, Meldung bei Fehlschlag
-- [ ] HDR aktiv → einmaliger Hinweis
-
-### 5. Watchdog (`src/ZoomIN.Watchdog`)
-- [ ] Eigenes kleines Projekt, referenziert nur Core; Architekturtest ergänzen
-- [ ] Startet mit ZoomIN, überwacht Prozess-Handle; reguläres Beenden wird abgemeldet
-- [ ] Absturz → aufräumen (Hooks für M4/M5 vorbereiten), neu starten; max. 3× in 5 min
+### 3. Multi-Monitor
+- [x] `IMonitorProvider` (Core) + `Win32MonitorProvider` (Platform), ID = Gerätename
+- [x] `ZoomModel` mit Stufe pro Monitor bzw. geteilt, Snapshot lock-frei
+- [x] `MonitorRenderer` pro Monitor, `ZoomEngine` verwaltet und baut neu auf
+- [x] Letzter Ausschnitt bleibt auf Monitoren ohne Maus
+- [x] Stufen pro Monitor in `settings.json`
+- [ ] Test mit virtuellem Zweitmonitor (150 % DPI) – Treiber noch nicht installiert
 
 ## Akzeptanzkriterien
-- [ ] 1 echter + 1 virtueller Monitor mit gemischter DPI funktionieren (oder dokumentiert,
-      warum nicht testbar)
-- [ ] Fehlerfälle aus 4. ohne App-Neustart überstanden
-- [ ] Prozess per Task-Manager beendet → ZoomIN läuft nach < 3 s wieder
+- [x] Prozess beendet → ZoomIN läuft nach **~150 ms** wieder; 4. Absturz in 5 min → Hinweis
+- [x] Reguläres Schließen → kein Neustart
+- [x] Ein-Monitor-Betrieb nach Umbau unverändert (63 Tests grün, Live-Abtastung an/aus)
+- [ ] 1 echter + 1 virtueller Monitor mit gemischter DPI funktionieren
+- [ ] Fehlerfälle aus 1. ohne App-Neustart überstanden (Treiber-Reset ✅, Auflösung ✅,
+      `Win+L`/Ruhezustand offen)
 - [ ] Keine Lecks nach 50× Monitor an/aus
-- [ ] ADR-0010 geschrieben, KB aktualisiert
+
+## Gefundene Fehler
+- **Einstellungen aus M2 brachen den Start (behoben):** Der JSON-Source-Generator setzt bei
+  `init`-Eigenschaften fehlende Werte auf `default` statt auf die Code-Standardwerte →
+  `MonitorZoomLevels = null` → Absturz in jeder Schleife des Watchdogs. Lösung: `set` statt
+  `init`, Regressionstest mit Datei im alten Format. Siehe [build-und-tooling.md](../kb/build-und-tooling.md).
 
 ## Offene Fragen / Risiken
-- Hybrid-Grafik und echte Zweitmonitore sind nicht testbar → Release-Notes „ungetestet“.
+- Hybrid-Grafik und echte Zweitmonitore bleiben „ungetestet“ (Release-Notes).
+- Ein Absturz direkt beim Start führt zu 3 schnellen Neustarts, dann Aufgabe – gewollt.
+- Ohne jede Pipeline (kein Monitor) werden Anzeigeänderungen nicht erkannt.

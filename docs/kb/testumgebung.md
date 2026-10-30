@@ -26,4 +26,7 @@ GitHub-Issue-Vorlage „Hardware-Bericht“.
 ## Ergebnisse
 | Datum | Thema | Ergebnis |
 |---|---|---|
-| – | Desktop Duplication auf virtuellem Monitor | offen (M3) |
+| – | Desktop Duplication auf virtuellem Monitor | offen (M3, Treiber noch nicht installiert) |
+| 2026-10-30 | Grafiktreiber-Reset bei aktivem Zoom (automatisiert) | ✅ Neuaufbau, kein Prozess-Neustart |
+| 2026-10-30 | Auflösung 1920×1080 → 1280×720 → zurück (automatisiert, temporär) | ✅ je ein Neuaufbau, Zoom sichtbar |
+| 2026-10-30 | Watchdog: Kill → Neustart, 4. Absturz → Hinweis (automatisiert) | ✅ Neustart ~150 ms |

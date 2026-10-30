@@ -17,6 +17,8 @@ GetModuleHandle
 WM_CLOSE
 WM_DESTROY
 WM_NCHITTEST
+WM_DISPLAYCHANGE
+WM_DPICHANGED
 
 // Overlay/CompositionSwapchain
 WaitForSingleObjectEx

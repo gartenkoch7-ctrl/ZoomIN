@@ -18,12 +18,15 @@
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <SelfContained>true</SelfContained>
+    <!-- Own Program.Main: the same exe also runs as watchdog (ADR-0007). -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ZoomIN.Core\ZoomIN.Core.csproj" />
     <ProjectReference Include="..\ZoomIN.Platform\ZoomIN.Platform.csproj" />
     <ProjectReference Include="..\ZoomIN.Rendering\ZoomIN.Rendering.csproj" />
+    <ProjectReference Include="..\ZoomIN.Watchdog\ZoomIN.Watchdog.csproj" />
   </ItemGroup>
 
   <ItemGroup>

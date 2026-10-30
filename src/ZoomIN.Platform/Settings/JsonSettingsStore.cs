@@ -38,7 +38,12 @@ public sealed class JsonSettingsStore : ISettingsStore
             try
             {
                 var json = File.ReadAllText(_path);
-                return JsonSerializer.Deserialize(json, SettingsJsonContext.Default.AppSettings) ?? new AppSettings();
+                var settings = JsonSerializer.Deserialize(json, SettingsJsonContext.Default.AppSettings) ?? new AppSettings();
+
+                // A hand-edited file may contain "null" for the levels.
+                return settings.MonitorZoomLevels is null
+                    ? settings with { MonitorZoomLevels = new Dictionary<string, double>() }
+                    : settings;
             }
             catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
             {

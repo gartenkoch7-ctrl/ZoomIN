@@ -12,6 +12,7 @@
     <ProjectReference Include="..\..\src\ZoomIN.Core\ZoomIN.Core.csproj" />
     <ProjectReference Include="..\..\src\ZoomIN.Platform\ZoomIN.Platform.csproj" />
     <ProjectReference Include="..\..\src\ZoomIN.Rendering\ZoomIN.Rendering.csproj" />
+    <ProjectReference Include="..\..\src\ZoomIN.Watchdog\ZoomIN.Watchdog.csproj" />
   </ItemGroup>
 
   <ItemGroup>
