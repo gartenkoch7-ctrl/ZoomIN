@@ -42,6 +42,26 @@ GetGUIThreadInfo
 GUITHREADINFO
 ClientToScreen
 
+// Shell/Win32TrayIcon
+Shell_NotifyIcon
+NOTIFYICONDATAW
+RegisterWindowMessage
+RegisterClassEx
+DefWindowProc
+PostQuitMessage
+CreatePopupMenu
+AppendMenu
+TrackPopupMenu
+DestroyMenu
+SetForegroundWindow
+LoadImage
+LoadIcon
+GetSystemMetrics
+WM_CLOSE
+WM_NULL
+WM_LBUTTONUP
+WM_RBUTTONUP
+
 // Shell/AppBarReservation
 SHAppBarMessage
 APPBARDATA

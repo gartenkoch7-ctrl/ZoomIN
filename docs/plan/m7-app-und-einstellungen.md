@@ -7,52 +7,46 @@ Oberfläche bedienbar machen.
 **Voraussetzungen:** M4, M5, M6.
 
 ## Entscheidungen (Grilling 2026-10-30)
-- Einstellungen wirken **sofort live** und werden gespeichert; „Auf Standard zurücksetzen“ je Seite
-- **Autostart** wird im **Erststart-Assistenten** abgefragt (Vorauswahl: ja)
-- **Profile manuell** wechseln (Hotkey/Tray); automatisch je Programm erst nach dem MVP
-- **Update-Prüfung opt-in:** nur Abfrage der neuesten GitHub-Release-Version, nur Hinweis,
-  kein Auto-Install, keine weiteren Daten
-- Sprachen: Deutsch und Englisch
+- Einstellungen wirken **sofort live** und werden entprellt gespeichert
+- **X schließt in den Tray** (einmaliger Hinweis); Beenden über das Tray-Menü
+- **Start still im Tray**; nur beim allerersten Start öffnet der **Erststart-Assistent**
+- **Profile = Darstellung** (Modus, Stufen, Lupe, Andocken, Filter, Zeiger, Tracking);
+  Tastenkürzel, Sprache, Autostart, Update-Prüfung gelten für alle Profile
+- Profile **manuell** wechseln (`Strg+Alt+P`, Tray, Seite „Profile“)
+- **Sprache wie Windows** (DE bei deutschem Windows, sonst EN), umstellbar
+- Autostart im Assistenten (Vorauswahl ja); Update-Prüfung **opt-in** (Vorauswahl nein)
 
-## Aufgaben
+## Technische Entscheidungen bei der Umsetzung
+- **Tray-Icon selbst gebaut** (`Shell_NotifyIcon`, eigener Thread, `TaskbarCreated`) statt
+  Fremdbibliothek – keine Lizenzprüfung, keine Abhängigkeit.
+- **Lokalisierung mit eigener Textklasse** (`App/Localization/Text*.cs`) statt `.resw`/MRT:
+  Sprachwechsel zur Laufzeit ist bei unverpackten WinUI-Apps mit MRT unzuverlässig.
+- **Einzelinstanz** per Mutex; zweiter Start öffnet die Einstellungen der laufenden Instanz.
+- `DispatcherShutdownMode.OnExplicitShutdown`: die App lebt ohne Fenster weiter.
+- **Update-Prüfung** gebaut, aber ohne Adresse inaktiv (GitHub-Repo-URL noch offen).
+- App-Symbol `Assets/ZoomIN.ico` (Lupe, Bernstein), klassische DIB-Frames + 256 px PNG.
 
-### 1. Einstellungen (`Core/Settings/`, `Platform/Settings/`)
-- [ ] `AppSettings` vollständig, `schemaVersion`, Migrationen (ADR-0004)
-- [ ] `JsonSettingsStore`: atomar schreiben, Backup bei defekter Datei
-- [ ] Profile: anlegen, umbenennen, duplizieren, wechseln, Export/Import
-- [ ] Änderungen wirken live über `RenderSnapshot`; Schreiben entprellt (z. B. 500 ms)
-
-### 2. Einstellungsfenster (`App/Views/`, `App/ViewModels/`)
-- [ ] `NavigationView`: Allgemein · Zoom · Modi · Farben & Zeiger · Tracking ·
-      Tastenkürzel · Profile · Info
-- [ ] Hotkey-Editor mit Warnung bei AltGr- und Systemkollisionen (ADR-0008)
-- [ ] Filtervorschau, Mica, Hell/Dunkel/System
-- [ ] Jede Seite = eigene View + ViewModel (300-Zeilen-Regel)
-
-### 3. Tray & Lebenszyklus
-- [ ] Tray-Menü: Zoom an/aus, Modus, Profil, Einstellungen, Beenden
-- [ ] Single Instance (zweiter Start öffnet Einstellungen)
-- [ ] Autostart über Run-Key `HKCU` (startet ZoomIN + Watchdog)
-- [ ] Erststart-Assistent: Zoom ausprobieren · Tastenkürzel (inkl. Hinweis
-      „Strg+Mausrad gehört jetzt ZoomIN“) · Farben · Autostart · Update-Prüfung
-
-### 4. Update-Hinweis (`Platform/Updates/`)
-- [ ] Nur wenn erlaubt: beim Start GitHub-API „latest release“ abfragen, Version vergleichen,
-      Hinweis im Tray; Fehler still ignorieren
-
-### 5. Barrierefreiheit der eigenen UI
-- [ ] Vollständig per Tastatur, sichtbarer Fokus, Narrator-Test, Kontrastdesigns
-- [ ] Einstellungsfenster wird **nicht** aus Aufnahmen ausgeschlossen
-
-### 6. Lokalisierung
-- [ ] Alle Texte in `.resw`, Deutsch und Englisch
+## Umsetzung
+- Core: Setter mit `Changed` (live + speichern), `ZoomLevels.CopyFrom`, `ProfileFields`,
+  `HotkeyRules` (Modifier, AltGr), `IProfileStore`, `IAutostart`, `IUpdateChecker`, `ITrayIcon`
+- Platform: `Win32TrayIcon`, `RegistryAutostart` (HKCU Run), `JsonProfileStore`
+  (`%AppData%\ZoomIN\profiles\*.json`), `GitHubUpdateChecker`, `UnregisterAll` für Hotkeys
+- App: `SettingsService` (gemeinsame Einstellungen + Modelle → `settings.json` + aktives
+  Profil), `ProfileService`, `AppShell` (Tray, Fenster, Beenden), `SettingsWindow` mit Seiten
+  Allgemein · Zoom & Modi · Farben & Zeiger · Fokus & Textcursor · Tastenkürzel · Profile ·
+  Info & Status, `WelcomePage` (5 Schritte), Hotkey-Editor (Aufnahme, AltGr-Sperre)
 
 ## Akzeptanzkriterien
-- [ ] Jede Einstellung aus M2–M6 in der UI änderbar und sofort wirksam
-- [ ] Defekte `settings.json` → Start mit Standardwerten + Meldung
-- [ ] Narrator- und Tastaturtest bestanden
-- [ ] Ohne Zustimmung keinerlei Netzwerkzugriff (prüfen mit Netzwerkmonitor)
+- [x] Jede Einstellung aus M2–M6 in der UI änderbar und sofort wirksam (gebunden an Modelle)
+- [x] Fenster schließen → läuft im Tray weiter; zweiter Start öffnet das Fenster (automatisch geprüft)
+- [x] Alle Seiten per UI Automation erreichbar, **kein bedienbares Element ohne Namen**
+- [x] Defekte `settings.json` → Standardwerte (seit M2); Profile mit ungültigem Namen abgelehnt
+- [ ] Tray: Rechtsklick-Menü, Beenden (Exit-Code 0, kein Watchdog-Neustart) – Sichttest
+- [ ] Narrator-Test (Sprachausgabe liest Seiten sinnvoll vor) – manuell
+- [ ] Hotkey ändern, Profil wechseln/exportieren/importieren, Sprache umstellen – Sichttest
+- [ ] Ohne Zustimmung keinerlei Netzwerkzugriff (ohne Update-Adresse ohnehin keiner)
 
 ## Offene Fragen / Risiken
-- Tray-Bibliothek für WinUI 3 (z. B. H.NotifyIcon): Lizenz MIT-kompatibel prüfen.
-- Startzeit unpackaged messen; Ziel: Tray < 1 s nach Login.
+- Schieberegler zeigen ihren Zahlenwert nur beim Ziehen (Tooltip) – ggf. Wert daneben anzeigen.
+- Win-Kombinationen kann der Hotkey-Editor nicht immer aufnehmen (Shell fängt sie ab).
+- Update-Adresse eintragen, sobald das GitHub-Repo feststeht.

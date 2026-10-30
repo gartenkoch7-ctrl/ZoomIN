@@ -6,10 +6,12 @@ namespace ZoomIN.App.Zoom;
 /// <summary>Maps between persisted <see cref="AppSettings"/> and the runtime <see cref="EffectsModel"/>.</summary>
 internal static class EffectsFactory
 {
-    public static EffectsModel Create(AppSettings settings) => new(new DisplayEffects(
+    public static EffectsModel Create(AppSettings settings) => new(Effects(settings));
+
+    public static DisplayEffects Effects(AppSettings settings) => new(
         new FilterSettings(settings.FilterEnabled, settings.ColorFilter, settings.Contrast, settings.Brightness),
         settings.Smoothing,
-        new CursorStyle(settings.CursorMaxScale, settings.CursorRim, settings.AutoLocate)));
+        new CursorStyle(settings.CursorMaxScale, settings.CursorRim, settings.AutoLocate));
 
     public static AppSettings Apply(AppSettings settings, EffectsModel model)
     {

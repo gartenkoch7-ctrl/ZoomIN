@@ -38,6 +38,17 @@ Der `System.Text.Json`-Source-Generator weist **fehlenden `init`-Eigenschaften `
 enthält (M3: `null`-Dictionary → Absturz beim Start). Deshalb haben `AppSettings`-Eigenschaften
 `set`; Regressionstest `Load_OlderFileWithoutNewProperties_KeepsTheirDefaults`.
 
+## UI-Tests per UI Automation (M7)
+Windows PowerShell 5.1 kann `System.Windows.Automation` laden und damit das
+Einstellungsfenster wie ein Screenreader bedienen (Navigation per `SelectionItemPattern`,
+Namensprüfung). Skripte mit Umlauten **mit BOM speichern** – sonst liest PowerShell 5.1 sie
+als ANSI („Tastenkürzel“ → „TastenkÃ¼rzel“). Screenshots von WinUI-Fenstern:
+`PrintWindow(hwnd, dc, 2)` (PW_RENDERFULLCONTENT); Mica erscheint dabei schwarz.
+
+## WinUI 3 ohne Fenster
+`Application.DispatcherShutdownMode = OnExplicitShutdown`, sonst endet die App mit dem
+letzten Fenster. Eigener `Program.Main` mit `DISABLE_XAML_GENERATED_MAIN`.
+
 ## Watchdog beim Testen
 Skripte, die ZoomIN per `Stop-Process` beenden, gelten für den Watchdog als Absturz: Er startet
 neu und schreibt `%LocalAppData%\ZoomIN\crashes.log`. Nach Tests die Datei löschen, sonst

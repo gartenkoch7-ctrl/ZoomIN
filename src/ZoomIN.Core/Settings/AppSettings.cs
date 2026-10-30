@@ -21,6 +21,25 @@ public sealed record AppSettings
 
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
 
+    // --- Application (shared by all profiles) ---
+    public AppLanguage Language { get; set; } = AppLanguage.System;
+
+    /// <summary>False until the first-run assistant was completed (M7).</summary>
+    public bool FirstRunCompleted { get; set; }
+
+    /// <summary>The "closes to tray" hint is shown only once.</summary>
+    public bool CloseToTrayHintShown { get; set; }
+
+    /// <summary>Opt-in update check (M7 decision): only asks for the latest release, nothing else.</summary>
+    public bool CheckForUpdates { get; set; }
+
+    /// <summary>GitHub "latest release" API URL; empty = no check possible yet.</summary>
+    public string UpdateFeedUrl { get; set; } = string.Empty;
+
+    public string ActiveProfile { get; set; } = ProfileFields.DefaultProfileName;
+
+    // --- Display (stored per profile, see ProfileFields) ---
+
     /// <summary>Mode used by Strg+Alt+Z.</summary>
     public ZoomMode LastMode { get; set; } = ZoomMode.Fullscreen;
 
@@ -91,6 +110,7 @@ public sealed record AppSettings
     /// <summary>Glide duration for zoom changes in milliseconds; 0 = instant.</summary>
     public int AnimationMilliseconds { get; set; } = 150;
 
+    // --- Input (shared by all profiles) ---
     public HotkeyGesture ToggleHotkey { get; set; } = HotkeyGesture.ToggleZoom;
 
     public HotkeyGesture ZoomInHotkey { get; set; } = HotkeyGesture.ZoomIn;
@@ -110,6 +130,8 @@ public sealed record AppSettings
     public HotkeyGesture LocateHotkey { get; set; } = HotkeyGesture.Locate;
 
     public HotkeyGesture TrackingHotkey { get; set; } = HotkeyGesture.ToggleTracking;
+
+    public HotkeyGesture ProfileHotkey { get; set; } = HotkeyGesture.NextProfile;
 
     public HotkeyModifiers WheelModifiers { get; set; } = HotkeyModifiers.Control;
 }

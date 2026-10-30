@@ -54,6 +54,22 @@ public sealed class ZoomLevels
         }
     }
 
+    /// <summary>Replaces all levels with those of <paramref name="other"/>.</summary>
+    public void CopyFrom(ZoomLevels other)
+    {
+        _shared.Clear();
+        _perMonitor.Clear();
+        foreach (var (mode, level) in other._shared)
+        {
+            _shared[mode] = level;
+        }
+
+        foreach (var (mode, levels) in other._perMonitor)
+        {
+            _perMonitor[mode] = new Dictionary<string, double>(levels);
+        }
+    }
+
     private Dictionary<string, double> ForMode(ZoomMode mode)
     {
         if (!_perMonitor.TryGetValue(mode, out var levels))

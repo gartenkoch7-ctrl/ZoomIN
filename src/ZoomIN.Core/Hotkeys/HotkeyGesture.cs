@@ -28,6 +28,8 @@ public readonly record struct HotkeyGesture(HotkeyModifiers Modifiers, int Virtu
 
     public static HotkeyGesture ToggleTracking { get; } = new(CtrlAlt, 0x54); // T
 
+    public static HotkeyGesture NextProfile { get; } = new(CtrlAlt, 0x50); // P
+
     // Ctrl+Alt+arrows rotate the screen on some Intel drivers, hence Shift (ADR-0008).
     public static HotkeyGesture LensWider { get; } = new(CtrlAltShift, 0x27); // Right
 

@@ -18,6 +18,7 @@ public sealed class Win32HotkeyService : IHotkeyService
     private readonly Thread _thread;
     private readonly ManualResetEventSlim _queueReady = new();
     private readonly ConcurrentQueue<Registration> _pending = new();
+    private readonly ConcurrentQueue<TaskCompletionSource> _unregisterRequests = new();
     private readonly Dictionary<int, Action> _callbacks = [];
     private uint _threadId;
     private int _nextId = 1;
@@ -36,6 +37,14 @@ public sealed class Win32HotkeyService : IHotkeyService
         _pending.Enqueue(registration);
         PInvoke.PostThreadMessage(_threadId, PInvoke.WM_APP, default, default);
         return registration.Result.Task.GetAwaiter().GetResult();
+    }
+
+    public void UnregisterAll()
+    {
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _unregisterRequests.Enqueue(done);
+        PInvoke.PostThreadMessage(_threadId, PInvoke.WM_APP + 1, default, default);
+        done.Task.Wait(TimeSpan.FromSeconds(2));
     }
 
     public void Dispose()
@@ -63,12 +72,27 @@ public sealed class Win32HotkeyService : IHotkeyService
             {
                 RegisterPending();
             }
+            else if (msg.message == PInvoke.WM_APP + 1)
+            {
+                UnregisterRegistered();
+                while (_unregisterRequests.TryDequeue(out var done))
+                {
+                    done.SetResult();
+                }
+            }
         }
 
+        UnregisterRegistered();
+    }
+
+    private void UnregisterRegistered()
+    {
         foreach (var id in _callbacks.Keys)
         {
             PInvoke.UnregisterHotKey(HWND.Null, id);
         }
+
+        _callbacks.Clear();
     }
 
     private void RegisterPending()

@@ -8,6 +8,8 @@
     <RootNamespace>ZoomIN.App</RootNamespace>
     <AssemblyName>ZoomIN</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\ZoomIN.ico</ApplicationIcon>
+    <Version>0.7.0</Version>
     <!-- x64 only in the MVP (ADR-0009). -->
     <Platforms>x64</Platforms>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
@@ -27,6 +29,11 @@
     <ProjectReference Include="..\ZoomIN.Platform\ZoomIN.Platform.csproj" />
     <ProjectReference Include="..\ZoomIN.Rendering\ZoomIN.Rendering.csproj" />
     <ProjectReference Include="..\ZoomIN.Watchdog\ZoomIN.Watchdog.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Loaded at runtime by the tray icon and the settings window. -->
+    <Content Include="Assets\ZoomIN.ico" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

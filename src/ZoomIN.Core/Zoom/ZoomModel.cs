@@ -42,28 +42,59 @@ public sealed class ZoomModel
     /// <summary>Monitor showing the docked strip while <see cref="Mode"/> is Docked.</summary>
     public string DockedMonitor => Volatile.Read(ref _dockedMonitor);
 
+    // Setters below raise Changed so the settings window applies and saves changes live (M7).
     public LensSize Lens
     {
         get => Volatile.Read(ref _lens);
-        set => Volatile.Write(ref _lens, value);
+        set => Set(ref _lens, value.Resize(0, 0));
     }
 
     public DockLayout Dock
     {
         get => Volatile.Read(ref _dock);
-        set => Volatile.Write(ref _dock, value.Normalized());
+        set => Set(ref _dock, value.Normalized());
     }
 
     public double AnimationSeconds
     {
         get => Volatile.Read(ref _animationSeconds);
-        set => Volatile.Write(ref _animationSeconds, Math.Max(0, value));
+        set
+        {
+            Volatile.Write(ref _animationSeconds, Math.Max(0, value));
+            Changed?.Invoke();
+        }
     }
 
     public bool PerMonitor
     {
         get { lock (_gate) { return _perMonitor; } }
-        set { lock (_gate) { _perMonitor = value; } }
+        set
+        {
+            lock (_gate)
+            {
+                _perMonitor = value;
+            }
+
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>Selects the mode used by Strg+Alt+Z without switching zoom on.</summary>
+    public void SetMode(ZoomMode mode)
+    {
+        Volatile.Write(ref _mode, (int)mode);
+        Changed?.Invoke();
+    }
+
+    /// <summary>Takes over all last levels, e.g. when switching profiles.</summary>
+    public void ReplaceLevels(ZoomLevels levels)
+    {
+        lock (_gate)
+        {
+            _levels.CopyFrom(levels);
+        }
+
+        Changed?.Invoke();
     }
 
     /// <summary>Target for one monitor; 1 when unknown or off. Called per frame, does not allocate.</summary>
@@ -88,11 +119,7 @@ public sealed class ZoomModel
     }
 
     /// <summary>Strg+Alt+Umschalt+Pfeile: lens grows or shrinks in 5 % steps.</summary>
-    public void ResizeLens(int widthSteps, int heightSteps)
-    {
-        Lens = Lens.Resize(widthSteps, heightSteps);
-        Changed?.Invoke();
-    }
+    public void ResizeLens(int widthSteps, int heightSteps) => Lens = Lens.Resize(widthSteps, heightSteps);
 
     /// <summary>Strg+Alt+Z: anything zoomed → off; otherwise on in the current mode.</summary>
     public void Toggle(string monitorAtMouse, IReadOnlyCollection<string> monitors) =>
@@ -174,4 +201,11 @@ public sealed class ZoomModel
     }
 
     private bool AnyOn(IReadOnlyCollection<string> monitors) => monitors.Any(id => TargetFor(id) > ZoomLimits.Min);
+
+    private void Set<T>(ref T field, T value)
+        where T : class
+    {
+        Volatile.Write(ref field, value);
+        Changed?.Invoke();
+    }
 }

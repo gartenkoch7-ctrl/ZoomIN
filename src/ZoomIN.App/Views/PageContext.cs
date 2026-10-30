@@ -1,0 +1,20 @@
+using ZoomIN.App.Settings;
+using ZoomIN.App.Zoom;
+using ZoomIN.Core.Lifecycle;
+
+namespace ZoomIN.App.Views;
+
+/// <summary>Everything the settings pages need; passed as navigation parameter.</summary>
+/// <param name="Settings">Shared settings and models.</param>
+/// <param name="Profiles">Profile commands.</param>
+/// <param name="Controller">Zoom commands, hotkey (re)registration, status.</param>
+/// <param name="Autostart">Start with Windows.</param>
+/// <param name="WindowHandle">Settings window handle, needed by file pickers.</param>
+/// <param name="WelcomeFinished">Called when the first-run assistant is done.</param>
+public sealed record PageContext(
+    SettingsService Settings,
+    ProfileService Profiles,
+    ZoomController Controller,
+    IAutostart Autostart,
+    Func<nint> WindowHandle,
+    Action WelcomeFinished);

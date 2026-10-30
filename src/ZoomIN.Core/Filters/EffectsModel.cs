@@ -38,6 +38,13 @@ public sealed class EffectsModel
 
     public void SetSmoothing(Smoothing smoothing) => Update(e => e with { Smoothing = smoothing });
 
+    public void SetFilter(FilterSettings filter) => Update(e => e with { Filter = filter.Normalized() });
+
+    public void SetCursor(CursorStyle cursor) => Update(e => e with { Cursor = cursor });
+
+    /// <summary>Takes over everything at once, e.g. when switching profiles.</summary>
+    public void Replace(DisplayEffects effects) => Update(_ => effects with { Filter = effects.Filter.Normalized() });
+
     /// <summary>Strg+Alt+S: show the pointer locator for a moment.</summary>
     public void Locate()
     {

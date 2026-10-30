@@ -1,0 +1,94 @@
+using ZoomIN.App.Zoom;
+using ZoomIN.Core.Settings;
+using ZoomIN.Rendering.RenderLoop;
+
+namespace ZoomIN.App.Settings;
+
+/// <summary>
+/// Single owner of the settings (M7): shared settings (language, hotkeys, updates …) live here,
+/// display settings live in the models. Every change is applied live and saved debounced –
+/// to settings.json and to the active profile.
+/// </summary>
+public sealed class SettingsService : IDisposable
+{
+    private static readonly TimeSpan SaveDelay = TimeSpan.FromSeconds(1);
+
+    private readonly RenderModels _models;
+    private readonly ISettingsStore _store;
+    private readonly IProfileStore _profiles;
+    private readonly Timer _saveTimer;
+    private readonly Lock _gate = new();
+    private AppSettings _shared;
+
+    public SettingsService(AppSettings initial, RenderModels models, ISettingsStore store, IProfileStore profiles)
+    {
+        _shared = initial;
+        _models = models;
+        _store = store;
+        _profiles = profiles;
+        _saveTimer = new Timer(_ => SaveNow());
+        _models.Zoom.Changed += ScheduleSave;
+        _models.Effects.Changed += ScheduleSave;
+        _models.Tracking.Changed += ScheduleSave;
+    }
+
+    /// <summary>Raised after shared settings changed (language, hotkeys, …), on the caller's thread.</summary>
+    public event Action? Changed;
+
+    public RenderModels Models => _models;
+
+    /// <summary>Everything as it would be saved now: shared settings plus the models' state.</summary>
+    public AppSettings Current
+    {
+        get
+        {
+            AppSettings shared;
+            lock (_gate)
+            {
+                shared = _shared;
+            }
+
+            var settings = ZoomModelFactory.Apply(shared, _models.Zoom);
+            settings = EffectsFactory.Apply(settings, _models.Effects);
+            return TrackingFactory.Apply(settings, _models.Tracking);
+        }
+    }
+
+    public void Update(Func<AppSettings, AppSettings> change)
+    {
+        lock (_gate)
+        {
+            _shared = change(_shared);
+        }
+
+        ScheduleSave();
+        Changed?.Invoke();
+    }
+
+    /// <summary>Applies the display part of <paramref name="profile"/> to the running models.</summary>
+    public void ApplyDisplay(AppSettings profile)
+    {
+        ZoomModelFactory.ApplyTo(_models.Zoom, profile);
+        _models.Effects.Replace(EffectsFactory.Effects(profile));
+        _models.Tracking.SetOptions(TrackingFactory.Options(profile));
+    }
+
+    public void SaveNow()
+    {
+        var settings = Current;
+        _store.Save(settings);
+        _profiles.Save(settings.ActiveProfile, settings);
+    }
+
+    public void Dispose()
+    {
+        _models.Zoom.Changed -= ScheduleSave;
+        _models.Effects.Changed -= ScheduleSave;
+        _models.Tracking.Changed -= ScheduleSave;
+        _saveTimer.Dispose();
+        SaveNow();
+    }
+
+    // Wheel zooming changes the level many times per second; write the files once it settles.
+    private void ScheduleSave() => _saveTimer.Change(SaveDelay, Timeout.InfiniteTimeSpan);
+}

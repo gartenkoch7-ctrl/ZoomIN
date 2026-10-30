@@ -22,6 +22,12 @@ public sealed class TrackingModel
 
     public void Publish(TrackingSnapshot snapshot) => Volatile.Write(ref _snapshot, snapshot);
 
+    public void SetOptions(TrackingOptions options)
+    {
+        Volatile.Write(ref _options, options);
+        Changed?.Invoke();
+    }
+
     /// <summary>Strg+Alt+T.</summary>
     public void ToggleEnabled()
     {

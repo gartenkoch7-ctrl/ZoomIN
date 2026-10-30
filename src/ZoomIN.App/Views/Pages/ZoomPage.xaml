@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="ZoomIN.App.Views.Pages.ZoomPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:ZoomIN.App.Localization">
+
+    <ScrollViewer>
+        <StackPanel MaxWidth="680" HorizontalAlignment="Left" Spacing="20">
+            <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="{x:Bind loc:Text.NavZoom}" />
+
+            <ComboBox MinWidth="280" Header="{x:Bind loc:Text.ZoomMode}" SelectedIndex="{x:Bind Vm.ModeIndex, Mode=TwoWay}">
+                <ComboBoxItem Content="{x:Bind loc:Text.ModeFullscreen}" />
+                <ComboBoxItem Content="{x:Bind loc:Text.ModeLens}" />
+                <ComboBoxItem Content="{x:Bind loc:Text.ModeDocked}" />
+            </ComboBox>
+
+            <ToggleSwitch Header="{x:Bind loc:Text.ZoomPerMonitor}" IsOn="{x:Bind Vm.PerMonitor, Mode=TwoWay}" />
+
+            <Slider
+                Header="{x:Bind loc:Text.ZoomAnimation}"
+                Maximum="500"
+                Minimum="0"
+                StepFrequency="10"
+                Value="{x:Bind Vm.AnimationMs, Mode=TwoWay}" />
+
+            <Slider
+                Header="{x:Bind loc:Text.ZoomLensWidth}"
+                Maximum="90"
+                Minimum="10"
+                StepFrequency="5"
+                Value="{x:Bind Vm.LensWidth, Mode=TwoWay}" />
+            <Slider
+                Header="{x:Bind loc:Text.ZoomLensHeight}"
+                Maximum="90"
+                Minimum="10"
+                StepFrequency="5"
+                Value="{x:Bind Vm.LensHeight, Mode=TwoWay}" />
+
+            <ComboBox MinWidth="280" Header="{x:Bind loc:Text.ZoomDockEdge}" SelectedIndex="{x:Bind Vm.DockEdgeIndex, Mode=TwoWay}">
+                <ComboBoxItem Content="{x:Bind loc:Text.DockTop}" />
+                <ComboBoxItem Content="{x:Bind loc:Text.DockBottom}" />
+                <ComboBoxItem Content="{x:Bind loc:Text.DockLeft}" />
+                <ComboBoxItem Content="{x:Bind loc:Text.DockRight}" />
+            </ComboBox>
+            <Slider
+                Header="{x:Bind loc:Text.ZoomDockSize}"
+                Maximum="70"
+                Minimum="15"
+                StepFrequency="5"
+                Value="{x:Bind Vm.DockSize, Mode=TwoWay}" />
+
+            <ComboBox MinWidth="280" Header="{x:Bind loc:Text.ZoomSmoothing}" SelectedIndex="{x:Bind Vm.SmoothingIndex, Mode=TwoWay}">
+                <ComboBoxItem Content="{x:Bind loc:Text.SmoothingText}" />
+                <ComboBoxItem Content="{x:Bind loc:Text.SmoothingSoft}" />
+                <ComboBoxItem Content="{x:Bind loc:Text.SmoothingPixel}" />
+            </ComboBox>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

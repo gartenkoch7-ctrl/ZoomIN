@@ -8,4 +8,7 @@ public interface IHotkeyService : IDisposable
     /// <param name="repeat">Also call while the key is held (auto-repeat), e.g. for zoom steps.</param>
     /// <returns>False if the gesture is already taken by another application.</returns>
     bool Register(HotkeyGesture gesture, Action onPressed, bool repeat = false);
+
+    /// <summary>Releases every registered shortcut, e.g. before changed shortcuts are registered again.</summary>
+    void UnregisterAll();
 }

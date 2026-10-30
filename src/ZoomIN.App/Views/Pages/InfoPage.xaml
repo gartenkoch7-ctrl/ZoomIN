@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="ZoomIN.App.Views.Pages.InfoPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="using:ZoomIN.App.Localization">
+
+    <ScrollViewer>
+        <StackPanel MaxWidth="680" HorizontalAlignment="Left" Spacing="16">
+            <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="{x:Bind loc:Text.NavInfo}" />
+
+            <Grid ColumnSpacing="24" RowSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition />
+                    <RowDefinition />
+                    <RowDefinition />
+                    <RowDefinition />
+                </Grid.RowDefinitions>
+                <TextBlock Text="{x:Bind loc:Text.InfoZoom}" />
+                <TextBlock x:Name="ZoomText" Grid.Column="1" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="1" Text="{x:Bind loc:Text.InfoFps}" />
+                <TextBlock x:Name="FpsText" Grid.Row="1" Grid.Column="1" />
+                <TextBlock Grid.Row="2" Text="{x:Bind loc:Text.InfoCapture}" />
+                <TextBlock x:Name="CaptureText" Grid.Row="2" Grid.Column="1" />
+                <TextBlock Grid.Row="3" Text="{x:Bind loc:Text.InfoVersion}" />
+                <TextBlock x:Name="VersionText" Grid.Row="3" Grid.Column="1" />
+            </Grid>
+
+            <InfoBar x:Name="ErrorBar" Title="{x:Bind loc:Text.InfoError}" IsClosable="False" Severity="Error" />
+
+            <Button Click="OnOpenLogs" Content="{x:Bind loc:Text.InfoLogs}" />
+            <TextBlock Text="{x:Bind loc:Text.InfoLicense}" TextWrapping="Wrap" />
+        </StackPanel>
+    </ScrollViewer>
+</Page>
