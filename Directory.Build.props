@@ -1,0 +1,22 @@
+<Project>
+  <!-- Shared build rules for all projects (AGENTS.md, section 5). -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <Deterministic>true</Deterministic>
+    <Company>ZoomIN contributors</Company>
+    <Product>ZoomIN</Product>
+    <Copyright>Copyright (c) ZoomIN contributors. MIT License.</Copyright>
+  </PropertyGroup>
+
+  <!-- All Windows-specific projects share the same minimum OS (Windows 10 2004). -->
+  <PropertyGroup>
+    <ZoomInWindowsTfm>net10.0-windows10.0.19041.0</ZoomInWindowsTfm>
+    <ZoomInMinWindows>10.0.19041.0</ZoomInMinWindows>
+  </PropertyGroup>
+</Project>

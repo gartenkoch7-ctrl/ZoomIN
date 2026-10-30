@@ -39,4 +39,8 @@ unsichtbar bleibt.
 - Installer mit Code-Signing (z. B. SignPath für OSS)
 
 ## Plattform
-Windows 10 2004 (Build 19041) und Windows 11, x64 und ARM64.
+Windows 10 2004 (Build 19041) und Windows 11, **nur x64** (ARM64 nach dem MVP, ADR-0009).
+
+## Detailentscheidungen
+Alle Festlegungen aus dem Grilling vom 2026-10-30 stehen im Abschnitt „Entscheidungen“ der
+jeweiligen Meilensteindatei in [../plan/](../plan/README.md) und in den ADRs 0006–0009.

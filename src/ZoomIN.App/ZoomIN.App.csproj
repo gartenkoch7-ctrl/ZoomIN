@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Composition root, WinUI 3 UI and tray. References Core, Platform and Rendering. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>$(ZoomInWindowsTfm)</TargetFramework>
+    <TargetPlatformMinVersion>$(ZoomInMinWindows)</TargetPlatformMinVersion>
+    <SupportedOSPlatformVersion>$(ZoomInMinWindows)</SupportedOSPlatformVersion>
+    <RootNamespace>ZoomIN.App</RootNamespace>
+    <AssemblyName>ZoomIN</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- x64 only in the MVP (ADR-0009). -->
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <!-- Unpackaged + self-contained: runs from a folder/ZIP without installing the runtime. -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZoomIN.Core\ZoomIN.Core.csproj" />
+    <ProjectReference Include="..\ZoomIN.Platform\ZoomIN.Platform.csproj" />
+    <ProjectReference Include="..\ZoomIN.Rendering\ZoomIN.Rendering.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+  </ItemGroup>
+</Project>

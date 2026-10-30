@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ZoomIN.App/ZoomIN.App.csproj">
+      <Platform Project="x64" />
+    </Project>
+    <Project Path="src/ZoomIN.Core/ZoomIN.Core.csproj" />
+    <Project Path="src/ZoomIN.Platform/ZoomIN.Platform.csproj" />
+    <Project Path="src/ZoomIN.Rendering/ZoomIN.Rendering.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ZoomIN.Architecture.Tests/ZoomIN.Architecture.Tests.csproj" />
+    <Project Path="tests/ZoomIN.Benchmarks/ZoomIN.Benchmarks.csproj" />
+    <Project Path="tests/ZoomIN.Core.Tests/ZoomIN.Core.Tests.csproj" />
+  </Folder>
+</Solution>

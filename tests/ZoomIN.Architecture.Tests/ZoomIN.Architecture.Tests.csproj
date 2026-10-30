@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Enforces the layer rules from AGENTS.md 2.2. The WinUI App project is not referenced:
+       it is the composition root and may depend on everything. -->
+  <PropertyGroup>
+    <TargetFramework>$(ZoomInWindowsTfm)</TargetFramework>
+    <SupportedOSPlatformVersion>$(ZoomInMinWindows)</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ZoomIN.Core\ZoomIN.Core.csproj" />
+    <ProjectReference Include="..\..\src\ZoomIN.Platform\ZoomIN.Platform.csproj" />
+    <ProjectReference Include="..\..\src\ZoomIN.Rendering\ZoomIN.Rendering.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="NetArchTest.Rules" />
+  </ItemGroup>
+</Project>

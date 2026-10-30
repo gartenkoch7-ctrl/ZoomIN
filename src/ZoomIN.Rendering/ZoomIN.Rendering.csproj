@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <!-- D3D11, Desktop Duplication, shaders, overlay swapchain, render thread. References Core only. -->
+  <PropertyGroup>
+    <TargetFramework>$(ZoomInWindowsTfm)</TargetFramework>
+    <SupportedOSPlatformVersion>$(ZoomInMinWindows)</SupportedOSPlatformVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZoomIN.Core\ZoomIN.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Vortice.Direct3D11" />
+    <PackageReference Include="Vortice.DXGI" />
+    <PackageReference Include="Vortice.D3DCompiler" />
+  </ItemGroup>
+</Project>

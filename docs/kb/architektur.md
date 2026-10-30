@@ -8,11 +8,17 @@ src/
   ZoomIN.Platform/      Win32, UI Automation, Hooks, Monitore, DPI, Hotkeys
   ZoomIN.Rendering/     D3D11, Desktop Duplication, Shader, Overlay-Swapchain
   ZoomIN.App/           WinUI 3, Tray, Einstellungen, Composition Root
+  ZoomIN.Watchdog/      Kleiner Überwachungsprozess (ab M3, ADR-0007)
 tests/
   ZoomIN.Core.Tests/
+  ZoomIN.Rendering.Tests/   Shader-Tests auf WARP (ab M1)
   ZoomIN.Architecture.Tests/
   ZoomIN.Benchmarks/
 ```
+
+## Prozesse
+Ein Prozess (`ZoomIN.exe`) mit UI-Thread, Render-Thread(s), Hook- und UIA-Threads, plus
+`ZoomIN.Watchdog.exe`, der nach einem Absturz aufräumt und neu startet (ADR-0007).
 
 ## Abhängigkeitsregeln
 | Projekt | darf referenzieren |
@@ -21,6 +27,7 @@ tests/
 | Platform | Core |
 | Rendering | Core |
 | App | Core, Platform, Rendering |
+| Watchdog | Core |
 | Speech (später) | Core |
 
 Platform und Rendering sprechen nur über Interfaces aus Core miteinander; verbunden in App.

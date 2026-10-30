@@ -29,7 +29,8 @@ verboten (ADR-0002). `MagSetInputTransform` (nur Eingabe) bleibt für später er
 
 ## Pflichttest (manuell, vor jedem Release)
 1. Zoom aktivieren (alle drei Modi).
-2. Teams-Testanruf / OBS-Vorschau / `Win+Shift+S`.
+2. Bildschirm freigeben in: **Microsoft Teams**, **Zoom/Webex**, **Discord**,
+   **Browser-Freigabe** (Edge/Chrome, z. B. Google Meet); zusätzlich `Win+Shift+S`.
 3. Erwartung: Aufnahme zeigt unvergrößerten Desktop, Hervorhebungen ebenfalls unsichtbar.
 Ergebnisse mit Windows-Build und App-Versionen hier eintragen.
 

@@ -35,11 +35,13 @@ signierte EXE, Installation in einem geschützten Ordner. Erst mit Installer + C
 
 `Core.TrackingArbiter` entscheidet, welche Quelle gewinnt (zuletzt aktive, mit Prioritäten).
 
-## Hotkeys (Vorschlag, konfigurierbar)
-| Aktion | Standard |
-|---|---|
-| Zoom an/aus | `Win+Alt+Z` |
-| Zoom + / − | `Win+Alt+Plus/Minus`, `Strg+Alt+Mausrad` |
-| Modus wechseln | `Win+Alt+M` |
-| Farbfilter an/aus | `Win+Alt+C` |
-Kollisionen mit der Windows-Lupe (`Win+Plus`) vermeiden. Registrierung per `RegisterHotKey`.
+## Tastenkürzel
+Schema und Standardbelegung: [ADR-0008](../adr/0008-tastenkuerzel-strg-alt.md)
+(Strg+Alt+Taste ohne AltGr-Belegung, Strg+Mausrad mit Vorrang vor Anwendungen).
+Globale Kürzel per `RegisterHotKey`, Mausrad per `WH_MOUSE_LL`.
+
+## Fokus & Caret – Verhalten (M6)
+- Fokus-Schwenk weich (~200 ms) oder sofort, einstellbar; nur bewegen, wenn das Element
+  nicht schon sichtbar ist.
+- Caret mit Randabstand (Standard 20 %).
+- Mausbewegung über Schwellwert → gleitend zurück zum Maus-Fixpunkt.

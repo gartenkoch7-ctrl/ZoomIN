@@ -24,6 +24,8 @@ Lade nur die Dateien, die deine Aufgabe betreffen. Index: [docs/kb/README.md](do
 | Eingabe & Tracking | [docs/kb/eingabe-und-tracking.md](docs/kb/eingabe-und-tracking.md) | du Maus/Fokus/Caret/Hotkeys bearbeitest |
 | Performance-Budget | [docs/kb/performance.md](docs/kb/performance.md) | du im Hot Path arbeitest |
 | SuperNova-Analyse | [docs/kb/supernova-analyse.md](docs/kb/supernova-analyse.md) | du ein Verhalten nachbaust |
+| Testumgebung | [docs/kb/testumgebung.md](docs/kb/testumgebung.md) | du testest oder misst |
+| Build & Tooling | [docs/kb/build-und-tooling.md](docs/kb/build-und-tooling.md) | Build oder Tests nicht laufen |
 | Architekturentscheidungen | [docs/adr/](docs/adr/) | du eine Entscheidung infrage stellst |
 | **Roadmap & Meilensteinpläne** | [docs/plan/README.md](docs/plan/README.md) | du eine Aufgabe beginnst – arbeite im aktuellen Meilenstein, hake erledigte Punkte ab |
 
@@ -135,8 +137,10 @@ Neue NuGet-Pakete nur mit kurzer Begründung im PR; keine Pakete mit Copyleft-Li
 ## 7. Befehle
 
 ```powershell
-dotnet build                                  # Build
-dotnet test                                   # alle Tests
+dotnet build ZoomIN.slnx                      # Build
+dotnet test --solution ZoomIN.slnx            # alle Tests (Microsoft.Testing.Platform, siehe global.json)
+dotnet run --project src/ZoomIN.App           # App starten
+dotnet run -c Release --project tests/ZoomIN.Benchmarks   # Benchmarks
 ./scripts/check-file-length.ps1               # 300-Zeilen-Regel prüfen
 git config core.hooksPath .githooks           # Pre-Commit-Hook aktivieren (einmalig)
 ```
