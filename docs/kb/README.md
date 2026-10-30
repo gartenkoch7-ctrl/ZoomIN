@@ -1,0 +1,21 @@
+# Knowledgebase – Index
+
+Thematisch aufgeteilt, damit Agents nur laden, was sie brauchen. Jede Datei bleibt kurz.
+
+| Datei | Inhalt |
+|---|---|
+| [produkt-und-scope.md](produkt-und-scope.md) | Vision, Zielgruppe, MVP-Umfang, Roadmap |
+| [glossar.md](glossar.md) | Begriffe aus Vergrößerung, Grafik und Windows |
+| [architektur.md](architektur.md) | Projekte, Schichten, Ordnerstruktur, Datenfluss |
+| [rendering-pipeline.md](rendering-pipeline.md) | Capture → Shader → Swapchain, Frame-Ablauf |
+| [capture-ausschluss.md](capture-ausschluss.md) | Warum der Zoom in Teams & Co. unsichtbar ist |
+| [eingabe-und-tracking.md](eingabe-und-tracking.md) | Maus, Fokus, Textcursor, Klick-Mapping, Hotkeys |
+| [performance.md](performance.md) | Budgets, Messung, Regeln für den Hot Path |
+| [supernova-analyse.md](supernova-analyse.md) | Black-Box-Beobachtungen zum Vorbild |
+
+Architekturentscheidungen: [../adr/](../adr/)
+
+## Pflege-Regeln
+- Fakten mit Quelle (Microsoft-Docs-Link, Messung mit Hardware, Beobachtung mit Version).
+- Unsichere Aussagen markieren: `⚠️ unverifiziert`.
+- Datei > 300 Zeilen → nach Unterthema aufteilen und diesen Index aktualisieren.

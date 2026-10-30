@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check file length (max 300 lines)
+        shell: pwsh
+        run: ./scripts/check-file-length.ps1
+
+      - uses: actions/setup-dotnet@v4
+        if: hashFiles('**/*.sln', '**/*.slnx') != ''
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build
+        if: hashFiles('**/*.sln', '**/*.slnx') != ''
+        run: dotnet build -c Release -warnaserror
+
+      - name: Test
+        if: hashFiles('**/*.sln', '**/*.slnx') != ''
+        run: dotnet test -c Release --no-build
