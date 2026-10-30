@@ -45,4 +45,10 @@ internal readonly struct CursorConstants
 
     public static CursorConstants ForRing(float thickness, FrameColor color) =>
         new(0, 0, default, 0, 0, 0, thickness, color);
+
+    /// <param name="thicknessU">Line width as a fraction of the rectangle width (≥ 0.5 fills it).</param>
+    /// <param name="thicknessV">Line height as a fraction of the rectangle height.</param>
+    /// <param name="color">Premultiplied colour.</param>
+    public static CursorConstants ForRect(float thicknessU, float thicknessV, FrameColor color) =>
+        new(0, 0, default, thicknessU, thicknessV, 0, 0, color);
 }

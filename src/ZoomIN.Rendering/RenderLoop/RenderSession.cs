@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using Vortice.DXGI;
 using Vortice.Mathematics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Modes;
+using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Viewport;
 using ZoomIN.Rendering.Capture;
 using ZoomIN.Rendering.Gpu;
@@ -29,6 +31,8 @@ internal sealed class RenderSession : IDisposable
     private readonly CompositionSwapchain _swapchain;
     private readonly MagnifyPass _pass;
     private readonly CursorLayer _cursorLayer;
+    private readonly HighlightLayer _highlights;
+    private readonly AnchorController _anchors = new();
     private readonly int _displayGeneration;
     private PhysicalPoint _lastCursor;
     private bool _cursorInside;
@@ -50,7 +54,9 @@ internal sealed class RenderSession : IDisposable
             _overlay = Own(new OverlayWindow(_monitor.Bounds));
             _swapchain = Own(new CompositionSwapchain(_gpu, factory, _overlay.Handle, _monitor.Width, _monitor.Height));
             _pass = Own(new MagnifyPass(_gpu.Device));
-            _cursorLayer = Own(new CursorLayer(_gpu.Device, pointer.Shapes, pointer.SystemCursor));
+            var cursorPass = Own(new CursorPass(_gpu.Device));
+            _cursorLayer = new CursorLayer(cursorPass, pointer.Shapes, pointer.SystemCursor);
+            _highlights = new HighlightLayer(cursorPass);
         }
         catch
         {
@@ -79,7 +85,7 @@ internal sealed class RenderSession : IDisposable
     /// <summary>Renders one frame, paced by the compositor.</summary>
     /// <returns>False if the compositor did not request a frame in time.</returns>
     /// <exception cref="DisplayChangedException">The pipeline no longer matches the monitors.</exception>
-    public bool RenderFrame(ZoomMode mode, double zoom, LensSize lens, DockLayout dock, DisplayEffects effects, long locateRequestedAt)
+    public bool RenderFrame(in FrameRequest request)
     {
         if (OverlayWindow.DisplayChangeCount != _displayGeneration)
         {
@@ -95,16 +101,24 @@ internal sealed class RenderSession : IDisposable
 
         // Read the cursor as late as possible: it decides what is shown under the pointer.
         // A monitor without the mouse keeps its last view (M3 decision).
-        _cursorInside = _pointer.Position.TryGetPosition(out var cursor) && _monitor.Bounds.Contains(cursor);
+        var hasCursor = _pointer.Position.TryGetPosition(out var cursor);
+        _cursorInside = hasCursor && _monitor.Bounds.Contains(cursor);
         if (_cursorInside)
         {
             _lastCursor = cursor;
         }
 
-        var frame = ModeGeometry.Compute(mode, _monitor.Bounds, _lastCursor, zoom, lens, dock);
-        Draw(frame, effects);
+        // The anchor is the mouse, or the focus/caret while the user works with the keyboard (M6).
+        var anchor = _anchors.Next(new AnchorInput(
+            Stopwatch.GetTimestamp(), hasCursor ? cursor : _lastCursor, _cursorInside, _monitor.Bounds,
+            request.Mode, request.Zoom, request.Lens, request.Dock, request.Tracking, request.TrackingOptions));
+
+        var frame = ModeGeometry.Compute(request.Mode, _monitor.Bounds, anchor, request.Zoom, request.Lens, request.Dock);
+        Draw(frame, request.Effects);
+        _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions);
         LocatorActive = _cursorInside && _cursorLayer.Draw(
-            _gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, mode, zoom, _lastCursor, effects, locateRequestedAt);
+            _gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Mode, request.Zoom, _lastCursor,
+            request.Effects, request.LocateRequestedAt);
         _swapchain.Present();
 
         // Show the window only after the first frame so it never flashes empty.

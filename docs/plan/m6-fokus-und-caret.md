@@ -3,55 +3,46 @@
 **Ziel:** Der Zoom folgt dem Tastaturfokus (Tab, Menüs, Dialoge) und dem Textcursor beim
 Schreiben – Kernfunktion für Tastaturnutzer.
 **Demo:** Im Editor tippen → Zoom folgt dem Textcursor; Tab durch einen Dialog → Zoom
-schwenkt zum fokussierten Element, das farbig umrahmt ist.
-**Voraussetzungen:** M2 (parallel zu M3–M5 möglich; Hervorhebung braucht M5).
+schwenkt zum fokussierten Element, das magenta umrahmt ist.
+**Voraussetzungen:** M2 (Hervorhebung nutzt die Zeiger-Pipeline aus M5).
 
 ## Entscheidungen (Grilling 2026-10-30)
-- Fokus-Schwenk **einstellbar: weich (~200 ms) oder sofort**; Standard **weich**.
-  Element schon sichtbar → keine Bewegung
-- Textcursor mit **Randabstand** (Standard 20 %): Ausschnitt bewegt sich erst am Rand
-- Maus bewegt (über Schwellwert) → **gleitend zurück zur Maus**; der Mauszeiger wird nie
-  automatisch versetzt (ADR-0003)
-- **Fokusrahmen standardmäßig an**, Farbe/Dicke einstellbar
+- Fokus-Schwenk **weich (200 ms)** oder sofort (`PanMilliseconds = 0`); nur bewegen, wenn das
+  Ziel nicht schon sichtbar ist
+- Textcursor mit **Randabstand 20 %**
+- Mausbewegung (> 8 px) → **gleitend zurück zur Maus**; Mauszeiger wird nie versetzt (ADR-0003)
+- **Alle Modi** folgen (Vollbild schwenkt, Lupe springt, Streifen zeigt die Umgebung)
+- **Fokusrahmen Magenta** (an), **Caret-Balken** (an), beide abschaltbar
+- **Strg+Alt+T** schaltet Fokus-/Caret-Verfolgung an/aus
+
+## Umsetzung
+- **Erkennung (`Platform/Automation/UiaTrackingSource`):** eigener Thread fragt ~30×/s
+  UI Automation (`GetFocusedElement` → `CurrentBoundingRectangle`) und `GetGUIThreadInfo`
+  (Caret) ab. Polling statt COM-Ereignissen: keine Callback-Objekte, hängende Apps verzögern
+  nur diesen Thread.
+- **Logik (`Core/Tracking/AnchorController`):** pro Monitor; Caret vor Fokus; Fokuswechsel
+  < 0,5 s nach Mausbewegung gelten als von der Maus verursacht und werden ignoriert;
+  Fokusrechtecke > 50 % des Monitors werden ignoriert; Zeitschritt pro Frame auf 0,1 s begrenzt.
+- **Darstellung:** Zeiger wird immer über die Frame-Abbildung platziert (`FrameMapping`), auch
+  wenn der Zoom am Fokus hängt; Systemzeiger bei Zoom ausgeblendet (außer Angedockt).
+  Fokusrahmen/Caret-Balken in `HighlightLayer` (`PSRect` in `Cursor.hlsl`).
 
 ## Aufgaben
+- [x] `TrackingSnapshot`, `TrackingOptions`, `TrackingModel`, `AnchorController` + 10 Tests
+- [x] `UiaTrackingSource` + Smoke-Test; Probe im echten Fenster (siehe Matrix)
+- [x] `FrameRequest`, `RenderModels`, `FrameMapping`, `HighlightLayer`
+- [x] Einstellungen, Strg+Alt+T, Statusfenster
 
-### 1. Tracking-Logik (`Core/Tracking/`)
-- [ ] `TrackingEvent` (struct): Quelle, Rechteck, Zeitstempel
-- [ ] `TrackingArbiter`: zuletzt aktive Quelle gewinnt; Caret vor Fokus während getippt wird;
-      Mausbewegung über Schwellwert übernimmt
-- [ ] `PanController`: weich/sofort, „nur bewegen, wenn nötig“, Randabstand für Caret
-- [ ] Unit-Tests für alle Regeln und Übergänge
-
-### 2. Fokus (`Platform/Automation/`)
-- [ ] UIA-Client auf eigenem MTA-Thread, `FocusChangedEvent`, `BoundingRectangle`
-- [ ] Zeitlimit für UIA-Aufrufe (hängende Apps blockieren nichts)
-- [ ] Fallback `WinEvent EVENT_OBJECT_FOCUS`
-
-### 3. Caret (`Platform/Automation/`)
-- [ ] UIA `TextPattern2.GetCaretRange`; Fallback `GetGUIThreadInfo().rcCaret`
-- [ ] Max. 1 Update pro Frame weiterreichen
-
-### 4. Hervorhebung
-- [ ] Fokusrahmen und Caret-Marker über den Shader aus M5
-
-### 5. Kompatibilitätsmatrix
-Testen und Ergebnis in `docs/kb/eingabe-und-tracking.md` eintragen:
-
-| App | Fokus | Caret |
-|---|---|---|
-| Notepad, Explorer, Einstellungen | | |
-| Edge, Chrome, Firefox | | |
-| Word, Outlook, Excel | | |
-| VS Code, Teams, Discord (Electron/WebView) | | |
-| Windows Terminal | | |
+## Kompatibilitätsmatrix
+Ergebnisse in [eingabe-und-tracking.md](../kb/eingabe-und-tracking.md#kompatibilität-fokus--caret-m6).
 
 ## Akzeptanzkriterien
-- [ ] Fokus- und Caret-Tracking in ≥ 80 % der Matrix
-- [ ] Hängende App verursacht keinen Ruckler
-- [ ] Weich/sofort, Randabstand und Fokusrahmen einstellbar (Settings-JSON)
-- [ ] Core-Tests ≥ 90 % für `Tracking/`
+- [x] Fokus und Caret werden in einem Win32/WinForms-Fenster erkannt (automatisch geprüft)
+- [x] Core-Tests für alle Regeln (Sichtbarkeit, Randabstand, Maus-Rückkehr, Maus-Absicht)
+- [ ] Sichttest: Tab durch Dialog, Tippen im Editor, Rückkehr zur Maus, Rahmen/Balken
+- [ ] Kompatibilitätsmatrix ≥ 80 % (Notepad, Edge, Word, VS Code, Teams, Terminal …)
+- [ ] Hängende App verursacht keinen Ruckler (Erkennung läuft getrennt – manuell bestätigen)
 
 ## Offene Fragen / Risiken
-- Chromium/Electron liefern UIA oft erst nach Erkennung einer Hilfstechnologie → prüfen.
-- Excel-Zellen und Konsolen-Caret sind bekannte Problemfälle.
+- Chromium/Electron liefern UIA oft erst, wenn eine Hilfstechnologie erkannt wird.
+- Konsole/Terminal und Excel-Zellen haben oft keinen System-Caret.

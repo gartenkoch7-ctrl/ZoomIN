@@ -39,10 +39,20 @@ signierte EXE, Installation in einem geschützten Ordner. Erst mit Installer + C
 | Quelle | API | Hinweis |
 |---|---|---|
 | Maus | `GetCursorPos` pro Frame (+ Low-Level-Hook nur für Hotkeys/Gesten) | Polling im Render-Thread ist am latenzärmsten |
-| Fokus | UIA `FocusChangedEvent` | Eigener STA/MTA-Thread, nie im Render-Thread |
-| Caret | UIA `TextPattern` / `GetGUIThreadInfo` als Fallback | Viele Apps liefern kein UIA-Caret |
+| Fokus | UIA `GetFocusedElement` → `CurrentBoundingRectangle`, ~30×/s gepollt | Eigener MTA-Thread, nie im Render-Thread |
+| Caret | `GetGUIThreadInfo` (System-Caret) ~30×/s | Apps ohne System-Caret liefern nichts |
 
-`Core.TrackingArbiter` entscheidet, welche Quelle gewinnt (zuletzt aktive, mit Prioritäten).
+`Core/Tracking/AnchorController` entscheidet pro Monitor, welche Quelle gewinnt (siehe M6-Plan).
+
+## Kompatibilität Fokus / Caret (M6)
+| Anwendung | Fokus | Caret | Quelle |
+|---|---|---|---|
+| WinForms/Win32-Textfelder | ✅ | ✅ | automatische Probe 2026-10-30 |
+| Notepad, Explorer, Einstellungen | ? | ? | offen – Sichttest |
+| Edge, Chrome, Firefox | ? | ? | offen |
+| Word, Outlook, Excel | ? | ? | offen |
+| VS Code, Teams, Discord | ? | ? | offen |
+| Windows Terminal | ? | ? | offen |
 
 ## Tastenkürzel
 Schema und Standardbelegung: [ADR-0008](../adr/0008-tastenkuerzel-strg-alt.md)

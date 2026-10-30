@@ -16,6 +16,7 @@ internal sealed class CursorPass : IDisposable
     private readonly ID3D11VertexShader _vertexShader;
     private readonly ID3D11PixelShader _pointerShader;
     private readonly ID3D11PixelShader _ringShader;
+    private readonly ID3D11PixelShader _rectShader;
     private readonly ID3D11SamplerState _sampler;
     private readonly ID3D11BlendState _blend;
     private readonly ID3D11Buffer _constants;
@@ -27,6 +28,7 @@ internal sealed class CursorPass : IDisposable
         _vertexShader = device.CreateVertexShader(ShaderSource.Compile("Cursor.hlsl", "VSMain", "vs_4_0").Span);
         _pointerShader = device.CreatePixelShader(ShaderSource.Compile("Cursor.hlsl", "PSCursor", "ps_4_0").Span);
         _ringShader = device.CreatePixelShader(ShaderSource.Compile("Cursor.hlsl", "PSRing", "ps_4_0").Span);
+        _rectShader = device.CreatePixelShader(ShaderSource.Compile("Cursor.hlsl", "PSRect", "ps_4_0").Span);
         _sampler = device.CreateSamplerState(new SamplerDescription(
             Filter.MinMagMipLinear, TextureAddressMode.Border, TextureAddressMode.Border, TextureAddressMode.Border,
             0, 1, ComparisonFunction.Never, new Color4(0, 0, 0, 0)));
@@ -55,6 +57,10 @@ internal sealed class CursorPass : IDisposable
         float radius, in CursorConstants constants) =>
         Draw(context, target, _ringShader, null, centerX - radius, centerY - radius, radius * 2, radius * 2, constants);
 
+    public void DrawRect(ID3D11DeviceContext context, ID3D11RenderTargetView target, float x, float y,
+        float width, float height, in CursorConstants constants) =>
+        Draw(context, target, _rectShader, null, x, y, width, height, constants);
+
     public void Dispose()
     {
         foreach (var texture in _textures.Values)
@@ -65,6 +71,7 @@ internal sealed class CursorPass : IDisposable
         _constants.Dispose();
         _blend.Dispose();
         _sampler.Dispose();
+        _rectShader.Dispose();
         _ringShader.Dispose();
         _pointerShader.Dispose();
         _vertexShader.Dispose();

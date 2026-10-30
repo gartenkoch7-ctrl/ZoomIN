@@ -2,6 +2,7 @@ using System.Diagnostics;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Modes;
+using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.Rendering.RenderLoop;
@@ -20,6 +21,7 @@ internal sealed class MonitorRenderer : IDisposable
     private readonly string _deviceName;
     private readonly ZoomModel _model;
     private readonly EffectsModel _effects;
+    private readonly TrackingModel _tracking;
     private readonly PointerServices _pointer;
     private readonly ILog _log;
     private readonly Action _requestRebuild;
@@ -30,11 +32,12 @@ internal sealed class MonitorRenderer : IDisposable
     private volatile bool _stopRequested;
 
     public MonitorRenderer(
-        string deviceName, ZoomModel model, EffectsModel effects, PointerServices pointer, ILog log, Action requestRebuild)
+        string deviceName, RenderModels models, PointerServices pointer, ILog log, Action requestRebuild)
     {
         _deviceName = deviceName;
-        _model = model;
-        _effects = effects;
+        _model = models.Zoom;
+        _effects = models.Effects;
+        _tracking = models.Tracking;
         _pointer = pointer;
         _log = log;
         _requestRebuild = requestRebuild;
@@ -134,7 +137,9 @@ internal sealed class MonitorRenderer : IDisposable
 
             // Unzoomed with a filter: the whole monitor, no lens or strip.
             var mode = unzoomed ? ZoomMode.Fullscreen : _model.Mode;
-            if (session.RenderFrame(mode, animator.Current, _model.Lens, _model.Dock, effects, _effects.LocateRequestedAt))
+            var request = new FrameRequest(mode, animator.Current, _model.Lens, _model.Dock, effects,
+                _effects.LocateRequestedAt, _tracking.Snapshot, _tracking.Options);
+            if (session.RenderFrame(request))
             {
                 frames++;
             }

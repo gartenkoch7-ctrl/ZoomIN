@@ -6,19 +6,22 @@ using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Zoom;
+using ZoomIN.Rendering.RenderLoop;
 
 namespace ZoomIN.App.Zoom;
 
 /// <summary>
-/// Connects hotkeys, the mouse wheel and the UI to the <see cref="ZoomModel"/>, starts the zoom
-/// output, keeps the docked strip reserved and persists the settings (debounced, and on shutdown).
-/// Commands apply to the monitor under the mouse.
+/// Connects hotkeys, the mouse wheel and the UI to the models, starts zoom output and focus
+/// tracking, keeps the docked strip reserved and persists the settings (debounced, and on
+/// shutdown). Commands apply to the monitor under the mouse.
 /// </summary>
 public sealed class ZoomController : IDisposable
 {
     private static readonly TimeSpan SaveDelay = TimeSpan.FromSeconds(1);
 
+    private readonly AppSettings _settings;
     private readonly IZoomOutput _output;
+    private readonly ITrackingSource _trackingSource;
     private readonly IHotkeyService _hotkeys;
     private readonly IMouseWheelHook _wheel;
     private readonly IMonitorProvider _monitors;
@@ -27,13 +30,12 @@ public sealed class ZoomController : IDisposable
     private readonly ILog _log;
     private readonly DockedStripSync _dockedStrip;
     private readonly Timer _saveTimer;
-    private readonly AppSettings _settings;
 
     public ZoomController(
-        ZoomModel model,
-        EffectsModel effects,
+        RenderModels models,
         AppSettings settings,
         IZoomOutput output,
+        ITrackingSource trackingSource,
         IHotkeyService hotkeys,
         IMouseWheelHook wheel,
         IMonitorProvider monitors,
@@ -42,23 +44,27 @@ public sealed class ZoomController : IDisposable
         ISettingsStore store,
         ILog log)
     {
-        Model = model;
-        Effects = effects;
+        Model = models.Zoom;
+        Effects = models.Effects;
+        Tracking = models.Tracking;
         _settings = settings;
         _output = output;
+        _trackingSource = trackingSource;
         _hotkeys = hotkeys;
         _wheel = wheel;
         _monitors = monitors;
         _cursor = cursor;
         _store = store;
         _log = log;
-        _dockedStrip = new DockedStripSync(model, monitors, reservation);
+        _dockedStrip = new DockedStripSync(Model, monitors, reservation);
         _saveTimer = new Timer(_ => Save());
     }
 
     public ZoomModel Model { get; }
 
     public EffectsModel Effects { get; }
+
+    public TrackingModel Tracking { get; }
 
     public ZoomStatus Status => _output.Status;
 
@@ -68,6 +74,30 @@ public sealed class ZoomController : IDisposable
     public IReadOnlyList<string> MonitorIds() => _monitors.MonitorIds();
 
     public void Initialize()
+    {
+        RegisterHotkeys();
+        _wheel.Start(_settings.WheelModifiers, Step);
+        Model.Changed += OnModelChanged;
+        Effects.Changed += ScheduleSave;
+        Tracking.Changed += ScheduleSave;
+        _output.Start();
+        _trackingSource.Start(Tracking);
+    }
+
+    public void Toggle() => Model.Toggle(MonitorAtMouse(), _monitors.MonitorIds());
+
+    public void Activate(ZoomMode mode) => Model.Activate(mode, MonitorAtMouse(), _monitors.MonitorIds());
+
+    public void Dispose()
+    {
+        Model.Changed -= OnModelChanged;
+        Effects.Changed -= ScheduleSave;
+        Tracking.Changed -= ScheduleSave;
+        _saveTimer.Dispose();
+        Save();
+    }
+
+    private void RegisterHotkeys()
     {
         var unavailable = new List<HotkeyGesture>();
         void Register(HotkeyGesture gesture, Action action, bool repeat = false)
@@ -95,24 +125,8 @@ public sealed class ZoomController : IDisposable
         Register(_settings.FilterHotkey, Effects.ToggleFilter);
         Register(_settings.NextFilterHotkey, Effects.NextFilter);
         Register(_settings.LocateHotkey, Effects.Locate);
+        Register(_settings.TrackingHotkey, Tracking.ToggleEnabled);
         UnavailableHotkeys = unavailable;
-
-        _wheel.Start(_settings.WheelModifiers, Step);
-        Model.Changed += OnModelChanged;
-        Effects.Changed += ScheduleSave;
-        _output.Start();
-    }
-
-    public void Toggle() => Model.Toggle(MonitorAtMouse(), _monitors.MonitorIds());
-
-    public void Activate(ZoomMode mode) => Model.Activate(mode, MonitorAtMouse(), _monitors.MonitorIds());
-
-    public void Dispose()
-    {
-        Model.Changed -= OnModelChanged;
-        Effects.Changed -= ScheduleSave;
-        _saveTimer.Dispose();
-        Save();
     }
 
     private void Step(double notches) => Model.Step(notches, MonitorAtMouse(), _monitors.MonitorIds());
@@ -129,5 +143,10 @@ public sealed class ZoomController : IDisposable
     // Wheel zooming changes the level many times per second; write the file once it settles.
     private void ScheduleSave() => _saveTimer.Change(SaveDelay, Timeout.InfiniteTimeSpan);
 
-    private void Save() => _store.Save(EffectsFactory.Apply(ZoomModelFactory.Apply(_settings, Model), Effects));
+    private void Save()
+    {
+        var settings = ZoomModelFactory.Apply(_settings, Model);
+        settings = EffectsFactory.Apply(settings, Effects);
+        _store.Save(TrackingFactory.Apply(settings, Tracking));
+    }
 }

@@ -50,7 +50,8 @@ public sealed partial class MainWindow : Window
             : string.Create(CultureInfo.CurrentCulture, $"– ({status.MonitorCount} Monitor(e) bereit)");
         CaptureText.Text = status.IsCaptureExcluded ? "ja" : "–";
         var filter = _controller.Effects.Current.Filter;
-        FilterText.Text = $"{FilterName(filter.Filter)} ({(filter.Enabled ? "an" : "aus")}) · Strg+Alt+C / +Umschalt";
+        FilterText.Text = $"{FilterName(filter.Filter)} ({(filter.Enabled ? "an" : "aus")}) · Strg+Alt+C / +Umschalt"
+            + $"\nFokus/Textcursor folgen: {(_controller.Tracking.Options.Enabled ? "an" : "aus")} · Strg+Alt+T";
 
         ErrorBar.IsOpen = status.LastError is not null;
         ErrorBar.Message = status.LastError ?? string.Empty;

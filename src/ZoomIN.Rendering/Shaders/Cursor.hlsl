@@ -50,6 +50,14 @@ float4 PSCursor(VertexOutput input) : SV_Target
     return color + RimColor * near * (1 - color.a);
 }
 
+// Hollow rectangle (focus frame) or, with thickness ≥ 0.5, a filled one (caret marker).
+// TexelSize holds the line thickness relative to the viewport here.
+float4 PSRect(VertexOutput input) : SV_Target
+{
+    float2 edge = min(input.Uv, 1 - input.Uv);
+    return (edge.x < TexelSize.x || edge.y < TexelSize.y) ? RingColor : 0;
+}
+
 float4 PSRing(VertexOutput input) : SV_Target
 {
     float d = length(input.Uv - 0.5) * 2; // 0 in the centre, 1 at the viewport edge

@@ -13,7 +13,7 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// hides the system pointer while the magnified one is drawn, and animates the locator.
 /// Runs every frame: no allocations after a pointer shape was seen once.
 /// </summary>
-internal sealed class CursorLayer : IDisposable
+internal sealed class CursorLayer
 {
     private const double MinRimPixels = 2;
     private const double LocatorSeconds = 1.0;
@@ -28,9 +28,9 @@ internal sealed class CursorLayer : IDisposable
     private long _lastMove;
     private long _autoLocateAt;
 
-    public CursorLayer(ID3D11Device device, ICursorShapeSource shapes, ISystemCursor systemCursor)
+    public CursorLayer(CursorPass pass, ICursorShapeSource shapes, ISystemCursor systemCursor)
     {
-        _pass = new CursorPass(device);
+        _pass = pass;
         _shapes = shapes;
         _systemCursor = systemCursor;
     }
@@ -42,18 +42,19 @@ internal sealed class CursorLayer : IDisposable
         var now = Stopwatch.GetTimestamp();
         TrackMovement(cursor, now, effects.Cursor.AutoLocate);
 
-        // Fullscreen and lens magnify around the pointer (fixpoint): it stays where it is.
-        // Docked: the pointer appears in the strip only while it is inside the magnified area.
+        // The pointer appears where its desktop position is shown. Around the mouse (fixpoint)
+        // that is the real position; while the view follows focus/caret it is mapped (M6).
         var docked = mode == ZoomMode.Docked && frame.HasFrame;
-        var visible = !docked || frame.Source.Contains(cursor);
-        var shown = docked
-            ? new PhysicalPoint(frame.Target.X + ((cursor.X - frame.Source.X) * zoom), frame.Target.Y + ((cursor.Y - frame.Source.Y) * zoom))
-            : cursor;
+        var magnified = zoom > 1.01;
+        var shown = FrameMapping.Map(frame, cursor);
+        if (magnified && frame.Source.Contains(cursor))
+        {
+            DrawPointer(context, target, monitor, shown, zoom, effects.Cursor);
+        }
 
-        var drawn = zoom > 1.01 && visible && DrawPointer(context, target, monitor, shown, zoom, effects.Cursor);
-
-        // In docked mode the real pointer works in the rest of the screen and must stay visible.
-        _systemCursor.SetVisible(!(drawn && !docked));
+        // Magnified: the real pointer would sit somewhere else in the image, so it is hidden.
+        // Docked: the real pointer works in the rest of the screen and stays visible.
+        _systemCursor.SetVisible(!magnified || docked);
 
         return DrawLocator(context, target, monitor, shown, now, Math.Max(locateRequestedAt, _autoLocateAt));
     }
@@ -61,14 +62,12 @@ internal sealed class CursorLayer : IDisposable
     /// <summary>Called when this monitor stops zooming while the pointer is on it.</summary>
     public void ShowSystemCursor() => _systemCursor.SetVisible(true);
 
-    public void Dispose() => _pass.Dispose();
-
-    private bool DrawPointer(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor,
+    private void DrawPointer(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor,
         PhysicalPoint shown, double zoom, CursorStyle style)
     {
         if (!_shapes.TryGetCurrent(out var handle) || _pass.Texture(handle, _shapes) is not { } pointer)
         {
-            return false;
+            return;
         }
 
         var scale = style.ScaleFor(zoom);
@@ -87,7 +86,6 @@ internal sealed class CursorLayer : IDisposable
             (float)width,
             (float)height,
             constants);
-        return true;
     }
 
     private bool DrawLocator(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor,

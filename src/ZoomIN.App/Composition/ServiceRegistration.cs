@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ZoomIN.App.Views;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Monitors;
@@ -9,6 +10,7 @@ using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Zoom;
 using ZoomIN.Platform.Diagnostics;
+using ZoomIN.Platform.Automation;
 using ZoomIN.Platform.Cursor;
 using ZoomIN.Platform.Input;
 using ZoomIN.Platform.Monitors;
@@ -30,6 +32,12 @@ internal static class ServiceRegistration
         services.AddSingleton(sp => sp.GetRequiredService<ISettingsStore>().Load());
         services.AddSingleton(sp => ZoomModelFactory.Create(sp.GetRequiredService<AppSettings>()));
         services.AddSingleton(sp => EffectsFactory.Create(sp.GetRequiredService<AppSettings>()));
+        services.AddSingleton(sp => TrackingFactory.Create(sp.GetRequiredService<AppSettings>()));
+        services.AddSingleton(sp => new RenderModels(
+            sp.GetRequiredService<ZoomModel>(),
+            sp.GetRequiredService<EffectsModel>(),
+            sp.GetRequiredService<TrackingModel>()));
+        services.AddSingleton<ITrackingSource, UiaTrackingSource>();
 
         services.AddSingleton<ICursorSource, Win32CursorSource>();
         services.AddSingleton<ICursorShapeSource, Win32CursorShapeSource>();

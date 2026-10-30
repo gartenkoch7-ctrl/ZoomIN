@@ -15,6 +15,7 @@ public sealed class ZoomEngine : IZoomOutput
     // Windows sends several display messages per change; wait until the layout has settled.
     private static readonly TimeSpan SettleDelay = TimeSpan.FromMilliseconds(500);
 
+    private readonly RenderModels _models;
     private readonly ZoomModel _model;
     private readonly EffectsModel _effects;
     private readonly PointerServices _pointer;
@@ -25,10 +26,11 @@ public sealed class ZoomEngine : IZoomOutput
     private bool _started;
     private bool _disposed;
 
-    public ZoomEngine(ZoomModel model, EffectsModel effects, PointerServices pointerServices, ILog log)
+    public ZoomEngine(RenderModels models, PointerServices pointerServices, ILog log)
     {
-        _model = model;
-        _effects = effects;
+        _models = models;
+        _model = models.Zoom;
+        _effects = models.Effects;
         _pointer = pointerServices;
         _log = log;
         _model.Changed += Wake;
@@ -114,7 +116,7 @@ public sealed class ZoomEngine : IZoomOutput
         var names = MonitorOutput.AttachedDeviceNames(factory);
         _log.Info($"Monitors: {string.Join(", ", names)}");
 
-        var renderers = names.Select(name => new MonitorRenderer(name, _model, _effects, _pointer, _log, RequestRebuild)).ToArray();
+        var renderers = names.Select(name => new MonitorRenderer(name, _models, _pointer, _log, RequestRebuild)).ToArray();
         foreach (var renderer in renderers)
         {
             renderer.Start();

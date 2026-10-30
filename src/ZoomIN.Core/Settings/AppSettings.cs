@@ -71,6 +71,23 @@ public sealed record AppSettings
     /// <summary>Show the locator when the mouse moves after a pause (M5 decision: off).</summary>
     public bool AutoLocate { get; set; }
 
+    /// <summary>Focus and caret tracking on (Strg+Alt+T); the mouse is always tracked.</summary>
+    public bool TrackingEnabled { get; set; } = true;
+
+    public bool TrackFocus { get; set; } = true;
+
+    public bool TrackCaret { get; set; } = true;
+
+    /// <summary>Glide time to focus/caret/mouse in milliseconds; 0 = jump (M6 decision: glide by default).</summary>
+    public int PanMilliseconds { get; set; } = 200;
+
+    /// <summary>The view follows the caret once it is this close to the edge (0.2 = 20 %).</summary>
+    public double CaretMargin { get; set; } = 0.2;
+
+    public bool FocusFrame { get; set; } = true;
+
+    public bool CaretMarker { get; set; } = true;
+
     /// <summary>Glide duration for zoom changes in milliseconds; 0 = instant.</summary>
     public int AnimationMilliseconds { get; set; } = 150;
 
@@ -91,6 +108,8 @@ public sealed record AppSettings
     public HotkeyGesture NextFilterHotkey { get; set; } = HotkeyGesture.NextFilter;
 
     public HotkeyGesture LocateHotkey { get; set; } = HotkeyGesture.Locate;
+
+    public HotkeyGesture TrackingHotkey { get; set; } = HotkeyGesture.ToggleTracking;
 
     public HotkeyModifiers WheelModifiers { get; set; } = HotkeyModifiers.Control;
 }
