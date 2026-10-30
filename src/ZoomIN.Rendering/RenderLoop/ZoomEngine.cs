@@ -1,6 +1,6 @@
 using Vortice.DXGI;
 using ZoomIN.Core.Diagnostics;
-using ZoomIN.Core.Tracking;
+using ZoomIN.Core.Filters;
 using ZoomIN.Core.Zoom;
 using ZoomIN.Rendering.Capture;
 
@@ -16,7 +16,8 @@ public sealed class ZoomEngine : IZoomOutput
     private static readonly TimeSpan SettleDelay = TimeSpan.FromMilliseconds(500);
 
     private readonly ZoomModel _model;
-    private readonly ICursorSource _cursor;
+    private readonly EffectsModel _effects;
+    private readonly PointerServices _pointer;
     private readonly ILog _log;
     private readonly Lock _gate = new();
     private MonitorRenderer[] _renderers = [];
@@ -24,12 +25,14 @@ public sealed class ZoomEngine : IZoomOutput
     private bool _started;
     private bool _disposed;
 
-    public ZoomEngine(ZoomModel model, ICursorSource cursor, ILog log)
+    public ZoomEngine(ZoomModel model, EffectsModel effects, PointerServices pointerServices, ILog log)
     {
         _model = model;
-        _cursor = cursor;
+        _effects = effects;
+        _pointer = pointerServices;
         _log = log;
         _model.Changed += Wake;
+        _effects.Changed += Wake;
     }
 
     public ZoomStatus Status
@@ -64,6 +67,7 @@ public sealed class ZoomEngine : IZoomOutput
     public void Dispose()
     {
         _model.Changed -= Wake;
+        _effects.Changed -= Wake;
         lock (_gate)
         {
             _disposed = true;
@@ -110,7 +114,7 @@ public sealed class ZoomEngine : IZoomOutput
         var names = MonitorOutput.AttachedDeviceNames(factory);
         _log.Info($"Monitors: {string.Join(", ", names)}");
 
-        var renderers = names.Select(name => new MonitorRenderer(name, _model, _cursor, _log, RequestRebuild)).ToArray();
+        var renderers = names.Select(name => new MonitorRenderer(name, _model, _effects, _pointer, _log, RequestRebuild)).ToArray();
         foreach (var renderer in renderers)
         {
             renderer.Start();

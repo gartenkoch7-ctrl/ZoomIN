@@ -12,6 +12,7 @@ internal sealed class MagnifyPass : IDisposable
     private readonly ID3D11VertexShader _vertexShader;
     private readonly ID3D11PixelShader _pixelShader;
     private readonly ID3D11SamplerState _sampler;
+    private readonly ID3D11SamplerState _pointSampler;
     private readonly ID3D11Buffer _constants;
 
     public MagnifyPass(ID3D11Device device)
@@ -19,6 +20,7 @@ internal sealed class MagnifyPass : IDisposable
         _vertexShader = device.CreateVertexShader(ShaderSource.Compile("Magnify.hlsl", "VSMain", "vs_4_0").Span);
         _pixelShader = device.CreatePixelShader(ShaderSource.Compile("Magnify.hlsl", "PSMain", "ps_4_0").Span);
         _sampler = device.CreateSamplerState(SamplerDescription.LinearClamp);
+        _pointSampler = device.CreateSamplerState(SamplerDescription.PointClamp);
         _constants = device.CreateBuffer(new BufferDescription(MagnifyConstants.SizeInBytes, BindFlags.ConstantBuffer, ResourceUsage.Default));
     }
 
@@ -53,6 +55,7 @@ internal sealed class MagnifyPass : IDisposable
         context.PSSetShader(_pixelShader);
         context.PSSetShaderResource(0, source);
         context.PSSetSampler(0, _sampler);
+        context.PSSetSampler(1, _pointSampler);
         context.PSSetConstantBuffer(0, _constants);
         context.Draw(3, 0);
     }
@@ -60,6 +63,7 @@ internal sealed class MagnifyPass : IDisposable
     public void Dispose()
     {
         _constants.Dispose();
+        _pointSampler.Dispose();
         _sampler.Dispose();
         _pixelShader.Dispose();
         _vertexShader.Dispose();

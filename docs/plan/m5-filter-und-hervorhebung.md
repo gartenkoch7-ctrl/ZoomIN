@@ -2,55 +2,52 @@
 
 **Ziel:** Bessere Lesbarkeit durch Farbfilter, Kantenglättung und einen gut sichtbaren
 Mauszeiger – alles im selben GPU-Durchgang.
-**Demo:** `Strg+Alt+C` schaltet den Filter; Text bleibt bei 8× scharf; großer Zeiger;
-`Strg+Alt+S` zeigt die Suchhilfe.
+**Demo:** `Strg+Alt+C` schaltet den Filter; Text bleibt bei 8× scharf; großer Zeiger mit
+Kontrastrand; `Strg+Alt+S` zeigt die Suchhilfe.
 **Voraussetzungen:** M3.
 
 ## Entscheidungen (Grilling 2026-10-30)
-- Filter im MVP: **Invertiert**, **Invertiert mit Farbtonerhalt**, **Graustufen** (normal +
-  invertiert), **Zweifarb-Schemata** (Gelb/Schwarz, Schwarz/Gelb, Weiß/Blau)
-- Standard-Glättung: **text-optimiert** (kantenschärfend); umschaltbar auf „weich“ und „Pixel“
-- Zeiger **wächst mit dem Zoom**, begrenzt durch eine einstellbare **Maximalgröße**
-- Suchhilfe: per **`Strg+Alt+S`** und optional automatisch bei Bewegung **nach Stillstand**
+- Filter: **Invertiert**, **Invertiert mit Farbtonerhalt**, **Graustufen** (normal/invertiert),
+  **Gelb auf Schwarz**, **Schwarz auf Gelb**, **Weiß auf Blau**
+- Bedienung: `Strg+Alt+C` an/aus, `Strg+Alt+Umschalt+C` nächster Filter (schaltet ihn ein)
+- **Filter wirken auch ohne Zoom (1×)** – das Overlay läuft dann bei 1×
+- Glättung Standard **text-optimiert** (Catmull-Rom); „Weich“ (bilinear) und „Pixel“ wählbar
+- Zeiger: **echte Windows-Form + Kontrastrand**, wächst mit dem Zoom bis **max. 4×**
+- Suchhilfe: `Strg+Alt+S`; Automatik nach Stillstand **standardmäßig aus** (Einstellung)
+- Systemzeiger ausblenden per `MagShowSystemCursor` → [ADR-0011](../adr/0011-systemzeiger-per-magshowsystemcursor.md)
 
 ## Aufgaben
 
-### 1. Farbfilter (`Core/Filters/`)
-- [ ] `ColorMatrix` (4×4 + Offset), Kombination mehrerer Filter
-- [ ] Voreinstellungen wie oben (eigene Werte, keine fremden Paletten)
-- [ ] Farbtonerhaltende Invertierung (Helligkeit in z. B. HSL/OKLab invertieren)
-- [ ] Kontrast, Helligkeit, Sättigung
-- [ ] Unit-Tests: bekannte Eingangsfarben → erwartete Ausgabe
+### 1. Core (`Core/Filters/`)
+- [x] `ColorMatrix` (3×3 + Offset, Komposition), `ColorFilters` (alle Filter + Kontrast/Helligkeit)
+- [x] `FilterSettings`, `Smoothing`, `CursorStyle`, `DisplayEffects` (Matrix vorberechnet)
+- [x] `EffectsModel` (Filter an/aus/nächster, Suchhilfe), lock-frei für Render-Threads
+- [x] Tests: jeder Filter mit Weiß/Schwarz/Rot, Kontrast, `with` berechnet Matrix neu
 
 ### 2. Shader (`Rendering/Shaders/`)
-- [ ] Filter-Konstanten im Constant Buffer, nur bei Änderung hochladen
-- [ ] Sampling: text-optimiert (z. B. geschärftes bikubisch), bilinear, Point
-- [ ] Bei farbtonerhaltender Invertierung: Umrechnung im Shader, Budget prüfen
-- [ ] WARP-Tests je Filter (Stichproben-Pixel)
-- [ ] GPU-Zeit 4K unter Budget aus [performance.md](../kb/performance.md)
+- [x] `Magnify.hlsl`: Farbmatrix, Catmull-Rom (9 Abtastungen), bilinear, Punkt
+- [x] `Cursor.hlsl`: Zeiger mit Kontrastrand (gedehntes Alpha), Suchring
+- [x] WARP-Tests: Filter, alle Glättungen, harte vs. weiche Kante, 0 B beim Zeichnen
 
-### 3. Vergrößerter Mauszeiger (`Rendering/Cursor/`)
-- [ ] Zeigerform aus `GetCursorInfo`/`GetIconInfoEx` → Textur, Cache pro `HCURSOR`
-      (monochrom, farbig, animiert)
-- [ ] Größe = min(Zoom × Originalgröße, Maximum aus Settings)
-- [ ] Zeichnen mit neuester Position direkt vor `Present`
-- [ ] Systemzeiger ausblenden, solange Zoom aktiv – Verfahren als **ADR-0011**
-      (`MagShowSystemCursor` vs. `SetSystemCursor`); Watchdog stellt ihn nach Absturz wieder her
-- [ ] Optionen: Farbe, Umrandung
+### 3. Zeiger (`Platform/Cursor/`, `Rendering/RenderLoop/CursorLayer`)
+- [x] Zeigerform aus `GetCursorInfo`/`GetIconInfo`/`GetDIBits` (farbig, monochrom, mit/ohne Alpha)
+- [x] Textur-Cache pro Zeiger-Handle; Zeichnen ohne Allokation
+- [x] Position: Vollbild/Lupe am echten Punkt (Fixpunkt), Angedockt umgerechnet in den Streifen
+- [x] Systemzeiger nur ausgeblendet, wenn der vergrößerte gezeichnet wird; Watchdog blendet ihn ein
 
 ### 4. Suchhilfe
-- [ ] Ring/Pulsieren um den Zeiger für ~1 s bei `Strg+Alt+S`
-- [ ] Optional: automatisch, wenn die Maus nach > X s Stillstand bewegt wird (Standard aus)
-
-### 5. Fokus-/Caret-Marker (Vorbereitung)
-- [ ] Shader zeichnet Rechtecke/Linien; Daten kommen in M6
+- [x] Ring schrumpft in 1 s auf den Zeiger; funktioniert auch bei Zoom aus
+- [x] Automatik nach 3 s Stillstand (Einstellung `AutoLocate`)
 
 ## Akzeptanzkriterien
-- [ ] Alle Filter in allen Modi und Monitoren, live umschaltbar
-- [ ] Frame-Budget mit allen Filtern eingehalten (60 + 144 Hz)
-- [ ] Zeiger korrekt für Pfeil, I-Beam, Hand, Sanduhr (animiert), Resize-Pfeile
-- [ ] Prozess abschießen → Systemzeiger wieder sichtbar
-- [ ] Filter und Zeiger bei Freigabe unsichtbar
+- [x] Filter bei 1× und mit Zoom, an/aus/weiter per Hotkey (automatisch geprüft)
+- [x] Absturz → Systemzeiger-Aufräumschritt läuft (automatisch geprüft)
+- [ ] Sichttest: Filterfarben, Textschärfe bei 8×, Zeiger + Rand, Suchring
+- [ ] Zeiger korrekt für Pfeil, I-Balken, Hand, Größenänderung (Sichttest)
+- [ ] Frame-Budget mit Catmull-Rom bei 144 Hz messen
+- [ ] Filter und Zeiger bei Bildschirmfreigabe unsichtbar (mit M1-Freigabetest)
 
 ## Offene Fragen / Risiken
-- Windows-Farbfilter (Barrierefreiheit) können parallel aktiv sein → Hinweis in der UI.
+- Animierte Zeiger nur mit erstem Bild; monochromes „Invertieren“ (I-Balken) wird schwarz
+  gezeichnet, der Rand hält es sichtbar.
+- Kontrast/Helligkeit/Glättung bisher nur in `settings.json` (UI in M7).

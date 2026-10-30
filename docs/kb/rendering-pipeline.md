@@ -40,6 +40,13 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
 | Geschützte Inhalte (DRM-Video) | erscheinen schwarz – erwartet, nicht behebbar |
 | Secure Desktop (UAC, Strg+Alt+Entf) | nicht erfassbar ohne Systemdienst – nicht im MVP |
 
+## Filter, Glättung, Zeiger (M5)
+- `Magnify.hlsl`: Abtastung (Catmull-Rom/bilinear/Punkt) → Farbmatrix (3×3 + Offset) → saturate.
+  Alle Filter sind eine Matrix, daher gleiche Kosten für jeden Filter.
+- `Cursor.hlsl`: zweiter Durchgang mit vormultipliziertem Alpha-Blending (Zeiger, Suchring);
+  danach wird das Blending wieder abgeschaltet.
+- Bei Zoom 1× mit aktivem Filter rendert das Overlay weiter (Vollbild-Geometrie).
+
 ## Shader-Regeln
 - HLSL-Dateien in `ZoomIN.Rendering/Shaders/`, als Embedded Resource eingebettet und beim
   Start mit dem in Windows enthaltenen D3DCompiler übersetzt (Entscheidung M1: kein SDK-Tool

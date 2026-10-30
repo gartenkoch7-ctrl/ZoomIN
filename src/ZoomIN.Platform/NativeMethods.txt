@@ -21,6 +21,19 @@ WM_HOTKEY
 WM_APP
 WM_QUIT
 
+// Cursor/Win32CursorShapeSource, Cursor/MagnifierSystemCursor
+GetCursorInfo
+GetIconInfo
+GetObject
+GetDIBits
+GetDC
+ReleaseDC
+DeleteObject
+BITMAP
+MagInitialize
+MagUninitialize
+MagShowSystemCursor
+
 // Shell/AppBarReservation
 SHAppBarMessage
 APPBARDATA

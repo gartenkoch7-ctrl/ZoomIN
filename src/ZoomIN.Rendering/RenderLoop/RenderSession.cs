@@ -1,7 +1,7 @@
 using Vortice.DXGI;
 using Vortice.Mathematics;
+using ZoomIN.Core.Filters;
 using ZoomIN.Core.Modes;
-using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Viewport;
 using ZoomIN.Rendering.Capture;
 using ZoomIN.Rendering.Gpu;
@@ -21,20 +21,22 @@ internal sealed class RenderSession : IDisposable
 
     // Owned resources in creation order; disposed in reverse.
     private readonly List<IDisposable> _owned = [];
-    private readonly ICursorSource _cursor;
+    private readonly PointerServices _pointer;
     private readonly MonitorOutput _monitor;
     private readonly GpuDevice _gpu;
     private readonly DesktopDuplicator _duplicator;
     private readonly OverlayWindow _overlay;
     private readonly CompositionSwapchain _swapchain;
     private readonly MagnifyPass _pass;
+    private readonly CursorLayer _cursorLayer;
     private readonly int _displayGeneration;
     private PhysicalPoint _lastCursor;
+    private bool _cursorInside;
     private bool _shown;
 
-    public RenderSession(ICursorSource cursor, string deviceName)
+    public RenderSession(PointerServices pointer, string deviceName)
     {
-        _cursor = cursor;
+        _pointer = pointer;
 
         // Taken before enumerating outputs so a change during construction is not missed.
         _displayGeneration = OverlayWindow.DisplayChangeCount;
@@ -48,6 +50,7 @@ internal sealed class RenderSession : IDisposable
             _overlay = Own(new OverlayWindow(_monitor.Bounds));
             _swapchain = Own(new CompositionSwapchain(_gpu, factory, _overlay.Handle, _monitor.Width, _monitor.Height));
             _pass = Own(new MagnifyPass(_gpu.Device));
+            _cursorLayer = Own(new CursorLayer(_gpu.Device, pointer.Shapes, pointer.SystemCursor));
         }
         catch
         {
@@ -56,20 +59,27 @@ internal sealed class RenderSession : IDisposable
         }
     }
 
-    /// <summary>The overlay is on screen (zoom is visible).</summary>
+    /// <summary>The overlay is on screen.</summary>
     public bool IsVisible => _shown;
+
+    /// <summary>The pointer locator was still animating in the last frame.</summary>
+    public bool LocatorActive { get; private set; }
 
     /// <summary>Hides the overlay but keeps every resource warm for an instant restart.</summary>
     public void Hide()
     {
         _overlay.Hide();
         _shown = false;
+        if (_cursorInside)
+        {
+            _cursorLayer.ShowSystemCursor();
+        }
     }
 
     /// <summary>Renders one frame, paced by the compositor.</summary>
     /// <returns>False if the compositor did not request a frame in time.</returns>
     /// <exception cref="DisplayChangedException">The pipeline no longer matches the monitors.</exception>
-    public bool RenderFrame(ZoomMode mode, double zoom, LensSize lens, DockLayout dock)
+    public bool RenderFrame(ZoomMode mode, double zoom, LensSize lens, DockLayout dock, DisplayEffects effects, long locateRequestedAt)
     {
         if (OverlayWindow.DisplayChangeCount != _displayGeneration)
         {
@@ -85,13 +95,16 @@ internal sealed class RenderSession : IDisposable
 
         // Read the cursor as late as possible: it decides what is shown under the pointer.
         // A monitor without the mouse keeps its last view (M3 decision).
-        if (_cursor.TryGetPosition(out var cursor) && _monitor.Bounds.Contains(cursor))
+        _cursorInside = _pointer.Position.TryGetPosition(out var cursor) && _monitor.Bounds.Contains(cursor);
+        if (_cursorInside)
         {
             _lastCursor = cursor;
         }
 
         var frame = ModeGeometry.Compute(mode, _monitor.Bounds, _lastCursor, zoom, lens, dock);
-        Draw(frame);
+        Draw(frame, effects);
+        LocatorActive = _cursorInside && _cursorLayer.Draw(
+            _gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, mode, zoom, _lastCursor, effects, locateRequestedAt);
         _swapchain.Present();
 
         // Show the window only after the first frame so it never flashes empty.
@@ -104,20 +117,31 @@ internal sealed class RenderSession : IDisposable
         return true;
     }
 
-    private void Draw(in ModeFrame frame)
+    public void Dispose()
+    {
+        for (var i = _owned.Count - 1; i >= 0; i--)
+        {
+            _owned[i].Dispose();
+        }
+
+        _owned.Clear();
+    }
+
+    private void Draw(in ModeFrame frame, DisplayEffects effects)
     {
         var monitor = _monitor.Bounds;
+        var matrix = effects.Matrix;
         if (!frame.HasFrame)
         {
             _pass.Draw(_gpu.Context, _duplicator.ShaderResource, _swapchain.RenderTarget, _swapchain.Width, _swapchain.Height,
-                MagnifyConstants.FromSourceRect(frame.Source, monitor));
+                MagnifyConstants.Fullscreen(frame.Source, monitor, matrix, effects.Smoothing));
             return;
         }
 
         // Lens/docked: everything outside the target stays transparent (and click-through).
         _gpu.Context.ClearRenderTargetView(_swapchain.RenderTarget, s_transparent);
         var viewport = Expand(frame.Target, FrameThickness, monitor);
-        var constants = MagnifyConstants.WithFrame(frame.Source, monitor, frame.Target, viewport, FrameColor.Default);
+        var constants = MagnifyConstants.WithFrame(frame.Source, monitor, frame.Target, viewport, FrameColor.Default, matrix, effects.Smoothing);
         _pass.Draw(
             _gpu.Context,
             _duplicator.ShaderResource,
@@ -134,16 +158,6 @@ internal sealed class RenderSession : IDisposable
         var x = Math.Max(rect.X - by, within.X);
         var y = Math.Max(rect.Y - by, within.Y);
         return new PhysicalRect(x, y, Math.Min(rect.Right + by, within.Right) - x, Math.Min(rect.Bottom + by, within.Bottom) - y);
-    }
-
-    public void Dispose()
-    {
-        for (var i = _owned.Count - 1; i >= 0; i--)
-        {
-            _owned[i].Dispose();
-        }
-
-        _owned.Clear();
     }
 
     private T Own<T>(T resource)

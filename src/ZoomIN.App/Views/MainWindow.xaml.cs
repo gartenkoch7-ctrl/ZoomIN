@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using ZoomIN.App.Zoom;
+using ZoomIN.Core.Filters;
 using ZoomIN.Core.Modes;
 
 namespace ZoomIN.App.Views;
@@ -48,10 +49,23 @@ public sealed partial class MainWindow : Window
             ? string.Create(CultureInfo.CurrentCulture, $"{status.FramesPerSecond} fps ({status.MonitorCount} Monitor(e))")
             : string.Create(CultureInfo.CurrentCulture, $"– ({status.MonitorCount} Monitor(e) bereit)");
         CaptureText.Text = status.IsCaptureExcluded ? "ja" : "–";
+        var filter = _controller.Effects.Current.Filter;
+        FilterText.Text = $"{FilterName(filter.Filter)} ({(filter.Enabled ? "an" : "aus")}) · Strg+Alt+C / +Umschalt";
 
         ErrorBar.IsOpen = status.LastError is not null;
         ErrorBar.Message = status.LastError ?? string.Empty;
     }
+
+    private static string FilterName(ColorFilter filter) => filter switch
+    {
+        ColorFilter.InvertedKeepHue => "Invertiert, Farbton erhalten",
+        ColorFilter.Grayscale => "Graustufen",
+        ColorFilter.GrayscaleInverted => "Graustufen invertiert",
+        ColorFilter.YellowOnBlack => "Gelb auf Schwarz",
+        ColorFilter.BlackOnYellow => "Schwarz auf Gelb",
+        ColorFilter.WhiteOnBlue => "Weiß auf Blau",
+        _ => "Invertiert",
+    };
 
     private static string ModeName(ZoomMode mode) => mode switch
     {

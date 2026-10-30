@@ -7,6 +7,11 @@ DestroyWindow
 LoadIcon
 NOTIFYICONDATAW
 
+// Crashes/SystemCursorCleanup
+MagInitialize
+MagUninitialize
+MagShowSystemCursor
+
 // Crashes/AppBarCleanup
 SHAppBarMessage
 APPBARDATA

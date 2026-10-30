@@ -30,6 +30,7 @@
                 <RowDefinition />
                 <RowDefinition />
                 <RowDefinition />
+                <RowDefinition />
             </Grid.RowDefinitions>
 
             <TextBlock Text="Zoom" />
@@ -39,7 +40,9 @@
             <TextBlock Grid.Row="2" Text="Unsichtbar bei Freigabe" />
             <TextBlock x:Name="CaptureText" Grid.Row="2" Grid.Column="1" />
             <TextBlock Grid.Row="3" Text="Tastenkürzel" />
-            <TextBlock x:Name="HotkeyText" Grid.Row="3" Grid.Column="1" />
+            <TextBlock x:Name="HotkeyText" Grid.Row="3" Grid.Column="1" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="4" Text="Farbfilter" />
+            <TextBlock x:Name="FilterText" Grid.Row="4" Grid.Column="1" />
         </Grid>
 
         <Button

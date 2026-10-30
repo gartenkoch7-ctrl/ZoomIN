@@ -17,7 +17,7 @@ public static class Program
     {
         if (WatchdogArguments.TryParse(args, out var processId))
         {
-            return WatchdogRunner.Run(processId, Environment.ProcessPath!, new FileLog(), cleanup: [new AppBarCleanup()]);
+            return WatchdogRunner.Run(processId, Environment.ProcessPath!, new FileLog(), cleanup: [new AppBarCleanup(), new SystemCursorCleanup()]);
         }
 
         WinRT.ComWrappersSupport.InitializeComWrappers();

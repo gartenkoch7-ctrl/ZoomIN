@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using ZoomIN.Core.Diagnostics;
-using ZoomIN.Core.Tracking;
+using ZoomIN.Core.Filters;
+using ZoomIN.Core.Modes;
 using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.Rendering.RenderLoop;
@@ -13,9 +14,13 @@ internal sealed class MonitorRenderer : IDisposable
 {
     private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(2);
 
+    // How long a locator request keeps an otherwise idle monitor rendering.
+    private const double LocatorSeconds = 1.0;
+
     private readonly string _deviceName;
     private readonly ZoomModel _model;
-    private readonly ICursorSource _cursor;
+    private readonly EffectsModel _effects;
+    private readonly PointerServices _pointer;
     private readonly ILog _log;
     private readonly Action _requestRebuild;
     private readonly AutoResetEvent _wake = new(false);
@@ -24,11 +29,13 @@ internal sealed class MonitorRenderer : IDisposable
     private ZoomStatus _status = ZoomStatus.Idle;
     private volatile bool _stopRequested;
 
-    public MonitorRenderer(string deviceName, ZoomModel model, ICursorSource cursor, ILog log, Action requestRebuild)
+    public MonitorRenderer(
+        string deviceName, ZoomModel model, EffectsModel effects, PointerServices pointer, ILog log, Action requestRebuild)
     {
         _deviceName = deviceName;
         _model = model;
-        _cursor = cursor;
+        _effects = effects;
+        _pointer = pointer;
         _log = log;
         _requestRebuild = requestRebuild;
         _thread = new Thread(Run) { IsBackground = true, Name = "ZoomIN Render " + deviceName, Priority = ThreadPriority.Highest };
@@ -68,7 +75,7 @@ internal sealed class MonitorRenderer : IDisposable
         {
             try
             {
-                using var session = new RenderSession(_cursor, _deviceName);
+                using var session = new RenderSession(_pointer, _deviceName);
                 _log.Info($"Zoom pipeline ready for {_deviceName}");
                 SetStatus(ZoomStatus.Idle with { IsCaptureExcluded = true });
                 RunSession(session);
@@ -84,7 +91,8 @@ internal sealed class MonitorRenderer : IDisposable
             {
                 _log.Error($"Zoom pipeline for {_deviceName} failed", ex);
                 SetStatus(ZoomStatus.Idle with { LastError = ex.Message });
-                _wake.WaitOne(_model.TargetFor(_deviceName) > ZoomLimits.Min ? RetryDelay : Timeout.InfiniteTimeSpan);
+                var needed = _model.TargetFor(_deviceName) > ZoomLimits.Min || _effects.Current.Filter.ChangesColors;
+                _wake.WaitOne(needed ? RetryDelay : Timeout.InfiniteTimeSpan);
             }
         }
     }
@@ -98,8 +106,12 @@ internal sealed class MonitorRenderer : IDisposable
 
         while (!_stopRequested)
         {
+            var effects = _effects.Current;
             animator.SetTarget(_model.TargetFor(_deviceName));
-            if (animator.IsSettled && animator.Current == ZoomLimits.Min)
+            var unzoomed = animator.IsSettled && animator.Current == ZoomLimits.Min;
+
+            // Filters work at 1× too (M5 decision); the locator needs a few frames as well.
+            if (unzoomed && !effects.Filter.ChangesColors && !session.LocatorActive && !LocatorRequested())
             {
                 if (session.IsVisible)
                 {
@@ -120,7 +132,9 @@ internal sealed class MonitorRenderer : IDisposable
             lastFrame = now;
             animator.Advance(delta, _model.AnimationSeconds);
 
-            if (session.RenderFrame(_model.Mode, animator.Current, _model.Lens, _model.Dock))
+            // Unzoomed with a filter: the whole monitor, no lens or strip.
+            var mode = unzoomed ? ZoomMode.Fullscreen : _model.Mode;
+            if (session.RenderFrame(mode, animator.Current, _model.Lens, _model.Dock, effects, _effects.LocateRequestedAt))
             {
                 frames++;
             }
@@ -133,6 +147,12 @@ internal sealed class MonitorRenderer : IDisposable
                 secondStart = Stopwatch.GetTimestamp();
             }
         }
+    }
+
+    private bool LocatorRequested()
+    {
+        var at = _effects.LocateRequestedAt;
+        return at != 0 && Stopwatch.GetElapsedTime(at).TotalSeconds < LocatorSeconds;
     }
 
     private void SetStatus(ZoomStatus status)

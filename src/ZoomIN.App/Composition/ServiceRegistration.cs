@@ -9,6 +9,7 @@ using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Zoom;
 using ZoomIN.Platform.Diagnostics;
+using ZoomIN.Platform.Cursor;
 using ZoomIN.Platform.Input;
 using ZoomIN.Platform.Monitors;
 using ZoomIN.Platform.Settings;
@@ -28,8 +29,15 @@ internal static class ServiceRegistration
         services.AddSingleton<ISettingsStore, JsonSettingsStore>();
         services.AddSingleton(sp => sp.GetRequiredService<ISettingsStore>().Load());
         services.AddSingleton(sp => ZoomModelFactory.Create(sp.GetRequiredService<AppSettings>()));
+        services.AddSingleton(sp => EffectsFactory.Create(sp.GetRequiredService<AppSettings>()));
 
         services.AddSingleton<ICursorSource, Win32CursorSource>();
+        services.AddSingleton<ICursorShapeSource, Win32CursorShapeSource>();
+        services.AddSingleton<ISystemCursor, MagnifierSystemCursor>();
+        services.AddSingleton(sp => new PointerServices(
+            sp.GetRequiredService<ICursorSource>(),
+            sp.GetRequiredService<ICursorShapeSource>(),
+            sp.GetRequiredService<ISystemCursor>()));
         services.AddSingleton<IMonitorProvider, Win32MonitorProvider>();
         services.AddSingleton<IScreenReservation, AppBarReservation>();
         services.AddSingleton<IHotkeyService, Win32HotkeyService>();

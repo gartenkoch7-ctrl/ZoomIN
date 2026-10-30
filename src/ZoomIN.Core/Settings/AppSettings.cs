@@ -1,3 +1,4 @@
+using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Zoom;
@@ -50,6 +51,26 @@ public sealed record AppSettings
     /// <summary>Docked strip size as a fraction of the monitor (M4 decision: 40 %).</summary>
     public double DockFraction { get; set; } = DockLayout.Default.Fraction;
 
+    public bool FilterEnabled { get; set; }
+
+    public ColorFilter ColorFilter { get; set; } = FilterSettings.Default.Filter;
+
+    /// <summary>1 = unchanged; 0.5–3.</summary>
+    public double Contrast { get; set; } = 1.0;
+
+    /// <summary>0 = unchanged; −0.5–0.5.</summary>
+    public double Brightness { get; set; }
+
+    public Smoothing Smoothing { get; set; } = Smoothing.Text;
+
+    /// <summary>The magnified pointer grows with the zoom up to this factor.</summary>
+    public double CursorMaxScale { get; set; } = CursorStyle.Default.MaxScale;
+
+    public bool CursorRim { get; set; } = true;
+
+    /// <summary>Show the locator when the mouse moves after a pause (M5 decision: off).</summary>
+    public bool AutoLocate { get; set; }
+
     /// <summary>Glide duration for zoom changes in milliseconds; 0 = instant.</summary>
     public int AnimationMilliseconds { get; set; } = 150;
 
@@ -64,6 +85,12 @@ public sealed record AppSettings
     public HotkeyGesture LensHotkey { get; set; } = HotkeyGesture.Lens;
 
     public HotkeyGesture DockedHotkey { get; set; } = HotkeyGesture.Docked;
+
+    public HotkeyGesture FilterHotkey { get; set; } = HotkeyGesture.ToggleFilter;
+
+    public HotkeyGesture NextFilterHotkey { get; set; } = HotkeyGesture.NextFilter;
+
+    public HotkeyGesture LocateHotkey { get; set; } = HotkeyGesture.Locate;
 
     public HotkeyModifiers WheelModifiers { get; set; } = HotkeyModifiers.Control;
 }

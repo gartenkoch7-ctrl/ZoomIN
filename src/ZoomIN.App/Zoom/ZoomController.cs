@@ -1,4 +1,5 @@
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Monitors;
@@ -30,6 +31,7 @@ public sealed class ZoomController : IDisposable
 
     public ZoomController(
         ZoomModel model,
+        EffectsModel effects,
         AppSettings settings,
         IZoomOutput output,
         IHotkeyService hotkeys,
@@ -41,6 +43,7 @@ public sealed class ZoomController : IDisposable
         ILog log)
     {
         Model = model;
+        Effects = effects;
         _settings = settings;
         _output = output;
         _hotkeys = hotkeys;
@@ -54,6 +57,8 @@ public sealed class ZoomController : IDisposable
     }
 
     public ZoomModel Model { get; }
+
+    public EffectsModel Effects { get; }
 
     public ZoomStatus Status => _output.Status;
 
@@ -87,10 +92,14 @@ public sealed class ZoomController : IDisposable
         Register(HotkeyGesture.LensNarrower, () => Model.ResizeLens(-1, 0), repeat: true);
         Register(HotkeyGesture.LensTaller, () => Model.ResizeLens(0, 1), repeat: true);
         Register(HotkeyGesture.LensShorter, () => Model.ResizeLens(0, -1), repeat: true);
+        Register(_settings.FilterHotkey, Effects.ToggleFilter);
+        Register(_settings.NextFilterHotkey, Effects.NextFilter);
+        Register(_settings.LocateHotkey, Effects.Locate);
         UnavailableHotkeys = unavailable;
 
         _wheel.Start(_settings.WheelModifiers, Step);
         Model.Changed += OnModelChanged;
+        Effects.Changed += ScheduleSave;
         _output.Start();
     }
 
@@ -101,6 +110,7 @@ public sealed class ZoomController : IDisposable
     public void Dispose()
     {
         Model.Changed -= OnModelChanged;
+        Effects.Changed -= ScheduleSave;
         _saveTimer.Dispose();
         Save();
     }
@@ -113,10 +123,11 @@ public sealed class ZoomController : IDisposable
     private void OnModelChanged()
     {
         _dockedStrip.Update();
-
-        // Wheel zooming changes the level many times per second; write the file once it settles.
-        _saveTimer.Change(SaveDelay, Timeout.InfiniteTimeSpan);
+        ScheduleSave();
     }
 
-    private void Save() => _store.Save(ZoomModelFactory.Apply(_settings, Model));
+    // Wheel zooming changes the level many times per second; write the file once it settles.
+    private void ScheduleSave() => _saveTimer.Change(SaveDelay, Timeout.InfiniteTimeSpan);
+
+    private void Save() => _store.Save(EffectsFactory.Apply(ZoomModelFactory.Apply(_settings, Model), Effects));
 }
