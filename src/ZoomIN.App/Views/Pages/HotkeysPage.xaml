@@ -11,7 +11,7 @@
         <StackPanel MaxWidth="760" HorizontalAlignment="Left" Spacing="16">
             <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="{x:Bind loc:Text.NavHotkeys}" />
             <TextBlock Text="{x:Bind loc:Text.HotkeysIntro}" TextWrapping="Wrap" />
-            <InfoBar IsClosable="False" IsOpen="{x:Bind HasMessage, Mode=OneWay}" Message="{x:Bind Vm.Message, Mode=OneWay}" Severity="Warning" />
+            <InfoBar IsClosable="False" IsOpen="{x:Bind HasMessage}" Message="{x:Bind Vm.Message, Mode=OneWay}" Severity="Warning" />
 
             <ItemsControl ItemsSource="{x:Bind Vm.Rows}">
                 <ItemsControl.ItemTemplate>

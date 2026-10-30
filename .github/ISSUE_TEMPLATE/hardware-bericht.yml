@@ -1,0 +1,46 @@
+name: Hardware-Bericht / Hardware report
+description: Läuft ZoomIN auf deiner Hardware? / Does ZoomIN work on your hardware?
+labels: [hardware]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke! Ohne Beta-Phase helfen uns diese Berichte, ungetestete Konfigurationen abzudecken.
+        Thanks! Without a beta phase, these reports cover configurations we could not test.
+  - type: input
+    id: version
+    attributes:
+      label: ZoomIN-Version (Info & Status)
+      placeholder: 1.0.0-rc1
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows-Version und Build (winver)
+      placeholder: Windows 11 23H2, Build 22631
+    validations:
+      required: true
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Grafik und Monitore
+      description: Grafikkarte(n), Laptop mit Hybrid-Grafik?, Monitore mit Auflösung, Hz, Skalierung, HDR
+    validations:
+      required: true
+  - type: checkboxes
+    id: works
+    attributes:
+      label: Was funktioniert? / What works?
+      options:
+        - label: Vollbild, Lupe, Angedockt
+        - label: Flüssig (keine Ruckler)
+        - label: Unsichtbar bei Bildschirmfreigabe (Teams/Zoom/Discord/Browser)
+        - label: Farbfilter und vergrößerter Zeiger
+        - label: Fokus und Textcursor werden verfolgt
+        - label: Mehrere Monitore
+  - type: textarea
+    id: problems
+    attributes:
+      label: Probleme und Log
+      description: Was ging schief? Bitte die Log-Datei anhängen (Info & Status → Log-Ordner öffnen).

@@ -1,0 +1,45 @@
+name: Release
+
+# Push a tag like v1.0.0-rc1 or v1.0.0 to build and publish a release (ADR-0009).
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Check file length (max 300 lines)
+        shell: pwsh
+        run: ./scripts/check-file-length.ps1
+
+      - name: Test
+        run: dotnet test --solution ZoomIN.slnx -c Release
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Publish ZIP and installer
+        shell: pwsh
+        run: |
+          $version = '${{ github.ref_name }}'.TrimStart('v')
+          ./scripts/publish.ps1 -Version $version
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ZoomIN ${{ github.ref_name }}
+          body_path: docs/release-notes/${{ github.ref_name }}.md
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            artifacts/*.zip
+            artifacts/*-setup.exe

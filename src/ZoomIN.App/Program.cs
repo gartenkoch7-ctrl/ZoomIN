@@ -30,6 +30,7 @@ public static class Program
         }
 
         Instance = instance;
+        LogBackgroundFailures(new FileLog());
         WinRT.ComWrappersSupport.InitializeComWrappers();
         Application.Start(callbackParams =>
         {
@@ -38,5 +39,20 @@ public static class Program
             _ = new App();
         });
         return 0;
+    }
+
+    /// <summary>
+    /// Errors on background threads end the process (and the watchdog restarts it); log them first
+    /// so every crash can be analysed (M8). UI-thread errors are logged in <see cref="App"/>.
+    /// </summary>
+    private static void LogBackgroundFailures(FileLog log)
+    {
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            log.Error("Unhandled exception, ZoomIN ends", e.ExceptionObject as Exception);
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            log.Error("Unobserved task exception", e.Exception);
+            e.SetObserved();
+        };
     }
 }

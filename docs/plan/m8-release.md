@@ -1,52 +1,57 @@
 # M8 – Release 1.0
 
-**Ziel:** Eine stabile, gemessene, dokumentierte Version zum Herunterladen.
-**Demo:** GitHub-Release mit ZIP und Installer; frische Windows-VM → installieren → funktioniert.
+**Ziel:** Eine stabile, gemessene, dokumentierte Version, die man herunterladen und im Alltag
+nutzen kann.
+**Demo:** GitHub-Release mit ZIP und Installer; frische Windows-Installation → installieren →
+funktioniert.
 **Voraussetzungen:** M7.
 
 ## Entscheidungen (Grilling 2026-10-30)
-- **ZIP + Inno-Setup-Installer**, **nur x64** → [ADR-0009](../adr/0009-verteilung-zip-und-inno-setup.md)
-- **Keine Beta.** Release-Notes kennzeichnen ehrlich **getestet / ungetestet**;
-  Issue-Vorlage für Hardware-Berichte
-- Testumgebung: ein PC (RTX 3060 Ti, 1 Monitor 60/144 Hz, Windows 11), virtuelle Monitore,
-  Windows-10-VM → [testumgebung.md](../kb/testumgebung.md)
+- **ZIP + Inno-Setup-Installer**, **nur x64**, **pro Benutzer** (`{autopf}` mit
+  `PrivilegesRequired=lowest` → `%LocalAppData%\Programs\ZoomIN`, keine Admin-Rechte)
+  → [ADR-0009](../adr/0009-verteilung-zip-und-inno-setup.md)
+- Installer wird **in CI gebaut** (Inno Setup per Chocolatey); lokal entsteht die ZIP
+- Version **1.0.0-rc1**, danach unverändert **1.0.0**, sobald die offenen Nutzertests durch sind
+- **Keine Beta**; Release-Notes mit ehrlicher Tabelle getestet/ungetestet; Issue-Vorlage
+- **GitHub-Repo-URL später**: Platzhalter `OWNER/ZoomIN` in `README.md` ersetzen; Update-Adresse
+  in den Einstellungen eintragen
 
-## Aufgaben
-
-### 1. Qualität & Performance
-- [ ] Messreihe nach `performance.md` bei 60 und 144 Hz, mit virtuellem Zweitmonitor
-- [ ] Dauertest 8 h (Zoom aktiv, Office/Browser): kein Speicherwachstum, keine Ruckler
-- [ ] Freigabetest: Teams, Zoom/Webex, Discord, Browser-Freigabe
-- [ ] Windows-10-VM (VirtualBox): Start, Zoom, Einstellungen – Grundfunktion
-- [ ] Regressionsliste: alle Akzeptanzkriterien M1–M7 erneut prüfen
-
-### 2. Stabilität
-- [ ] Globaler Exception-Handler: Log, Zeiger + AppBar wiederherstellen
-- [ ] Render-Thread hängt > 2 s → Overlay ausblenden, Pipeline neu starten
-- [ ] Watchdog-Szenarien erneut testen
-- [ ] Keine Telemetrie; Crash-Logs nur lokal
-
-### 3. Verteilung
-- [ ] Portable ZIP (self-contained, win-x64)
-- [ ] Inno-Setup-Skript: Installation, Startmenü, optional Autostart, saubere Deinstallation
-- [ ] `release.yml`: Tag `v*` → Build, Tests, ZIP + Installer, Release-Entwurf
-- [ ] SmartScreen-Hinweis in der Doku; EXE bei Microsoft zur Analyse einreichen
-
-### 4. Dokumentation
-- [ ] `README.md`: Was ist ZoomIN, eigene Screenshots, Download, Systemanforderungen
-- [ ] Benutzerhandbuch `docs/benutzer/` (DE, EN): Tastenkürzel, Modi, Profile
-- [ ] `CONTRIBUTING.md`: Verweis auf AGENTS.md, Clean-Room-Regeln, Setup
-- [ ] Release-Notes mit Tabelle **getestet / ungetestet** (Hybrid-Grafik, echte Zweitmonitore,
-      Laptop-DPI, HDR, ARM64 nicht unterstützt)
-- [ ] `.github/ISSUE_TEMPLATE/hardware-bericht.yml`
+## Umsetzung
+- **Stabilität:** Render-Watchdog in `ZoomEngine` (Herzschlag je `MonitorRenderer`; > 2 s ohne
+  Fortschritt → Neuaufbau; Thread hängt weiter → `Environment.FailFast`, Prozess-Watchdog
+  räumt auf und startet neu). Unbehandelte Fehler aller Threads werden geloggt.
+- **Größe:** statt des Sammelpakets nur `Microsoft.WindowsAppSDK.WinUI` + `.Foundation` –
+  ZIP 91 → **66 MB**, Ordner 235 → 173 MB (KI/ML/Suche entfallen).
+- **Verteilung:** `scripts/publish.ps1` (self-contained win-x64, ZIP, Installer falls
+  Inno Setup vorhanden), `installer/ZoomIN.iss` (de/en, optionaler Autostart, Deinstallation
+  beendet ZoomIN + Wächter und entfernt den Autostart-Eintrag).
+- **CI/Release:** `.github/workflows/release.yml` – Tag `v*` → Zeilenprüfung, Tests, Publish,
+  Installer, GitHub-Release (Tag mit „-“ = Vorabversion, Text aus `docs/release-notes/<tag>.md`).
+- **Doku:** `README.md`, `CONTRIBUTING.md`, `docs/benutzer/handbuch.md` + `manual.md`,
+  `docs/release-notes/v1.0.0-rc1.md`, `.github/ISSUE_TEMPLATE/hardware-bericht.yml`.
 
 ## Akzeptanzkriterien
-- [ ] Performance-Budgets bei 60 und 144 Hz erfüllt
-- [ ] 8-h-Dauertest bestanden
-- [ ] Installation auf frischem Windows 11 und Windows-10-VM erfolgreich
-- [ ] Release `v1.0.0` auf GitHub veröffentlicht
-- [ ] Roadmap: alle Meilensteine **erledigt**
+- [x] Release-Build (`artifacts/publish`) läuft eigenständig: Zoom an < 25 ms, 0 % CPU im
+      Leerlauf, Strg+Mausrad, Watchdog (automatisch geprüft)
+- [x] 138 Tests grün, Zeilenregel eingehalten
+- [ ] Installer in CI gebaut und auf frischem Windows 11 installiert/deinstalliert
+- [ ] Windows-10-VM: Start, Zoom, Einstellungen
+- [ ] Freigabetest Teams, Zoom/Webex, Discord, Browser (aus M1)
+- [ ] 144 Hz, Win+L, Ruhezustand; Zweitmonitor (aus M1/M3)
+- [ ] 8-h-Dauertest: kein Speicherwachstum, keine Ruckler
+- [ ] Sichttests M4–M7, Narrator-Durchgang
+- [ ] `v1.0.0-rc1` getaggt und veröffentlicht → nach den Tests `v1.0.0`
+
+## So wird veröffentlicht
+```powershell
+git remote add origin https://github.com/OWNER/ZoomIN.git   # einmalig
+git push -u origin main
+git tag v1.0.0-rc1
+git push origin v1.0.0-rc1                                  # startet release.yml
+```
+Für `v1.0.0`: `docs/release-notes/v1.0.0.md` anlegen (Tabelle aktualisieren), dann taggen.
 
 ## Offene Fragen / Risiken
-- Unsignierte EXE + Hooks + Overlay → Virenscanner-Fehlalarme möglich.
-- Ohne Beta tauchen Hardware-Probleme erst nach Release auf → schnelle Patch-Releases einplanen.
+- Unsignierte EXE + Hooks + Overlay → mögliche Virenscanner-Fehlalarme; EXE bei Microsoft
+  zur Analyse einreichen; Code-Signing (SignPath für OSS) nach dem MVP.
+- Inno-Setup-Skript ist lokal nicht kompiliert worden (kein ISCC) – erster CI-Lauf prüft es.

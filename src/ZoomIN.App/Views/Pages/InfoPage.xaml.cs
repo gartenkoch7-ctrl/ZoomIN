@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Reflection;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -23,7 +24,9 @@ public sealed partial class InfoPage : Page
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         _context = (PageContext)e.Parameter;
-        VersionText.Text = typeof(InfoPage).Assembly.GetName().Version?.ToString(3) ?? "?";
+        // Informational version keeps "-rc1"; the SDK appends "+<commit>", which users do not need.
+        var version = typeof(InfoPage).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "?";
+        VersionText.Text = version.Split('+')[0];
 
         // Status is polled: the render threads never call into the UI.
         _timer = DispatcherQueue.CreateTimer();

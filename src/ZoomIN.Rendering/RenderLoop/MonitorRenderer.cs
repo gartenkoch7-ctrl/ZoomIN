@@ -30,6 +30,8 @@ internal sealed class MonitorRenderer : IDisposable
     private readonly Lock _statusGate = new();
     private ZoomStatus _status = ZoomStatus.Idle;
     private volatile bool _stopRequested;
+    private volatile bool _sleeping;
+    private long _heartbeat;
 
     public MonitorRenderer(
         string deviceName, RenderModels models, PointerServices pointer, ILog log, Action requestRebuild)
@@ -55,7 +57,20 @@ internal sealed class MonitorRenderer : IDisposable
         }
     }
 
-    public void Start() => _thread.Start();
+    public bool IsAlive => _thread.IsAlive;
+
+    /// <summary>
+    /// True if the thread should be working but has not completed a loop for longer than
+    /// <paramref name="limit"/> (e.g. stuck in a driver call). Sleeping while idle does not count.
+    /// </summary>
+    public bool IsHung(TimeSpan limit) =>
+        _thread.IsAlive && !_sleeping && Stopwatch.GetElapsedTime(Volatile.Read(ref _heartbeat)) > limit;
+
+    public void Start()
+    {
+        Volatile.Write(ref _heartbeat, Stopwatch.GetTimestamp());
+        _thread.Start();
+    }
 
     public void Wake() => _wake.Set();
 
@@ -95,7 +110,7 @@ internal sealed class MonitorRenderer : IDisposable
                 _log.Error($"Zoom pipeline for {_deviceName} failed", ex);
                 SetStatus(ZoomStatus.Idle with { LastError = ex.Message });
                 var needed = _model.TargetFor(_deviceName) > ZoomLimits.Min || _effects.Current.Filter.ChangesColors;
-                _wake.WaitOne(needed ? RetryDelay : Timeout.InfiniteTimeSpan);
+                Sleep(needed ? RetryDelay : Timeout.InfiniteTimeSpan);
             }
         }
     }
@@ -109,6 +124,7 @@ internal sealed class MonitorRenderer : IDisposable
 
         while (!_stopRequested)
         {
+            Volatile.Write(ref _heartbeat, Stopwatch.GetTimestamp());
             var effects = _effects.Current;
             animator.SetTarget(_model.TargetFor(_deviceName));
             var unzoomed = animator.IsSettled && animator.Current == ZoomLimits.Min;
@@ -123,7 +139,7 @@ internal sealed class MonitorRenderer : IDisposable
                 }
 
                 // Not zoomed: sleep without capturing or rendering until the model changes.
-                _wake.WaitOne();
+                Sleep(Timeout.InfiniteTimeSpan);
                 lastFrame = Stopwatch.GetTimestamp();
                 secondStart = lastFrame;
                 frames = 0;
@@ -152,6 +168,15 @@ internal sealed class MonitorRenderer : IDisposable
                 secondStart = Stopwatch.GetTimestamp();
             }
         }
+    }
+
+    // Waiting on purpose is not a hang: the render watchdog ignores sleeping threads.
+    private void Sleep(TimeSpan timeout)
+    {
+        _sleeping = true;
+        _wake.WaitOne(timeout);
+        _sleeping = false;
+        Volatile.Write(ref _heartbeat, Stopwatch.GetTimestamp());
     }
 
     private bool LocatorRequested()

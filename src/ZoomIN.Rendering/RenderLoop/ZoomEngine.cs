@@ -15,6 +15,10 @@ public sealed class ZoomEngine : IZoomOutput
     // Windows sends several display messages per change; wait until the layout has settled.
     private static readonly TimeSpan SettleDelay = TimeSpan.FromMilliseconds(500);
 
+    // Render watchdog (M8): a renderer without progress for this long is considered hung.
+    private static readonly TimeSpan HangLimit = TimeSpan.FromSeconds(2);
+    private readonly Timer _watchdog;
+
     private readonly RenderModels _models;
     private readonly ZoomModel _model;
     private readonly EffectsModel _effects;
@@ -35,6 +39,7 @@ public sealed class ZoomEngine : IZoomOutput
         _log = log;
         _model.Changed += Wake;
         _effects.Changed += Wake;
+        _watchdog = new Timer(_ => CheckForHangs(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
     public ZoomStatus Status
@@ -68,6 +73,7 @@ public sealed class ZoomEngine : IZoomOutput
 
     public void Dispose()
     {
+        _watchdog.Dispose();
         _model.Changed -= Wake;
         _effects.Changed -= Wake;
         lock (_gate)
@@ -132,6 +138,26 @@ public sealed class ZoomEngine : IZoomOutput
         foreach (var renderer in renderers)
         {
             renderer.Dispose();
+            if (renderer.IsAlive && !_disposed)
+            {
+                // A thread stuck in the driver cannot be stopped, and its overlay may still cover
+                // the screen. End the process; the watchdog cleans up and restarts ZoomIN (ADR-0007).
+                _log.Error("A render thread does not stop; restarting ZoomIN via the watchdog.");
+                Environment.FailFast("ZoomIN render thread hung");
+            }
+        }
+    }
+
+    private void CheckForHangs()
+    {
+        foreach (var renderer in Volatile.Read(ref _renderers))
+        {
+            if (renderer.IsHung(HangLimit))
+            {
+                _log.Error($"Render thread without progress for over {HangLimit.TotalSeconds:0} s; rebuilding the zoom pipeline.");
+                RequestRebuild();
+                return;
+            }
         }
     }
 }

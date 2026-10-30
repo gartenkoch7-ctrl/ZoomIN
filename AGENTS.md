@@ -141,6 +141,7 @@ dotnet build ZoomIN.slnx                      # Build
 dotnet test --solution ZoomIN.slnx            # alle Tests (Microsoft.Testing.Platform, siehe global.json)
 dotnet run --project src/ZoomIN.App           # App starten
 dotnet run -c Release --project tests/ZoomIN.Benchmarks   # Benchmarks
+./scripts/publish.ps1 -Version 1.0.0-rc1      # Release: artifacts/ (ZIP, Installer mit Inno Setup)
 ./scripts/check-file-length.ps1               # 300-Zeilen-Regel prüfen
 git config core.hooksPath .githooks           # Pre-Commit-Hook aktivieren (einmalig)
 ```

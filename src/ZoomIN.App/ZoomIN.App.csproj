@@ -9,7 +9,8 @@
     <AssemblyName>ZoomIN</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\ZoomIN.ico</ApplicationIcon>
-    <Version>0.7.0</Version>
+    <!-- Overridden by scripts/publish.ps1 (-Version) for releases. -->
+    <Version>1.0.0-rc1</Version>
     <!-- x64 only in the MVP (ADR-0009). -->
     <Platforms>x64</Platforms>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
@@ -20,6 +21,8 @@
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <SelfContained>true</SelfContained>
+    <!-- ZoomIN ships German and English only; skip the framework's other UI languages. -->
+    <SatelliteResourceLanguages>de;en</SatelliteResourceLanguages>
     <!-- Own Program.Main: the same exe also runs as watchdog (ADR-0007). -->
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>
@@ -37,7 +40,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
