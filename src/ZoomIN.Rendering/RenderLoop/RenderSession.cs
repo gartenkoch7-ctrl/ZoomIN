@@ -44,6 +44,16 @@ internal sealed class RenderSession : IDisposable
         }
     }
 
+    /// <summary>The overlay is on screen (zoom is visible).</summary>
+    public bool IsVisible => _shown;
+
+    /// <summary>Hides the overlay but keeps every resource warm for an instant restart.</summary>
+    public void Hide()
+    {
+        _overlay.Hide();
+        _shown = false;
+    }
+
     /// <summary>Renders one frame, paced by the compositor.</summary>
     /// <returns>False if the compositor did not request a frame in time.</returns>
     public bool RenderFrame(double zoom)

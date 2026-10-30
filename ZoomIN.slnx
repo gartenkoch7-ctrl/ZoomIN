@@ -11,6 +11,7 @@
     <Project Path="tests/ZoomIN.Architecture.Tests/ZoomIN.Architecture.Tests.csproj" />
     <Project Path="tests/ZoomIN.Benchmarks/ZoomIN.Benchmarks.csproj" />
     <Project Path="tests/ZoomIN.Core.Tests/ZoomIN.Core.Tests.csproj" />
+    <Project Path="tests/ZoomIN.Platform.Tests/ZoomIN.Platform.Tests.csproj" />
     <Project Path="tests/ZoomIN.Rendering.Tests/ZoomIN.Rendering.Tests.csproj" />
   </Folder>
 </Solution>

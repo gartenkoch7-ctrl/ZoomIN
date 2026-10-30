@@ -9,45 +9,52 @@ mit Hotkeys und Mausrad.
 - Zoombereich **1×–16×**, stufenlos; ein Schritt = Faktor **×1,25** (multiplikativ)
 - **Strg+Mausrad** zoomt (anpassbar); ZoomIN **verschluckt** das Ereignis und hat Vorrang vor dem
   Zoom der Anwendungen → [ADR-0008](../adr/0008-tastenkuerzel-strg-alt.md)
-- Tastatur: `Strg+Alt+Bild↑ / Bild↓`
-- Einschalten: gleitet in ca. **150 ms** auf die **zuletzt benutzte Stufe**; Dauer einstellbar,
-  inkl. „sofort“
+- Tastatur: `Strg+Alt+Bild↑ / Bild↓` (mit Tastenwiederholung)
+- Einschalten **und Ausschalten** gleiten (Standard **150 ms**, einstellbar, 0 = sofort)
+- Zoom aus: Pipeline bleibt **warm**, Render-Thread schläft (kein Capture, kein Rendering)
+- Strg+Rad hoch bei „aus“ startet bei 1× und wächst; bis 1× zurückdrehen schaltet aus
 
 ## Aufgaben
 
-### 1. Geometrie (`Core/Viewport/`)
-- [ ] `PhysicalPoint`, `PhysicalSize`, `PhysicalRect` (readonly structs, `double`)
-- [ ] `ViewportCalculator.SourceRect(monitorBounds, cursor, zoom)` – Fixpunkt-Formel aus
-      [eingabe-und-tracking.md](../kb/eingabe-und-tracking.md); Test beweist: Quellrechteck
-      liegt immer im Monitor
-- [ ] Tests: Ecken, Mitte, 1×, 16×, krumme Größen, negative Koordinaten
+### 1. Geometrie (`Core/Viewport/`) – bereits in M1
+- [x] `PhysicalPoint`, `PhysicalRect`, `ViewportCalculator` (Fixpunkt) mit Tests
 
-### 2. Zoom-Zustand (`Core/Zoom/`)
-- [ ] `ZoomLimits` (1, 16, Schritt ×1,25)
-- [ ] `ZoomState`: Ziel/Ist, `Advance(deltaSeconds)`, Easing mit Zeitkonstante aus Settings
-      (0 = sofort)
-- [ ] An/Aus = Animation zwischen 1× und zuletzt benutzter Stufe (wird gespeichert)
-- [ ] Tests: konvergiert, kein Überschwingen, gleich schnell bei 60 und 144 Hz
+### 2. Zoom (`Core/Zoom/`)
+- [x] `ZoomLimits` (1, 16, ×1,25, multiplikative Schritte)
+- [x] `ZoomAnimator`: Easing in Log-Skala, bildratenunabhängig, kein Überschwingen
+- [x] `ZoomModel`: Ziel, letzte Stufe, Toggle, Step; thread-sicher, Render-Thread liest lock-frei
+- [x] Tests inkl. 60 vs. 144 Hz gleich schnell
 
-### 3. Zustandsübergabe (`Core/Rendering/`)
-- [ ] `RenderSnapshot` (immutable), `SnapshotPublisher` (atomarer Tausch)
-- [ ] Render-Thread nutzt nur Core-Logik
+### 3. Render-Thread (`Rendering/RenderLoop/`)
+- [x] Pipeline warm halten, bei 1× Overlay ausblenden und auf Ereignis schlafen
+- [x] Animation pro Frame mit echter Frame-Zeit
+- [x] Pipeline-Fehler → neu aufbauen (alle 2 s, nur solange Zoom an)
+- [x] Allokationsfreie Capture-Aufrufe (`Interop/DxgiInterop.cs`)
 
 ### 4. Eingabe (`Platform/Input/`)
-- [ ] `HotkeyService` (`RegisterHotKey`, Message-Only-Fenster, eigener Thread)
-- [ ] `WheelZoomHook` (`WH_MOUSE_LL`, eigener Thread): bei konfiguriertem Modifier
-      Ereignis verschlucken und Wert weiterreichen – Callback ohne Allokation, ohne Locks
-- [ ] Hotkeys und Mausrad-Modifier aus `settings.json` (`Core/Settings/AppSettings`)
+- [x] `Win32HotkeyService` mit optionaler Tastenwiederholung
+- [x] `Win32WheelHook` (`WH_MOUSE_LL`, eigener Thread, Ereignis wird verschluckt)
 
-### 5. Benchmarks
-- [ ] `ViewportCalculator`, `ZoomState.Advance`, Snapshot-Lesen → `0 B`
+### 5. Einstellungen (`Core/Settings/`, `Platform/Settings/`)
+- [x] `AppSettings` (Schema 1): letzte Stufe, Animationsdauer, Hotkeys, Mausrad-Modifier
+- [x] `JsonSettingsStore`: `%AppData%\ZoomIN\settings.json`, atomar, defekte Datei → `.broken` + Standard
+- [x] Speichern entprellt (1 s) und beim Beenden
+
+### 6. Benchmarks & Allokation
+- [x] `tests/ZoomIN.Benchmarks/HotPathBenchmarks.cs`
+- [x] Allokationstests (0 B) für Viewport, Animator, Modell, Shader-Draw
 
 ## Akzeptanzkriterien
-- [ ] Core-Testabdeckung ≥ 90 %, Benchmarks `0 B`
-- [ ] 1× → 16× ohne Ruckeln, bei 60 und 144 Hz gleich schnell
-- [ ] In Edge/Word zoomt bei `Strg+Mausrad` nur ZoomIN, nicht die Anwendung
-- [ ] Belegter Hotkey → verständliche Log-Meldung, kein Absturz
+- [x] Core-Tests grün (53 Tests gesamt), Allokation 0 B
+- [x] Einschalten sichtbar nach 2–16 ms (Ziel: nächster Frame) – automatisch gemessen
+- [x] Strg+Mausrad schaltet ein/aus, Stufe wird gespeichert – automatisch geprüft
+- [ ] 1× → 16× ohne Ruckeln bei 60 **und** 144 Hz (Sichttest)
+- [ ] In Edge/Word zoomt bei `Strg+Mausrad` nur ZoomIN, nicht die Anwendung (Sichttest)
+- [ ] Belegter Hotkey → Hinweis im Fenster statt Absturz (manuell mit belegtem Kürzel)
+- [ ] Core-Abdeckung ≥ 90 % messen (`dotnet test --coverage`)
 
 ## Offene Fragen / Risiken
-- Windows entfernt zu langsame LL-Hooks still → Hook-Thread überwachen und neu registrieren.
+- Ausblenden dauert bis zum vollständigen Verschwinden ≈ 390 ms (Einrasten bei exakt 1×) →
+  bei Bedarf Schwelle anheben ([performance.md](../kb/performance.md)).
+- Windows entfernt zu langsame LL-Hooks still → Hook-Thread überwachen (M3 Robustheit).
 - Spiele/Anti-Cheat reagieren evtl. auf Hooks → beobachten.

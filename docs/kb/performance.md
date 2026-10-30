@@ -32,11 +32,17 @@
 | Datum | Hardware | Monitor | Modus | Ergebnis | Hinweis |
 |---|---|---|---|---|---|
 | 2026-10-30 | RTX 3060 Ti | 1080p, 60 Hz | Vollbild 2× (M1) | 60,4 fps (171 Frames / 2,8 s) | p99 noch nicht gemessen; Start per Hotkey ≈ 215 ms (Pipeline-Aufbau) |
+| 2026-10-30 | RTX 3060 Ti | 1080p, 60 Hz | M2, Pipeline warm | Hotkey → Overlay sichtbar **2–16 ms**; Leerlauf 0,5 % eines Kerns | Ausblenden bis unsichtbar ≈ 390 ms (siehe unten) |
 
-## Bekannte Abweichungen (offen)
-- **Allokation pro neuem Desktop-Frame:** `DesktopDuplicator.Update` erzeugt bei jedem
-  geänderten Desktop-Bild zwei kleine COM-Wrapper (Vortice `IDXGIResource` +
-  `QueryInterface<ID3D11Texture2D>`). Verstößt gegen „0 B im Render-Loop“ → in M2 messen und
-  über Raw-Pointer-Aufruf oder gecachte Wrapper beseitigen.
-- **Zoom an ≈ 215 ms** statt „nächster Frame“: M1 baut die Pipeline bei jedem Einschalten neu
-  auf. M2 hält sie warm und blendet nur weich ein/aus.
+## Allokationen (M2 gelöst)
+- `DesktopDuplicator.Update` ruft `AcquireNextFrame`, `ReleaseFrame` und `CopyResource` direkt
+  über die COM-Vtable auf (`Rendering/Interop/DxgiInterop.cs`) – Vorticies Überladungen
+  erzeugten pro Frame Wrapper-Objekte.
+- Tests erzwingen 0 B: `Core.Tests/HotPath/AllocationTests` (Viewport, Animator, Modell) und
+  `Rendering.Tests/Gpu/MagnifyPassAllocationTests` (Draw auf WARP).
+
+## Offene Feinheiten
+- **Ausblenden ≈ 390 ms:** Die Animation erreicht nach 150 ms 95 %, das Overlay verschwindet
+  aber erst beim Einrasten auf exakt 1× (Schwelle 0,05 % in Log-Skala). Optisch endet die
+  Bewegung früher; ggf. Schwelle anheben, wenn es sich träge anfühlt.
+- **Leerlauf 0,5 %:** vermutlich der 250-ms-Status-Timer des Diagnosefensters (entfällt mit M7).

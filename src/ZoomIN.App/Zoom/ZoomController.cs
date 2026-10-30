@@ -1,60 +1,96 @@
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Hotkeys;
+using ZoomIN.Core.Settings;
 using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.App.Zoom;
 
 /// <summary>
-/// Connects the toggle hotkey and the UI button to the zoom output.
-/// M1: fixed 2x zoom; M2 replaces this with animated, adjustable zoom.
+/// Connects hotkeys, the mouse wheel and the UI to the <see cref="ZoomModel"/>, starts the zoom
+/// output and persists the last zoom level (debounced, and once more on shutdown).
 /// </summary>
-public sealed class ZoomController
+public sealed class ZoomController : IDisposable
 {
-    public const double FixedZoom = 2.0;
+    private static readonly TimeSpan SaveDelay = TimeSpan.FromSeconds(1);
 
     private readonly IZoomOutput _output;
     private readonly IHotkeyService _hotkeys;
+    private readonly IMouseWheelHook _wheel;
+    private readonly ISettingsStore _store;
     private readonly ILog _log;
-    private readonly Lock _gate = new();
+    private readonly Timer _saveTimer;
+    private AppSettings _settings;
 
-    public ZoomController(IZoomOutput output, IHotkeyService hotkeys, ILog log)
+    public ZoomController(
+        ZoomModel model,
+        AppSettings settings,
+        IZoomOutput output,
+        IHotkeyService hotkeys,
+        IMouseWheelHook wheel,
+        ISettingsStore store,
+        ILog log)
     {
+        Model = model;
+        _settings = settings;
         _output = output;
         _hotkeys = hotkeys;
+        _wheel = wheel;
+        _store = store;
         _log = log;
+        _saveTimer = new Timer(_ => Save());
     }
 
-    public bool IsHotkeyRegistered { get; private set; }
+    public ZoomModel Model { get; }
 
     public ZoomStatus Status => _output.Status;
 
+    /// <summary>Hotkeys that could not be registered because another application owns them.</summary>
+    public IReadOnlyList<HotkeyGesture> UnavailableHotkeys { get; private set; } = [];
+
     public void Initialize()
     {
-        IsHotkeyRegistered = _hotkeys.Register(HotkeyGesture.ToggleZoom, Toggle);
-        if (IsHotkeyRegistered)
+        var unavailable = new List<HotkeyGesture>();
+        Register(_settings.ToggleHotkey, Model.Toggle, repeat: false, unavailable);
+        Register(_settings.ZoomInHotkey, () => Model.Step(1), repeat: true, unavailable);
+        Register(_settings.ZoomOutHotkey, () => Model.Step(-1), repeat: true, unavailable);
+        UnavailableHotkeys = unavailable;
+
+        _wheel.Start(_settings.WheelModifiers, Model.Step);
+        Model.Changed += ScheduleSave;
+        _output.Start();
+    }
+
+    public void Toggle() => Model.Toggle();
+
+    public void Dispose()
+    {
+        Model.Changed -= ScheduleSave;
+        _saveTimer.Dispose();
+        Save();
+    }
+
+    private void Register(HotkeyGesture gesture, Action action, bool repeat, List<HotkeyGesture> unavailable)
+    {
+        if (_hotkeys.Register(gesture, action, repeat))
         {
-            _log.Info("Toggle hotkey Ctrl+Alt+Z registered");
+            _log.Info($"Hotkey {gesture} registered");
         }
         else
         {
-            _log.Warn("Toggle hotkey Ctrl+Alt+Z is not available; use the button instead.");
+            unavailable.Add(gesture);
         }
     }
 
-    /// <summary>Called from the hotkey thread and the UI thread.</summary>
-    public void Toggle()
+    // Wheel zooming changes the level many times per second; write the file once it settles.
+    private void ScheduleSave() => _saveTimer.Change(SaveDelay, Timeout.InfiniteTimeSpan);
+
+    private void Save()
     {
-        lock (_gate)
+        var updated = _settings with { LastZoomLevel = Model.LastLevel };
+        if (updated != _settings)
         {
-            _log.Info(_output.IsRunning ? "Toggle: stopping zoom" : "Toggle: starting zoom");
-            if (_output.IsRunning)
-            {
-                _output.Stop();
-            }
-            else
-            {
-                _output.Start(FixedZoom);
-            }
+            _settings = updated;
+            _store.Save(updated);
         }
     }
 }

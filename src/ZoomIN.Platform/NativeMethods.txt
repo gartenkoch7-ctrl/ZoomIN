@@ -14,3 +14,14 @@ GetCurrentThreadId
 WM_HOTKEY
 WM_APP
 WM_QUIT
+
+// Input/Win32WheelHook
+SetWindowsHookEx
+CallNextHookEx
+GetModuleHandle
+GetAsyncKeyState
+TranslateMessage
+DispatchMessage
+MSLLHOOKSTRUCT
+WM_MOUSEWHEEL
+VIRTUAL_KEY

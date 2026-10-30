@@ -16,13 +16,13 @@ public sealed partial class MainWindow : Window
         _controller = controller;
         InitializeComponent();
 
-        HotkeyText.Text = controller.IsHotkeyRegistered
-            ? "Strg+Alt+Z"
-            : "Strg+Alt+Z ist belegt – bitte den Knopf nutzen";
+        HotkeyText.Text = controller.UnavailableHotkeys.Count == 0
+            ? "Strg+Alt+Z · Strg+Mausrad · Strg+Alt+Bild↑/↓"
+            : "Teilweise belegt: " + string.Join(", ", controller.UnavailableHotkeys);
 
-        // The render thread publishes its status once per second; polling keeps threads decoupled.
+        // Status is polled: the render thread must never call into the UI.
         _refreshTimer = DispatcherQueue.CreateTimer();
-        _refreshTimer.Interval = TimeSpan.FromMilliseconds(500);
+        _refreshTimer.Interval = TimeSpan.FromMilliseconds(250);
         _refreshTimer.Tick += (_, _) => Refresh();
         _refreshTimer.Start();
         Closed += (_, _) => _refreshTimer.Stop();
@@ -37,14 +37,15 @@ public sealed partial class MainWindow : Window
 
     private void Refresh()
     {
+        var model = _controller.Model;
         var status = _controller.Status;
-        ZoomStateText.Text = status.IsRunning
-            ? string.Create(CultureInfo.CurrentCulture, $"an ({ZoomController.FixedZoom:0.#}×)")
-            : "aus";
-        FpsText.Text = status.IsRunning
+        ZoomStateText.Text = model.IsOn
+            ? string.Create(CultureInfo.CurrentCulture, $"an ({model.Target:0.##}×)")
+            : string.Create(CultureInfo.CurrentCulture, $"aus (zuletzt {model.LastLevel:0.##}×)");
+        FpsText.Text = status.IsVisible
             ? string.Create(CultureInfo.CurrentCulture, $"{status.FramesPerSecond} fps")
             : "–";
-        CaptureText.Text = status.IsRunning ? (status.IsCaptureExcluded ? "ja" : "NEIN") : "–";
+        CaptureText.Text = status.IsCaptureExcluded ? "ja" : "–";
 
         ErrorBar.IsOpen = status.LastError is not null;
         ErrorBar.Message = status.LastError ?? string.Empty;

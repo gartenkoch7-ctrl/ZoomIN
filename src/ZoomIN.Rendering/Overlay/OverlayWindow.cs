@@ -50,6 +50,8 @@ internal sealed unsafe class OverlayWindow : IDisposable
 
     public void Show() => PInvoke.ShowWindow(Handle, SHOW_WINDOW_CMD.SW_SHOWNOACTIVATE);
 
+    public void Hide() => PInvoke.ShowWindow(Handle, SHOW_WINDOW_CMD.SW_HIDE);
+
     public void Dispose()
     {
         if (!Handle.IsNull)

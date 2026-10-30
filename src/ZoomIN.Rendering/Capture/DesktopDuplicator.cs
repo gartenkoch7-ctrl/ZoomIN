@@ -1,6 +1,8 @@
+using System.Runtime.InteropServices;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
 using ZoomIN.Rendering.Gpu;
+using ZoomIN.Rendering.Interop;
 
 namespace ZoomIN.Rendering.Capture;
 
@@ -8,6 +10,7 @@ namespace ZoomIN.Rendering.Capture;
 /// Captures one monitor via DXGI Desktop Duplication into a texture we own, so the duplication
 /// frame can be released immediately. Windows with WDA_EXCLUDEFROMCAPTURE (our overlay) are not
 /// part of the image, which prevents feedback (docs/kb/capture-ausschluss.md).
+/// <see cref="Update"/> runs every frame and does not allocate (raw COM calls, see DxgiInterop).
 /// </summary>
 internal sealed class DesktopDuplicator : IDisposable
 {
@@ -45,33 +48,35 @@ internal sealed class DesktopDuplicator : IDisposable
             return;
         }
 
-        var result = _duplication!.AcquireNextFrame(0, out var info, out var resource);
-        if (result == Vortice.DXGI.ResultCode.WaitTimeout)
+        var duplication = _duplication!.NativePointer;
+        var hr = DxgiInterop.AcquireNextFrame(duplication, 0, out var info, out var resource);
+        if (hr == DxgiInterop.WaitTimeout)
         {
             return;
         }
 
-        if (result == Vortice.DXGI.ResultCode.AccessLost)
+        if (hr == DxgiInterop.AccessLost)
         {
             _duplication.Dispose();
             _duplication = null;
             return;
         }
 
-        result.CheckError();
+        Marshal.ThrowExceptionForHR(hr);
         try
         {
             // LastPresentTime == 0 means only the pointer moved; the image is unchanged.
-            if (info.LastPresentTime != 0)
+            if (info.LastPresentTime != 0
+                && Marshal.QueryInterface(resource, in DxgiInterop.D3D11ResourceId, out var texture) >= 0)
             {
-                using var texture = resource.QueryInterface<ID3D11Texture2D>();
-                _gpu.Context.CopyResource(_copy, texture);
+                DxgiInterop.CopyResource(_gpu.Context.NativePointer, _copy.NativePointer, texture);
+                Marshal.Release(texture);
             }
         }
         finally
         {
-            resource.Dispose();
-            _duplication.ReleaseFrame();
+            Marshal.Release(resource);
+            DxgiInterop.ReleaseFrame(duplication);
         }
     }
 

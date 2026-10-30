@@ -30,9 +30,9 @@ public sealed class Win32HotkeyService : IHotkeyService
         _queueReady.Wait();
     }
 
-    public bool Register(HotkeyGesture gesture, Action onPressed)
+    public bool Register(HotkeyGesture gesture, Action onPressed, bool repeat = false)
     {
-        var registration = new Registration(gesture, onPressed);
+        var registration = new Registration(gesture, onPressed, repeat);
         _pending.Enqueue(registration);
         PInvoke.PostThreadMessage(_threadId, PInvoke.WM_APP, default, default);
         return registration.Result.Task.GetAwaiter().GetResult();
@@ -76,7 +76,12 @@ public sealed class Win32HotkeyService : IHotkeyService
         while (_pending.TryDequeue(out var registration))
         {
             var id = _nextId++;
-            var modifiers = (HOT_KEY_MODIFIERS)registration.Gesture.Modifiers | HOT_KEY_MODIFIERS.MOD_NOREPEAT;
+            var modifiers = (HOT_KEY_MODIFIERS)registration.Gesture.Modifiers;
+            if (!registration.Repeat)
+            {
+                modifiers |= HOT_KEY_MODIFIERS.MOD_NOREPEAT;
+            }
+
             var ok = PInvoke.RegisterHotKey(HWND.Null, id, modifiers, (uint)registration.Gesture.VirtualKey);
             if (ok)
             {
@@ -104,7 +109,7 @@ public sealed class Win32HotkeyService : IHotkeyService
         }
     }
 
-    private sealed record Registration(HotkeyGesture Gesture, Action OnPressed)
+    private sealed record Registration(HotkeyGesture Gesture, Action OnPressed, bool Repeat)
     {
         public TaskCompletionSource<bool> Result { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }

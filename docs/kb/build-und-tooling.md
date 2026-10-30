@@ -22,6 +22,13 @@ Erkenntnisse aus M0 (2026-10-30, .NET SDK 10.0.302).
 - `RuntimeIdentifier` fällt auf `$(NETCoreSdkRuntimeIdentifier)` zurück, damit ein
   Solution-Build ohne `-r` funktioniert.
 
+## Ausgabeordner der App
+- Solution-Build (`dotnet build ZoomIN.slnx`) baut die App als **x64** nach
+  `src/ZoomIN.App/bin/x64/Debug/…/win-x64/`. Ein Projekt-Build ohne Plattform landet in
+  `bin/Debug/…` – nicht verwechseln (M2: veralteter Build wurde getestet).
+- Welche Version läuft, zeigt der Zeitstempel der `ZoomIN.dll`, nicht der `ZoomIN.exe`
+  (der App-Host wird nur bei Änderungen neu kopiert).
+
 ## Solution
 - `.slnx` funktioniert mit dem .NET 10 SDK (CLI und CI) ohne Probleme.
 
