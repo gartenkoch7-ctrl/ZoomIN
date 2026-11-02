@@ -73,7 +73,9 @@ $iscc = @(
 
 if (-not $iscc) {
     if ($UiAccess) {
-        throw 'Inno Setup not found: the UIAccess build needs the installer (Program Files).'
+        # The exe only starts from Program Files; install-uiaccess.ps1 copies it there.
+        Write-Host 'Inno Setup not found: installer skipped. Next, as administrator: ./scripts/install-uiaccess.ps1' -ForegroundColor Yellow
+        exit 0
     }
     Write-Host 'Inno Setup not found: installer skipped (ZIP only).' -ForegroundColor Yellow
     exit 0

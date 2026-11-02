@@ -60,8 +60,19 @@ allen normalen Topmost-Fenstern. Folge ohne UIAccess (gemeldet 2026-10-30, Windo
 Kein Fensterstil hilft (`WS_EX_TOPMOST`, `SetWindowPos(HWND_TOPMOST)`); `CreateWindowInBand` ist
 für normale Prozesse gesperrt. Lösung: der **UIAccess-Build** (ADR-0012) – Topmost-Fenster eines
 UIAccess-Prozesses kommen in die UIAccess-Ebene über diesen Menüs. Voraussetzung: signierte EXE in
-`Program Files`. ⚠️ Nach dem ersten UIAccess-Install mit Schnelleinstellungen, Info-Center und
-Startmenü bestätigen und hier eintragen.
+`Program Files`.
+
+Gemessen 2026-11-02 (Build 22631, `GetWindowBand` aus user32, undokumentiert):
+- Die Schnelleinstellungen (Ton, Netzwerk, Bluetooth) und das Startmenü hostet Explorer in
+  `XamlExplorerHostIslandWindow`, **Band 16** (`ZBID_SYSTEM_TOOLS`).
+- Normales Overlay (`dotnet run`, ZIP): **Band 1** (`ZBID_DESKTOP`) → unter dem Menü.
+- UIAccess-Build aus `Program Files`: **Band 2** (`ZBID_UIACCESS`), ganz oben in der Z-Order,
+  über allen Band-16-Fenstern. Die Bandnummer sagt nichts über die Reihenfolge aus.
+- Lokal installieren ohne Inno Setup: `setup-signing.ps1` (Admin, einmalig) →
+  `publish.ps1 -UiAccess` → `install-uiaccess.ps1` (Admin). Siehe build-und-tooling.md.
+- Simulierte Klicks/`Win+A` (`mouse_event`/`keybd_event`) öffnen die Schnelleinstellungen nicht –
+  der Sichttest muss von Hand erfolgen. ⚠️ Sichttest mit Schnelleinstellungen, Info-Center und
+  Startmenü hier eintragen.
 
 ## Pflichttest (manuell, vor jedem Release)
 1. Zoom aktivieren (alle drei Modi).
