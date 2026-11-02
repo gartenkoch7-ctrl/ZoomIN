@@ -18,6 +18,7 @@ Jeder Meilenstein endet mit etwas, das man **starten und vorführen** kann.
 | M7 | [App, Einstellungen & Profile](m7-app-und-einstellungen.md) | Einstellungsfenster, Tray, Profile, Autostart | L | umgesetzt – Sichttest offen |
 | M8 | [Release 1.0](m8-release.md) | Getestete, dokumentierte Version zum Download | M | umgesetzt – Repo, Tag, Abschlusstests offen |
 | UI | [Neugestaltung & Mauszeiger](ui-neugestaltung.md) | Windows-11-Kartenstil, Übersicht, eigene Mauszeiger-Seite | M | umgesetzt – Sichttest offen |
+| M9 | [Setup & Updates](m9-setup-und-updates.md) | Barrierefreies Online-Setup mit UIAccess, Kanälen, Versionswahl und Ein-Klick-Updates | L | geplant – **vor** dem ersten Release |
 
 Größen: **S** ≈ wenige Tage · **M** ≈ 1–2 Wochen · **L** ≈ 2–4 Wochen (eine Person, Teilzeit-Schätzung, grob).
 
@@ -28,6 +29,7 @@ M0 ─► M1 ─► M2 ─┬─► M3 ─┬─► M4 ─┐
                 │       └─► M5 ─┼─► M7 ─► M8
                 └─────► M6 ─────┘
 ```
+- M9 baut auf M8 auf, der Tag `v1.0.0` wartet aber auf M9: 1.0 erscheint mit dem neuen Setup.
 - M3 vor M4/M5: Modi und Filter werden sofort pro Monitor gebaut, nicht nachgerüstet.
 - M6 braucht nur M2 (Viewport-Logik) und kann parallel zu M3–M5 laufen.
 - M7 setzt alle Features voraus, weil es deren Einstellungen bündelt.
@@ -43,4 +45,4 @@ M0 ─► M1 ─► M2 ─┬─► M3 ─┬─► M4 ─┐
 
 ## Nach dem MVP (nicht geplant, nur gesammelt)
 Sprachausgabe (`ZoomIN.Speech`), Input-Transform mit UIAccess + Code-Signing,
-Line View, Auto-Lupe am Fokus, Zoom bis 64×, Installer mit Auto-Update.
+Line View, Auto-Lupe am Fokus, Zoom bis 64×. (Installer mit Updates → M9.)
