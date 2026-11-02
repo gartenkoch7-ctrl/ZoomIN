@@ -71,8 +71,9 @@ Gemessen 2026-11-02 (Build 22631, `GetWindowBand` aus user32, undokumentiert):
 - Lokal installieren ohne Inno Setup: `setup-signing.ps1` (Admin, einmalig) →
   `publish.ps1 -UiAccess` → `install-uiaccess.ps1` (Admin). Siehe build-und-tooling.md.
 - Simulierte Klicks/`Win+A` (`mouse_event`/`keybd_event`) öffnen die Schnelleinstellungen nicht –
-  der Sichttest muss von Hand erfolgen. ⚠️ Sichttest mit Schnelleinstellungen, Info-Center und
-  Startmenü hier eintragen.
+  der Sichttest muss von Hand erfolgen.
+- Sichttest 2026-11-02 (Build 22631, UIAccess-Build aus `Program Files`): Ton/Netzwerk/Bluetooth-Menü
+  nur noch vergrößert, kein Original darüber ✅.
 
 ## Pflichttest (manuell, vor jedem Release)
 1. Zoom aktivieren (alle drei Modi).
