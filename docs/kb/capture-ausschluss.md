@@ -27,6 +27,22 @@ verboten (ADR-0002). `MagSetInputTransform` (nur Eingabe) bleibt für später er
 | Windows < 10 2004 | `WDA_EXCLUDEFROMCAPTURE` fehlt → nicht unterstützt |
 | Alte Aufnahme-Software mit GDI-`BitBlt` | ⚠️ unverifiziert – testen und hier dokumentieren |
 
+## Kontextmenüs und Popups: Overlay wieder nach oben holen
+Gemeldet 2026-11-02: Rechtsklick-Menüs, aufgeklappte Chrome-Lesezeichenordner und ähnliche Popups
+erscheinen **doppelt** – vergrößert im Zoom und unvergrößert darüber. Ursache: Diese Popups sind
+selbst Topmost-Fenster und werden **nach** dem Overlay erzeugt; unter Topmost-Fenstern gewinnt das
+zuletzt nach oben gebrachte. Anders als Shell-Menüs liegen sie aber in derselben Ebene wie wir.
+
+Lösung (ADR-0013): `OverlayZOrderGuard` hört per `SetWinEventHook` (out-of-context, eigener
+Prozess ausgeschlossen) auf `EVENT_SYSTEM_FOREGROUND`, `EVENT_SYSTEM_MENUPOPUPSTART` und
+`EVENT_OBJECT_SHOW`. Zeigt ein fremdes **Top-Level-Fenster** sich selbst (`OBJID_WINDOW`), setzt
+das Overlay sich per `SetWindowPos(HWND_TOPMOST, SWP_NOACTIVATE …)` wieder an die Spitze.
+Entscheidung als testbare Regel: `ZoomIN.Core.Overlay.OverlayRaisePolicy`.
+- Hooks laufen auf dem Overlay-Thread (dessen Message-Loop liefert die Events), nicht im Render-Loop.
+- Das Popup ist höchstens einen Augenblick unvergrößert sichtbar, bis das Event ankommt.
+- Klicks gehen weiter durch das Overlay (`WS_EX_TRANSPARENT`, `HTTRANSPARENT`) ins Menü.
+- ⚠️ Mit Chrome-Lesezeichenordnern, Explorer-Kontextmenü und Tooltips bestätigen und hier eintragen.
+
 ## Z-Ebenen: Shell-Menüs liegen über jedem Topmost-Fenster
 Windows ordnet Fenster nicht nur nach „topmost“, sondern zusätzlich in **Ebenen (Bands)**. Die
 Schnelleinstellungen (Ton, Netzwerk), das Info-Center und das Startmenü liegen in einer Ebene über

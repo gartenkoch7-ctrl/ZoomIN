@@ -90,6 +90,8 @@ internal sealed unsafe class OverlayWindow : IDisposable
             return;
         }
 
+        // Created on this thread because its WinEvents arrive through the loop below.
+        using var zOrderGuard = new OverlayZOrderGuard(Handle);
         while (PInvoke.GetMessage(out var msg, HWND.Null, 0, 0) > 0)
         {
             PInvoke.TranslateMessage(msg);
