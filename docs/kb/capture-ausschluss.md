@@ -41,7 +41,13 @@ Entscheidung als testbare Regel: `ZoomIN.Core.Overlay.OverlayRaisePolicy`.
 - Hooks laufen auf dem Overlay-Thread (dessen Message-Loop liefert die Events), nicht im Render-Loop.
 - Das Popup ist höchstens einen Augenblick unvergrößert sichtbar, bis das Event ankommt.
 - Klicks gehen weiter durch das Overlay (`WS_EX_TRANSPARENT`, `HTTRANSPARENT`) ins Menü.
-- ⚠️ Mit Chrome-Lesezeichenordnern, Explorer-Kontextmenü und Tooltips bestätigen und hier eintragen.
+- Geprüft 2026-11-02 (Build 22631) per Z-Order-Auflistung (`GetTopWindow`/`GetWindow`):
+  Ohne Guard liegt ein Fenstermenü (`#32768`) direkt **über** `ZoomIN.Overlay`, mit Guard direkt
+  darunter. Rechtsklick-Menüs auf dem Arbeitsrechner des Nutzers ebenfalls ✅.
+- Das Ton-/Netzwerk-Menü (Schnelleinstellungen) bleibt mit `dotnet run` und ZIP sichtbar – erwartet,
+  siehe nächster Abschnitt. ⚠️ Chrome-Lesezeichenordner und Tooltips noch einzeln bestätigen.
+- Test-Falle: ZoomIN läuft nur einmal (`SingleInstance`). Läuft noch eine ältere Instanz (Tray,
+  Autostart), beendet sich der neu gestartete Build sofort, und man testet den alten Stand.
 
 ## Z-Ebenen: Shell-Menüs liegen über jedem Topmost-Fenster
 Windows ordnet Fenster nicht nur nach „topmost“, sondern zusätzlich in **Ebenen (Bands)**. Die
