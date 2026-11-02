@@ -27,6 +27,20 @@ verboten (ADR-0002). `MagSetInputTransform` (nur Eingabe) bleibt für später er
 | Windows < 10 2004 | `WDA_EXCLUDEFROMCAPTURE` fehlt → nicht unterstützt |
 | Alte Aufnahme-Software mit GDI-`BitBlt` | ⚠️ unverifiziert – testen und hier dokumentieren |
 
+## Z-Ebenen: Shell-Menüs liegen über jedem Topmost-Fenster
+Windows ordnet Fenster nicht nur nach „topmost“, sondern zusätzlich in **Ebenen (Bands)**. Die
+Schnelleinstellungen (Ton, Netzwerk), das Info-Center und das Startmenü liegen in einer Ebene über
+allen normalen Topmost-Fenstern. Folge ohne UIAccess (gemeldet 2026-10-30, Windows 11):
+- Desktop Duplication nimmt das Menü auf → es erscheint **vergrößert und gefiltert** im Zoom.
+- Das echte Menü liegt aber **über** dem Overlay → es bleibt zusätzlich **unvergrößert und
+  ungefiltert** an seiner Stelle stehen.
+
+Kein Fensterstil hilft (`WS_EX_TOPMOST`, `SetWindowPos(HWND_TOPMOST)`); `CreateWindowInBand` ist
+für normale Prozesse gesperrt. Lösung: der **UIAccess-Build** (ADR-0012) – Topmost-Fenster eines
+UIAccess-Prozesses kommen in die UIAccess-Ebene über diesen Menüs. Voraussetzung: signierte EXE in
+`Program Files`. ⚠️ Nach dem ersten UIAccess-Install mit Schnelleinstellungen, Info-Center und
+Startmenü bestätigen und hier eintragen.
+
 ## Pflichttest (manuell, vor jedem Release)
 1. Zoom aktivieren (alle drei Modi).
 2. Bildschirm freigeben in: **Microsoft Teams**, **Zoom/Webex**, **Discord**,

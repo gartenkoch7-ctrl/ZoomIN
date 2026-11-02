@@ -1,4 +1,5 @@
 using ZoomIN.Core.Filters;
+using ZoomIN.Core.Pointer;
 
 namespace ZoomIN.Core.Tests.Filters;
 
@@ -112,11 +113,11 @@ public sealed class ColorFiltersTests
     }
 
     [Fact]
-    public void CursorStyle_ScaleGrowsWithZoom_UpToMax()
+    public void PointerStyle_ScaleGrowsWithZoom_UpToMax()
     {
-        Assert.Equal(1.0, CursorStyle.Default.ScaleFor(1));
-        Assert.Equal(3.0, CursorStyle.Default.ScaleFor(3));
-        Assert.Equal(4.0, CursorStyle.Default.ScaleFor(12));
+        Assert.Equal(1.0, PointerStyle.Default.ScaleFor(1));
+        Assert.Equal(3.0, PointerStyle.Default.ScaleFor(3));
+        Assert.Equal(4.0, PointerStyle.Default.ScaleFor(12));
     }
 
     private static void AssertClose((float R, float G, float B) expected, (float R, float G, float B) actual)

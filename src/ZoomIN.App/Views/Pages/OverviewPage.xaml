@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="ZoomIN.App.Views.Pages.OverviewPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:ZoomIN.App.Views.Controls"
+    xmlns:loc="using:ZoomIN.App.Localization">
+
+    <Page.Resources>
+        <Style x:Key="TileStyle" TargetType="Border">
+            <Setter Property="Padding" Value="16,12" />
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="{StaticResource OverlayCornerRadius}" />
+        </Style>
+    </Page.Resources>
+
+    <ScrollViewer>
+        <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Style="{StaticResource CardStackStyle}">
+            <TextBlock Style="{StaticResource PageTitleStyle}" Text="{x:Bind loc:Text.Get('NavOverview')}" />
+
+            <!-- Big zoom switch with the current level and +/− buttons. -->
+            <Border Padding="20" Style="{StaticResource TileStyle}">
+                <Grid ColumnSpacing="20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <FontIcon VerticalAlignment="Center" FontSize="40" Glyph="&#xE71E;" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="{x:Bind loc:Text.Get('Overview.Zoom')}" />
+                        <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind loc:Text.Get('Overview.Zoom.Desc')}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal" Spacing="12">
+                        <Button
+                            AutomationProperties.Name="{x:Bind loc:Text.Get('Act.ZoomOut')}"
+                            Click="OnZoomOut"
+                            Content="&#xE738;"
+                            FontFamily="{StaticResource SymbolThemeFontFamily}"
+                            ToolTipService.ToolTip="{x:Bind loc:Text.Get('Act.ZoomOut')}" />
+                        <TextBlock
+                            MinWidth="72"
+                            VerticalAlignment="Center"
+                            AutomationProperties.Name="{x:Bind loc:Text.Get('Overview.Level')}"
+                            Style="{StaticResource SubtitleTextBlockStyle}"
+                            Text="{x:Bind Vm.LevelText, Mode=OneWay}"
+                            TextAlignment="Center" />
+                        <Button
+                            AutomationProperties.Name="{x:Bind loc:Text.Get('Act.ZoomIn')}"
+                            Click="OnZoomIn"
+                            Content="&#xE710;"
+                            FontFamily="{StaticResource SymbolThemeFontFamily}"
+                            ToolTipService.ToolTip="{x:Bind loc:Text.Get('Act.ZoomIn')}" />
+                        <ToggleSwitch
+                            MinWidth="0"
+                            AutomationProperties.Name="{x:Bind loc:Text.Get('Overview.Zoom')}"
+                            IsOn="{x:Bind Vm.IsOn, Mode=TwoWay}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('Overview.Mode')}" />
+            <Grid ColumnSpacing="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource TileStyle}">
+                    <RadioButton AutomationProperties.Name="{x:Bind loc:Text.ModeFullscreen}" GroupName="Mode" IsChecked="{x:Bind Vm.Fullscreen, Mode=TwoWay}">
+                        <StackPanel Spacing="4">
+                            <FontIcon HorizontalAlignment="Left" FontSize="24" Glyph="&#xE740;" />
+                            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="{x:Bind loc:Text.ModeFullscreen}" />
+                            <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind loc:Text.Get('Overview.Fullscreen.Desc')}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </RadioButton>
+                </Border>
+                <Border Grid.Column="1" Style="{StaticResource TileStyle}">
+                    <RadioButton AutomationProperties.Name="{x:Bind loc:Text.ModeLens}" GroupName="Mode" IsChecked="{x:Bind Vm.Lens, Mode=TwoWay}">
+                        <StackPanel Spacing="4">
+                            <FontIcon HorizontalAlignment="Left" FontSize="24" Glyph="&#xE721;" />
+                            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="{x:Bind loc:Text.ModeLens}" />
+                            <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind loc:Text.Get('Overview.Lens.Desc')}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </RadioButton>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource TileStyle}">
+                    <RadioButton AutomationProperties.Name="{x:Bind loc:Text.ModeDocked}" GroupName="Mode" IsChecked="{x:Bind Vm.Docked, Mode=TwoWay}">
+                        <StackPanel Spacing="4">
+                            <FontIcon HorizontalAlignment="Left" FontSize="24" Glyph="&#xE90C;" />
+                            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="{x:Bind loc:Text.ModeDocked}" />
+                            <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind loc:Text.Get('Overview.Docked.Desc')}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </RadioButton>
+                </Border>
+            </Grid>
+
+            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('Overview.Quick')}" />
+            <c:SettingCard Description="{x:Bind loc:Text.Get('FilterOn.Desc')}" Glyph="&#xE790;" Header="{x:Bind loc:Text.Get('FilterOn')}">
+                <ToggleSwitch IsOn="{x:Bind Vm.FilterOn, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Overview.Crosshair.Desc')}" Glyph="&#xE710;" Header="{x:Bind loc:Text.Get('PointerCrosshair')}">
+                <ToggleSwitch IsOn="{x:Bind Vm.CrosshairOn, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Overview.Tracking.Desc')}" Glyph="&#xE8D2;" Header="{x:Bind loc:Text.TrackingOn}">
+                <ToggleSwitch IsOn="{x:Bind Vm.TrackingOn, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Overview.Locate.Desc')}" Glyph="&#xE962;" Header="{x:Bind loc:Text.Get('Act.Locate')}">
+                <Button Click="OnLocate" Content="{x:Bind loc:Text.Get('PointerTestLocator')}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Overview.Profile.Desc')}" Glyph="&#xE77B;" Header="{x:Bind loc:Text.ProfilesActive}">
+                <ComboBox MinWidth="200" ItemsSource="{x:Bind Vm.ProfileNames}" SelectedItem="{x:Bind Vm.Profile, Mode=TwoWay}" />
+            </c:SettingCard>
+
+            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('Overview.Status')}" />
+            <InfoBar
+                IsClosable="False"
+                IsOpen="True"
+                Message="{x:Bind Vm.StatusText, Mode=OneWay}"
+                Severity="{x:Bind Vm.Severity, Mode=OneWay}" />
+        </StackPanel>
+    </ScrollViewer>
+</Page>

@@ -19,6 +19,29 @@ public sealed unsafe class Win32CursorShapeSource : ICursorShapeSource
         return ok;
     }
 
+    public nint ArrowHandle() => (nint)PInvoke.LoadCursor(HINSTANCE.Null, PInvoke.IDC_ARROW).Value;
+
+    public CursorShape? LoadStandard(nint handle, double scale)
+    {
+        var baseSize = StandardPointers.BaseSize();
+        var standard = StandardPointers.TryLoad(handle, StandardPointers.PixelsFor(scale));
+        if (standard != 0)
+        {
+            try
+            {
+                // Keeps the system handle as identity; the image is the larger standard file.
+                return Load(standard) is { } shape ? shape with { Handle = handle, BaseSize = baseSize } : null;
+            }
+            finally
+            {
+                StandardPointers.Destroy(standard);
+            }
+        }
+
+        // Application pointer: only the Windows enlargement is taken back.
+        return Load(handle) is { } own ? own with { BaseSize = Math.Min(own.Width, baseSize) } : null;
+    }
+
     public CursorShape? Load(nint handle)
     {
         ICONINFO icon;

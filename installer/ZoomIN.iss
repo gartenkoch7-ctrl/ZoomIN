@@ -1,5 +1,7 @@
 ; ZoomIN installer (ADR-0009): per user, no admin rights, x64 only.
 ; Built by scripts/publish.ps1 with /DAppVersion, /DSourceDir and /DOutputDir.
+; With /DUiAccess (publish.ps1 -UiAccess, ADR-0012): signed uiAccess build, installed for all users
+; in Program Files - Windows grants UIAccess only there, which needs admin rights once.
 
 #ifndef AppVersion
   #define AppVersion "0.0.0"
@@ -19,12 +21,20 @@ AppPublisher=ZoomIN contributors
 AppComments=Kostenlose Open-Source-Bildschirmlupe / free open-source screen magnifier
 DefaultDirName={autopf}\ZoomIN
 DisableProgramGroupPage=yes
+#ifdef UiAccess
+PrivilegesRequired=admin
+#else
 PrivilegesRequired=lowest
+#endif
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.19041
 OutputDir={#OutputDir}
+#ifdef UiAccess
+OutputBaseFilename=ZoomIN-{#AppVersion}-setup-uiaccess
+#else
 OutputBaseFilename=ZoomIN-{#AppVersion}-setup
+#endif
 SetupIconFile=..\src\ZoomIN.App\Assets\ZoomIN.ico
 UninstallDisplayIcon={app}\ZoomIN.exe
 LicenseFile=..\LICENSE
@@ -57,7 +67,8 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
   ValueData: """{app}\ZoomIN.exe"""; Tasks: autostart; Flags: uninsdeletevalue
 
 [Run]
-Filename: "{app}\ZoomIN.exe"; Flags: nowait postinstall skipifsilent
+; shellexec: CreateProcess cannot start the uiAccess build; runasoriginaluser: never elevated.
+Filename: "{app}\ZoomIN.exe"; Flags: nowait postinstall skipifsilent shellexec runasoriginaluser
 
 [UninstallRun]
 ; Ends ZoomIN and its watchdog together (same image name), so nothing restarts during uninstall.

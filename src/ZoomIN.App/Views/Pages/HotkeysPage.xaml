@@ -3,36 +3,44 @@
     x:Class="ZoomIN.App.Views.Pages.HotkeysPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:ZoomIN.App.Views.Controls"
     xmlns:loc="using:ZoomIN.App.Localization"
     xmlns:vm="using:ZoomIN.App.ViewModels"
     PreviewKeyDown="OnPreviewKeyDown">
 
     <ScrollViewer>
-        <StackPanel MaxWidth="760" HorizontalAlignment="Left" Spacing="16">
-            <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="{x:Bind loc:Text.NavHotkeys}" />
-            <TextBlock Text="{x:Bind loc:Text.HotkeysIntro}" TextWrapping="Wrap" />
+        <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Style="{StaticResource CardStackStyle}">
+            <TextBlock Style="{StaticResource PageTitleStyle}" Text="{x:Bind loc:Text.NavHotkeys}" />
+            <TextBlock Margin="0,0,0,8" Text="{x:Bind loc:Text.HotkeysIntro}" TextWrapping="Wrap" />
             <InfoBar IsClosable="False" IsOpen="{x:Bind HasMessage}" Message="{x:Bind Vm.Message, Mode=OneWay}" Severity="Warning" />
 
             <ItemsControl ItemsSource="{x:Bind Vm.Rows}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Spacing="4" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:HotkeyRow">
-                        <Grid Padding="0,6" ColumnSpacing="16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="260" />
-                                <ColumnDefinition Width="220" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock VerticalAlignment="Center" Text="{x:Bind Name}" />
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock FontWeight="SemiBold" Text="{x:Bind Gesture, Mode=OneWay}" />
-                                <TextBlock Foreground="{ThemeResource SystemFillColorCautionBrush}" Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind Warning, Mode=OneWay}" />
+                        <c:SettingCard Description="{x:Bind Warning, Mode=OneWay}" Glyph="&#xE765;" Header="{x:Bind Name}">
+                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                <Border
+                                    MinWidth="140"
+                                    Padding="10,4"
+                                    VerticalAlignment="Center"
+                                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                    CornerRadius="4">
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        FontWeight="SemiBold"
+                                        Text="{x:Bind Gesture, Mode=OneWay}" />
+                                </Border>
+                                <Button
+                                    AutomationProperties.Name="{x:Bind Name}"
+                                    Click="OnChangeClick"
+                                    Content="{x:Bind loc:Text.HotkeyChange}" />
                             </StackPanel>
-                            <Button
-                                Grid.Column="2"
-                                AutomationProperties.Name="{x:Bind Name}"
-                                Click="OnChangeClick"
-                                Content="{x:Bind loc:Text.HotkeyChange}" />
-                        </Grid>
+                        </c:SettingCard>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

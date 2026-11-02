@@ -8,6 +8,9 @@
     <RootNamespace>ZoomIN.App</RootNamespace>
     <AssemblyName>ZoomIN</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Installer build (publish.ps1 -UiAccess, ADR-0012): overlay above shell flyouts. Needs a
+         signed exe in Program Files, so it is off for dev builds and the portable ZIP. -->
+    <ApplicationManifest Condition="'$(ZoomInUiAccess)' == 'true'">app.uiaccess.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\ZoomIN.ico</ApplicationIcon>
     <!-- Overridden by scripts/publish.ps1 (-Version) for releases. -->
     <Version>1.0.0-rc1</Version>
@@ -46,4 +49,18 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
   </ItemGroup>
+
+  <!-- The Windows App SDK merges our manifest into obj\...\Manifests\app.manifest only when that file is
+       older than its inputs, so switching app.manifest <-> app.uiaccess.manifest silently kept the
+       stale merge (no uiAccess in the exe). Remember which manifest was merged; on change, delete the
+       merge so CreateWinRTRegistration runs again. -->
+  <Target Name="ZoomInRefreshMergedManifest" BeforeTargets="CreateWinRTRegistration" DependsOnTargets="GetNewAppManifestValues">
+    <PropertyGroup>
+      <ZoomInManifestMarker>$(SelfContainedIntermediateOutputPath)Manifests\merged-from.txt</ZoomInManifestMarker>
+      <ZoomInLastManifest Condition="Exists('$(ZoomInManifestMarker)')">$([System.IO.File]::ReadAllText('$(ZoomInManifestMarker)').Trim())</ZoomInLastManifest>
+    </PropertyGroup>
+    <Delete Files="$(ApplicationManifest)" Condition="'$(ZoomInLastManifest)' != '$(UserApplicationManifest)'" />
+    <MakeDir Directories="$(SelfContainedIntermediateOutputPath)Manifests\" />
+    <WriteLinesToFile File="$(ZoomInManifestMarker)" Lines="$(UserApplicationManifest)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+  </Target>
 </Project>

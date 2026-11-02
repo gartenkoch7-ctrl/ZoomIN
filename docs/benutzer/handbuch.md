@@ -41,10 +41,21 @@ Im angedockten Streifen kann man nicht klicken – er ist nur Anzeige.
 | Strg+Alt+C | Farbfilter an/aus (wirkt auch ohne Zoom) |
 | Strg+Alt+Umschalt+C | nächster Filter |
 | Strg+Alt+S | Suchhilfe: ein Ring zieht sich auf den Mauszeiger zusammen |
+| Strg+Alt+K | Fadenkreuz an/aus |
 
 Filter: Invertiert · Invertiert mit Farbton · Graustufen · Graustufen invertiert ·
-Gelb auf Schwarz · Schwarz auf Gelb · Weiß auf Blau. Kontrast, Helligkeit, Zeigergröße und
-Glättung stellen Sie unter **Farben & Zeiger** bzw. **Zoom & Modi** ein.
+Gelb auf Schwarz · Schwarz auf Gelb · Weiß auf Blau. Kontrast und Helligkeit stellen Sie unter
+**Farbfilter** ein, die Glättung unter **Zoom & Modi**.
+
+Auf der Seite **Mauszeiger** (mit Live-Vorschau) stellen Sie ein: „Windows-Zeigereinstellungen
+überschreiben“ (ZoomIN zeichnet dann immer den Windows-Standardzeiger in eigener Größe und Farbe,
+Zeigergröße und -farbe aus den Windows-Einstellungen gelten nicht), Größe ohne Zoom (1–4×),
+„Größe relativ zum Zoom“ (an: Größe × Zoomfaktor bis zur maximalen Größe; aus: der Zeiger bleibt
+gleich groß) und die maximale Größe beim Zoomen, Farbe (Original, Einfärben, Invertiert), Kontrastrand mit Farbe und
+Breite, die Suchhilfe (Farbe, Größe, Dauer; auslösen per Kürzel, Schütteln der Maus, nach
+3 Sekunden Pause oder mit Strg allein), das Fadenkreuz (nur beim Zoomen oder immer) und
+„Zeiger beim Tippen ausblenden“. Die Startseite **Übersicht** bündelt Zoom an/aus, Modus,
+Zoomstufe, Schnellschalter, Profil und Status.
 
 ## Tastaturfokus und Textcursor
 Drücken Sie Tab, springt der Zoom zum fokussierten Element (magenta umrahmt). Beim Tippen folgt

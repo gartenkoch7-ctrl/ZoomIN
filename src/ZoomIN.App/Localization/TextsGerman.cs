@@ -23,7 +23,6 @@ internal static class TextsGerman
 
         ["NavGeneral"] = "Allgemein",
         ["NavZoom"] = "Zoom & Modi",
-        ["NavColors"] = "Farben & Zeiger",
         ["NavTracking"] = "Fokus & Textcursor",
         ["NavHotkeys"] = "Tastenkürzel",
         ["NavProfiles"] = "Profile",
@@ -63,9 +62,6 @@ internal static class TextsGerman
         ["Filter.WhiteOnBlue"] = "Weiß auf Blau",
         ["ColorsContrast"] = "Kontrast",
         ["ColorsBrightness"] = "Helligkeit",
-        ["ColorsCursorSize"] = "Maximale Zeigergröße (×)",
-        ["ColorsCursorRim"] = "Kontrastrand um den Zeiger",
-        ["ColorsAutoLocate"] = "Suchhilfe, wenn die Maus nach einer Pause bewegt wird",
 
         ["TrackingOn"] = "Fokus und Textcursor folgen (Strg+Alt+T)",
         ["TrackingFocus"] = "Tastaturfokus folgen",

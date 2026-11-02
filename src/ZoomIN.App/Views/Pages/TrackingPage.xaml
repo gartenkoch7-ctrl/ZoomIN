@@ -3,31 +3,38 @@
     x:Class="ZoomIN.App.Views.Pages.TrackingPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:ZoomIN.App.Views.Controls"
     xmlns:loc="using:ZoomIN.App.Localization">
 
     <ScrollViewer>
-        <StackPanel MaxWidth="680" HorizontalAlignment="Left" Spacing="20">
-            <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="{x:Bind loc:Text.NavTracking}" />
+        <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Style="{StaticResource CardStackStyle}">
+            <TextBlock Style="{StaticResource PageTitleStyle}" Text="{x:Bind loc:Text.NavTracking}" />
 
-            <ToggleSwitch Header="{x:Bind loc:Text.TrackingOn}" IsOn="{x:Bind Vm.TrackingEnabled, Mode=TwoWay}" />
-            <ToggleSwitch Header="{x:Bind loc:Text.TrackingFocus}" IsOn="{x:Bind Vm.Focus, Mode=TwoWay}" />
-            <ToggleSwitch Header="{x:Bind loc:Text.TrackingCaret}" IsOn="{x:Bind Vm.Caret, Mode=TwoWay}" />
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Overview.Tracking.Desc')}" Glyph="&#xE8D2;" Header="{x:Bind loc:Text.TrackingOn}">
+                <ToggleSwitch IsOn="{x:Bind Vm.TrackingEnabled, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('TrackingFocus.Desc')}" Glyph="&#xE7C9;" Header="{x:Bind loc:Text.TrackingFocus}">
+                <ToggleSwitch IsOn="{x:Bind Vm.Focus, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('TrackingCaret.Desc')}" Glyph="&#xE8AC;" Header="{x:Bind loc:Text.TrackingCaret}">
+                <ToggleSwitch IsOn="{x:Bind Vm.Caret, Mode=TwoWay}" />
+            </c:SettingCard>
 
-            <Slider
-                Header="{x:Bind loc:Text.TrackingPan}"
-                Maximum="1000"
-                Minimum="0"
-                StepFrequency="50"
-                Value="{x:Bind Vm.PanMs, Mode=TwoWay}" />
-            <Slider
-                Header="{x:Bind loc:Text.TrackingMargin}"
-                Maximum="40"
-                Minimum="0"
-                StepFrequency="5"
-                Value="{x:Bind Vm.Margin, Mode=TwoWay}" />
+            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('TrackingGroupMotion')}" />
+            <c:SettingCard Description="{x:Bind loc:Text.Get('TrackingPan.Desc')}" Glyph="&#xE916;" Header="{x:Bind loc:Text.Get('TrackingPanTitle')}">
+                <c:ValueSlider Format="{}{0:0} ms" Maximum="1000" Minimum="0" Step="50" Value="{x:Bind Vm.PanMs, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('TrackingMargin.Desc')}" Glyph="&#xE740;" Header="{x:Bind loc:Text.Get('TrackingMarginTitle')}">
+                <c:ValueSlider Format="{}{0:0} %" Maximum="40" Minimum="0" Step="5" Value="{x:Bind Vm.Margin, Mode=TwoWay}" />
+            </c:SettingCard>
 
-            <ToggleSwitch Header="{x:Bind loc:Text.TrackingFocusFrame}" IsOn="{x:Bind Vm.FocusFrame, Mode=TwoWay}" />
-            <ToggleSwitch Header="{x:Bind loc:Text.TrackingCaretMarker}" IsOn="{x:Bind Vm.CaretMarker, Mode=TwoWay}" />
+            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('TrackingGroupMarks')}" />
+            <c:SettingCard Description="{x:Bind loc:Text.Get('TrackingFocusFrame.Desc')}" Glyph="&#xE91F;" Header="{x:Bind loc:Text.TrackingFocusFrame}">
+                <ToggleSwitch IsOn="{x:Bind Vm.FocusFrame, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('TrackingCaretMarker.Desc')}" Glyph="&#xE8AC;" Header="{x:Bind loc:Text.TrackingCaretMarker}">
+                <ToggleSwitch IsOn="{x:Bind Vm.CaretMarker, Mode=TwoWay}" />
+            </c:SettingCard>
         </StackPanel>
     </ScrollViewer>
 </Page>

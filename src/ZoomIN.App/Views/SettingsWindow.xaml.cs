@@ -26,7 +26,7 @@ public sealed partial class SettingsWindow : Window
         AppWindow.Closing += OnClosing;
         Text.LanguageChanged += OnLanguageChanged;
 
-        _currentPage = context.Settings.Current.FirstRunCompleted ? typeof(GeneralPage) : typeof(WelcomePage);
+        _currentPage = context.Settings.Current.FirstRunCompleted ? typeof(OverviewPage) : typeof(WelcomePage);
         BuildNavigation();
     }
 
@@ -66,12 +66,14 @@ public sealed partial class SettingsWindow : Window
     {
         Title = "ZoomIN";
         Navigation.MenuItems.Clear();
-        Add(Text.NavGeneral, "", typeof(GeneralPage));
+        Add(Text.Get("NavOverview"), "", typeof(OverviewPage));
         Add(Text.NavZoom, "", typeof(ZoomPage));
-        Add(Text.NavColors, "", typeof(ColorsPage));
-        Add(Text.NavTracking, "", typeof(TrackingPage));
+        Add(Text.Get("NavFilter"), "", typeof(FilterPage));
+        Add(Text.Get("NavPointer"), "", typeof(PointerPage));
+        Add(Text.NavTracking, "", typeof(TrackingPage));
         Add(Text.NavHotkeys, "", typeof(HotkeysPage));
         Add(Text.NavProfiles, "", typeof(ProfilesPage));
+        Add(Text.NavGeneral, "", typeof(GeneralPage));
         Add(Text.NavInfo, "", typeof(InfoPage));
 
         var current = Navigation.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => (Type)i.Tag == _currentPage);
@@ -101,9 +103,9 @@ public sealed partial class SettingsWindow : Window
     }
 
     /// <summary>Used by the first-run assistant when it is done.</summary>
-    internal void ShowGeneral()
+    internal void ShowOverview()
     {
-        _currentPage = typeof(GeneralPage);
+        _currentPage = typeof(OverviewPage);
         BuildNavigation();
     }
 }

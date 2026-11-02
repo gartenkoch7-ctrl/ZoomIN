@@ -39,6 +39,7 @@ public sealed class ZoomEngine : IZoomOutput
         _log = log;
         _model.Changed += Wake;
         _effects.Changed += Wake;
+        _effects.Signaled += Wake;
         _watchdog = new Timer(_ => CheckForHangs(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
@@ -76,6 +77,7 @@ public sealed class ZoomEngine : IZoomOutput
         _watchdog.Dispose();
         _model.Changed -= Wake;
         _effects.Changed -= Wake;
+        _effects.Signaled -= Wake;
         lock (_gate)
         {
             _disposed = true;

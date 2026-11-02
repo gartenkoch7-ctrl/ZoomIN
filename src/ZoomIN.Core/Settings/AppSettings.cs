@@ -1,6 +1,7 @@
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
+using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.Core.Settings;
@@ -82,13 +83,51 @@ public sealed record AppSettings
 
     public Smoothing Smoothing { get; set; } = Smoothing.Text;
 
+    // --- Pointer (pointer page); colours are "#RRGGBB" ---
+
     /// <summary>The magnified pointer grows with the zoom up to this factor.</summary>
-    public double CursorMaxScale { get; set; } = CursorStyle.Default.MaxScale;
+    public double CursorMaxScale { get; set; } = PointerStyle.Default.MaxScale;
 
-    public bool CursorRim { get; set; } = true;
+    /// <summary>Pointer size without zoom; above 1 ZoomIN draws the pointer itself.</summary>
+    public double CursorUnzoomedScale { get; set; } = PointerStyle.Default.UnzoomedScale;
 
-    /// <summary>Show the locator when the mouse moves after a pause (M5 decision: off).</summary>
-    public bool AutoLocate { get; set; }
+    /// <summary>ZoomIN's pointer size and colour replace the Windows pointer settings.</summary>
+    public bool CursorOverrideWindows { get; set; } = PointerStyle.Default.OverrideWindows;
+
+    /// <summary>False: the pointer keeps its size at every zoom level.</summary>
+    public bool CursorGrowWithZoom { get; set; } = PointerStyle.Default.GrowWithZoom;
+
+    public PointerColorMode CursorColorMode { get; set; } = PointerStyle.Default.ColorMode;
+
+    public string CursorColor { get; set; } = PointerStyle.Default.Color.ToHex();
+
+    public bool CursorRim { get; set; } = PointerStyle.Default.Rim;
+
+    public string CursorRimColor { get; set; } = PointerStyle.Default.RimColor.ToHex();
+
+    public double CursorRimWidth { get; set; } = PointerStyle.Default.RimWidth;
+
+    public string LocatorColor { get; set; } = PointerStyle.Default.LocatorColor.ToHex();
+
+    public double LocatorSize { get; set; } = PointerStyle.Default.LocatorSize;
+
+    public double LocatorSeconds { get; set; } = PointerStyle.Default.LocatorSeconds;
+
+    /// <summary>What shows the locator (decision: hotkey, shaking, after a rest; Ctrl alone off).</summary>
+    public LocatorTriggers LocatorTriggers { get; set; } = PointerStyle.Default.LocatorTriggers;
+
+    public bool CrosshairEnabled { get; set; }
+
+    /// <summary>False: crosshair only while zoomed.</summary>
+    public bool CrosshairAlways { get; set; }
+
+    public string CrosshairColor { get; set; } = PointerStyle.Default.CrosshairColor.ToHex();
+
+    public double CrosshairWidth { get; set; } = PointerStyle.Default.CrosshairWidth;
+
+    public double CrosshairOpacity { get; set; } = PointerStyle.Default.CrosshairOpacity;
+
+    public bool HideCursorWhileTyping { get; set; }
 
     /// <summary>Focus and caret tracking on (Strg+Alt+T); the mouse is always tracked.</summary>
     public bool TrackingEnabled { get; set; } = true;
@@ -128,6 +167,8 @@ public sealed record AppSettings
     public HotkeyGesture NextFilterHotkey { get; set; } = HotkeyGesture.NextFilter;
 
     public HotkeyGesture LocateHotkey { get; set; } = HotkeyGesture.Locate;
+
+    public HotkeyGesture CrosshairHotkey { get; set; } = HotkeyGesture.ToggleCrosshair;
 
     public HotkeyGesture TrackingHotkey { get; set; } = HotkeyGesture.ToggleTracking;
 

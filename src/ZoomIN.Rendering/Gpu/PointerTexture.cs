@@ -18,9 +18,13 @@ internal sealed class PointerTexture : IDisposable
         Height = shape.Height;
         HotspotX = shape.HotspotX;
         HotspotY = shape.HotspotY;
+        Density = shape.Density;
     }
 
     public ID3D11ShaderResourceView View { get; }
+
+    /// <summary>Image pixels per screen pixel at pointer size 1×, see <see cref="CursorShape.Density"/>.</summary>
+    public double Density { get; }
 
     public int Width { get; }
 

@@ -44,7 +44,8 @@ public static class WatchdogRunner
         if (RestartPolicy.ShouldRestart(crashes, DateTimeOffset.Now))
         {
             log.Info("[Watchdog] Restarting ZoomIN.");
-            Process.Start(new ProcessStartInfo(appPath) { UseShellExecute = false })?.Dispose();
+            // Through the shell, as CreateProcess cannot start the uiAccess build (ADR-0012).
+            Process.Start(new ProcessStartInfo(appPath) { UseShellExecute = true })?.Dispose();
             return 0;
         }
 

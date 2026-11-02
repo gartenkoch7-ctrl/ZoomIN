@@ -1,9 +1,11 @@
+using ZoomIN.App.Pointer;
 using ZoomIN.App.Settings;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Monitors;
+using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Zoom;
 
@@ -22,6 +24,7 @@ public sealed class ZoomController : IDisposable
     private readonly ITrackingSource _trackingSource;
     private readonly IHotkeyService _hotkeys;
     private readonly IMouseWheelHook _wheel;
+    private readonly IInputActivitySource _activity;
     private readonly IMonitorProvider _monitors;
     private readonly ICursorSource _cursor;
     private readonly ILog _log;
@@ -34,6 +37,7 @@ public sealed class ZoomController : IDisposable
         ITrackingSource trackingSource,
         IHotkeyService hotkeys,
         IMouseWheelHook wheel,
+        IInputActivitySource activity,
         IMonitorProvider monitors,
         ICursorSource cursor,
         IScreenReservation reservation,
@@ -45,6 +49,7 @@ public sealed class ZoomController : IDisposable
         _trackingSource = trackingSource;
         _hotkeys = hotkeys;
         _wheel = wheel;
+        _activity = activity;
         _monitors = monitors;
         _cursor = cursor;
         _log = log;
@@ -68,6 +73,7 @@ public sealed class ZoomController : IDisposable
     {
         RegisterHotkeys();
         _wheel.Start(_settings.Current.WheelModifiers, Step);
+        _activity.Start(new PointerActivity(Effects));
         Model.Changed += _dockedStrip.Update;
         _output.Start();
         _trackingSource.Start(Tracking);
@@ -105,6 +111,9 @@ public sealed class ZoomController : IDisposable
         }
     }
 
+    /// <summary>Zoom in (+) or out (−) on the monitor under the mouse, e.g. from the overview page.</summary>
+    public void ZoomBy(double steps) => Step(steps);
+
     public void Dispose() => Model.Changed -= _dockedStrip.Update;
 
     private void RegisterHotkeys()
@@ -135,7 +144,12 @@ public sealed class ZoomController : IDisposable
         Register(HotkeyGesture.LensShorter, () => Model.ResizeLens(0, -1), repeat: true);
         Register(s.FilterHotkey, Effects.ToggleFilter);
         Register(s.NextFilterHotkey, Effects.NextFilter);
-        Register(s.LocateHotkey, Effects.Locate);
+        if (Effects.Current.Cursor.LocatorTriggers.HasFlag(LocatorTriggers.Hotkey))
+        {
+            Register(s.LocateHotkey, Effects.Locate);
+        }
+
+        Register(s.CrosshairHotkey, Effects.ToggleCrosshair);
         Register(s.TrackingHotkey, Tracking.ToggleEnabled);
         Register(s.ProfileHotkey, _profiles.Next);
         UnavailableHotkeys = unavailable;

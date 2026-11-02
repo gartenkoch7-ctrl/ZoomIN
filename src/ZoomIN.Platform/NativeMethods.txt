@@ -82,3 +82,20 @@ DispatchMessage
 MSLLHOOKSTRUCT
 WM_MOUSEWHEEL
 VIRTUAL_KEY
+
+// Input/Win32InputActivityHook
+KBDLLHOOKSTRUCT
+WM_KEYDOWN
+WM_KEYUP
+WM_SYSKEYDOWN
+WM_SYSKEYUP
+WM_MOUSEMOVE
+WM_LBUTTONDOWN
+WM_RBUTTONDOWN
+WM_MBUTTONDOWN
+
+// Cursor/Win32CursorShapeSource (pointer page preview)
+LoadCursor
+DestroyCursor
+GetDpiForSystem
+IDC_ARROW

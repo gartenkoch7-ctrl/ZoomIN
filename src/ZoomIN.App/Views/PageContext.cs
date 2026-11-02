@@ -1,6 +1,7 @@
 using ZoomIN.App.Settings;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Lifecycle;
+using ZoomIN.Core.Tracking;
 
 namespace ZoomIN.App.Views;
 
@@ -9,6 +10,7 @@ namespace ZoomIN.App.Views;
 /// <param name="Profiles">Profile commands.</param>
 /// <param name="Controller">Zoom commands, hotkey (re)registration, status.</param>
 /// <param name="Autostart">Start with Windows.</param>
+/// <param name="CursorShapes">Pointer images for the preview on the pointer page.</param>
 /// <param name="WindowHandle">Settings window handle, needed by file pickers.</param>
 /// <param name="WelcomeFinished">Called when the first-run assistant is done.</param>
 public sealed record PageContext(
@@ -16,5 +18,6 @@ public sealed record PageContext(
     ProfileService Profiles,
     ZoomController Controller,
     IAutostart Autostart,
+    ICursorShapeSource CursorShapes,
     Func<nint> WindowHandle,
     Action WelcomeFinished);

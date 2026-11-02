@@ -22,6 +22,9 @@ internal sealed class CursorPass : IDisposable
     private readonly ID3D11Buffer _constants;
     private readonly Dictionary<nint, PointerTexture?> _textures = [];
 
+    // Standard pointers (Windows settings overridden) per handle and sharp size (1, 2, 4, 8).
+    private readonly Dictionary<(nint Handle, int Sharp), PointerTexture?> _standard = [];
+
     public CursorPass(ID3D11Device device)
     {
         _device = device;
@@ -49,6 +52,18 @@ internal sealed class CursorPass : IDisposable
         return texture;
     }
 
+    /// <summary>Standard Windows pointer for a handle, sharp up to pointer size <paramref name="sharp"/>; loaded on first use.</summary>
+    public PointerTexture? StandardTexture(nint handle, int sharp, ICursorShapeSource source)
+    {
+        if (!_standard.TryGetValue((handle, sharp), out var texture))
+        {
+            texture = source.LoadStandard(handle, sharp) is { } shape ? PointerTexture.Create(_device, shape) : null;
+            _standard[(handle, sharp)] = texture;
+        }
+
+        return texture;
+    }
+
     public void DrawPointer(ID3D11DeviceContext context, ID3D11RenderTargetView target, PointerTexture pointer,
         float x, float y, float width, float height, in CursorConstants constants) =>
         Draw(context, target, _pointerShader, pointer.View, x, y, width, height, constants);
@@ -63,7 +78,7 @@ internal sealed class CursorPass : IDisposable
 
     public void Dispose()
     {
-        foreach (var texture in _textures.Values)
+        foreach (var texture in _textures.Values.Concat(_standard.Values))
         {
             texture?.Dispose();
         }

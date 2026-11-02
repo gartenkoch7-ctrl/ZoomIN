@@ -3,37 +3,31 @@
     x:Class="ZoomIN.App.Views.Pages.InfoPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:ZoomIN.App.Views.Controls"
     xmlns:loc="using:ZoomIN.App.Localization">
 
     <ScrollViewer>
-        <StackPanel MaxWidth="680" HorizontalAlignment="Left" Spacing="16">
-            <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="{x:Bind loc:Text.NavInfo}" />
-
-            <Grid ColumnSpacing="24" RowSpacing="8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition />
-                    <RowDefinition />
-                    <RowDefinition />
-                    <RowDefinition />
-                </Grid.RowDefinitions>
-                <TextBlock Text="{x:Bind loc:Text.InfoZoom}" />
-                <TextBlock x:Name="ZoomText" Grid.Column="1" TextWrapping="Wrap" />
-                <TextBlock Grid.Row="1" Text="{x:Bind loc:Text.InfoFps}" />
-                <TextBlock x:Name="FpsText" Grid.Row="1" Grid.Column="1" />
-                <TextBlock Grid.Row="2" Text="{x:Bind loc:Text.InfoCapture}" />
-                <TextBlock x:Name="CaptureText" Grid.Row="2" Grid.Column="1" />
-                <TextBlock Grid.Row="3" Text="{x:Bind loc:Text.InfoVersion}" />
-                <TextBlock x:Name="VersionText" Grid.Row="3" Grid.Column="1" />
-            </Grid>
+        <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Style="{StaticResource CardStackStyle}">
+            <TextBlock Style="{StaticResource PageTitleStyle}" Text="{x:Bind loc:Text.NavInfo}" />
 
             <InfoBar x:Name="ErrorBar" Title="{x:Bind loc:Text.InfoError}" IsClosable="False" Severity="Error" />
 
-            <Button Click="OnOpenLogs" Content="{x:Bind loc:Text.InfoLogs}" />
-            <TextBlock Text="{x:Bind loc:Text.InfoLicense}" TextWrapping="Wrap" />
+            <c:SettingCard Glyph="&#xE71E;" Header="{x:Bind loc:Text.InfoZoom}">
+                <TextBlock x:Name="ZoomText" MaxWidth="460" TextAlignment="Right" TextWrapping="Wrap" />
+            </c:SettingCard>
+            <c:SettingCard Glyph="&#xE9D9;" Header="{x:Bind loc:Text.InfoFps}">
+                <TextBlock x:Name="FpsText" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('InfoCapture.Desc')}" Glyph="&#xE72E;" Header="{x:Bind loc:Text.InfoCapture}">
+                <TextBlock x:Name="CaptureText" />
+            </c:SettingCard>
+            <c:SettingCard Glyph="&#xE946;" Header="{x:Bind loc:Text.InfoVersion}">
+                <TextBlock x:Name="VersionText" IsTextSelectionEnabled="True" />
+            </c:SettingCard>
+            <c:SettingCard Glyph="&#xE8B7;" Header="{x:Bind loc:Text.Get('InfoLogsTitle')}">
+                <Button Click="OnOpenLogs" Content="{x:Bind loc:Text.InfoLogs}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.InfoLicense}" Glyph="&#xE8A1;" Header="ZoomIN" />
         </StackPanel>
     </ScrollViewer>
 </Page>

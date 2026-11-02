@@ -41,10 +41,20 @@ is display-only.
 | Ctrl+Alt+C | Colour filter on/off (also without zoom) |
 | Ctrl+Alt+Shift+C | Next filter |
 | Ctrl+Alt+S | Locator: a ring shrinks onto the pointer |
+| Ctrl+Alt+K | Crosshair on/off |
 
 Filters: inverted · inverted keeping hue · greyscale · greyscale inverted · yellow on black ·
-black on yellow · white on blue. Contrast, brightness, pointer size and smoothing are under
-**Colours & pointer** and **Zoom & modes**.
+black on yellow · white on blue. Contrast and brightness are under **Colour filters**, smoothing
+under **Zoom & modes**.
+
+The **Mouse pointer** page (with live preview) sets: "Override Windows pointer settings" (ZoomIN
+then always draws the standard Windows pointer in its own size and colour; pointer size and colour
+from the Windows settings no longer apply), size without zoom (1–4×), "Size relative to zoom" (on:
+size × zoom factor up to the maximum size; off: the pointer keeps its size) and the maximum size
+while zoomed, colour (original, tint, inverted), contrast rim with colour and width, the locator
+(colour, size, duration; triggered by shortcut, shaking the mouse, after a 3-second pause or Ctrl
+alone), the crosshair (only while zoomed or always) and "hide pointer while typing". The
+**Overview** start page gathers zoom on/off, mode, level, quick switches, profile and status.
 
 ## Keyboard focus and text cursor
 Press Tab and the zoom moves to the focused element (magenta frame). While typing it follows

@@ -15,9 +15,6 @@ internal sealed class MonitorRenderer : IDisposable
 {
     private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(2);
 
-    // How long a locator request keeps an otherwise idle monitor rendering.
-    private const double LocatorSeconds = 1.0;
-
     private readonly string _deviceName;
     private readonly ZoomModel _model;
     private readonly EffectsModel _effects;
@@ -109,7 +106,7 @@ internal sealed class MonitorRenderer : IDisposable
             {
                 _log.Error($"Zoom pipeline for {_deviceName} failed", ex);
                 SetStatus(ZoomStatus.Idle with { LastError = ex.Message });
-                var needed = _model.TargetFor(_deviceName) > ZoomLimits.Min || _effects.Current.Filter.ChangesColors;
+                var needed = _model.TargetFor(_deviceName) > ZoomLimits.Min || NeedsOverlayUnzoomed(_effects.Current);
                 Sleep(needed ? RetryDelay : Timeout.InfiniteTimeSpan);
             }
         }
@@ -129,8 +126,9 @@ internal sealed class MonitorRenderer : IDisposable
             animator.SetTarget(_model.TargetFor(_deviceName));
             var unzoomed = animator.IsSettled && animator.Current == ZoomLimits.Min;
 
-            // Filters work at 1× too (M5 decision); the locator needs a few frames as well.
-            if (unzoomed && !effects.Filter.ChangesColors && !session.LocatorActive && !LocatorRequested())
+            // Filters work at 1× too (M5 decision); so do the pointer options (larger or coloured
+            // pointer, crosshair, hiding while typing); the locator needs a few frames as well.
+            if (unzoomed && !NeedsOverlayUnzoomed(effects) && !session.LocatorActive && !LocatorRequested(effects))
             {
                 if (session.IsVisible)
                 {
@@ -151,10 +149,10 @@ internal sealed class MonitorRenderer : IDisposable
             lastFrame = now;
             animator.Advance(delta, _model.AnimationSeconds);
 
-            // Unzoomed with a filter: the whole monitor, no lens or strip.
+            // Unzoomed: the whole monitor, no lens or strip.
             var mode = unzoomed ? ZoomMode.Fullscreen : _model.Mode;
             var request = new FrameRequest(mode, animator.Current, _model.Lens, _model.Dock, effects,
-                _effects.LocateRequestedAt, _tracking.Snapshot, _tracking.Options);
+                _effects.LocateRequestedAt, _tracking.Snapshot, _tracking.Options, _effects.PointerHiddenByTyping);
             if (session.RenderFrame(request))
             {
                 frames++;
@@ -179,10 +177,14 @@ internal sealed class MonitorRenderer : IDisposable
         Volatile.Write(ref _heartbeat, Stopwatch.GetTimestamp());
     }
 
-    private bool LocatorRequested()
+    private bool NeedsOverlayUnzoomed(DisplayEffects effects) =>
+        effects.Filter.ChangesColors || effects.Cursor.NeedsOverlayUnzoomed || _effects.PointerHiddenByTyping;
+
+    // A locator request keeps an otherwise idle monitor rendering until the ring is gone.
+    private bool LocatorRequested(DisplayEffects effects)
     {
         var at = _effects.LocateRequestedAt;
-        return at != 0 && Stopwatch.GetElapsedTime(at).TotalSeconds < LocatorSeconds;
+        return at != 0 && Stopwatch.GetElapsedTime(at).TotalSeconds < effects.Cursor.LocatorSeconds;
     }
 
     private void SetStatus(ZoomStatus status)

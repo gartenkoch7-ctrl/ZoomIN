@@ -17,6 +17,7 @@ public sealed record HotkeyBinding(string TextKey, Func<AppSettings, HotkeyGestu
         new("Act.Filter", s => s.FilterHotkey, (s, g) => s with { FilterHotkey = g }),
         new("Act.NextFilter", s => s.NextFilterHotkey, (s, g) => s with { NextFilterHotkey = g }),
         new("Act.Locate", s => s.LocateHotkey, (s, g) => s with { LocateHotkey = g }),
+        new("Act.Crosshair", s => s.CrosshairHotkey, (s, g) => s with { CrosshairHotkey = g }),
         new("Act.Tracking", s => s.TrackingHotkey, (s, g) => s with { TrackingHotkey = g }),
         new("Act.Profile", s => s.ProfileHotkey, (s, g) => s with { ProfileHotkey = g }),
     ];

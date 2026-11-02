@@ -26,6 +26,8 @@ public readonly record struct HotkeyGesture(HotkeyModifiers Modifiers, int Virtu
 
     public static HotkeyGesture Locate { get; } = new(CtrlAlt, 0x53); // S
 
+    public static HotkeyGesture ToggleCrosshair { get; } = new(CtrlAlt, 0x4B); // K
+
     public static HotkeyGesture ToggleTracking { get; } = new(CtrlAlt, 0x54); // T
 
     public static HotkeyGesture NextProfile { get; } = new(CtrlAlt, 0x50); // P

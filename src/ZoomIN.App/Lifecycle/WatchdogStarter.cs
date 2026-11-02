@@ -19,10 +19,11 @@ internal static class WatchdogStarter
 
         try
         {
+            // Through the shell: CreateProcess refuses exes with uiAccess="true" (installer build,
+            // ADR-0012) with ERROR_ELEVATION_REQUIRED; ShellExecute lets Windows grant UIAccess.
             var info = new ProcessStartInfo(Environment.ProcessPath!, WatchdogArguments.Format(Environment.ProcessId))
             {
-                UseShellExecute = false,
-                CreateNoWindow = true,
+                UseShellExecute = true,
             };
             Process.Start(info)?.Dispose();
             log.Info("Watchdog started.");

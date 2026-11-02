@@ -1,21 +1,24 @@
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using ZoomIN.App.ViewModels;
 
 namespace ZoomIN.App.Views.Pages;
 
-public sealed partial class ColorsPage : Page
+public sealed partial class FilterPage : Page
 {
-    public ColorsPage()
+    public FilterPage()
     {
         InitializeComponent();
     }
 
-    public ColorsViewModel? Vm { get; private set; }
+    public FilterViewModel? Vm { get; private set; }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        Vm = new ColorsViewModel((PageContext)e.Parameter);
+        Vm = new FilterViewModel((PageContext)e.Parameter);
         Bindings.Update();
     }
+
+    private void OnReset(object sender, RoutedEventArgs e) => Vm?.Reset();
 }

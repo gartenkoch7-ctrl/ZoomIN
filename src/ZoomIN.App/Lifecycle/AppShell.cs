@@ -6,6 +6,7 @@ using ZoomIN.App.Zoom;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.Modes;
+using ZoomIN.Core.Tracking;
 
 namespace ZoomIN.App.Lifecycle;
 
@@ -27,7 +28,7 @@ public sealed class AppShell
 
     public AppShell(
         ZoomController controller, SettingsService settings, ProfileService profiles, ITrayIcon tray,
-        IUpdateChecker updates, IAutostart autostart, ILog log)
+        IUpdateChecker updates, IAutostart autostart, ICursorShapeSource cursorShapes, ILog log)
     {
         _controller = controller;
         _settings = settings;
@@ -36,7 +37,7 @@ public sealed class AppShell
         _updates = updates;
         _log = log;
         _dispatcher = DispatcherQueue.GetForCurrentThread();
-        _pages = new PageContext(settings, profiles, controller, autostart, () => _window?.Handle ?? 0, () => _window?.ShowGeneral());
+        _pages = new PageContext(settings, profiles, controller, autostart, cursorShapes, () => _window?.Handle ?? 0, () => _window?.ShowOverview());
     }
 
     /// <summary>Raised on the UI thread when the user chose "Exit".</summary>

@@ -3,35 +3,34 @@
     x:Class="ZoomIN.App.Views.Pages.GeneralPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:ZoomIN.App.Views.Controls"
     xmlns:loc="using:ZoomIN.App.Localization">
 
     <ScrollViewer>
-        <StackPanel MaxWidth="680" HorizontalAlignment="Left" Spacing="20">
-            <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="{x:Bind loc:Text.NavGeneral}" />
+        <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Style="{StaticResource CardStackStyle}">
+            <TextBlock Style="{StaticResource PageTitleStyle}" Text="{x:Bind loc:Text.NavGeneral}" />
 
-            <ComboBox
-                MinWidth="280"
-                Header="{x:Bind loc:Text.GeneralLanguage}"
-                SelectedIndex="{x:Bind Vm.LanguageIndex, Mode=TwoWay}">
-                <ComboBoxItem Content="{x:Bind loc:Text.LanguageSystem}" />
-                <ComboBoxItem Content="Deutsch" />
-                <ComboBoxItem Content="English" />
-            </ComboBox>
+            <c:SettingCard Glyph="&#xF2B7;" Header="{x:Bind loc:Text.GeneralLanguage}">
+                <ComboBox MinWidth="200" SelectedIndex="{x:Bind Vm.LanguageIndex, Mode=TwoWay}">
+                    <ComboBoxItem Content="{x:Bind loc:Text.LanguageSystem}" />
+                    <ComboBoxItem Content="Deutsch" />
+                    <ComboBoxItem Content="English" />
+                </ComboBox>
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('GeneralAutostart.Desc')}" Glyph="&#xE7E8;" Header="{x:Bind loc:Text.GeneralAutostart}">
+                <ToggleSwitch IsOn="{x:Bind Vm.Autostart, Mode=TwoWay}" />
+            </c:SettingCard>
 
-            <ToggleSwitch Header="{x:Bind loc:Text.GeneralAutostart}" IsOn="{x:Bind Vm.Autostart, Mode=TwoWay}" />
-
-            <StackPanel Spacing="6">
-                <ToggleSwitch Header="{x:Bind loc:Text.GeneralUpdates}" IsOn="{x:Bind Vm.CheckUpdates, Mode=TwoWay}" />
-                <TextBlock
-                    Style="{StaticResource CaptionTextBlockStyle}"
-                    Text="{x:Bind loc:Text.GeneralUpdatesHint}"
-                    TextWrapping="Wrap" />
-            </StackPanel>
-
-            <TextBox
-                Header="{x:Bind loc:Text.GeneralUpdateUrl}"
-                PlaceholderText="https://api.github.com/repos/…/releases/latest"
-                Text="{x:Bind Vm.UpdateUrl, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('GeneralGroupUpdates')}" />
+            <c:SettingCard Description="{x:Bind loc:Text.GeneralUpdatesHint}" Glyph="&#xE895;" Header="{x:Bind loc:Text.GeneralUpdates}">
+                <ToggleSwitch IsOn="{x:Bind Vm.CheckUpdates, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Glyph="&#xE71B;" Header="{x:Bind loc:Text.GeneralUpdateUrl}" HorizontalContentAlignment="Stretch">
+                <TextBox
+                    MinWidth="320"
+                    PlaceholderText="https://api.github.com/repos/…/releases/latest"
+                    Text="{x:Bind Vm.UpdateUrl, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+            </c:SettingCard>
         </StackPanel>
     </ScrollViewer>
 </Page>

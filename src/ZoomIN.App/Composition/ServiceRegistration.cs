@@ -8,6 +8,7 @@ using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Monitors;
+using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Zoom;
@@ -58,6 +59,7 @@ internal static class ServiceRegistration
         services.AddSingleton<IScreenReservation, AppBarReservation>();
         services.AddSingleton<IHotkeyService, Win32HotkeyService>();
         services.AddSingleton<IMouseWheelHook, Win32WheelHook>();
+        services.AddSingleton<IInputActivitySource, Win32InputActivityHook>();
         services.AddSingleton<ITrackingSource, UiaTrackingSource>();
         services.AddSingleton<ITrayIcon, Win32TrayIcon>();
         services.AddSingleton<IAutostart, RegistryAutostart>();

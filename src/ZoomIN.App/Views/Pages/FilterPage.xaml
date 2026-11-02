@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="ZoomIN.App.Views.Pages.FilterPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:ZoomIN.App.Views.Controls"
+    xmlns:loc="using:ZoomIN.App.Localization">
+
+    <ScrollViewer>
+        <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Style="{StaticResource CardStackStyle}">
+            <TextBlock Style="{StaticResource PageTitleStyle}" Text="{x:Bind loc:Text.Get('NavFilter')}" />
+
+            <c:SettingCard Description="{x:Bind loc:Text.Get('FilterOn.Desc')}" Glyph="&#xE790;" Header="{x:Bind loc:Text.Get('FilterOn')}">
+                <ToggleSwitch IsOn="{x:Bind Vm.FilterOn, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('FilterKind.Desc')}" Glyph="&#xE7B3;" Header="{x:Bind loc:Text.Get('FilterKind')}">
+                <ComboBox MinWidth="240" ItemsSource="{x:Bind Vm.FilterNames}" SelectedIndex="{x:Bind Vm.FilterIndex, Mode=TwoWay}" />
+            </c:SettingCard>
+
+            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('FilterAdjust')}" />
+            <c:SettingCard Description="{x:Bind loc:Text.Get('FilterContrast.Desc')}" Glyph="&#xE793;" Header="{x:Bind loc:Text.Get('FilterContrast')}">
+                <c:ValueSlider Format="{}{0:0} %" Maximum="300" Minimum="50" Step="5" Value="{x:Bind Vm.Contrast, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('FilterBrightness.Desc')}" Glyph="&#xE706;" Header="{x:Bind loc:Text.Get('FilterBrightness')}">
+                <c:ValueSlider Format="{}{0:+0;-0;0} %" Maximum="50" Minimum="-50" Step="5" Value="{x:Bind Vm.Brightness, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Glyph="&#xE777;" Header="{x:Bind loc:Text.Get('FilterReset')}">
+                <Button Click="OnReset" Content="{x:Bind loc:Text.Get('Reset')}" />
+            </c:SettingCard>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

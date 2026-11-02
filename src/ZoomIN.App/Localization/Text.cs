@@ -9,7 +9,9 @@ namespace ZoomIN.App.Localization;
 /// </summary>
 public static class Text
 {
-    private static IReadOnlyDictionary<string, string> s_current = TextsEnglish.All;
+    private static readonly IReadOnlyDictionary<string, string> s_german = Merge(TextsGerman.All, TextsGermanCards.All);
+    private static readonly IReadOnlyDictionary<string, string> s_english = Merge(TextsEnglish.All, TextsEnglishCards.All);
+    private static IReadOnlyDictionary<string, string> s_current = s_english;
 
     public static event Action? LanguageChanged;
 
@@ -19,13 +21,16 @@ public static class Text
     {
         IsGerman = language == AppLanguage.German
             || (language == AppLanguage.System && CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "de");
-        s_current = IsGerman ? TextsGerman.All : TextsEnglish.All;
+        s_current = IsGerman ? s_german : s_english;
         LanguageChanged?.Invoke();
     }
 
     public static string Get(string key) => s_current.TryGetValue(key, out var value) ? value : key;
 
     public static string Format(string key, params object[] args) => string.Format(CultureInfo.CurrentCulture, Get(key), args);
+
+    private static Dictionary<string, string> Merge(IReadOnlyDictionary<string, string> a, IReadOnlyDictionary<string, string> b) =>
+        a.Concat(b).ToDictionary(p => p.Key, p => p.Value);
 
     // Modes, states
     public static string ModeFullscreen => Get(nameof(ModeFullscreen));
@@ -46,7 +51,6 @@ public static class Text
     // Navigation
     public static string NavGeneral => Get(nameof(NavGeneral));
     public static string NavZoom => Get(nameof(NavZoom));
-    public static string NavColors => Get(nameof(NavColors));
     public static string NavTracking => Get(nameof(NavTracking));
     public static string NavHotkeys => Get(nameof(NavHotkeys));
     public static string NavProfiles => Get(nameof(NavProfiles));
@@ -77,14 +81,11 @@ public static class Text
     public static string SmoothingSoft => Get(nameof(SmoothingSoft));
     public static string SmoothingPixel => Get(nameof(SmoothingPixel));
 
-    // Colours and pointer
+    // Colours (first-run assistant)
     public static string ColorsFilterOn => Get(nameof(ColorsFilterOn));
     public static string ColorsFilter => Get(nameof(ColorsFilter));
     public static string ColorsContrast => Get(nameof(ColorsContrast));
     public static string ColorsBrightness => Get(nameof(ColorsBrightness));
-    public static string ColorsCursorSize => Get(nameof(ColorsCursorSize));
-    public static string ColorsCursorRim => Get(nameof(ColorsCursorRim));
-    public static string ColorsAutoLocate => Get(nameof(ColorsAutoLocate));
 
     // Tracking
     public static string TrackingOn => Get(nameof(TrackingOn));

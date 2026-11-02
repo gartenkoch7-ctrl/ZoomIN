@@ -97,7 +97,12 @@ internal sealed class RenderSession : IDisposable
             return false;
         }
 
-        _duplicator.Update();
+        // Without zoom or filter the desktop is not copied at all: Windows shows it, ZoomIN only
+        // draws on a transparent overlay (pointer page: pointer at 1×, crosshair, locator).
+        if (!request.OverlayOnly)
+        {
+            _duplicator.Update();
+        }
 
         // Read the cursor as late as possible: it decides what is shown under the pointer.
         // A monitor without the mouse keeps its last view (M3 decision).
@@ -114,11 +119,19 @@ internal sealed class RenderSession : IDisposable
             request.Mode, request.Zoom, request.Lens, request.Dock, request.Tracking, request.TrackingOptions));
 
         var frame = ModeGeometry.Compute(request.Mode, _monitor.Bounds, anchor, request.Zoom, request.Lens, request.Dock);
-        Draw(frame, request.Effects);
+        if (request.OverlayOnly)
+        {
+            _gpu.Context.ClearRenderTargetView(_swapchain.RenderTarget, s_transparent);
+        }
+        else
+        {
+            Draw(frame, request.Effects);
+        }
+
         _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions);
         LocatorActive = _cursorInside && _cursorLayer.Draw(
             _gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Mode, request.Zoom, _lastCursor,
-            request.Effects, request.LocateRequestedAt);
+            request.Effects, request.LocateRequestedAt, request.PointerHidden);
         _swapchain.Present();
 
         // Show the window only after the first frame so it never flashes empty.
