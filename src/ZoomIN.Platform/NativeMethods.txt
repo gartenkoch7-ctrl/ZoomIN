@@ -99,3 +99,9 @@ LoadCursor
 DestroyCursor
 GetDpiForSystem
 IDC_ARROW
+
+// Updates/AuthenticodeVerifier
+WinVerifyTrust
+WINTRUST_DATA
+WINTRUST_FILE_INFO
+WINTRUST_ACTION_GENERIC_VERIFY_V2
