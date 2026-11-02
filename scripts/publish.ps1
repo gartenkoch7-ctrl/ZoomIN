@@ -11,11 +11,15 @@
 .EXAMPLE
     ./scripts/publish.ps1 -Version 1.0.0-rc1
     ./scripts/publish.ps1 -Version 1.0.0-rc1 -UiAccess
+    ./scripts/publish.ps1 -Version 1.0.0-dev.42 -UiAccess -Unsigned   # CI, before SignPath
+    Then ./scripts/package-release.ps1 builds the release assets (ADR-0014).
 #>
 param(
     [string]$Version = '1.0.0-rc1',
     [string]$Output = 'artifacts',
     [switch]$UiAccess,
+    # With -UiAccess: skip local signing, for CI where SignPath signs afterwards (ADR-0014).
+    [switch]$Unsigned,
     # Defaults to the certificate created by scripts/setup-signing.ps1.
     [string]$CertificateSubject = 'CN=ZoomIN Local Code Signing'
 )
@@ -48,7 +52,12 @@ if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed ($LASTEXITCODE)."
 }
 
-if ($UiAccess) {
+if ($UiAccess -and $Unsigned) {
+    # CI: the folder goes to SignPath first; package-release.ps1 zips it once it comes back signed.
+    Write-Host "Unsigned UIAccess build (does not start until signed): $publish" -ForegroundColor Yellow
+    exit 0
+}
+elseif ($UiAccess) {
     # Windows checks the signature of the exe itself before granting UIAccess.
     $exe = Join-Path $publish 'ZoomIN.exe'
     $signature = Set-AuthenticodeSignature -FilePath $exe -Certificate (Get-SigningCertificate) -HashAlgorithm SHA256
