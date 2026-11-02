@@ -29,10 +29,16 @@ Zoom liegt über den Schnelleinstellungen. Danach Update per Klick und Downgrade
 ## Aufgaben
 ### Fundament
 - [ ] SignPath-Antrag stellen (OSS); klären, ob develop-Signierungen ohne Handfreigabe gehen
-- [ ] Core: `ReleaseChannel`, `ReleaseInfo`, Versionsvergleich inkl. `-rc`/`-dev.N`,
-      Kanalfilter, Downgrade-Erkennung – mit Unit-Tests
-- [ ] Platform: GitHub-Releases-Client (Liste statt nur `latest`), Download mit Fortschritt,
-      Prüfung Authenticode `Valid` + SHA-256 (`checksums.txt` im Release)
+- [x] Core (`ZoomIN.Core.Updates`): `AppVersion` (SemVer-Reihenfolge inkl. `-rc`/`-dev.N`),
+      `ReleaseChannel`, `ReleaseInfo`, `ReleaseCatalog` (Kanalfilter, Update, Downgrade-Erkennung),
+      `ReleaseAssets`, `ReleaseFeeds` – mit Unit-Tests
+- [x] Platform: `GitHubReleaseFeed` + testbarer `GitHubReleaseParser` (Liste statt nur `latest`)
+- [ ] Platform: Download mit Fortschritt, Prüfung Authenticode `Valid` + SHA-256 (`checksums.txt`)
+- [ ] App: alten `IUpdateChecker`/`GitHubUpdateChecker` durch `IReleaseFeed` ersetzen
+
+**Pflicht-Assets je Release** (sonst ignoriert der Feed den Release):
+`ZoomIN-<version>-win-x64-uiaccess.zip` (signierter UIAccess-Build) und `checksums.txt`
+(SHA-256 aller Assets). Kanal folgt der Version: mit Vorabkennung → Experimentell.
 
 ### CI
 - [ ] `release.yml`: UIAccess-Build, `checksums.txt`, SignPath-Signierung, Setup als Asset
