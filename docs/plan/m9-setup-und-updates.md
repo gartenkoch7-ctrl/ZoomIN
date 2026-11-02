@@ -33,7 +33,11 @@ Zoom liegt über den Schnelleinstellungen. Danach Update per Klick und Downgrade
       `ReleaseChannel`, `ReleaseInfo`, `ReleaseCatalog` (Kanalfilter, Update, Downgrade-Erkennung),
       `ReleaseAssets`, `ReleaseFeeds` – mit Unit-Tests
 - [x] Platform: `GitHubReleaseFeed` + testbarer `GitHubReleaseParser` (Liste statt nur `latest`)
-- [ ] Platform: Download mit Fortschritt, Prüfung Authenticode `Valid` + SHA-256 (`checksums.txt`)
+- [x] Platform: `HttpPackageDownloader` (Fortschritt, SHA-256 beim Streamen, nur passende Datei
+      bleibt liegen) und `AuthenticodeVerifier` (WinVerifyTrust + festgenagelter Herausgeber aus
+      `TrustedPublishers`); Core: `ChecksumList`, `PackageCheck`
+- [ ] SignPath-Zertifikatsname in `TrustedPublishers` eintragen, Sperrlisten-Prüfung
+      (`WTD_REVOKE_WHOLECHAIN`) dann einschalten – das lokale Zertifikat hat keine Sperrliste
 - [ ] App: alten `IUpdateChecker`/`GitHubUpdateChecker` durch `IReleaseFeed` ersetzen
 
 **Pflicht-Assets je Release** (sonst ignoriert der Feed den Release):
