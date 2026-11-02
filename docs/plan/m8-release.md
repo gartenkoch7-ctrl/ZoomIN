@@ -52,6 +52,8 @@ git push origin v1.0.0-rc1                                  # startet release.ym
 Für `v1.0.0`: `docs/release-notes/v1.0.0.md` anlegen (Tabelle aktualisieren), dann taggen.
 
 ## Offene Fragen / Risiken
+- **2026-11-02:** Inno Setup wird durch das eigene Setup aus M9 ersetzt (ADR-0014); der erste
+  Release erscheint erst danach. Die Abschnitte zu Inno Setup oben gelten nur bis dahin.
 - Unsignierte EXE + Hooks + Overlay → mögliche Virenscanner-Fehlalarme; EXE bei Microsoft
   zur Analyse einreichen; Code-Signing (SignPath für OSS) nach dem MVP.
 - Inno-Setup-Skript ist lokal nicht kompiliert worden (kein ISCC) – erster CI-Lauf prüft es.
