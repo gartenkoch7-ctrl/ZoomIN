@@ -54,6 +54,19 @@ Skripte, die ZoomIN per `Stop-Process` beenden, gelten für den Watchdog als Abs
 neu und schreibt `%LocalAppData%\ZoomIN\crashes.log`. Nach Tests die Datei löschen, sonst
 blockieren echte Abstürze schneller.
 
+## UIAccess-Build lokal installieren (ADR-0012)
+Nur dieser Build liegt über Schnelleinstellungen, Startmenü und Info-Center
+(capture-ausschluss.md, „Z-Ebenen“). Inno Setup ist dafür nicht nötig:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/setup-signing.ps1     # einmalig, als Administrator
+./scripts/publish.ps1 -UiAccess                                         # normaler Benutzer, signiert
+powershell -ExecutionPolicy Bypass -File scripts/install-uiaccess.ps1  # als Administrator
+```
+- `install-uiaccess.ps1` kopiert nach `C:\Program Files\ZoomIN`, legt einen Startmenü-Eintrag an
+  und startet ZoomIN über Explorer, also **nicht** erhöht. `-Remove` deinstalliert.
+- Danach nicht parallel `dotnet run` testen: ZoomIN läuft nur einmal (`SingleInstance`).
+- Execution Policy blockt unsignierte Skripte → `-ExecutionPolicy Bypass` bzw. PowerShell-Tool.
+
 ## Analyzer
 - `AnalysisLevel=latest-recommended` + `TreatWarningsAsErrors`.
 - Bewusst abgeschaltet (`.editorconfig`): CA1716 (VB-Schlüsselwörter, irrelevant für C#);
