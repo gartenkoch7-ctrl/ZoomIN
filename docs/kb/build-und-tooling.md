@@ -67,6 +67,19 @@ powershell -ExecutionPolicy Bypass -File scripts/install-uiaccess.ps1  # als Adm
 - Danach nicht parallel `dotnet run` testen: ZoomIN läuft nur einmal (`SingleInstance`).
 - Execution Policy blockt unsignierte Skripte → `-ExecutionPolicy Bypass` bzw. PowerShell-Tool.
 
+## Release-Assets und Versionen (ADR-0014)
+- `./scripts/package-release.ps1 -Version <v>` macht aus dem **signierten** UIAccess-Ordner
+  `ZoomIN-<v>-win-x64-uiaccess.zip` und schreibt `checksums.txt` (SHA-256 aller ZIP/EXE in
+  `artifacts/`, sha256sum-Format, ohne BOM, LF). Unsigniert → Abbruch. Die Namen müssen zu
+  `ReleaseAssets` passen, sonst ignoriert der Release-Feed den Release.
+- Lokal liegt in `artifacts/` evtl. noch ein altes ZIP – es landet mit in `checksums.txt`. Schadet
+  nicht, in CI ist der Ordner leer.
+- Basisversion steht in `VERSION` (z. B. `1.0.0`). develop-Builds heißen `<VERSION>-dev.<N>`
+  (N = Anzahl Commits) und sortieren damit **vor** `1.0.0-rc1` und `1.0.0`. Nach einem Release
+  `VERSION` hochsetzen, sonst wären neue develop-Builds „älter“ als der Release.
+- Workflows: `build-release.yml` (gemeinsam) ← `release.yml` (Tags) und `develop.yml` (Pushes).
+  Ohne Secret `SIGNPATH_API_TOKEN` laufen Build und Tests, veröffentlicht wird nichts.
+
 ## Analyzer
 - `AnalysisLevel=latest-recommended` + `TreatWarningsAsErrors`.
 - Bewusst abgeschaltet (`.editorconfig`): CA1716 (VB-Schlüsselwörter, irrelevant für C#);

@@ -45,8 +45,14 @@ Zoom liegt über den Schnelleinstellungen. Danach Update per Klick und Downgrade
 (SHA-256 aller Assets). Kanal folgt der Version: mit Vorabkennung → Experimentell.
 
 ### CI
-- [ ] `release.yml`: UIAccess-Build, `checksums.txt`, SignPath-Signierung, Setup als Asset
-- [ ] Neuer Workflow für `develop`: Version `x.y.z-dev.N`, Vorabversion, signiert
+- [x] `build-release.yml` (wiederverwendbar): Tests, portables ZIP, UIAccess-Build unsigniert →
+      SignPath → `package-release.ps1` (Paket + `checksums.txt`). Ohne Secret
+      `SIGNPATH_API_TOKEN` wird gebaut, aber **nichts veröffentlicht**.
+- [x] `release.yml` (Tag `v*`) und `develop.yml` (jeder Push: `<VERSION>-dev.<Commit-Anzahl>`)
+      nutzen ihn; Basisversion steht in der Datei `VERSION`
+- [ ] SignPath einrichten: Secret `SIGNPATH_API_TOKEN`, Variablen `SIGNPATH_ORGANIZATION_ID`,
+      `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_SIGNING_POLICY_SLUG`; ersten Lauf prüfen (Schritt ungetestet)
+- [ ] Setup-Programm als Release-Asset ergänzen (sobald `ZoomIN.Setup` existiert)
 - [ ] Inno-Setup-Schritt und `installer/ZoomIN.iss` entfernen
 
 ### Setup-Programm (`ZoomIN.Setup`)
