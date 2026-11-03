@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using ZoomIN.App.Composition;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Platform.SecureDesktop;
 
 namespace ZoomIN.App;
 
@@ -13,6 +14,7 @@ namespace ZoomIN.App;
 public partial class App : Application
 {
     private ServiceProvider? _services;
+    private EaseOfAccessNotifier? _easeOfAccess;
 
     public App()
     {
@@ -32,12 +34,15 @@ public partial class App : Application
         shell.ExitRequested += ExitApp;
         shell.Start();
         Program.Instance?.ListenForOpenRequests(shell.OpenSettings);
+        _easeOfAccess = EaseOfAccessNotifier.Create(log);
+        _easeOfAccess.NotifyStarted();
     }
 
     private void ExitApp()
     {
         // Disposing stops rendering, releases hotkeys/AppBar/pointer and saves the settings.
         _services?.GetRequiredService<ILog>().Info("ZoomIN exits");
+        _easeOfAccess?.NotifyExiting();
         _services?.Dispose();
         Exit();
     }

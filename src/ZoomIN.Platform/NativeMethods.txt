@@ -118,3 +118,11 @@ WTSQueryUserToken
 SHGetKnownFolderPath
 FOLDERID_RoamingAppData
 CoTaskMemFree
+
+// SecureDesktop/SessionUserToken
+OpenProcess
+OpenProcessToken
+
+// SecureDesktop/EaseOfAccessNotifier
+SendInput
+INPUT
