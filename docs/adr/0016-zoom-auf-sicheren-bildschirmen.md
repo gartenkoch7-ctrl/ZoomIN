@@ -57,6 +57,10 @@ das, indem ein Prozess mit SYSTEM-Rechten auf dem sicheren Desktop läuft.
   6. Gelesene Benutzerdateien: Der Pfad, den Windows tatsächlich geöffnet hat, muss dem erwarteten
      entsprechen (keine Junctions/Symlinks, auch nicht nachträglich getauscht), genau ein
      Dateiname (kein Hardlink), höchstens 256 KB.
+  7. Zugriffe auf den Benutzerordner laufen **unter dem Benutzerkonto** (Impersonation mit dem
+     Sitzungs-Token), und nur Pfade `X:\…` auf einer lokalen Festplatte werden überhaupt
+     angefasst (Sicherheitsprüfung 2026-11-03): Sonst könnte ein Benutzer sein AppData auf eine
+     Netzwerkfreigabe umleiten und SYSTEM zur Anmeldung mit dem Computerkonto bringen.
 - **Notbremse:** Strg+Alt+Z schaltet den Zoom aus; eigenes Kürzel zum Beenden nur im sicheren
   Modus: **Strg+Alt+Umschalt+Z** (Q schied aus, AltGr+Q ergibt @ – ADR-0008); Wächter startet höchstens 3×
   neu, danach bleibt der sichere Modus bis zum nächsten Systemstart aus; liefert die Erfassung

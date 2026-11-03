@@ -93,7 +93,9 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
 - [x] Logs als SYSTEM automatisch in SYSTEMs Profil (`FileLog` nutzt LocalAppData); JSON-Fehler
       werden nicht mit Inhalt geloggt
 - [x] Logs: UIA/Tracking loggen keinen Text (einzige Meldung: „UI Automation is unavailable“)
-- [ ] `/security-review` des Branches vor dem Merge
+- [x] `/security-review` des Branches (2026-11-03): ein Fund – SYSTEM konnte über eine
+      umgeleitete AppData einen Netzwerkpfad öffnen. Behoben: Lesen impersoniert als Benutzer,
+      nur lokale Festplattenpfade (`SessionUser`, `LocalPathRule`)
 
 ### 6 · Test auf dem echten PC (Nutzer, Checkliste)
 - [ ] Neustart → Anmeldebildschirm vergrößert (Einstellungen der Kopie)

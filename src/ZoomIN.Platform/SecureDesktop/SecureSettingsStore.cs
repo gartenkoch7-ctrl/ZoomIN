@@ -17,19 +17,20 @@ public sealed class SecureSettingsStore : ISettingsStore
     private const string FileName = "settings.json";
 
     private readonly ILog _log;
-    private readonly string? _userFolder;
+    private readonly SessionUser _user;
     private readonly string _copyFolder;
 
-    public SecureSettingsStore(ILog log, string? userFolder, string machineFolder)
+    public SecureSettingsStore(ILog log, SessionUser user, string machineFolder)
     {
         _log = log;
-        _userFolder = userFolder;
+        _user = user;
         _copyFolder = Path.Combine(machineFolder, "secure");
     }
 
     public AppSettings Load()
     {
-        if (_userFolder is not null && Parse(Path.Combine(_userFolder, FileName)) is { } user)
+        // Read as the user, write the copy as SYSTEM: the copy lives in SYSTEM's own profile.
+        if (_user.ZoomFolder is { } folder && _user.Read(() => Parse(Path.Combine(folder, FileName))) is { } user)
         {
             _log.Info("Secure desktop: using the session user's settings");
             KeepCopy(user);

@@ -1,6 +1,7 @@
 using Microsoft.Win32.SafeHandles;
 using Windows.Win32;
 using Windows.Win32.Storage.FileSystem;
+using ZoomIN.Core.SecureDesktop;
 
 namespace ZoomIN.Platform.SecureDesktop;
 
@@ -9,7 +10,8 @@ namespace ZoomIN.Platform.SecureDesktop;
 /// (ADR-0016). Refuses links of every kind: the path Windows actually opened must equal the
 /// requested one (catches junctions and symbolic links anywhere in the path, also when swapped
 /// after a check), the file must be a regular disk file with a single name (no hard link to a
-/// file the user could not read) and not larger than the limit.
+/// file the user could not read) and not larger than the limit. Only "X:\…" paths are touched at
+/// all, so no network share is ever contacted.
 /// </summary>
 public static unsafe class GuardedFileReader
 {
@@ -20,8 +22,14 @@ public static unsafe class GuardedFileReader
     {
         try
         {
+            // Checked before the first file-system call: opening a UNC path would already sign in there.
+            if (!LocalPathRule.IsDriveLetterPath(path))
+            {
+                return null;
+            }
+
             var expected = Path.GetFullPath(path);
-            if (!File.Exists(expected))
+            if (!LocalPathRule.IsDriveLetterPath(expected) || !File.Exists(expected))
             {
                 return null;
             }
@@ -74,15 +82,14 @@ public static unsafe class GuardedFileReader
             return false;
         }
 
+        // Only a local "\\?\X:\…" result counts; "\\?\UNC\…" (network) is refused outright.
         var actual = buffer[..(int)length].ToString();
-        if (actual.StartsWith(@"\\?\UNC\", StringComparison.Ordinal))
+        if (!actual.StartsWith(@"\\?\", StringComparison.Ordinal) || actual.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase))
         {
-            actual = @"\\" + actual[8..];
+            return false;
         }
-        else if (actual.StartsWith(@"\\?\", StringComparison.Ordinal))
-        {
-            actual = actual[4..];
-        }
+
+        actual = actual[4..];
 
         // 8.3 short names in the requested path would differ legitimately; settings paths come
         // from the known-folder API and are always long names.

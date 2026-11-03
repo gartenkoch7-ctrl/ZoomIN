@@ -45,12 +45,14 @@ internal static class ServiceRegistration
     /// </summary>
     public static ServiceProvider BuildSecureDesktop()
     {
-        var userFolder = SessionUserFolders.SessionUserZoomFolder();
         var services = new ServiceCollection();
         services.AddSingleton<ILog, FileLog>();
-        services.AddSingleton<ISettingsStore>(sp =>
-            new SecureSettingsStore(sp.GetRequiredService<ILog>(), userFolder, SessionUserFolders.MachineFolder));
-        services.AddSingleton<IProfileStore>(new SecureProfileStore(userFolder));
+
+        // Created by a factory, so the provider disposes it (and the user's token) at exit.
+        services.AddSingleton(_ => SessionUser.Open());
+        services.AddSingleton<ISettingsStore>(sp => new SecureSettingsStore(
+            sp.GetRequiredService<ILog>(), sp.GetRequiredService<SessionUser>(), SessionUserFolders.MachineFolder));
+        services.AddSingleton<IProfileStore>(sp => new SecureProfileStore(sp.GetRequiredService<SessionUser>()));
         services.AddEngine();
         return services.BuildServiceProvider();
     }

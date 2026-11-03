@@ -79,7 +79,7 @@ public sealed class SecureSettingsStoreTests : IDisposable
 
     public void Dispose() => Directory.Delete(_root, recursive: true);
 
-    private SecureSettingsStore Store(string? userFolder) => new(NullLog.Instance, userFolder, Machine);
+    private SecureSettingsStore Store(string? userFolder) => new(NullLog.Instance, SessionUser.ForFolder(userFolder), Machine);
 
     private void WriteUser(string json)
     {

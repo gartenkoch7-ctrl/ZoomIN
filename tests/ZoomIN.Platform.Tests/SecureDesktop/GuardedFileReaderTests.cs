@@ -52,6 +52,13 @@ public sealed class GuardedFileReaderTests : IDisposable
     [Fact]
     public void Directory_ReturnsNull() => Assert.Null(GuardedFileReader.TryRead(_root));
 
+    // Must be refused before any file-system call; the host name is never resolved.
+    [Theory]
+    [InlineData(@"\\zoomin-test.invalid\share\settings.json")]
+    [InlineData(@"\\?\UNC\zoomin-test.invalid\share\settings.json")]
+    [InlineData(@"\\localhost\C$\Windows\win.ini")]
+    public void NetworkPaths_AreRefused(string path) => Assert.Null(GuardedFileReader.TryRead(path));
+
     public void Dispose()
     {
         // A recursive delete refuses junctions; removing the link alone leaves its target intact.

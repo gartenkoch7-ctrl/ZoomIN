@@ -77,6 +77,11 @@ Schlüssel `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Accessibility\ATs\
   `HKLM\SOFTWARE\ZoomIN\SecureDesktop` (DWORD). Geschrieben nur von erhöhten Schritten (Setup,
   `--apply-update`, `--secure-desktop-setting on|off`, Deinstallation).
 - Erkennung ohne Argument: Läuft ZoomIN als SYSTEM, startet immer der sichere Modus.
+- Falle (Sicherheitsprüfung): `SHGetKnownFolderPath` mit Benutzer-Token folgt der Ordnerumleitung
+  aus HKCU `User Shell Folders` – die der Benutzer selbst setzen kann, auch auf `\\host\share`.
+  Öffnet SYSTEM so einen Pfad, meldet sich Windows dort mit dem Computerkonto an (NTLM-Relay).
+  Darum: `SessionUser` liest nur impersoniert, `LocalPathRule` + `DriveType.Fixed` vor dem ersten
+  Zugriff, und `GuardedFileReader` lehnt `\\?\UNC\…` als Ergebnis ab.
 
 ## Offen (Spike mit ZoomIN selbst)
 - Startet Windows ZoomIN bei Sperre/Strg+Alt+Entf/UAC, obwohl die Tray-App über unseren eigenen

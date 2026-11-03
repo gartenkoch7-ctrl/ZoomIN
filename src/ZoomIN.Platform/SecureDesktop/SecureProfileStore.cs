@@ -4,46 +4,27 @@ namespace ZoomIN.Platform.SecureDesktop;
 
 /// <summary>
 /// The session user's profiles, read-only, so Strg+Alt+P also works on the secure desktop
-/// (ADR-0016). Same checks as <see cref="SecureSettingsStore"/>; without a signed-in user there
-/// are no profiles. Every changing call does nothing.
+/// (ADR-0016). Same checks as <see cref="SecureSettingsStore"/>, read as the user; without a
+/// signed-in user there are no profiles. Every changing call does nothing.
 /// </summary>
 public sealed class SecureProfileStore : IProfileStore
 {
     private const int MaxProfiles = 32;
 
+    private readonly SessionUser _user;
     private readonly string? _directory;
 
-    public SecureProfileStore(string? userFolder)
+    public SecureProfileStore(SessionUser user)
     {
-        _directory = userFolder is null ? null : Path.Combine(userFolder, "profiles");
+        _user = user;
+        _directory = user.ZoomFolder is null ? null : Path.Combine(user.ZoomFolder, "profiles");
     }
 
-    public IReadOnlyList<string> Names()
-    {
-        if (_directory is null || !Directory.Exists(_directory))
-        {
-            return [];
-        }
-
-        try
-        {
-            return Directory.EnumerateFiles(_directory, "*.json")
-                .Select(Path.GetFileNameWithoutExtension)
-                .OfType<string>()
-                .Where(ProfileFields.IsValidName)
-                .Take(MaxProfiles)
-                .Order(StringComparer.CurrentCultureIgnoreCase)
-                .ToList();
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            return [];
-        }
-    }
+    public IReadOnlyList<string> Names() => _directory is null ? [] : _user.Read(() => List(_directory));
 
     public AppSettings? Load(string name) =>
         _directory is not null && ProfileFields.IsValidName(name)
-            ? SecureSettingsStore.Parse(Path.Combine(_directory, name + ".json"))
+            ? _user.Read(() => SecureSettingsStore.Parse(Path.Combine(_directory, name + ".json")))
             : null;
 
     public void Save(string name, AppSettings settings)
@@ -61,4 +42,24 @@ public sealed class SecureProfileStore : IProfileStore
     }
 
     public string? Import(string filePath) => null;
+
+    private static List<string> List(string directory)
+    {
+        try
+        {
+            return Directory.Exists(directory)
+                ? Directory.EnumerateFiles(directory, "*.json")
+                    .Select(Path.GetFileNameWithoutExtension)
+                    .OfType<string>()
+                    .Where(ProfileFields.IsValidName)
+                    .Take(MaxProfiles)
+                    .Order(StringComparer.CurrentCultureIgnoreCase)
+                    .ToList()
+                : [];
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
 }
