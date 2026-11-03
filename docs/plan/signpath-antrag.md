@@ -23,7 +23,7 @@ was SignPath laut Bedingungen prüft.
 | Nur eigene Projekte/Binärdateien signieren | ✅ eigenes Repo, eigene Build-Skripte | Nur ZoomIN-Dateien signieren, keine Microsoft-DLLs |
 | Keine Hacking-Tools | Lupe mit Hooks und UIAccess – **legitime Hilfstechnologie** | Im Antrag erklären (Text unten) |
 | Datenschutz: Daten an unbestimmte Systeme nur mit Erklärung + abschaltbar | Nur Abfrage der Release-Liste bei GitHub, im Setup abwählbar ✅ | Datenschutz-Erklärung veröffentlichen (Text unten) |
-| Systemänderungen ankündigen | Setup nennt Admin-Rechte, Autostart ist eine Option | Setup-Text nennt UIAccess noch nicht – ergänzen |
+| Systemänderungen ankündigen | Setup nennt Admin-Rechte, Program Files, UIAccess und den „Apps“-Eintrag (2026-11-03); Autostart und Anmeldebildschirm sind Optionen; Schrittliste zeigt jeden Schritt ✅ | – |
 | Deinstallation vorhanden | ✅ „Apps“ → Deinstallieren, getestet | – |
 | **MFA** für Repo und SignPath bei allen Beteiligten | ? | **Du:** 2FA bei GitHub einschalten, SignPath-Konto mit MFA |
 | Rollen: Authors, Reviewers, Approvers | Ein Maintainer | Alle drei Rollen = `gartenkoch7-ctrl` |
@@ -114,15 +114,51 @@ public list of releases from the GitHub API (api.github.com).
    Trusted Build System „GitHub.com“ verknüpfen, Signing Policy mit Freigabe anlegen.
 2. In GitHub: Secret `SIGNPATH_API_TOKEN`, Variablen `SIGNPATH_ORGANIZATION_ID`,
    `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_SIGNING_POLICY_SLUG` (du; Werte aus SignPath).
-3. Artifact Configuration in SignPath: Wurzel `<zip-file>` (so lädt `upload-artifact` hoch),
-   darin `ZoomIN.exe`, unsere `ZoomIN.*.dll` und `ZoomIN-Setup.exe` mit Produktname „ZoomIN“.
-4. Workflow: `ZoomIN-Setup.exe` mit in die Signierung nehmen; Action auf `@v3` heben
-   (aktuelle Doku nennt v3, `build-release.yml` nutzt noch `@v1`).
+3. Artifact Configuration in SignPath (du, als Text einfügen). `build-release.yml` lädt **eine**
+   ZIP-Datei mit `uiaccess/` und `setup/` hoch. Vor dem Einfügen mit der SignPath-Doku
+   („Artifact Configuration“) abgleichen – Syntax aus dem Gedächtnis, nicht live geprüft:
+   ```xml
+   <?xml version="1.0" encoding="utf-8"?>
+   <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+     <zip-file>
+       <directory path="uiaccess">
+         <pe-file path="ZoomIN.exe" product-name="ZoomIN">
+           <authenticode-sign />
+         </pe-file>
+         <pe-file-set>
+           <include path="ZoomIN.dll" product-name="ZoomIN" />
+           <include path="ZoomIN.*.dll" product-name="ZoomIN" />
+           <for-each>
+             <authenticode-sign />
+           </for-each>
+         </pe-file-set>
+       </directory>
+       <directory path="setup">
+         <pe-file path="ZoomIN-Setup.exe" product-name="ZoomIN">
+           <authenticode-sign />
+         </pe-file>
+       </directory>
+     </zip-file>
+   </artifact-configuration>
+   ```
+4. ✅ Erledigt (2026-11-03): Workflow signiert `ZoomIN-Setup.exe` mit, Action steht auf `@v3`;
+   `package-release.ps1` bricht ab, wenn das Setup nicht gültig signiert ist
+   (lokal: `-AllowUnsignedSetup`).
 5. **`TrustedPublishers` anpassen:** Alle OSS-Projekte erhalten denselben Herausgeber
    „SignPath Foundation“. Der Name allein beweist also nicht, dass eine Datei von ZoomIN stammt.
    Zusätzlich prüfen: Produktname in den Datei-Metadaten = „ZoomIN“ (SignPath erzwingt ihn) – dazu
    bleibt die SHA-256 aus unserem eigenen Release. Danach Sperrlisten-Prüfung einschalten.
 6. README- und Release-Texte aus Abschnitt 4 einfügen, ersten signierten Release `v1.0.0` taggen.
+7. Danach funktioniert der Knopf „Signierte Version installieren“ in der App (ADR-0017) ohne
+   Codeänderung: Er findet `ZoomIN-Setup.exe` im Release, prüft Prüfsumme und Signatur.
+
+## 6. Deine Schritte, in dieser Reihenfolge
+1. 2FA bei GitHub einschalten (Einstellungen → Password and authentication).
+2. Entscheiden, ob der Vorab-Release `v1.0.0-rc1` mit portablem ZIP (Abschnitt 2) veröffentlicht
+   wird – ich kann ihn vorbereiten, veröffentlichen erst nach deinem Okay.
+3. Antrag auf [signpath.org/apply](https://signpath.org/apply) mit den Texten aus Abschnitt 3.
+4. Nach der Zusage: Schritte 1–3 aus Abschnitt 5 (GitHub-App, Secrets, Artifact Configuration);
+   den Rest (5–6) übernehme ich.
 
 ## Quellen
 - [SignPath Foundation – Bedingungen](https://signpath.org/terms)

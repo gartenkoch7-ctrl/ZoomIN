@@ -80,7 +80,8 @@ powershell -ExecutionPolicy Bypass -File scripts/install-uiaccess.ps1  # als Adm
 - `./scripts/package-release.ps1 -Version <v>` macht aus dem **signierten** UIAccess-Ordner
   `ZoomIN-<v>-win-x64-uiaccess.zip` und schreibt `checksums.txt` (SHA-256 aller ZIP/EXE in
   `artifacts/`, sha256sum-Format, ohne BOM, LF). Unsigniert → Abbruch. Die Namen müssen zu
-  `ReleaseAssets` passen, sonst ignoriert der Release-Feed den Release.
+  `ReleaseAssets` passen, sonst ignoriert der Release-Feed den Release. Liegt `ZoomIN-Setup.exe` in
+  `artifacts/`, muss es ebenfalls gültig signiert sein; lokal (ohne SignPath) `-AllowUnsignedSetup`.
 - Lokal liegt in `artifacts/` evtl. noch ein altes ZIP – es landet mit in `checksums.txt`. Schadet
   nicht, in CI ist der Ordner leer.
 - Basisversion steht in `VERSION` (z. B. `1.0.0`). develop-Builds heißen `<VERSION>-dev.<N>`

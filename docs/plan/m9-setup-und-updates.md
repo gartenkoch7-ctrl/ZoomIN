@@ -56,7 +56,8 @@ Zoom liegt über den Schnelleinstellungen. Danach Update per Klick und Downgrade
 - [ ] SignPath einrichten: Secret `SIGNPATH_API_TOKEN`, Variablen `SIGNPATH_ORGANIZATION_ID`,
       `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_SIGNING_POLICY_SLUG`; ersten Lauf prüfen (Schritt ungetestet)
 - [x] Setup als Release-Asset: `publish-setup.ps1` → `ZoomIN-Setup.exe` (Single-File, 67 MB)
-- [ ] SignPath soll auch `ZoomIN-Setup.exe` signieren (sonst SmartScreen-Warnung)
+- [x] SignPath signiert auch `ZoomIN-Setup.exe`: eine Anfrage mit `uiaccess/` + `setup/`, Action `@v3`;
+      `package-release.ps1` lehnt ein unsigniertes Setup ab (Schritt ungetestet bis SignPath läuft)
 - [x] Inno-Setup-Schritt und `installer/ZoomIN.iss` entfernt
 
 ### Setup-Programm (`ZoomIN.Setup`)
@@ -68,6 +69,10 @@ Zoom liegt über den Schnelleinstellungen. Danach Update per Klick und Downgrade
       Startmenü (alle Benutzer); Desktop-Verknüpfung als Benutzer
 - [x] Alte Inno-Installation erkennen und still entfernen (`LegacyInstall`)
 - [x] Einstellungen des Wizards als angemeldeter Benutzer schreiben (`SetupChoices`)
+- [x] Installationsschritt als Liste mit Haken (`InstallChecklist` in Core, getestet): alte Installation →
+      Download + Prüfung → Program Files (Windows-Abfrage) → Benutzereinstellungen; jeder Schritt mit
+      Zustand für Screenreader, laufender Schritt als Live-Region. Willkommenstext nennt Program Files,
+      UIAccess und „Apps“-Eintrag (SignPath-Bedingung). Sichttest offen (braucht einen Release)
 
 **Geprüft 2026-11-03 (lokal):** Wizard-Fenster (dunkle Titelleiste, Sprache, Versionsschritt,
 Vergrößerung), Single-File-Setup startet; `ZoomIN-Setup.exe --apply-update` installiert
