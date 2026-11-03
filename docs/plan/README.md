@@ -19,6 +19,7 @@ Jeder Meilenstein endet mit etwas, das man **starten und vorführen** kann.
 | M8 | [Release 1.0](m8-release.md) | Getestete, dokumentierte Version zum Download | M | umgesetzt – Repo, Tag, Abschlusstests offen |
 | UI | [Neugestaltung & Mauszeiger](ui-neugestaltung.md) | Windows-11-Kartenstil, Übersicht, eigene Mauszeiger-Seite | M | umgesetzt – Sichttest offen |
 | M9 | [Setup & Updates](m9-setup-und-updates.md) | Barrierefreies Online-Setup mit UIAccess, Kanälen, Versionswahl und Ein-Klick-Updates | L | geplant – **vor** dem ersten Release |
+| M10 | [Sichere Bildschirme](m10-sichere-bildschirme.md) | Zoom auf Anmeldung, Sperre, Strg+Alt+Entf und UAC | L | Design freigegeben – in Arbeit (Spike) |
 
 Größen: **S** ≈ wenige Tage · **M** ≈ 1–2 Wochen · **L** ≈ 2–4 Wochen (eine Person, Teilzeit-Schätzung, grob).
 
