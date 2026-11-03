@@ -1,6 +1,8 @@
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using ZoomIN.App.Lifecycle;
+using ZoomIN.App.Updates;
+using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Diagnostics;
 using ZoomIN.Watchdog;
 using ZoomIN.Watchdog.Crashes;
@@ -8,8 +10,8 @@ using ZoomIN.Watchdog.Crashes;
 namespace ZoomIN.App;
 
 /// <summary>
-/// Entry point. "ZoomIN.exe --watchdog &lt;pid&gt;" runs the watchdog without any UI (ADR-0007);
-/// otherwise the WinUI app starts (same steps as the XAML-generated Main), once per session.
+/// Entry point. "ZoomIN.exe --watchdog &lt;pid&gt;" runs the watchdog without any UI (ADR-0007),
+/// "--apply-update …" the elevated install step (ADR-0015); otherwise the WinUI app starts (same steps as the XAML-generated Main), once per session.
 /// </summary>
 public static class Program
 {
@@ -23,6 +25,12 @@ public static class Program
             return WatchdogRunner.Run(processId, Environment.ProcessPath!, new FileLog(), cleanup: [new AppBarCleanup(), new SystemCursorCleanup()]);
         }
 
+        if (UpdateCommand.TryParse(args, out var update))
+        {
+            return UpdateRunner.Run(update, new FileLog());
+        }
+
+        RestartArguments.WaitIfRequested(args);
         using var instance = SingleInstance.TryAcquire();
         if (instance is null)
         {

@@ -5,7 +5,7 @@ using ZoomIN.Core.Settings;
 
 namespace ZoomIN.App.ViewModels;
 
-/// <summary>Language, autostart and update check. Every change applies and saves at once (M7).</summary>
+/// <summary>Language and autostart (updates have their own page, M9). Every change applies and saves at once (M7).</summary>
 public sealed partial class GeneralViewModel : ObservableObject
 {
     private readonly PageContext _context;
@@ -17,8 +17,6 @@ public sealed partial class GeneralViewModel : ObservableObject
         var s = context.Settings.Current;
         LanguageIndex = (int)s.Language;
         Autostart = context.Autostart.IsEnabled;
-        CheckUpdates = s.CheckForUpdates;
-        UpdateUrl = s.UpdateFeedUrl;
         _ready = true;
     }
 
@@ -27,12 +25,6 @@ public sealed partial class GeneralViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool Autostart { get; set; }
-
-    [ObservableProperty]
-    public partial bool CheckUpdates { get; set; }
-
-    [ObservableProperty]
-    public partial string UpdateUrl { get; set; } = string.Empty;
 
     partial void OnLanguageIndexChanged(int value)
     {
@@ -51,22 +43,6 @@ public sealed partial class GeneralViewModel : ObservableObject
         if (_ready)
         {
             _context.Autostart.SetEnabled(value);
-        }
-    }
-
-    partial void OnCheckUpdatesChanged(bool value)
-    {
-        if (_ready)
-        {
-            _context.Settings.Update(s => s with { CheckForUpdates = value });
-        }
-    }
-
-    partial void OnUpdateUrlChanged(string value)
-    {
-        if (_ready)
-        {
-            _context.Settings.Update(s => s with { UpdateFeedUrl = value.Trim() });
         }
     }
 }

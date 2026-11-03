@@ -1,6 +1,7 @@
 using Microsoft.UI.Dispatching;
 using ZoomIN.App.Localization;
 using ZoomIN.App.Settings;
+using ZoomIN.App.Updates;
 using ZoomIN.App.Views;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Diagnostics;
@@ -20,7 +21,7 @@ public sealed class AppShell
     private readonly SettingsService _settings;
     private readonly ProfileService _profiles;
     private readonly ITrayIcon _tray;
-    private readonly IUpdateChecker _updates;
+    private readonly UpdateService _updates;
     private readonly ILog _log;
     private readonly PageContext _pages;
     private readonly DispatcherQueue _dispatcher;
@@ -28,7 +29,7 @@ public sealed class AppShell
 
     public AppShell(
         ZoomController controller, SettingsService settings, ProfileService profiles, ITrayIcon tray,
-        IUpdateChecker updates, IAutostart autostart, ICursorShapeSource cursorShapes, ILog log)
+        UpdateService updates, IAutostart autostart, ICursorShapeSource cursorShapes, ILog log)
     {
         _controller = controller;
         _settings = settings;
@@ -37,7 +38,8 @@ public sealed class AppShell
         _updates = updates;
         _log = log;
         _dispatcher = DispatcherQueue.GetForCurrentThread();
-        _pages = new PageContext(settings, profiles, controller, autostart, cursorShapes, () => _window?.Handle ?? 0, () => _window?.ShowOverview());
+        _pages = new PageContext(
+            settings, profiles, controller, autostart, cursorShapes, updates, () => _window?.Handle ?? 0, () => _window?.ShowOverview(), ExitForUpdate);
     }
 
     /// <summary>Raised on the UI thread when the user chose "Exit".</summary>
@@ -59,7 +61,8 @@ public sealed class AppShell
             OpenSettings();
         }
 
-        _ = CheckForUpdatesAsync();
+        _updates.UpdateAvailable += update => _tray.Notify(Text.UpdateTitle, Text.Format("UpdateText", update.Version));
+        _ = RunUpdateChecksAsync();
     }
 
     /// <summary>Thread-safe: e.g. called when a second ZoomIN start asks for the settings.</summary>
@@ -125,23 +128,26 @@ public sealed class AppShell
             ]));
     }
 
-    private async Task CheckForUpdatesAsync()
+    private async Task RunUpdateChecksAsync()
     {
-        var settings = _settings.Current;
-        if (!settings.CheckForUpdates || string.IsNullOrWhiteSpace(settings.UpdateFeedUrl))
+        try
         {
-            return;
+            await _updates.RunChecksAsync(CancellationToken.None).ConfigureAwait(false);
         }
-
-        // Not during start-up: the check is never urgent.
-        await Task.Delay(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
-        var current = typeof(AppShell).Assembly.GetName().Version ?? new Version(0, 0);
-        if (await _updates.NewerVersionAsync(settings.UpdateFeedUrl, current, CancellationToken.None).ConfigureAwait(false) is { } newer)
+        catch (Exception ex) when (ex is HttpRequestException or IOException)
         {
-            _log.Info($"Update available: {newer}");
-            _tray.Notify(Text.UpdateTitle, Text.Format("UpdateText", newer));
+            // Never important enough to disturb the magnifier; the feed already logged it.
+            _log.Info($"Update checks stopped: {ex.Message}");
         }
     }
+
+    /// <summary>After an update: start the new version (it waits for this process), then exit.</summary>
+    private void ExitForUpdate() => _dispatcher.TryEnqueue(() =>
+    {
+        _updates.StartNewVersion();
+        _window?.CloseForExit();
+        ExitRequested?.Invoke();
+    });
 
     internal static string ModeName(ZoomMode mode) => mode switch
     {

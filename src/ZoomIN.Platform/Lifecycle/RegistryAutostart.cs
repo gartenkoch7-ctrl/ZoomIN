@@ -1,5 +1,6 @@
 using Microsoft.Win32;
 using ZoomIN.Core.Lifecycle;
+using ZoomIN.Core.Updates;
 
 namespace ZoomIN.Platform.Lifecycle;
 
@@ -16,7 +17,7 @@ public sealed class RegistryAutostart : IAutostart
     private readonly string _command;
 
     public RegistryAutostart()
-        : this(RunKey, $"\"{Environment.ProcessPath}\"")
+        : this(RunKey, $"\"{StableExecutablePath()}\"")
     {
     }
 
@@ -26,6 +27,13 @@ public sealed class RegistryAutostart : IAutostart
         _keyPath = keyPath;
         _command = command;
     }
+
+    // An installed ZoomIN runs from a version folder that a later update removes (ADR-0015);
+    // autostart must use the "current" link, which always points at the installed version.
+    private static string? StableExecutablePath() =>
+        InstallLayout.TryFromExecutable(Environment.ProcessPath, out var layout)
+            ? layout.CurrentExecutable
+            : Environment.ProcessPath;
 
     public bool IsEnabled
     {

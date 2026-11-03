@@ -9,8 +9,8 @@ namespace ZoomIN.App.Localization;
 /// </summary>
 public static class Text
 {
-    private static readonly IReadOnlyDictionary<string, string> s_german = Merge(TextsGerman.All, TextsGermanCards.All);
-    private static readonly IReadOnlyDictionary<string, string> s_english = Merge(TextsEnglish.All, TextsEnglishCards.All);
+    private static readonly IReadOnlyDictionary<string, string> s_german = Merge(TextsGerman.All, TextsGermanCards.All, TextsGermanUpdates.All);
+    private static readonly IReadOnlyDictionary<string, string> s_english = Merge(TextsEnglish.All, TextsEnglishCards.All, TextsEnglishUpdates.All);
     private static IReadOnlyDictionary<string, string> s_current = s_english;
 
     public static event Action? LanguageChanged;
@@ -29,8 +29,8 @@ public static class Text
 
     public static string Format(string key, params object[] args) => string.Format(CultureInfo.CurrentCulture, Get(key), args);
 
-    private static Dictionary<string, string> Merge(IReadOnlyDictionary<string, string> a, IReadOnlyDictionary<string, string> b) =>
-        a.Concat(b).ToDictionary(p => p.Key, p => p.Value);
+    private static Dictionary<string, string> Merge(params IReadOnlyDictionary<string, string>[] parts) =>
+        parts.SelectMany(part => part).ToDictionary(p => p.Key, p => p.Value);
 
     // Modes, states
     public static string ModeFullscreen => Get(nameof(ModeFullscreen));
@@ -62,7 +62,6 @@ public static class Text
     public static string GeneralAutostart => Get(nameof(GeneralAutostart));
     public static string GeneralUpdates => Get(nameof(GeneralUpdates));
     public static string GeneralUpdatesHint => Get(nameof(GeneralUpdatesHint));
-    public static string GeneralUpdateUrl => Get(nameof(GeneralUpdateUrl));
 
     // Zoom
     public static string ZoomMode => Get(nameof(ZoomMode));

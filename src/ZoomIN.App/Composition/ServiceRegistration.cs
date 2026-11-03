@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.App.Settings;
+using ZoomIN.App.Updates;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
@@ -11,6 +12,7 @@ using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
+using ZoomIN.Core.Updates;
 using ZoomIN.Core.Zoom;
 using ZoomIN.Platform.Automation;
 using ZoomIN.Platform.Cursor;
@@ -63,11 +65,14 @@ internal static class ServiceRegistration
         services.AddSingleton<ITrackingSource, UiaTrackingSource>();
         services.AddSingleton<ITrayIcon, Win32TrayIcon>();
         services.AddSingleton<IAutostart, RegistryAutostart>();
-        services.AddSingleton<IUpdateChecker, GitHubUpdateChecker>();
+        services.AddSingleton<IReleaseFeed, GitHubReleaseFeed>();
+        services.AddSingleton<IPackageDownloader, HttpPackageDownloader>();
+        services.AddSingleton<ISettingsBackup, FolderSettingsBackup>();
 
         // Rendering and app
         services.AddSingleton<IZoomOutput, ZoomEngine>();
         services.AddSingleton<ZoomController>();
+        services.AddSingleton<UpdateService>();
         services.AddSingleton<AppShell>();
 
         return services.BuildServiceProvider();

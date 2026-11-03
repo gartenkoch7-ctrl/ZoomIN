@@ -78,6 +78,7 @@ public sealed partial class SettingsWindow : Window
         Add(Text.NavHotkeys, "", typeof(HotkeysPage));
         Add(Text.NavProfiles, "", typeof(ProfilesPage));
         Add(Text.NavGeneral, "", typeof(GeneralPage));
+        Add(Text.Get("NavUpdates"), "", typeof(UpdatesPage));
         Add(Text.NavInfo, "", typeof(InfoPage));
 
         var current = Navigation.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => (Type)i.Tag == _currentPage);

@@ -62,9 +62,15 @@ powershell -ExecutionPolicy Bypass -File scripts/setup-signing.ps1     # einmali
 ./scripts/publish.ps1 -UiAccess                                         # normaler Benutzer, signiert
 powershell -ExecutionPolicy Bypass -File scripts/install-uiaccess.ps1  # als Administrator
 ```
-- `install-uiaccess.ps1` kopiert nach `C:\Program Files\ZoomIN`, legt einen Startmenü-Eintrag an
-  und startet ZoomIN über Explorer, also **nicht** erhöht. `-Remove` deinstalliert.
+- `install-uiaccess.ps1` kopiert nach `C:\Program Files\ZoomIN\app-<version>`, setzt den Link
+  `current` (ADR-0015), legt einen Startmenü-Eintrag an und startet ZoomIN über Explorer, also
+  **nicht** erhöht. `-Remove` deinstalliert. Eine alte flache Installation wird ersetzt.
 - Danach nicht parallel `dotnet run` testen: ZoomIN läuft nur einmal (`SingleInstance`).
+- Eine laufende UIAccess-Instanz lässt sich als normaler Benutzer **nicht** per `Stop-Process`
+  beenden („Zugriff verweigert“) – über das Tray beenden oder mit Admin-Rechten.
+- Update-Schritt von Hand (wie die App ihn startet), mit Admin-Abfrage:
+  `"C:\Program Files\ZoomIN\current\ZoomIN.exe" --apply-update "<paket.zip>" <sha256> <version>`;
+  Exit-Code = `UpdateResult` (0 = installiert, 7 = Abfrage abgelehnt).
 - Execution Policy blockt unsignierte Skripte → `-ExecutionPolicy Bypass` bzw. PowerShell-Tool.
 
 ## Release-Assets und Versionen (ADR-0014)
