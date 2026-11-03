@@ -17,7 +17,7 @@ internal static class SetupTextsGerman
         ["Progress"] = "Schritt {0} von {1}",
 
         ["Step0.Title"] = "Willkommen bei ZoomIN",
-        ["Step0.Text"] = "ZoomIN ist eine kostenlose Bildschirmlupe. Dieses Setup installiert ZoomIN für alle Benutzer dieses PCs. Dafür fragt Windows einmal nach Administratorrechten.",
+        ["Step0.Text"] = "ZoomIN ist eine kostenlose Bildschirmlupe. Dieses Setup installiert ZoomIN für alle Benutzer dieses PCs in den Programme-Ordner (C:\\Program Files\\ZoomIN). Nur von dort darf Windows den Zoom über Taskleiste, Startmenü und Schnelleinstellungen legen (UIAccess, wie bei der Windows-Lupe). ZoomIN erscheint außerdem unter „Apps“ in Windows und lässt sich dort deinstallieren. Dafür fragt Windows einmal nach Administratorrechten.",
         ["Language"] = "Sprache",
 
         ["Step1.Title"] = "Version wählen",
@@ -49,10 +49,15 @@ internal static class SetupTextsGerman
         ["Filter.WhiteOnBlue"] = "Weiß auf Blau",
 
         ["Step3.Title"] = "Installation",
-        ["Legacy"] = "Entferne die alte ZoomIN-Installation …",
-        ["Downloading"] = "Lade {0} herunter …",
-        ["Installing"] = "Installiere {0} … Bitte die Windows-Abfrage bestätigen.",
-        ["Configuring"] = "Übernehme die Einstellungen …",
+        ["InstallSteps"] = "Installationsschritte",
+        ["InstallStep.RemoveOld"] = "Alte ZoomIN-Installation entfernen",
+        ["InstallStep.Download"] = "ZoomIN {0} herunterladen und prüfen",
+        ["InstallStep.Install"] = "In den Programme-Ordner installieren – bitte die Windows-Abfrage bestätigen",
+        ["InstallStep.Configure"] = "Autostart, Verknüpfung und Einstellungen übernehmen",
+        ["StepState.Pending"] = "wartet",
+        ["StepState.Running"] = "läuft",
+        ["StepState.Done"] = "erledigt",
+        ["StepState.Failed"] = "fehlgeschlagen",
         ["Result.PackageMismatch"] = "Das heruntergeladene Paket ist beschädigt oder verändert und wurde verworfen.",
         ["Result.SignatureRejected"] = "Das Paket ist nicht von ZoomIN signiert und wurde nicht installiert.",
         ["Result.Declined"] = "Abgebrochen: Die Windows-Abfrage wurde abgelehnt. Es wurde nichts geändert.",

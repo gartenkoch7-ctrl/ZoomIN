@@ -17,7 +17,9 @@ param(
     [Parameter(Mandatory)][string]$Version,
     [string]$Output = 'artifacts',
     # Folder with the signed UIAccess build; defaults to publish.ps1's output.
-    [string]$Source
+    [string]$Source,
+    # Local packaging only: publish-setup.ps1 does not sign; CI gets the setup signed by SignPath.
+    [switch]$AllowUnsignedSetup
 )
 
 $ErrorActionPreference = 'Stop'
@@ -35,6 +37,12 @@ if (-not (Test-Path $exe)) {
 $signature = Get-AuthenticodeSignature $exe
 if ($signature.Status -ne 'Valid') {
     throw "ZoomIN.exe is not validly signed ($($signature.Status)); the package would never start."
+}
+
+# The app's "install signed version" button refuses an unsigned setup (ADR-0017), and SmartScreen warns.
+$setup = Join-Path $out 'ZoomIN-Setup.exe'
+if ((Test-Path $setup) -and -not $AllowUnsignedSetup -and (Get-AuthenticodeSignature $setup).Status -ne 'Valid') {
+    throw "ZoomIN-Setup.exe is not validly signed. Sign it, or pass -AllowUnsignedSetup for a local package."
 }
 
 $package = Join-Path $out "ZoomIN-$Version-win-x64-uiaccess.zip"
