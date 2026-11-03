@@ -17,7 +17,7 @@ internal static class SetupTextsEnglish
         ["Progress"] = "Step {0} of {1}",
 
         ["Step0.Title"] = "Welcome to ZoomIN",
-        ["Step0.Text"] = "ZoomIN is a free screen magnifier. This setup installs ZoomIN for all users of this PC. Windows asks for administrator rights once.",
+        ["Step0.Text"] = "ZoomIN is a free screen magnifier. This setup installs ZoomIN for all users of this PC in the Programs folder (C:\\Program Files\\ZoomIN). Only from there may Windows let the zoom lie above the taskbar, Start and quick settings (UIAccess, like the Windows Magnifier). ZoomIN also appears in Windows \"Apps\", where it can be uninstalled. Windows asks for administrator rights once.",
         ["Language"] = "Language",
 
         ["Step1.Title"] = "Choose a version",
@@ -49,10 +49,15 @@ internal static class SetupTextsEnglish
         ["Filter.WhiteOnBlue"] = "White on blue",
 
         ["Step3.Title"] = "Installation",
-        ["Legacy"] = "Removing the old ZoomIN installation …",
-        ["Downloading"] = "Downloading {0} …",
-        ["Installing"] = "Installing {0} … Please confirm the Windows prompt.",
-        ["Configuring"] = "Applying the settings …",
+        ["InstallSteps"] = "Installation steps",
+        ["InstallStep.RemoveOld"] = "Remove an old ZoomIN installation",
+        ["InstallStep.Download"] = "Download and check ZoomIN {0}",
+        ["InstallStep.Install"] = "Install to Program Files – please confirm the Windows prompt",
+        ["InstallStep.Configure"] = "Apply autostart, shortcut and settings",
+        ["StepState.Pending"] = "waiting",
+        ["StepState.Running"] = "in progress",
+        ["StepState.Done"] = "done",
+        ["StepState.Failed"] = "failed",
         ["Result.PackageMismatch"] = "The downloaded package is damaged or altered and was discarded.",
         ["Result.SignatureRejected"] = "The package is not signed by ZoomIN and was not installed.",
         ["Result.Declined"] = "Cancelled: the Windows prompt was declined. Nothing was changed.",

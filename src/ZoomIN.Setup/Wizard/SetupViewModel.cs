@@ -32,7 +32,11 @@ public sealed partial class SetupViewModel : ObservableObject
     {
         _feed = new GitHubReleaseFeed(_log);
         LanguageIndex = SetupText.IsGerman ? 0 : 1;
+        InstallSteps.StatusChanged += text => Status = text;
     }
+
+    /// <summary>Step 3: what the installation does, ticked as it goes.</summary>
+    public InstallStepList InstallSteps { get; } = new();
 
     /// <summary>Raised after a language switch; the window re-evaluates all texts.</summary>
     public event Action? TextsChanged;
@@ -151,6 +155,7 @@ public sealed partial class SetupViewModel : ObservableObject
     {
         SetupText.SetGerman(value == 0);
         ShowVersions();
+        InstallSteps.Refresh();
         TextsChanged?.Invoke();
     }
 
@@ -167,8 +172,9 @@ public sealed partial class SetupViewModel : ObservableObject
         Failed = false;
         Progress = 0;
         var choices = new SetupChoices((ReleaseChannel)ChannelIndex, Autostart, DesktopShortcut, CheckForUpdates, ZoomLevel, s_filters[FilterIndex], SecureDesktop);
+        InstallSteps.Start(release.Version.ToString());
         var result = await new SetupInstaller(_log).InstallAsync(
-            release, choices, new Progress<string>(text => Status = text), new Progress<double>(value => Progress = value * 100), CancellationToken.None);
+            release, choices, InstallSteps.Checklist, new Progress<double>(value => Progress = value * 100), CancellationToken.None);
         IsBusy = false;
         if (result == UpdateResult.Installed)
         {
@@ -176,6 +182,7 @@ public sealed partial class SetupViewModel : ObservableObject
             return;
         }
 
+        InstallSteps.Checklist.Finish(succeeded: false);
         Failed = true;
         Status = SetupText.Get("Result." + (result is UpdateResult.PackageMismatch or UpdateResult.SignatureRejected or UpdateResult.Declined ? result : UpdateResult.Failed));
         OnPropertyChanged(nameof(CanGoNext));

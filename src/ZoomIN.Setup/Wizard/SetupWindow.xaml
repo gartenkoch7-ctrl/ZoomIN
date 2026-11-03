@@ -104,7 +104,22 @@
                     </ComboBox>
                 </StackPanel>
 
-                <!-- 3: install progress (status is shared with step 1) -->
+                <!-- 3: install steps with ticks, then the download progress (status is shared with step 1) -->
+                <ItemsControl
+                    Margin="0,0,0,12"
+                    AutomationProperties.Name="{x:Bind loc:SetupText.Get('InstallSteps')}"
+                    ItemsSource="{x:Bind Vm.InstallSteps.Items}"
+                    Visibility="{x:Bind local:SetupWindow.On(Vm.Step, 3), Mode=OneWay}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="local:InstallStepItem">
+                            <StackPanel Margin="0,4" AutomationProperties.Name="{x:Bind AutomationName}" Orientation="Horizontal" Spacing="12">
+                                <FontIcon AutomationProperties.AccessibilityView="Raw" FontSize="20" Glyph="{x:Bind Glyph}" />
+                                <TextBlock VerticalAlignment="Center" Text="{x:Bind Text}" TextWrapping="Wrap" />
+                                <TextBlock VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind StateText}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
                 <ProgressBar
                     Margin="0,0,0,12"
                     AutomationProperties.Name="{x:Bind Vm.Status, Mode=OneWay}"

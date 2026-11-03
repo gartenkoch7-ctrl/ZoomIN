@@ -5,7 +5,6 @@ using ZoomIN.Platform.Lifecycle;
 using ZoomIN.Platform.Settings;
 using ZoomIN.Platform.Shell;
 using ZoomIN.Platform.Updates;
-using ZoomIN.Setup.Localization;
 
 namespace ZoomIN.Setup.Install;
 
@@ -25,18 +24,19 @@ internal sealed class SetupInstaller
         _downloader = new HttpPackageDownloader(log);
     }
 
+    /// <param name="steps">Ticked step by step; the caller marks the running step failed on an error result.</param>
     public async Task<UpdateResult> InstallAsync(
-        ReleaseInfo release, SetupChoices choices, IProgress<string> status, IProgress<double> progress, CancellationToken cancellationToken)
+        ReleaseInfo release, SetupChoices choices, InstallChecklist steps, IProgress<double> progress, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(release);
-        ArgumentNullException.ThrowIfNull(status);
-        status.Report(SetupText.Get("Legacy"));
+        ArgumentNullException.ThrowIfNull(steps);
+        steps.Begin(InstallStep.RemoveOld);
         if (await Task.Run(() => InstallRegistration.RemoveLegacyInstall(TimeSpan.FromSeconds(60)), cancellationToken))
         {
             _log.Info("[Setup] Old Inno installation removed.");
         }
 
-        status.Report(SetupText.Format("Downloading", release.Version));
+        steps.Begin(InstallStep.Download);
         var folder = Path.Combine(Path.GetTempPath(), "ZoomIN-Setup");
         var download = await _downloader.DownloadAsync(release, folder, progress, cancellationToken);
         if (download.Path is null)
@@ -48,7 +48,7 @@ internal sealed class SetupInstaller
 
         try
         {
-            status.Report(SetupText.Format("Installing", release.Version));
+            steps.Begin(InstallStep.Install);
             var hash = await Task.Run(() => ElevatedStep.HashOf(download.Path), cancellationToken);
             var command = new UpdateCommand(download.Path, hash, release.Version, choices.SecureDesktop);
             var result = await Task.Run(() => ElevatedStep.Run(Environment.ProcessPath!, command, _log), cancellationToken);
@@ -57,8 +57,9 @@ internal sealed class SetupInstaller
                 return result;
             }
 
-            status.Report(SetupText.Get("Configuring"));
+            steps.Begin(InstallStep.Configure);
             ApplyUserChoices(choices);
+            steps.Finish(succeeded: true);
             return UpdateResult.Installed;
         }
         finally
