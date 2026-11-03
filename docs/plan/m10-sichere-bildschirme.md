@@ -31,7 +31,15 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
 - [ ] Registrierung von Hand (Nutzer, Admin) laut KB mit `current\ZoomIN.exe --secure-desktop`:
       welche Werte unter `ATs\…` und `Configuration` (HKLM für Anmeldung, HKCU für Sperre/UAC) nötig
       sind. Ein eigenes Prüfskript wird nicht gebaut – getestet wird mit ZoomIN selbst und dessen Log
-- [ ] Testlauf als SYSTEM auf `Winlogon`: Log zeigt `SYSTEM: True` und die Startzeit
+- [x] Testlauf als SYSTEM auf `Winlogon`: Log zeigt `SYSTEM: True` und die Startzeit
+      (Anmeldebildschirm 287 ms, UAC 170–290 ms bis zur Engine)
+- [x] Startmeldung an die Erleichterte Bedienung (`EaseOfAccessNotifier`): ohne sie startet
+      Windows ZoomIN bei Sperre/Strg+Alt+Entf/UAC nie
+- [x] SYSTEM ohne SeTcbPrivilege: Benutzer-Token über `explorer.exe` der Sitzung (`SessionUserToken`)
+- [x] Win+L und Strg+Alt+Entf starten ZoomIN (Log dev.108, 12:53), UAC ebenso
+- [x] Sicherer Modus startet mit dem gespeicherten `ZoomOn` (dev.109; vorher immer aus)
+- [x] Sichtprüfung dev.109: Sperre und Strg+Alt+Entf vergrößert (Nutzer, Log 12:57)
+- [ ] Startzeit: erstes Bild nach ~1,4 s (UAC, Sperre, Strg+Alt+Entf, dev.109) – Ziel ≤ 1 s
 - [ ] Desktop Duplication auf dem sicheren Desktop: liefert Bilder? `WDA_EXCLUDEFROMCAPTURE` wirkt?
 - [ ] Z-Reihenfolge: liegt das Overlay über LogonUI, Sperrbildschirm und UAC-Dialog? Braucht es
       UIAccess bzw. eine Signatur, auch ohne SignPath?

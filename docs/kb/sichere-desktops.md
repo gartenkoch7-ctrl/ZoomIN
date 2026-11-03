@@ -88,16 +88,46 @@ Schlüssel `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Accessibility\ATs\
   Darum: `SessionUser` liest nur impersoniert, `LocalPathRule` + `DriveType.Fixed` vor dem ersten
   Zugriff, und `GuardedFileReader` lehnt `\\?\UNC\…` als Ergebnis ab.
 
+## Messungen (2026-11-03, dev.104–dev.108, Windows 11 23H2)
+- **Ohne Startmeldung startet Windows ZoomIN bei Sperre, Strg+Alt+Entf und UAC nie** (Win+L um
+  12:33/12:36/12:42, mehrere UAC-Abfragen: kein Eintrag im SYSTEM-Log). Nur HKLM-`Configuration`
+  reicht dafür nicht; sie wirkt nur auf dem Anmeldebildschirm (nach dem Abmelden: Start als
+  SYSTEM, Engine nach 287 ms bereit).
+- Abhilfe laut Doku, umgesetzt in `EaseOfAccessNotifier`: Die Tray-App setzt beim Start
+  `HKCU\…\AccessibilityTemp\ZoomIN` = 3 und sendet Win+U, beim Beenden = 2. Nur wenn ZoomIN
+  registriert ist (sonst öffnet Win+U nur die Einstellungen). Danach startet Windows ZoomIN bei
+  jeder UAC-Abfrage als SYSTEM in der Benutzersitzung (Engine nach 170–290 ms bereit). Sichtbare
+  Nebenwirkung laut Nutzer: keine; im Hintergrund starten Utilman und die Einstellungen-App kurz.
+- **Konto:** SYSTEM, Sitzung des Benutzers – aber **ohne SeTcbPrivilege**: `WTSQueryUserToken`
+  scheitert mit 1314 (`ERROR_PRIVILEGE_NOT_HELD`). Ersatz in `SessionUserToken`: Token des
+  `explorer.exe` derselben Sitzung (`PROCESS_QUERY_LIMITED_INFORMATION`, `TOKEN_QUERY |
+  TOKEN_IMPERSONATE | TOKEN_DUPLICATE`). Es ist das eigene Token des Benutzers, Impersonieren gibt
+  also nicht mehr Rechte, als er ohnehin hat. Damit: „using the session user's settings“, und
+  die Kopie in `…\systemprofile\…\ZoomIN\secure` entsteht.
+- Falle: `SettingsService.Current.ZoomOn` meldet den **laufenden** Zoom (beim Start immer aus),
+  nicht den gespeicherten Wert. Der sichere Modus liest darum die geladenen `AppSettings`
+  (behoben in dev.109; vorher startete jede Sperre unvergrößert).
+- Startzeit dev.109 (UAC, Zoom an): Engine nach 298 ms, Pipeline nach ~430 ms, **erstes
+  vergrößertes Bild nach 1440 ms** – Ziel ≤ 1 s verfehlt; die Lücke von ~1 s liegt zwischen
+  „Zoom pipeline ready“ und dem ersten Bild (Ursache offen: erstes Duplication-Bild oder Animation).
+- Die Kopie für den Anmeldebildschirm entsteht erst beim ersten Start auf einem sicheren Desktop
+  mit angemeldetem Benutzer. Vorher nimmt der Anmeldebildschirm Standardwerte (Zoom aus).
+- Falle beim Messen: In einer Shell aus einer MSIX-App (Agent-Terminal) sind **Lesen und
+  Schreiben** unter `%LocalAppData%`/`%AppData%` und HKCU umgeleitet. Das echte Benutzer-Log
+  liest man über `\\localhost\C$\Users\<Name>\AppData\Local\ZoomIN\logs`. Ein Registry-Wert, der
+  aus so einer Shell gesetzt wird, landet nicht im echten HKCU, ein Handtest der Startmeldung
+  von dort beweist also nichts.
+- Prüfen, ob wirklich gesperrt wurde: Ereignisanzeige `Microsoft-Windows-Winlogon/Operational`,
+  Ereignis 811 mit Benachrichtigung (4) = Sperre, (5) = Entsperren.
+
 ## Offen (Spike mit ZoomIN selbst)
-- Startet Windows ZoomIN bei Sperre/Strg+Alt+Entf/UAC, obwohl die Tray-App über unseren eigenen
-  Autostart lief und nur HKLM-`Configuration` gesetzt ist? Falls nein: HKCU-`Configuration`
-  prüfen (Nebenwirkung: Start nach der Anmeldung im Job).
+- Start belegt (dev.108, 12:53): Strg+Alt+Entf und Win+L starten ZoomIN als SYSTEM mit den
+  Benutzereinstellungen. Sichtprüfung dev.109 (12:57, Nutzer): Strg+Alt+Entf und Sperre
+  vergrößert, erstes Bild nach 1402–1423 ms.
+- ~1 s zwischen Pipeline bereit und erstem vergrößerten Bild.
 - Gelten Tastenkürzel (`RegisterHotKey`) pro Desktop? Sonst würde die Tray-App auf `Default` die
   Kürzel der sicheren Instanz blockieren.
 - Startet ATBroker den Wächter mit im Job, und wird er beim Wechsel mit beendet?
-- Unter welchem Konto, in welcher Sitzung und auf welchem Desktop startet ATBroker das Programm?
-- Startet es bei Sperre/UAC, wenn die Benutzerinstanz **nicht** über die Erleichterte Bedienung
-  gestartet wurde (unser eigener Autostart)?
 - Liegt ein Topmost-Fenster über LogonUI, Sperrbildschirm und UAC-Dialog?
 - Wirkt `SetWindowDisplayAffinity` dort? Desktop Duplication (Runde 2, mit ZoomIN selbst).
 - Wie lange dauert der Start?
