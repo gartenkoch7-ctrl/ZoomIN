@@ -37,6 +37,8 @@ public sealed class UpdateApplier
         var result = UpdateResult.Failed;
         try
         {
+            // Missing on a first install from the setup program.
+            Directory.CreateDirectory(layout.Root);
             DeleteFolder(staging);
             File.Copy(command.PackagePath, package, overwrite: true);
             if (!HashMatches(package, command.Sha256))

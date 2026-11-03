@@ -14,11 +14,13 @@
 - **Mehrere Monitore**, jeder mit eigener Zoomstufe
 - **Profile**, Autostart, Deutsch und Englisch
 - Absturzsicher: ein Wächterprozess startet ZoomIN neu und räumt auf
-- **Keine Telemetrie.** Die Update-Prüfung ist freiwillig und fragt nur die Versionsnummer ab.
+- **Keine Telemetrie.** Die Update-Prüfung ist abschaltbar und fragt nur die Versionsliste bei GitHub ab.
 
 ## Download
-[Neueste Version](https://github.com/OWNER/ZoomIN/releases) – Installer (`ZoomIN-…-setup.exe`, ohne
-Admin-Rechte) oder ZIP zum Entpacken. Windows 10 2004 oder neuer, 64 Bit (x64).
+[Neueste Version](https://github.com/gartenkoch7-ctrl/ZoomIN/releases) – **`ZoomIN-Setup.exe`** (barrierefreier
+Assistent: Kanal und Version wählen, einmal Admin-Rechte, danach Updates aus ZoomIN heraus) oder das
+portable ZIP (ohne Admin-Rechte, aber ohne Zoom über Startmenü und Schnelleinstellungen).
+Windows 10 2004 oder neuer, 64 Bit (x64).
 
 > Windows SmartScreen kann beim ersten Start warnen, weil ZoomIN noch nicht digital signiert ist:
 > „Weitere Informationen“ → „Trotzdem ausführen“.
@@ -42,7 +44,8 @@ Voraussetzung: .NET 10 SDK.
 dotnet build ZoomIN.slnx
 dotnet test --solution ZoomIN.slnx
 dotnet run --project src/ZoomIN.App
-./scripts/publish.ps1 -Version 1.0.0-rc1   # ZIP (+ Installer, wenn Inno Setup installiert ist)
+./scripts/publish.ps1 -Version 1.0.0-rc1         # portables ZIP
+./scripts/publish-setup.ps1 -Version 1.0.0-rc1   # artifacts\ZoomIN-Setup.exe
 ```
 Mitmachen: [CONTRIBUTING.md](CONTRIBUTING.md). Architektur und Regeln: [AGENTS.md](AGENTS.md).
 

@@ -31,5 +31,10 @@ internal static class TextsEnglishUpdates
         ["Updates.Result.SignatureRejected"] = "The package is not signed by ZoomIN and was not installed.",
         ["Updates.Result.AlreadyActive"] = "This version is already installed.",
         ["Updates.Result.Failed"] = "Installing failed. Details are in the log (Info & status).",
+
+        ["Uninstall.Title"] = "Uninstall ZoomIN",
+        ["Uninstall.Question"] = "ZoomIN will be removed from this PC.\n\nKeep your settings and profiles?\n\nYes: keep settings\nNo: delete everything\nCancel: change nothing",
+        ["Uninstall.Done"] = "ZoomIN has been removed.",
+        ["Uninstall.Failed"] = "ZoomIN was not removed. The Windows prompt was declined or the removal failed.",
     };
 }

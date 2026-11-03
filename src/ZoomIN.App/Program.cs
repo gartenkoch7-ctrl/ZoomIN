@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using ZoomIN.App.Lifecycle;
@@ -28,6 +29,16 @@ public static class Program
         if (UpdateCommand.TryParse(args, out var update))
         {
             return UpdateRunner.Run(update, new FileLog());
+        }
+
+        if (args is [UninstallEntry.UninstallSwitch])
+        {
+            return UninstallFlow.Run(new FileLog());
+        }
+
+        if (args is [UninstallEntry.RemoveSwitch, var pid] && int.TryParse(pid, NumberStyles.None, CultureInfo.InvariantCulture, out var asker))
+        {
+            return UninstallFlow.RemoveElevated(asker, new FileLog());
         }
 
         RestartArguments.WaitIfRequested(args);

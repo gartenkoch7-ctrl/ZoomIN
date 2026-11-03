@@ -1,10 +1,9 @@
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
-using System.Security.Cryptography;
 using ZoomIN.App.Settings;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Updates;
+using ZoomIN.Platform.Updates;
 
 namespace ZoomIN.App.Updates;
 
@@ -15,8 +14,6 @@ namespace ZoomIN.App.Updates;
 /// </summary>
 public sealed class UpdateService
 {
-    // ERROR_CANCELLED: the user said "No" at the administrator prompt.
-    private const int ErrorCancelled = 1223;
     private static readonly TimeSpan s_checkInterval = TimeSpan.FromDays(1);
 
     private readonly IReleaseFeed _feed;
@@ -105,9 +102,9 @@ public sealed class UpdateService
                 _backup.Backup(CurrentVersion);
             }
 
-            var hash = await Task.Run(() => HashOf(download.Path), cancellationToken).ConfigureAwait(false);
+            var hash = await Task.Run(() => ElevatedStep.HashOf(download.Path), cancellationToken).ConfigureAwait(false);
             var command = new UpdateCommand(download.Path, hash, release.Version);
-            return await Task.Run(() => RunElevated(_layout, command), cancellationToken).ConfigureAwait(false);
+            return await Task.Run(() => ElevatedStep.Run(_layout.CurrentExecutable, command, _log), cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -128,42 +125,6 @@ public sealed class UpdateService
         {
             UseShellExecute = true,
         });
-    }
-
-    private UpdateResult RunElevated(InstallLayout layout, UpdateCommand command)
-    {
-        try
-        {
-            using var process = Process.Start(new ProcessStartInfo(layout.CurrentExecutable, command.Format())
-            {
-                UseShellExecute = true,
-                Verb = "runas",
-            });
-            if (process is null)
-            {
-                return UpdateResult.Failed;
-            }
-
-            process.WaitForExit();
-            var result = (UpdateResult)process.ExitCode;
-            _log.Info($"Update to {command.Version}: {result}");
-            return Enum.IsDefined(result) ? result : UpdateResult.Failed;
-        }
-        catch (Win32Exception ex) when (ex.NativeErrorCode == ErrorCancelled)
-        {
-            return UpdateResult.Declined;
-        }
-        catch (Win32Exception ex)
-        {
-            _log.Error("Starting the update step failed", ex);
-            return UpdateResult.Failed;
-        }
-    }
-
-    private static string HashOf(string path)
-    {
-        using var stream = File.OpenRead(path);
-        return Convert.ToHexStringLower(SHA256.HashData(stream));
     }
 
     private static AppVersion ReadCurrentVersion()

@@ -6,6 +6,9 @@
     <Project Path="src/ZoomIN.Core/ZoomIN.Core.csproj" />
     <Project Path="src/ZoomIN.Platform/ZoomIN.Platform.csproj" />
     <Project Path="src/ZoomIN.Rendering/ZoomIN.Rendering.csproj" />
+    <Project Path="src/ZoomIN.Setup/ZoomIN.Setup.csproj">
+      <Platform Project="x64" />
+    </Project>
     <Project Path="src/ZoomIN.Watchdog/ZoomIN.Watchdog.csproj" />
   </Folder>
   <Folder Name="/tests/">

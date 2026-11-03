@@ -54,16 +54,27 @@ Zoom liegt über den Schnelleinstellungen. Danach Update per Klick und Downgrade
       nutzen ihn; Basisversion steht in der Datei `VERSION`
 - [ ] SignPath einrichten: Secret `SIGNPATH_API_TOKEN`, Variablen `SIGNPATH_ORGANIZATION_ID`,
       `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_SIGNING_POLICY_SLUG`; ersten Lauf prüfen (Schritt ungetestet)
-- [ ] Setup-Programm als Release-Asset ergänzen (sobald `ZoomIN.Setup` existiert)
-- [ ] Inno-Setup-Schritt und `installer/ZoomIN.iss` entfernen
+- [x] Setup als Release-Asset: `publish-setup.ps1` → `ZoomIN-Setup.exe` (Single-File, 67 MB)
+- [ ] SignPath soll auch `ZoomIN-Setup.exe` signieren (sonst SmartScreen-Warnung)
+- [x] Inno-Setup-Schritt und `installer/ZoomIN.iss` entfernt
 
 ### Setup-Programm (`ZoomIN.Setup`)
-- [ ] Projekt anlegen, Schichtregeln in den Architekturtests ergänzen
-- [ ] Wizard-Seiten (siehe Schritte oben), Sprache umschaltbar, eigene Vergrößerung (Strg+Plus/Mausrad)
-- [ ] Erhöhter Hilfsprozess: beenden, kopieren, Startmenü/Desktop, Deinstallationseintrag in „Apps“
-- [ ] Alte Inno-Installation erkennen und entfernen
-- [ ] Einstellungen des Wizards in `%AppData%\ZoomIN\` schreiben (als angemeldeter Benutzer)
-- [ ] Deinstallation mit Frage nach den Einstellungen
+- [x] Projekt `ZoomIN.Setup` angelegt (referenziert nur Core und Platform; Logik liegt dort und ist getestet)
+- [x] Wizard: Willkommen/Sprache, Kanal/Version, Einstellungen, Installation, Fertig; Sprache umschaltbar;
+      eigene Vergrößerung (Größer/Kleiner, Strg+Plus/Minus/0, Strg+Mausrad); Überschrift und Status als
+      Live-Region (in WinUI muss `LiveRegionChanged` selbst ausgelöst werden – auch auf der Updates-Seite nachgezogen)
+- [x] Erhöhter Schritt `ZoomIN-Setup.exe --apply-update`: ZoomIN beenden, installieren, „Apps“-Eintrag,
+      Startmenü (alle Benutzer); Desktop-Verknüpfung als Benutzer
+- [x] Alte Inno-Installation erkennen und still entfernen (`LegacyInstall`)
+- [x] Einstellungen des Wizards als angemeldeter Benutzer schreiben (`SetupChoices`)
+
+**Geprüft 2026-11-03 (lokal):** Wizard-Fenster (dunkle Titelleiste, Sprache, Versionsschritt,
+Vergrößerung), Single-File-Setup startet; `ZoomIN-Setup.exe --apply-update` installiert
+`1.0.0-dev.102` (laufendes ZoomIN beendet, `.100` aufgeräumt, `.101` behalten, „Apps“-Eintrag,
+Startmenü); Deinstallation mit „Einstellungen behalten“ entfernt Ordner, „Apps“, Startmenü und
+Autostart, `settings.json` bleibt. Noch nicht geprüft: der Klickweg durch den Wizard bis zur
+Installation (braucht einen Release) und die Benutzer-Optionen (Autostart, Desktop, Einstellungen).
+- [x] Deinstallation `ZoomIN.exe --uninstall` mit Frage nach den Einstellungen (Standard-Windows-Dialog)
 
 ### App
 - [x] Einstellungsseite „Updates“: Kanal, Versionsliste, Prüfung an/aus, Aktualisieren/Zurückgehen,
@@ -71,7 +82,7 @@ Zoom liegt über den Schnelleinstellungen. Danach Update per Klick und Downgrade
 - [x] Update-Hinweis im Tray, Sicherung von Einstellungen/Profilen vor einem Downgrade
 - [x] Update-Prüfung beim Start + täglich; im Erststart-Assistenten vorausgewählt
 - [x] Autostart zeigt auf `current\ZoomIN.exe`, nicht auf einen Versionsordner
-- [ ] Erststart-Assistent überspringen, wenn das Setup schon eingerichtet hat (mit `ZoomIN.Setup`)
+- [x] Erststart-Assistent überspringen, wenn das Setup schon eingerichtet hat (`FirstRunCompleted`)
 - [ ] Ende-zu-Ende mit echtem Release (Klick in der App) – geht erst, wenn ein signierter Release existiert
 
 **Geprüft 2026-11-03 (lokal, Zertifikat dieses PCs):** Installation in die neue Struktur,
@@ -80,7 +91,8 @@ Link umgesetzt, alte Version behalten), abgelehnte Abfrage ändert nichts, Neust
 `--wait-for` übernimmt nach dem Ende der alten Instanz.
 
 ### Doku
-- [ ] `docs/kb/build-und-tooling.md`, Handbuch (de/en), README: neuer Installationsweg
+- [x] README und build-und-tooling.md: neuer Installationsweg
+- [ ] Handbuch (de/en): Setup, Updates, Deinstallation
 - [ ] M8-Release-Anleitung auf das neue Setup umstellen
 
 ## Akzeptanzkriterien

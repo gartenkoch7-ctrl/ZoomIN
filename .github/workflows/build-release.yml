@@ -10,10 +10,6 @@ on:
       version:
         required: true
         type: string
-      with-installer:
-        description: Also build the Inno Setup installer (until ZoomIN.Setup replaces it, M9).
-        default: false
-        type: boolean
     outputs:
       signed:
         description: "'true' when the release assets are complete and may be published."
@@ -53,10 +49,6 @@ jobs:
       - name: Test
         run: dotnet test --solution ZoomIN.slnx -c Release
 
-      - name: Install Inno Setup
-        if: inputs.with-installer
-        run: choco install innosetup --no-progress -y
-
       - name: Publish portable ZIP
         shell: pwsh
         run: ./scripts/publish.ps1 -Version $env:ZOOMIN_VERSION
@@ -64,6 +56,11 @@ jobs:
       - name: Publish UIAccess build (unsigned)
         shell: pwsh
         run: ./scripts/publish.ps1 -Version $env:ZOOMIN_VERSION -UiAccess -Unsigned
+
+      # TODO(M9): have SignPath sign ZoomIN-Setup.exe as well, otherwise SmartScreen warns on download.
+      - name: Publish setup (single file)
+        shell: pwsh
+        run: ./scripts/publish-setup.ps1 -Version $env:ZOOMIN_VERSION
 
       - name: Upload UIAccess build for signing
         id: unsigned
@@ -103,6 +100,6 @@ jobs:
           name: release-assets
           path: |
             artifacts/*.zip
-            artifacts/*-setup.exe
+            artifacts/ZoomIN-Setup.exe
             artifacts/checksums.txt
           if-no-files-found: error

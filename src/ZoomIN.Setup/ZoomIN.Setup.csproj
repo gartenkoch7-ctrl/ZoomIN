@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Accessible online setup (M9, ADR-0014): WinUI 3 wizard; the same exe runs elevated with the
+       apply-update switch for the Program Files part. References Core and Platform only. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>$(ZoomInWindowsTfm)</TargetFramework>
+    <TargetPlatformMinVersion>$(ZoomInMinWindows)</TargetPlatformMinVersion>
+    <SupportedOSPlatformVersion>$(ZoomInMinWindows)</SupportedOSPlatformVersion>
+    <RootNamespace>ZoomIN.Setup</RootNamespace>
+    <AssemblyName>ZoomIN-Setup</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\ZoomIN.App\Assets\ZoomIN.ico</ApplicationIcon>
+    <Version>1.0.0-rc1</Version>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <!-- Runs on a fresh PC: no .NET or Windows App SDK runtime is installed there yet. -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+    <SatelliteResourceLanguages>de;en</SatelliteResourceLanguages>
+    <!-- Own Program.Main: the elevated install step must run without any UI. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ZoomIN.Core\ZoomIN.Core.csproj" />
+    <ProjectReference Include="..\ZoomIN.Platform\ZoomIN.Platform.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\ZoomIN.App\Assets\ZoomIN.ico" Link="Assets\ZoomIN.ico" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+  </ItemGroup>
+</Project>

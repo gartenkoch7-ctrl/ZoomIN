@@ -31,5 +31,10 @@ internal static class TextsGermanUpdates
         ["Updates.Result.SignatureRejected"] = "Das Paket ist nicht von ZoomIN signiert und wurde nicht installiert.",
         ["Updates.Result.AlreadyActive"] = "Diese Version ist bereits installiert.",
         ["Updates.Result.Failed"] = "Die Installation ist fehlgeschlagen. Details stehen im Protokoll (Info & Status).",
+
+        ["Uninstall.Title"] = "ZoomIN deinstallieren",
+        ["Uninstall.Question"] = "ZoomIN wird von diesem PC entfernt.\n\nSollen deine Einstellungen und Profile erhalten bleiben?\n\nJa: Einstellungen behalten\nNein: alles löschen\nAbbrechen: nichts ändern",
+        ["Uninstall.Done"] = "ZoomIN wurde entfernt.",
+        ["Uninstall.Failed"] = "ZoomIN wurde nicht entfernt. Die Windows-Abfrage wurde abgelehnt oder die Entfernung ist fehlgeschlagen.",
     };
 }
