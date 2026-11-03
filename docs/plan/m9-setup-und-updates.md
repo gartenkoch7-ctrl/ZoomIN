@@ -28,7 +28,8 @@ Zoom liegt über den Schnelleinstellungen. Danach Update per Klick und Downgrade
 
 ## Aufgaben
 ### Fundament
-- [ ] SignPath-Antrag stellen (OSS); klären, ob develop-Signierungen ohne Handfreigabe gehen
+- [ ] SignPath-Antrag stellen (OSS) – vorbereitet in [signpath-antrag.md](signpath-antrag.md). Geklärt: jede
+      Signierung braucht eine Freigabe von Hand, auch develop-Builds. Blocker: es gibt noch keinen Release.
 - [x] Core (`ZoomIN.Core.Updates`): `AppVersion` (SemVer-Reihenfolge inkl. `-rc`/`-dev.N`),
       `ReleaseChannel`, `ReleaseInfo`, `ReleaseCatalog` (Kanalfilter, Update, Downgrade-Erkennung),
       `ReleaseAssets`, `ReleaseFeeds` – mit Unit-Tests
