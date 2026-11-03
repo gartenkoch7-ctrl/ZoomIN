@@ -71,4 +71,5 @@ Umsetzung:
 - [x] Settings: `PerMonitorFilter`, `MonitorFilters` (Profil-Feld), JSON mit `null`-Schutz
 - [x] Render: `MonitorRenderer` liest `CurrentFor(Gerätename)` – Benchmark `EffectsRead` 0 B
 - [x] UI: Schalter + Monitor-Auswahl auf der Filterseite, Übersicht/Willkommen wirken auf den Monitor unter der Maus
+- [x] Live-Test mit einem Monitor (2026-11-03): Kürzel, Monitor-Auswahl, Option aus/an, Overlay bei 1×
 - [ ] Sichttest mit zwei Monitoren
