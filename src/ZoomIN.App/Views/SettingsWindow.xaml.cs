@@ -23,6 +23,10 @@ public sealed partial class SettingsWindow : Window
         InitializeComponent();
         AppWindow.Resize(new SizeInt32(980, 720));
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "ZoomIN.ico"));
+
+        // The system title bar of a WinUI 3 window stays light even in dark mode unless told to
+        // follow the Windows app mode; the content already does.
+        AppWindow.TitleBar.PreferredTheme = TitleBarTheme.UseDefaultAppMode;
         AppWindow.Closing += OnClosing;
         Text.LanguageChanged += OnLanguageChanged;
 
