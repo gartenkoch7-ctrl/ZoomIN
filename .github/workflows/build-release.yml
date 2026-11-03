@@ -57,22 +57,32 @@ jobs:
         shell: pwsh
         run: ./scripts/publish.ps1 -Version $env:ZOOMIN_VERSION -UiAccess -Unsigned
 
-      # TODO(M9): have SignPath sign ZoomIN-Setup.exe as well, otherwise SmartScreen warns on download.
       - name: Publish setup (single file)
         shell: pwsh
         run: ./scripts/publish-setup.ps1 -Version $env:ZOOMIN_VERSION
 
-      - name: Upload UIAccess build for signing
+      # One signing request for both: the SignPath artifact configuration expects this layout
+      # (docs/plan/signpath-antrag.md): uiaccess/ (ZoomIN.exe + our DLLs) and setup/ZoomIN-Setup.exe.
+      # An unsigned setup would make SmartScreen warn and the app's setup button refuse it.
+      - name: Stage files for signing
+        if: env.SIGNPATH_API_TOKEN != ''
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts/sign/setup | Out-Null
+          Copy-Item artifacts/publish/ZoomIN-uiaccess artifacts/sign/uiaccess -Recurse
+          Copy-Item artifacts/ZoomIN-Setup.exe artifacts/sign/setup/
+
+      - name: Upload files for signing
         id: unsigned
         if: env.SIGNPATH_API_TOKEN != ''
         uses: actions/upload-artifact@v4
         with:
-          name: uiaccess-unsigned
-          path: artifacts/publish/ZoomIN-uiaccess/
+          name: unsigned
+          path: artifacts/sign/
 
       - name: Sign with SignPath
         if: env.SIGNPATH_API_TOKEN != ''
-        uses: signpath/github-action-submit-signing-request@v1
+        uses: signpath/github-action-submit-signing-request@v3
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
@@ -80,7 +90,15 @@ jobs:
           signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
           github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
           wait-for-completion: true
-          output-artifact-directory: artifacts/publish/ZoomIN-uiaccess
+          output-artifact-directory: artifacts/signed
+
+      - name: Take over signed files
+        if: env.SIGNPATH_API_TOKEN != ''
+        shell: pwsh
+        run: |
+          Remove-Item artifacts/publish/ZoomIN-uiaccess -Recurse -Force
+          Copy-Item artifacts/signed/uiaccess artifacts/publish/ZoomIN-uiaccess -Recurse
+          Copy-Item artifacts/signed/setup/ZoomIN-Setup.exe artifacts/ZoomIN-Setup.exe -Force
 
       - name: Package and checksums
         id: package
