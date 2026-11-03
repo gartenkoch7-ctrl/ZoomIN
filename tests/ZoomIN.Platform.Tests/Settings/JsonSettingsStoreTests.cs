@@ -1,4 +1,5 @@
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Settings;
 using ZoomIN.Platform.Settings;
@@ -30,6 +31,8 @@ public sealed class JsonSettingsStoreTests : IDisposable
             ToggleHotkey = new HotkeyGesture(HotkeyModifiers.Control | HotkeyModifiers.Shift, 0x51),
             WheelModifiers = HotkeyModifiers.Alt,
             PerMonitorZoom = false,
+            PerMonitorFilter = false,
+            MonitorFilters = new Dictionary<string, MonitorFilter> { [@"\\.\DISPLAY2"] = new(true, ColorFilter.BlackOnYellow) },
             MonitorZoomLevels = new Dictionary<string, double> { [@"\\.\DISPLAY1"] = 2.5, [@"\\.\DISPLAY2"] = 4 },
         };
 
@@ -105,12 +108,14 @@ public sealed class JsonSettingsStoreTests : IDisposable
         Assert.Equal(expected.MonitorZoomLevels, actual.MonitorZoomLevels);
         Assert.Equal(expected.LensMonitorZoomLevels, actual.LensMonitorZoomLevels);
         Assert.Equal(expected.DockedMonitorZoomLevels, actual.DockedMonitorZoomLevels);
+        Assert.Equal(expected.MonitorFilters, actual.MonitorFilters);
         Assert.Equal(
             expected with
             {
                 MonitorZoomLevels = actual.MonitorZoomLevels,
                 LensMonitorZoomLevels = actual.LensMonitorZoomLevels,
                 DockedMonitorZoomLevels = actual.DockedMonitorZoomLevels,
+                MonitorFilters = actual.MonitorFilters,
             },
             actual);
     }

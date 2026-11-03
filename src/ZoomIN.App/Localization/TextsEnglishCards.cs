@@ -28,6 +28,12 @@ internal static class TextsEnglishCards
         ["Overview.StatusZooming"] = "Zooming at {0} frames per second, invisible in screen sharing.",
         ["Overview.StatusError"] = "Error: {0}",
 
+        ["FilterPerMonitor"] = "Separate colour filter per monitor",
+        ["FilterPerMonitor.Desc"] = "Each monitor remembers whether its filter is on and which one. Ctrl+Alt+C acts on the monitor under the mouse.",
+        ["FilterMonitor"] = "Monitor",
+        ["FilterMonitor.Desc"] = "The filter and on/off below apply to this monitor. Contrast and brightness apply to all.",
+        ["FilterMonitor.Shared"] = "Default (monitors without their own filter)",
+        ["FilterMonitor.Name"] = "Monitor {0}",
         ["FilterOn"] = "Colour filter",
         ["FilterOn.Desc"] = "Changes the colours of the whole screen, also without zoom (Ctrl+Alt+C).",
         ["FilterKind"] = "Filter",

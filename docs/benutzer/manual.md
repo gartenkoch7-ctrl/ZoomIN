@@ -47,6 +47,11 @@ Filters: inverted · inverted keeping hue · greyscale · greyscale inverted · 
 black on yellow · white on blue. Contrast and brightness are under **Colour filters**, smoothing
 under **Zoom & modes**.
 
+With "Separate colour filter per monitor" (on by default) each monitor remembers whether its filter
+is on and which one; the shortcuts then act on the monitor under the mouse. On the **Colour
+filters** page you pick the monitor from a list; "Default" applies to all monitors without their
+own filter. Contrast and brightness always apply to all monitors.
+
 The **Mouse pointer** page (with live preview) sets: "Override Windows pointer settings" (ZoomIN
 then always draws the standard Windows pointer in its own size and colour; pointer size and colour
 from the Windows settings no longer apply), size without zoom (1–4×), "Size relative to zoom" (on:

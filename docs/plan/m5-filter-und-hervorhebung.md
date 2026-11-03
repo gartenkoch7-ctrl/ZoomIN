@@ -51,3 +51,24 @@ Kontrastrand; `Strg+Alt+S` zeigt die Suchhilfe.
 - Animierte Zeiger nur mit erstem Bild; monochromes „Invertieren“ (I-Balken) wird schwarz
   gezeichnet, der Rand hält es sichtbar.
 - Kontrast/Helligkeit/Glättung bisher nur in `settings.json` (UI in M7).
+
+## Nachtrag: Farbfilter pro Monitor (Grilling 2026-11-03)
+Wunsch nach M7: Der Filter soll – wie die Zoomstufe – pro Monitor einstellbar sein.
+
+Entscheidungen:
+- Option **„Eigener Farbfilter je Monitor“**, standardmäßig **an** (wie beim Zoom).
+- Pro Monitor getrennt sind nur **An/Aus und Filterart**; Kontrast und Helligkeit gelten für alle.
+- `Strg+Alt+C` / `Strg+Alt+Umschalt+C` wirken auf den **Monitor unter der Maus**. Hat er noch
+  keinen eigenen Eintrag, startet er vom gemeinsamen Filter und bekommt danach einen eigenen;
+  der gemeinsame Filter („Standard“) bleibt unverändert.
+- Einstellungsseite „Farbfilter“: **Monitor-Auswahlliste** („Standard (Monitore ohne eigenen
+  Filter)“, „Monitor 1“, …); vorausgewählt ist der Monitor unter der Maus.
+- Option aus → alle Monitore zeigen den gemeinsamen Filter; eigene Einträge bleiben gespeichert.
+
+Umsetzung:
+- [x] Core: `MonitorFilter`, `DisplayEffects.PerMonitorFilter`/`MonitorFilters`/`FilterOf`,
+  `EffectsModel.CurrentFor(monitor)` (vorberechnete Kopie mit Matrix je Monitor, `EffectsSnapshot`)
+- [x] Settings: `PerMonitorFilter`, `MonitorFilters` (Profil-Feld), JSON mit `null`-Schutz
+- [x] Render: `MonitorRenderer` liest `CurrentFor(Gerätename)` – Benchmark `EffectsRead` 0 B
+- [x] UI: Schalter + Monitor-Auswahl auf der Filterseite, Übersicht/Willkommen wirken auf den Monitor unter der Maus
+- [ ] Sichttest mit zwei Monitoren

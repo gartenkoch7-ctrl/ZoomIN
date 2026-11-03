@@ -89,9 +89,9 @@ public sealed class ZoomController : IDisposable
     /// <summary>Releases all shortcuts while the hotkey editor records a new combination.</summary>
     public void SuspendHotkeys() => _hotkeys.UnregisterAll();
 
-    public void Toggle() => Model.Toggle(MonitorAtMouse(), _monitors.MonitorIds());
+    public void Toggle() => Model.Toggle(MonitorUnderMouse(), _monitors.MonitorIds());
 
-    public void Activate(ZoomMode mode) => Model.Activate(mode, MonitorAtMouse(), _monitors.MonitorIds());
+    public void Activate(ZoomMode mode) => Model.Activate(mode, MonitorUnderMouse(), _monitors.MonitorIds());
 
     /// <summary>Mode chosen in the settings: switches over if zooming, otherwise only preselects it.</summary>
     public void SelectMode(ZoomMode mode)
@@ -113,6 +113,12 @@ public sealed class ZoomController : IDisposable
 
     /// <summary>Zoom in (+) or out (−) on the monitor under the mouse, e.g. from the overview page.</summary>
     public void ZoomBy(double steps) => Step(steps);
+
+    /// <summary>Colour filter on/off for the monitor under the mouse (or all, if monitors share it).</summary>
+    public void ToggleFilter() => Effects.ToggleFilter(MonitorUnderMouse());
+
+    public string MonitorUnderMouse() =>
+        _monitors.MonitorAt(_cursor.TryGetPosition(out var position) ? position : default);
 
     public void Dispose() => Model.Changed -= _dockedStrip.Update;
 
@@ -142,8 +148,8 @@ public sealed class ZoomController : IDisposable
         Register(HotkeyGesture.LensNarrower, () => Model.ResizeLens(-1, 0), repeat: true);
         Register(HotkeyGesture.LensTaller, () => Model.ResizeLens(0, 1), repeat: true);
         Register(HotkeyGesture.LensShorter, () => Model.ResizeLens(0, -1), repeat: true);
-        Register(s.FilterHotkey, Effects.ToggleFilter);
-        Register(s.NextFilterHotkey, Effects.NextFilter);
+        Register(s.FilterHotkey, ToggleFilter);
+        Register(s.NextFilterHotkey, () => Effects.NextFilter(MonitorUnderMouse()));
         if (Effects.Current.Cursor.LocatorTriggers.HasFlag(LocatorTriggers.Hotkey))
         {
             Register(s.LocateHotkey, Effects.Locate);
@@ -155,8 +161,5 @@ public sealed class ZoomController : IDisposable
         UnavailableHotkeys = unavailable;
     }
 
-    private void Step(double notches) => Model.Step(notches, MonitorAtMouse(), _monitors.MonitorIds());
-
-    private string MonitorAtMouse() =>
-        _monitors.MonitorAt(_cursor.TryGetPosition(out var position) ? position : default);
+    private void Step(double notches) => Model.Step(notches, MonitorUnderMouse(), _monitors.MonitorIds());
 }

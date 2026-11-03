@@ -29,6 +29,10 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
 - Monitor-ID = Gerätename `\\.\DISPLAYn` (DXGI `OutputDescription.DeviceName` = GDI `szDevice`).
 - Anzeigeänderung → `DisplayChangedException` → `ZoomEngine` baut nach 500 ms alle Renderer neu.
 - Monitore ohne Maus behalten ihren letzten Ausschnitt.
+- Farbfilter pro Monitor: Jeder Renderer liest `EffectsModel.CurrentFor(Gerätename)`. Für
+  Monitore mit eigenem Filter liegt beim Ändern der Einstellungen schon eine fertige
+  `DisplayEffects`-Kopie samt Farbmatrix bereit (`EffectsSnapshot`); pro Frame bleibt nur ein
+  Dictionary-Lookup (0 B, Benchmark `EffectsRead`).
 - Hybrid-GPU: Duplication auf dem Adapter des Monitors. ⚠️ unverifiziert (keine Hardware).
 
 ## Fehlerfälle (müssen behandelt werden)
