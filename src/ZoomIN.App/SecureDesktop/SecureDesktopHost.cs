@@ -2,10 +2,10 @@ using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using ZoomIN.App.Composition;
 using ZoomIN.App.Lifecycle;
-using ZoomIN.App.Settings;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Hotkeys;
+using ZoomIN.Core.Settings;
 using ZoomIN.Platform.Diagnostics;
 using ZoomIN.Platform.SecureDesktop;
 using ZoomIN.Watchdog.Crashes;
@@ -64,7 +64,9 @@ internal static class SecureDesktopHost
     private static void Start(ServiceProvider services, ManualResetEventSlim exit, ILog log)
     {
         var controller = services.GetRequiredService<ZoomController>();
-        var settings = services.GetRequiredService<SettingsService>().Current;
+        // The loaded settings, not SettingsService.Current: Current reports the live model, which
+        // always starts unzoomed, so the saved on/off state would be lost (observed 2026-11-03).
+        var settings = services.GetRequiredService<AppSettings>();
         controller.Initialize();
         if (settings.ZoomOn)
         {
