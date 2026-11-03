@@ -77,6 +77,11 @@ Schlüssel `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Accessibility\ATs\
   `HKLM\SOFTWARE\ZoomIN\SecureDesktop` (DWORD). Geschrieben nur von erhöhten Schritten (Setup,
   `--apply-update`, `--secure-desktop-setting on|off`, Deinstallation).
 - Erkennung ohne Argument: Läuft ZoomIN als SYSTEM, startet immer der sichere Modus.
+- Falle beim Update (beobachtet 2026-11-03, dev.103 → dev.104): `--apply-update` führt die
+  **bisher installierte** `ZoomIN.exe` aus. Kennt diese die Registrierung noch nicht, wird beim
+  ersten Update auf eine M10-Version nichts registriert. Abhilfe von Hand:
+  `current\ZoomIN.exe --secure-desktop-setting on` (erhöht) oder der Schalter in der App; ab dem
+  nächsten Update registriert der erhöhte Schritt selbst.
 - Falle (Sicherheitsprüfung): `SHGetKnownFolderPath` mit Benutzer-Token folgt der Ordnerumleitung
   aus HKCU `User Shell Folders` – die der Benutzer selbst setzen kann, auch auf `\\host\share`.
   Öffnet SYSTEM so einen Pfad, meldet sich Windows dort mit dem Computerkonto an (NTLM-Relay).
