@@ -28,6 +28,12 @@ internal static class TextsGermanCards
         ["Overview.StatusZooming"] = "Zoom läuft mit {0} Bildern pro Sekunde, unsichtbar bei Bildschirmfreigaben.",
         ["Overview.StatusError"] = "Fehler: {0}",
 
+        ["FilterPerMonitor"] = "Eigener Farbfilter je Monitor",
+        ["FilterPerMonitor.Desc"] = "Jeder Monitor merkt sich, ob sein Filter an ist und welcher. Strg+Alt+C wirkt auf den Monitor unter der Maus.",
+        ["FilterMonitor"] = "Monitor",
+        ["FilterMonitor.Desc"] = "Filter und An/Aus darunter gelten für diesen Monitor. Kontrast und Helligkeit gelten für alle.",
+        ["FilterMonitor.Shared"] = "Standard (Monitore ohne eigenen Filter)",
+        ["FilterMonitor.Name"] = "Monitor {0}",
         ["FilterOn"] = "Farbfilter",
         ["FilterOn.Desc"] = "Ändert die Farben des ganzen Bildschirms, auch ohne Zoom (Strg+Alt+C).",
         ["FilterKind"] = "Filter",

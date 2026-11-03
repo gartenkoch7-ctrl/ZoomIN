@@ -5,20 +5,20 @@ namespace ZoomIN.Core.Filters;
 
 /// <summary>
 /// Colour filter, smoothing and pointer state. Commands come from hotkey and hook threads; render
-/// threads read <see cref="Current"/>, <see cref="LocateRequestedAt"/> and
+/// threads read <see cref="CurrentFor"/>, <see cref="LocateRequestedAt"/> and
 /// <see cref="PointerHiddenByTyping"/> lock-free.
 /// </summary>
 public sealed class EffectsModel
 {
     private static readonly ColorFilter[] s_order = Enum.GetValues<ColorFilter>();
 
-    private DisplayEffects _current;
+    private EffectsSnapshot _snapshot;
     private long _locateRequestedAt;
     private volatile bool _typing;
 
     public EffectsModel(DisplayEffects initial)
     {
-        _current = Normalized(initial);
+        _snapshot = EffectsSnapshot.Create(Normalized(initial));
     }
 
     /// <summary>Raised after every setting change, on the thread that caused it. Handlers must be fast.</summary>
@@ -30,7 +30,8 @@ public sealed class EffectsModel
     /// </summary>
     public event Action? Signaled;
 
-    public DisplayEffects Current => Volatile.Read(ref _current);
+    /// <summary>Shared settings; the filter here is the one for monitors without their own.</summary>
+    public DisplayEffects Current => Volatile.Read(ref _snapshot).Shared;
 
     /// <summary><see cref="Stopwatch"/> timestamp of the last locator request; 0 if never.</summary>
     public long LocateRequestedAt => Volatile.Read(ref _locateRequestedAt);
@@ -38,19 +39,26 @@ public sealed class EffectsModel
     /// <summary>The user types and "hide while typing" is on; ends with the next mouse movement.</summary>
     public bool PointerHiddenByTyping => _typing;
 
-    /// <summary>Strg+Alt+C: selected filter on/off.</summary>
-    public void ToggleFilter() => Update(e => e with { Filter = e.Filter with { Enabled = !e.Filter.Enabled } });
+    /// <summary>Effects as one monitor shows them, with its own filter if it has one. Called per frame, does not allocate.</summary>
+    public DisplayEffects CurrentFor(string monitorId) => Volatile.Read(ref _snapshot).For(monitorId);
 
-    /// <summary>Strg+Alt+Umschalt+C: next filter, and switch it on.</summary>
-    public void NextFilter() => Update(e =>
-    {
-        var next = s_order[(Array.IndexOf(s_order, e.Filter.Filter) + 1) % s_order.Length];
-        return e with { Filter = e.Filter with { Filter = next, Enabled = true } };
-    });
+    /// <summary>Strg+Alt+C: filter of the monitor on/off (the shared one if monitors share it).</summary>
+    public void ToggleFilter(string monitorId) => ChangeFilter(monitorId, f => f with { Enabled = !f.Enabled });
+
+    /// <summary>Strg+Alt+Umschalt+C: next filter on the monitor, and switch it on.</summary>
+    public void NextFilter(string monitorId) => ChangeFilter(monitorId, f =>
+        new MonitorFilter(true, s_order[(Array.IndexOf(s_order, f.Filter) + 1) % s_order.Length]));
 
     public void SetSmoothing(Smoothing smoothing) => Update(e => e with { Smoothing = smoothing });
 
+    /// <summary>Shared filter, contrast and brightness.</summary>
     public void SetFilter(FilterSettings filter) => Update(e => e with { Filter = filter.Normalized() });
+
+    /// <summary>Gives the monitor its own filter; it shows only while <see cref="DisplayEffects.PerMonitorFilter"/> is on.</summary>
+    public void SetMonitorFilter(string monitorId, MonitorFilter filter) => Update(e => WithOwn(e, monitorId, filter));
+
+    /// <summary>Off: all monitors show the shared filter; own entries are kept for later.</summary>
+    public void SetPerMonitorFilter(bool perMonitor) => Update(e => e with { PerMonitorFilter = perMonitor });
 
     public void SetCursor(PointerStyle style) => Update(e => e with { Cursor = style.Normalized() });
 
@@ -87,18 +95,35 @@ public sealed class EffectsModel
         }
     }
 
-    private static DisplayEffects Normalized(DisplayEffects e) =>
-        e with { Filter = e.Filter.Normalized(), Cursor = e.Cursor.Normalized() };
+    private static DisplayEffects Normalized(DisplayEffects e) => e with
+    {
+        Filter = e.Filter.Normalized(),
+        Cursor = e.Cursor.Normalized(),
+        MonitorFilters = e.MonitorFilters ?? new Dictionary<string, MonitorFilter>(),
+    };
+
+    // A monitor without an own entry starts from the shared filter and keeps the result as its
+    // own entry, like zoom levels (decision: the shared filter stays unchanged).
+    private void ChangeFilter(string monitorId, Func<MonitorFilter, MonitorFilter> change) => Update(e =>
+    {
+        var next = change(e.FilterOf(monitorId));
+        return e.PerMonitorFilter
+            ? WithOwn(e, monitorId, next)
+            : e with { Filter = e.Filter with { Enabled = next.Enabled, Filter = next.Filter } };
+    });
+
+    private static DisplayEffects WithOwn(DisplayEffects e, string monitorId, MonitorFilter filter) =>
+        e with { MonitorFilters = new Dictionary<string, MonitorFilter>(e.MonitorFilters) { [monitorId] = filter } };
 
     private void Update(Func<DisplayEffects, DisplayEffects> change)
     {
-        DisplayEffects current, next;
+        EffectsSnapshot current, next;
         do
         {
-            current = Volatile.Read(ref _current);
-            next = change(current);
+            current = Volatile.Read(ref _snapshot);
+            next = EffectsSnapshot.Create(change(current.Shared));
         }
-        while (Interlocked.CompareExchange(ref _current, next, current) != current);
+        while (Interlocked.CompareExchange(ref _snapshot, next, current) != current);
 
         Changed?.Invoke();
     }

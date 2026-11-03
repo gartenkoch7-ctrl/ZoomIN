@@ -73,7 +73,7 @@ public sealed partial class WelcomeViewModel : ObservableObject
         _context.WelcomeFinished();
     }
 
-    public void ToggleFilter() => _context.Controller.Effects.ToggleFilter();
+    public void ToggleFilter() => _context.Controller.ToggleFilter();
 
     private void ShowStep()
     {

@@ -12,7 +12,11 @@ internal static class EffectsFactory
     public static DisplayEffects Effects(AppSettings settings) => new(
         new FilterSettings(settings.FilterEnabled, settings.ColorFilter, settings.Contrast, settings.Brightness),
         settings.Smoothing,
-        Pointer(settings));
+        Pointer(settings))
+    {
+        PerMonitorFilter = settings.PerMonitorFilter,
+        MonitorFilters = settings.MonitorFilters,
+    };
 
     public static AppSettings Apply(AppSettings settings, EffectsModel model)
     {
@@ -22,6 +26,8 @@ internal static class EffectsFactory
         {
             FilterEnabled = effects.Filter.Enabled,
             ColorFilter = effects.Filter.Filter,
+            PerMonitorFilter = effects.PerMonitorFilter,
+            MonitorFilters = new Dictionary<string, MonitorFilter>(effects.MonitorFilters),
             Contrast = effects.Filter.Contrast,
             Brightness = effects.Filter.Brightness,
             Smoothing = effects.Smoothing,

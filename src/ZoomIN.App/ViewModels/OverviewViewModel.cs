@@ -74,7 +74,7 @@ public sealed partial class OverviewViewModel : ObservableObject
         _syncing = true;
         var controller = _context.Controller;
         var model = controller.Model;
-        var effects = controller.Effects.Current;
+        var effects = controller.Effects.CurrentFor(controller.MonitorUnderMouse());
         IsOn = model.IsOn;
         Fullscreen = model.Mode == ZoomMode.Fullscreen;
         Lens = model.Mode == ZoomMode.Lens;
@@ -113,9 +113,9 @@ public sealed partial class OverviewViewModel : ObservableObject
 
     partial void OnFilterOnChanged(bool value)
     {
-        if (!_syncing && value != _context.Controller.Effects.Current.Filter.Enabled)
+        if (!_syncing && value != _context.Controller.Effects.CurrentFor(_context.Controller.MonitorUnderMouse()).Filter.Enabled)
         {
-            _context.Controller.Effects.ToggleFilter();
+            _context.Controller.ToggleFilter();
         }
     }
 

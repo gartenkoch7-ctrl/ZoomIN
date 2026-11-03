@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Filters;
 using ZoomIN.Core.Settings;
 
 namespace ZoomIN.Platform.Settings;
@@ -46,6 +47,7 @@ public sealed class JsonSettingsStore : ISettingsStore
                     MonitorZoomLevels = settings.MonitorZoomLevels ?? new Dictionary<string, double>(),
                     LensMonitorZoomLevels = settings.LensMonitorZoomLevels ?? new Dictionary<string, double>(),
                     DockedMonitorZoomLevels = settings.DockedMonitorZoomLevels ?? new Dictionary<string, double>(),
+                    MonitorFilters = settings.MonitorFilters ?? new Dictionary<string, MonitorFilter>(),
                 };
             }
             catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)

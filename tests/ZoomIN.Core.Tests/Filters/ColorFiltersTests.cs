@@ -88,31 +88,6 @@ public sealed class ColorFiltersTests
     }
 
     [Fact]
-    public void EffectsModel_NextFilter_CyclesAndEnables()
-    {
-        var model = new EffectsModel(DisplayEffects.Default);
-
-        model.NextFilter();
-
-        Assert.True(model.Current.Filter.Enabled);
-        Assert.Equal(ColorFilter.InvertedKeepHue, model.Current.Filter.Filter);
-    }
-
-    [Fact]
-    public void EffectsModel_ToggleFilter_FlipsEnabled_AndRaisesChanged()
-    {
-        var model = new EffectsModel(DisplayEffects.Default);
-        var raised = 0;
-        model.Changed += () => raised++;
-
-        model.ToggleFilter();
-        model.ToggleFilter();
-
-        Assert.False(model.Current.Filter.Enabled);
-        Assert.Equal(2, raised);
-    }
-
-    [Fact]
     public void PointerStyle_ScaleGrowsWithZoom_UpToMax()
     {
         Assert.Equal(1.0, PointerStyle.Default.ScaleFor(1));

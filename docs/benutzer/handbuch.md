@@ -47,6 +47,11 @@ Filter: Invertiert · Invertiert mit Farbton · Graustufen · Graustufen inverti
 Gelb auf Schwarz · Schwarz auf Gelb · Weiß auf Blau. Kontrast und Helligkeit stellen Sie unter
 **Farbfilter** ein, die Glättung unter **Zoom & Modi**.
 
+Mit „Eigener Farbfilter je Monitor“ (standardmäßig an) merkt sich jeder Monitor, ob sein Filter
+an ist und welcher; die Kürzel wirken dann auf den Monitor unter der Maus. Auf der Seite
+**Farbfilter** wählen Sie den Monitor in einer Liste aus; „Standard“ gilt für alle Monitore ohne
+eigenen Filter. Kontrast und Helligkeit gelten immer für alle Monitore.
+
 Auf der Seite **Mauszeiger** (mit Live-Vorschau) stellen Sie ein: „Windows-Zeigereinstellungen
 überschreiben“ (ZoomIN zeichnet dann immer den Windows-Standardzeiger in eigener Größe und Farbe,
 Zeigergröße und -farbe aus den Windows-Einstellungen gelten nicht), Größe ohne Zoom (1–4×),

@@ -25,6 +25,8 @@ public static class ProfileFields
         DockFraction = profile.DockFraction,
         FilterEnabled = profile.FilterEnabled,
         ColorFilter = profile.ColorFilter,
+        PerMonitorFilter = profile.PerMonitorFilter,
+        MonitorFilters = profile.MonitorFilters,
         Contrast = profile.Contrast,
         Brightness = profile.Brightness,
         Smoothing = profile.Smoothing,

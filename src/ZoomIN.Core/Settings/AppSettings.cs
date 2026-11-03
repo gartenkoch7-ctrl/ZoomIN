@@ -76,6 +76,12 @@ public sealed record AppSettings
 
     public ColorFilter ColorFilter { get; set; } = FilterSettings.Default.Filter;
 
+    /// <summary>Each monitor may keep its own filter on/off and kind (decision: default on, like the zoom level).</summary>
+    public bool PerMonitorFilter { get; set; } = true;
+
+    /// <summary>Own filter per monitor device name; monitors without an entry use FilterEnabled/ColorFilter.</summary>
+    public IReadOnlyDictionary<string, MonitorFilter> MonitorFilters { get; set; } = new Dictionary<string, MonitorFilter>();
+
     /// <summary>1 = unchanged; 0.5–3.</summary>
     public double Contrast { get; set; } = 1.0;
 

@@ -106,7 +106,7 @@ internal sealed class MonitorRenderer : IDisposable
             {
                 _log.Error($"Zoom pipeline for {_deviceName} failed", ex);
                 SetStatus(ZoomStatus.Idle with { LastError = ex.Message });
-                var needed = _model.TargetFor(_deviceName) > ZoomLimits.Min || NeedsOverlayUnzoomed(_effects.Current);
+                var needed = _model.TargetFor(_deviceName) > ZoomLimits.Min || NeedsOverlayUnzoomed(_effects.CurrentFor(_deviceName));
                 Sleep(needed ? RetryDelay : Timeout.InfiniteTimeSpan);
             }
         }
@@ -122,7 +122,8 @@ internal sealed class MonitorRenderer : IDisposable
         while (!_stopRequested)
         {
             Volatile.Write(ref _heartbeat, Stopwatch.GetTimestamp());
-            var effects = _effects.Current;
+            // The monitor's own colour filter, if it has one (per-monitor filter).
+            var effects = _effects.CurrentFor(_deviceName);
             animator.SetTarget(_model.TargetFor(_deviceName));
             var unzoomed = animator.IsSettled && animator.Current == ZoomLimits.Min;
 
