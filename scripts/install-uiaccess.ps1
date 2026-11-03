@@ -10,17 +10,25 @@
       1. ./scripts/setup-signing.ps1            (once, as administrator)
       2. ./scripts/publish.ps1 -UiAccess         (as normal user, signs ZoomIN.exe)
       3. ./scripts/install-uiaccess.ps1          (as administrator, this script)
-    The script stops a running ZoomIN, copies the build, adds a Start menu entry and starts
-    ZoomIN again as the normal user (never elevated). Undo: run with -Remove.
+    Layout (ADR-0015), the same the in-app updater maintains:
+      Program Files\ZoomIN\app-<version>\   one folder per version
+      Program Files\ZoomIN\current          directory link to the active version
+    The script stops a running ZoomIN, copies the build into its version folder, points "current"
+    at it, adds a Start menu entry and starts ZoomIN again as the normal user (never elevated).
+    An old flat installation (ZoomIN.exe directly in Program Files\ZoomIN) is replaced.
+    Undo: run with -Remove.
 #>
 param(
     [string]$Source,
     [string]$Destination = (Join-Path $env:ProgramFiles 'ZoomIN'),
+    # Defaults to the product version stamped into ZoomIN.exe by publish.ps1 -Version.
+    [string]$Version,
     [switch]$Remove
 )
 
 $ErrorActionPreference = 'Stop'
 $shortcut = Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs\ZoomIN.lnk'
+$current = Join-Path $Destination 'current'
 
 function Stop-ZoomIN {
     # App and watchdog share the image name; stopping both prevents a restart mid-copy.
@@ -28,8 +36,15 @@ function Stop-ZoomIN {
     Start-Sleep -Milliseconds 500
 }
 
+function Remove-Link([string]$Path) {
+    # Delete() on a directory link removes the link only, never the folder it points to.
+    $item = Get-Item $Path -Force -ErrorAction SilentlyContinue
+    if ($item) { $item.Delete() }
+}
+
 if ($Remove) {
     Stop-ZoomIN
+    Remove-Link $current
     Remove-Item $Destination -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item $shortcut -Force -ErrorAction SilentlyContinue
     Write-Host "ZoomIN removed from $Destination." -ForegroundColor Green
@@ -51,18 +66,32 @@ if ($signature.Status -ne 'Valid') {
     throw "ZoomIN.exe is not validly signed ($($signature.Status)). Run setup-signing.ps1, then publish.ps1 -UiAccess."
 }
 
+if (-not $Version) {
+    # "1.0.0-dev.99+commit" -> "1.0.0-dev.99", the name the updater gives the folder.
+    $Version = ((Get-Item $sourceExe).VersionInfo.ProductVersion -split '\+')[0]
+}
+
 Stop-ZoomIN
-if (Test-Path $Destination) {
+if (Test-Path (Join-Path $Destination 'ZoomIN.exe')) {
+    Write-Host 'Replacing the old flat installation.'
     Remove-Item $Destination -Recurse -Force
 }
-Copy-Item $Source $Destination -Recurse
-Write-Host "Installed to $Destination" -ForegroundColor Green
 
-$exe = Join-Path $Destination 'ZoomIN.exe'
+$target = Join-Path $Destination "app-$Version"
+New-Item -ItemType Directory -Force $Destination | Out-Null
+if (Test-Path $target) {
+    Remove-Item $target -Recurse -Force
+}
+Copy-Item $Source $target -Recurse
+Remove-Link $current
+New-Item -ItemType SymbolicLink -Path $current -Target $target | Out-Null
+Write-Host "Installed $Version to $target (current -> app-$Version)" -ForegroundColor Green
+
+$exe = Join-Path $current 'ZoomIN.exe'
 $shell = New-Object -ComObject WScript.Shell
 $link = $shell.CreateShortcut($shortcut)
 $link.TargetPath = $exe
-$link.WorkingDirectory = $Destination
+$link.WorkingDirectory = $current
 $link.Save()
 Write-Host "Start menu entry: $shortcut"
 

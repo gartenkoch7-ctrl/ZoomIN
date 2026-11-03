@@ -32,8 +32,7 @@ internal static class TextsGerman
         ["LanguageSystem"] = "Wie Windows",
         ["GeneralAutostart"] = "Mit Windows starten",
         ["GeneralUpdates"] = "Nach neuen Versionen suchen",
-        ["GeneralUpdatesHint"] = "Fragt beim Start nur die neueste Versionsnummer ab. Es werden keine Daten gesendet und nichts installiert.",
-        ["GeneralUpdateUrl"] = "Update-Adresse (GitHub-API „releases/latest“)",
+        ["GeneralUpdatesHint"] = "Fragt beim Start und einmal täglich die Versionsliste bei GitHub ab. Es werden keine Daten gesendet; installiert wird nur auf Klick.",
 
         ["ZoomMode"] = "Modus für Strg+Alt+Z",
         ["ZoomPerMonitor"] = "Eigene Zoomstufe je Monitor",

@@ -17,7 +17,7 @@ public sealed partial class WelcomeViewModel : ObservableObject
     {
         _context = context;
         Autostart = true;
-        CheckUpdates = false;
+        CheckUpdates = true;
         ShowStep();
     }
 

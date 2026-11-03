@@ -20,17 +20,6 @@
             <c:SettingCard Description="{x:Bind loc:Text.Get('GeneralAutostart.Desc')}" Glyph="&#xE7E8;" Header="{x:Bind loc:Text.GeneralAutostart}">
                 <ToggleSwitch IsOn="{x:Bind Vm.Autostart, Mode=TwoWay}" />
             </c:SettingCard>
-
-            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('GeneralGroupUpdates')}" />
-            <c:SettingCard Description="{x:Bind loc:Text.GeneralUpdatesHint}" Glyph="&#xE895;" Header="{x:Bind loc:Text.GeneralUpdates}">
-                <ToggleSwitch IsOn="{x:Bind Vm.CheckUpdates, Mode=TwoWay}" />
-            </c:SettingCard>
-            <c:SettingCard Glyph="&#xE71B;" Header="{x:Bind loc:Text.GeneralUpdateUrl}" HorizontalContentAlignment="Stretch">
-                <TextBox
-                    MinWidth="320"
-                    PlaceholderText="https://api.github.com/repos/…/releases/latest"
-                    Text="{x:Bind Vm.UpdateUrl, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-            </c:SettingCard>
         </StackPanel>
     </ScrollViewer>
 </Page>

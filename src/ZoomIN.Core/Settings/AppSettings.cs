@@ -2,6 +2,7 @@ using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
+using ZoomIN.Core.Updates;
 using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.Core.Settings;
@@ -31,11 +32,11 @@ public sealed record AppSettings
     /// <summary>The "closes to tray" hint is shown only once.</summary>
     public bool CloseToTrayHintShown { get; set; }
 
-    /// <summary>Opt-in update check (M7 decision): only asks for the latest release, nothing else.</summary>
+    /// <summary>Update check at start and once a day (ADR-0014); only asks GitHub for the release list.</summary>
     public bool CheckForUpdates { get; set; }
 
-    /// <summary>GitHub "latest release" API URL; empty = no check possible yet.</summary>
-    public string UpdateFeedUrl { get; set; } = string.Empty;
+    /// <summary>Which releases are offered (ADR-0014): finished ones only, or also experimental builds.</summary>
+    public ReleaseChannel UpdateChannel { get; set; } = ReleaseChannel.Stable;
 
     public string ActiveProfile { get; set; } = ProfileFields.DefaultProfileName;
 
