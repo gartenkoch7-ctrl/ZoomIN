@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Lifecycle;
+using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Watchdog.Crashes;
 using ZoomIN.Watchdog.Notification;
 
@@ -14,7 +15,8 @@ namespace ZoomIN.Watchdog;
 /// </summary>
 public static class WatchdogRunner
 {
-    public static int Run(int processId, string appPath, ILog log, IReadOnlyList<ICleanupStep> cleanup)
+    /// <param name="secure">Watches the secure-desktop instance (ADR-0016): restarts it with its switch, never notifies.</param>
+    public static int Run(int processId, string appPath, ILog log, IReadOnlyList<ICleanupStep> cleanup, bool secure = false)
     {
         int exitCode;
         try
@@ -37,6 +39,13 @@ public static class WatchdogRunner
             return 0;
         }
 
+        if (secure)
+        {
+            // Windows ends the whole job (instance and watchdog) on every desktop switch. If this
+            // watchdog is still alive a moment later, the instance really crashed.
+            Thread.Sleep(500);
+        }
+
         log.Error($"[Watchdog] ZoomIN ended unexpectedly (exit code 0x{exitCode:X8}).");
         RunCleanup(cleanup, log);
 
@@ -45,11 +54,18 @@ public static class WatchdogRunner
         {
             log.Info("[Watchdog] Restarting ZoomIN.");
             // Through the shell, as CreateProcess cannot start the uiAccess build (ADR-0012).
-            Process.Start(new ProcessStartInfo(appPath) { UseShellExecute = true })?.Dispose();
+            Process.Start(new ProcessStartInfo(appPath, secure ? SecureDesktopMode.Switch : "") { UseShellExecute = true })?.Dispose();
             return 0;
         }
 
         log.Error($"[Watchdog] Giving up after {RestartPolicy.MaxRestarts} restarts within {RestartPolicy.Window.TotalMinutes:0} minutes.");
+        if (secure)
+        {
+            // No notification on a secure desktop; stay off there until Windows restarts.
+            SecureDesktopGiveUp.Mark();
+            return 2;
+        }
+
         TrayNotification.Show(
             "ZoomIN wurde beendet",
             "ZoomIN ist wiederholt abgestürzt und wird nicht mehr neu gestartet. Details im Log unter %LocalAppData%\\ZoomIN\\logs.",

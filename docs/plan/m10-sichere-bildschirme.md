@@ -45,7 +45,8 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
       `Application.Start`, keine Updates/Autostart/Tray; Hauptthread wartet auf das Beenden-Kürzel
 - [x] Dev-Schalter: derselbe Schalter als normaler Benutzer läuft auf dem normalen Desktop
       (Rauchtest 2026-11-03: Engine nach 646 ms bereit)
-- [ ] Startzeit bis zum **ersten vergrößerten Bild** messen (bisher nur bis „Engine läuft“)
+- [x] Startzeit bis zum **ersten vergrößerten Bild** loggen (`Secure desktop: first magnified image
+      after … ms`, nur wenn der Zoom beim Start an ist); Messung auf dem echten Anmeldebildschirm offen
 
 ### 3 · Einstellungen & Zustand
 - [x] Core: `SecureSettingsSanitizer` begrenzt jeden Wert (NaN, unbekannte Enums, zu große
@@ -57,8 +58,10 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
       `Save` schreibt nie
 - [x] `SecureProfileStore`: Profile nur lesen, damit Strg+Alt+P auch dort funktioniert
 - [x] Neues Feld `ZoomOn`; der sichere Modus startet damit gezoomt
-- [ ] Benutzerinstanz: bei Sperre/Desktopwechsel (`WTS_SESSION_LOCK` u. a.) Zustand sofort
-      speichern (bisher nach 1 s Verzögerung – Sperre direkt nach Strg+Alt+Z geht noch verloren)
+- [x] Benutzerinstanz: Zoom an/aus wird sofort gespeichert (ohne die 1-s-Verzögerung), damit
+      Win+L direkt nach Strg+Alt+Z stimmt. Zoomstufen bleiben verzögert – wer per Mausrad zoomt und
+      binnen 1 s sperrt, sieht auf dem Sperrbildschirm die vorige Stufe (bewusst, kein
+      Sitzungs-Hook nötig; gilt so auch für Strg+Alt+Entf und UAC, die kein Sperr-Ereignis senden)
 - [ ] Erkenntnis: In einer MSIX-Umgebung (z. B. Shell aus einer Paket-App) leitet Windows AppData
       um; der Pfadvergleich weist das ab → Standardwerte. Für SYSTEM nicht relevant
 
@@ -71,11 +74,16 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
 ### 5 · Sicherheit & Robustheit
 - [x] Tastatur-Hook: Schnittstelle liefert nachweislich nur zwei Ereignisse (`InputActivityPrivacyTests`)
 - [x] Beenden-Kürzel Strg+Alt+Umschalt+Z nur im sicheren Modus (Test gegen AltGr-Regel)
-- [ ] Wächter im sicheren Modus: Neustart ohne Shell, max. 3×, danach aus bis Systemstart
-- [ ] Overlay zeigt nichts, solange kein Bild erfasst wurde (kein Schwarzbild)
+- [x] Wächter im sicheren Modus (`--watchdog <pid> --secure`): wartet 500 ms (Desktopwechsel
+      beendet den ganzen Job, nur ein echter Absturz lässt den Wächter leben), startet mit
+      `--secure-desktop` neu, max. 3× in 5 min; danach Merker `secure-gave-up.txt` → aus bis
+      Windows-Neustart, keine Benachrichtigung. Rauchtest: Wächter startet mit
+- [ ] Wächter: im echten Job (ATBroker) prüfen, dass er mitstartet und mit beendet wird
+- [x] Overlay zeigt nichts, solange kein Bild erfasst wurde (`DesktopDuplicator.HasImage`);
+      Hot-Path-Änderung ist eine Bool-Abfrage ohne Allokation, kein eigener Benchmark
 - [x] Logs als SYSTEM automatisch in SYSTEMs Profil (`FileLog` nutzt LocalAppData); JSON-Fehler
       werden nicht mit Inhalt geloggt
-- [ ] Logs: prüfen, dass UIA/Tracking im sicheren Modus keinen Text loggen
+- [x] Logs: UIA/Tracking loggen keinen Text (einzige Meldung: „UI Automation is unavailable“)
 - [ ] `/security-review` des Branches vor dem Merge
 
 ### 6 · Test auf dem echten PC (Nutzer, Checkliste)

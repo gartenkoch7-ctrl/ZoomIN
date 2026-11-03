@@ -102,6 +102,14 @@ internal sealed class RenderSession : IDisposable
         if (!request.OverlayOnly)
         {
             _duplicator.Update();
+
+            // Nothing captured yet: draw nothing and keep the overlay hidden instead of showing black.
+            if (!_duplicator.HasImage)
+            {
+                _gpu.Context.ClearRenderTargetView(_swapchain.RenderTarget, s_transparent);
+                _swapchain.Present();
+                return true;
+            }
         }
 
         // Read the cursor as late as possible: it decides what is shown under the pointer.

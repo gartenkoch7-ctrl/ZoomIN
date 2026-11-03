@@ -39,6 +39,12 @@ internal sealed class DesktopDuplicator : IDisposable
     public ID3D11ShaderResourceView ShaderResource { get; }
 
     /// <summary>
+    /// False until the first desktop image was copied. Until then the copy is empty and would be
+    /// shown as a black screen, e.g. right after a start on the secure desktop (ADR-0016).
+    /// </summary>
+    public bool HasImage { get; private set; }
+
+    /// <summary>
     /// Pulls a new frame if one is available, without blocking. Recreates the duplication after
     /// ACCESS_LOST (mode change, lock screen, UAC prompt).
     /// </summary>
@@ -72,6 +78,7 @@ internal sealed class DesktopDuplicator : IDisposable
             {
                 DxgiInterop.CopyResource(_gpu.Context.NativePointer, _copy.NativePointer, texture);
                 Marshal.Release(texture);
+                HasImage = true;
             }
         }
         finally

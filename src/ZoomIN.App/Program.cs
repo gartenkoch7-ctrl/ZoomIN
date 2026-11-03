@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.App.SecureDesktop;
 using ZoomIN.App.Updates;
+using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Diagnostics;
 using ZoomIN.Watchdog;
@@ -22,9 +23,9 @@ public static class Program
     [STAThread]
     public static int Main(string[] args)
     {
-        if (WatchdogArguments.TryParse(args, out var processId))
+        if (WatchdogArguments.TryParse(args, out var processId, out var secure))
         {
-            return WatchdogRunner.Run(processId, Environment.ProcessPath!, new FileLog(), cleanup: [new AppBarCleanup(), new SystemCursorCleanup()]);
+            return WatchdogRunner.Run(processId, Environment.ProcessPath!, new FileLog(), cleanup: [new AppBarCleanup(), new SystemCursorCleanup()], secure);
         }
 
         if (UpdateCommand.TryParse(args, out var update))
@@ -42,7 +43,7 @@ public static class Program
             return UninstallFlow.RemoveElevated(asker, new FileLog());
         }
 
-        if (args is [SecureDesktopHost.Switch])
+        if (args is [SecureDesktopMode.Switch])
         {
             LogBackgroundFailures(new FileLog());
             return SecureDesktopHost.Run();

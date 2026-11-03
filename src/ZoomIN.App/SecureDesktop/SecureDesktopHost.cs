@@ -1,11 +1,14 @@
 using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using ZoomIN.App.Composition;
+using ZoomIN.App.Lifecycle;
 using ZoomIN.App.Settings;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Hotkeys;
+using ZoomIN.Platform.Diagnostics;
 using ZoomIN.Platform.SecureDesktop;
+using ZoomIN.Watchdog.Crashes;
 
 namespace ZoomIN.App.SecureDesktop;
 
@@ -17,13 +20,19 @@ namespace ZoomIN.App.SecureDesktop;
 /// </summary>
 internal static class SecureDesktopHost
 {
-    public const string Switch = "--secure-desktop";
-
     // Not the tray app's name: both run at the same time in the same session.
     private const string MutexName = @"Local\ZoomIN.SecureInstance";
 
+    private static readonly TimeSpan FirstFrameTimeout = TimeSpan.FromSeconds(10);
+
     public static int Run()
     {
+        if (SecureDesktopGiveUp.IsActive())
+        {
+            new FileLog().Warn("Secure desktop: off until Windows restarts (watchdog gave up after repeated crashes)");
+            return 0;
+        }
+
         using var mutex = new Mutex(false, MutexName);
         try
         {
@@ -42,6 +51,7 @@ internal static class SecureDesktopHost
         {
             var log = services.GetRequiredService<ILog>();
             log.Info($"ZoomIN secure desktop started (SYSTEM: {SessionUserFolders.IsSystem})");
+            WatchdogStarter.Start(log, secure: true);
             Start(services, exit, log);
             exit.Wait();
             log.Info("ZoomIN secure desktop exits");
@@ -59,6 +69,7 @@ internal static class SecureDesktopHost
         if (settings.ZoomOn)
         {
             controller.Activate(settings.LastMode);
+            _ = Task.Run(() => LogFirstFrame(controller, log));
         }
 
         if (!services.GetRequiredService<IHotkeyService>().Register(HotkeyGesture.ExitSecureDesktop, exit.Set))
@@ -66,7 +77,26 @@ internal static class SecureDesktopHost
             log.Warn("Exit shortcut for the secure desktop is unavailable");
         }
 
-        var elapsed = DateTime.Now - Process.GetCurrentProcess().StartTime;
-        log.Info($"Secure desktop engine running after {elapsed.TotalMilliseconds:0} ms (zoom on: {settings.ZoomOn})");
+        log.Info($"Secure desktop engine running after {SinceStart().TotalMilliseconds:0} ms (zoom on: {settings.ZoomOn})");
     }
+
+    /// <summary>Acceptance criterion of M10: the magnified image within 1 s of the switch.</summary>
+    private static async Task LogFirstFrame(ZoomController controller, ILog log)
+    {
+        var deadline = Stopwatch.StartNew();
+        while (!controller.Status.IsVisible)
+        {
+            if (deadline.Elapsed > FirstFrameTimeout)
+            {
+                log.Warn($"Secure desktop: no magnified image after {FirstFrameTimeout.TotalSeconds:0} s");
+                return;
+            }
+
+            await Task.Delay(10).ConfigureAwait(false);
+        }
+
+        log.Info($"Secure desktop: first magnified image after {SinceStart().TotalMilliseconds:0} ms");
+    }
+
+    private static TimeSpan SinceStart() => DateTime.Now - Process.GetCurrentProcess().StartTime;
 }

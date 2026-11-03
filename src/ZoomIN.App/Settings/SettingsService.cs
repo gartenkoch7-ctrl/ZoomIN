@@ -19,15 +19,17 @@ public sealed class SettingsService : IDisposable
     private readonly Timer _saveTimer;
     private readonly Lock _gate = new();
     private AppSettings _shared;
+    private bool _savedZoomOn;
 
     public SettingsService(AppSettings initial, RenderModels models, ISettingsStore store, IProfileStore profiles)
     {
         _shared = initial;
+        _savedZoomOn = initial.ZoomOn;
         _models = models;
         _store = store;
         _profiles = profiles;
         _saveTimer = new Timer(_ => SaveNow());
-        _models.Zoom.Changed += ScheduleSave;
+        _models.Zoom.Changed += OnZoomChanged;
         _models.Effects.Changed += ScheduleSave;
         _models.Tracking.Changed += ScheduleSave;
     }
@@ -76,17 +78,32 @@ public sealed class SettingsService : IDisposable
     public void SaveNow()
     {
         var settings = Current;
+        Volatile.Write(ref _savedZoomOn, settings.ZoomOn);
         _store.Save(settings);
         _profiles.Save(settings.ActiveProfile, settings);
     }
 
     public void Dispose()
     {
-        _models.Zoom.Changed -= ScheduleSave;
+        _models.Zoom.Changed -= OnZoomChanged;
         _models.Effects.Changed -= ScheduleSave;
         _models.Tracking.Changed -= ScheduleSave;
         _saveTimer.Dispose();
         SaveNow();
+    }
+
+    // The secure desktop starts with the saved on/off state (ADR-0016): Win+L right after
+    // Strg+Alt+Z must not wait for the debounce.
+    private void OnZoomChanged()
+    {
+        if (_models.Zoom.IsOn != Volatile.Read(ref _savedZoomOn))
+        {
+            SaveNow();
+        }
+        else
+        {
+            ScheduleSave();
+        }
     }
 
     // Wheel zooming changes the level many times per second; write the files once it settles.

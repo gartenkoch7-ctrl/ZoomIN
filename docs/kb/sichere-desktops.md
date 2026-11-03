@@ -61,7 +61,19 @@ Schlüssel `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Accessibility\ATs\
   `AppData` umgeleitet (`…\Packages\<App>\LocalCache\Roaming`). Der Pfadvergleich lehnt das ab,
   der sichere Modus nimmt dann Standardwerte. Für den echten Start als SYSTEM nicht relevant.
 
+- Wächter: `--watchdog <pid> --secure`. Er wartet nach dem Ende der Instanz 500 ms: Ein
+  Desktopwechsel beendet den ganzen Job samt Wächter, ein Absturz nicht. Nach 3 Abstürzen in 5 min
+  schreibt er `secure-gave-up.txt`; bis zum nächsten Windows-Start beendet sich der sichere
+  Modus dann sofort wieder.
+- Kein Schwarzbild: Bis die erste Desktopkopie vorliegt (`DesktopDuplicator.HasImage`), bleibt das
+  Overlay unsichtbar.
+- Rauchtest auf dem normalen Desktop: Kürzel, die die Tray-App schon belegt, meldet der sichere
+  Modus als „already in use“ – dort erwartet, weil beide auf demselben Desktop laufen.
+
 ## Offen (Spike mit ZoomIN selbst)
+- Gelten Tastenkürzel (`RegisterHotKey`) pro Desktop? Sonst würde die Tray-App auf `Default` die
+  Kürzel der sicheren Instanz blockieren.
+- Startet ATBroker den Wächter mit im Job, und wird er beim Wechsel mit beendet?
 - Unter welchem Konto, in welcher Sitzung und auf welchem Desktop startet ATBroker das Programm?
 - Startet es bei Sperre/UAC, wenn die Benutzerinstanz **nicht** über die Erleichterte Bedienung
   gestartet wurde (unser eigener Autostart)?
