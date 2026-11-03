@@ -36,5 +36,15 @@ internal static class TextsEnglishUpdates
         ["Uninstall.Question"] = "ZoomIN will be removed from this PC.\n\nKeep your settings and profiles?\n\nYes: keep settings\nNo: delete everything\nCancel: change nothing",
         ["Uninstall.Done"] = "ZoomIN has been removed.",
         ["Uninstall.Failed"] = "ZoomIN was not removed. The Windows prompt was declined or the removal failed.",
+
+        ["UiAccess.Title"] = "Zoom is not above all menus",
+        ["UiAccess.Tray"] = "The taskbar, sound, network and Start menus stay visible unmagnified. Open ZoomIN to install the signed version.",
+        ["UiAccess.Banner"] = "This ZoomIN may not draw above the taskbar, quick settings (sound, network, Bluetooth), Start and the notification center – they stay visible unmagnified. Only the signed, installed version can.",
+        ["UiAccess.Install"] = "Install signed version",
+        ["UiAccess.Downloading"] = "Downloading and checking the setup …",
+        ["UiAccess.Result.Started"] = "The setup has started. Please confirm the Windows prompt.",
+        ["UiAccess.Result.NoRelease"] = "There is no version with a setup in your update channel yet.",
+        ["UiAccess.Result.DownloadFailed"] = "The setup could not be downloaded. Please check the internet connection.",
+        ["UiAccess.Result.NotTrusted"] = "The available setup is not publicly signed yet and was not started. This button works once the signature is in place.",
     };
 }

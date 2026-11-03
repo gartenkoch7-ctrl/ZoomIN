@@ -15,6 +15,17 @@ public sealed class GitHubReleaseParserTests
         Assert.Equal(new DateTimeOffset(2026, 11, 2, 10, 0, 0, TimeSpan.Zero), release.PublishedAt);
         Assert.EndsWith("ZoomIN-1.0.0-win-x64-uiaccess.zip", release.PackageUrl.AbsoluteUri, StringComparison.Ordinal);
         Assert.EndsWith("checksums.txt", release.ChecksumsUrl.AbsoluteUri, StringComparison.Ordinal);
+        Assert.Null(release.SetupUrl);
+    }
+
+    [Fact]
+    public void SetupAsset_IsPickedUp()
+    {
+        var setup = """{"name":"ZoomIN-Setup.exe","browser_download_url":"https://example.invalid/ZoomIN-Setup.exe"}""";
+
+        var release = Assert.Single(Parse($"[{Release("v1.0.0", Package("1.0.0"), Checksums, setup)}]"));
+
+        Assert.EndsWith("ZoomIN-Setup.exe", release.SetupUrl?.AbsoluteUri, StringComparison.Ordinal);
     }
 
     [Fact]

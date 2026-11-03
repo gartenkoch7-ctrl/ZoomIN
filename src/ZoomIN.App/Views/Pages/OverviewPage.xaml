@@ -20,6 +20,23 @@
         <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Style="{StaticResource CardStackStyle}">
             <TextBlock Style="{StaticResource PageTitleStyle}" Text="{x:Bind loc:Text.Get('NavOverview')}" />
 
+            <!-- Without UIAccess quick settings and Start stay above the zoom (ADR-0017). -->
+            <InfoBar
+                Title="{x:Bind loc:Text.Get('UiAccess.Title')}"
+                IsClosable="False"
+                IsOpen="{x:Bind Banner.IsOpen}"
+                Message="{x:Bind loc:Text.Get('UiAccess.Banner')}"
+                Severity="Warning">
+                <InfoBar.ActionButton>
+                    <Button Click="OnInstallSigned" Content="{x:Bind loc:Text.Get('UiAccess.Install')}" IsEnabled="{x:Bind Banner.CanInstall, Mode=OneWay}" />
+                </InfoBar.ActionButton>
+                <TextBlock
+                    Margin="0,0,0,12"
+                    AutomationProperties.LiveSetting="Polite"
+                    Text="{x:Bind Banner.Status, Mode=OneWay}"
+                    TextWrapping="Wrap" />
+            </InfoBar>
+
             <!-- Big zoom switch with the current level and +/− buttons. -->
             <Border Padding="20" Style="{StaticResource TileStyle}">
                 <Grid ColumnSpacing="20">

@@ -5,4 +5,5 @@ namespace ZoomIN.Core.Updates;
 /// <param name="PublishedAt">When the release was published.</param>
 /// <param name="PackageUrl">The signed UIAccess package (<see cref="ReleaseAssets.PackageName"/>).</param>
 /// <param name="ChecksumsUrl">SHA-256 list (<see cref="ReleaseAssets.ChecksumsName"/>) to verify the package.</param>
-public sealed record ReleaseInfo(AppVersion Version, DateTimeOffset PublishedAt, Uri PackageUrl, Uri ChecksumsUrl);
+/// <param name="SetupUrl">The setup program (<see cref="ReleaseAssets.SetupName"/>), if the release carries one.</param>
+public sealed record ReleaseInfo(AppVersion Version, DateTimeOffset PublishedAt, Uri PackageUrl, Uri ChecksumsUrl, Uri? SetupUrl = null);

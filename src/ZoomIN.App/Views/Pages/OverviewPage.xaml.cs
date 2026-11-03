@@ -18,9 +18,13 @@ public sealed partial class OverviewPage : Page
 
     public OverviewViewModel? Vm { get; private set; }
 
+    public UiAccessBannerViewModel? Banner { get; private set; }
+
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        Vm = new OverviewViewModel((PageContext)e.Parameter);
+        var context = (PageContext)e.Parameter;
+        Vm = new OverviewViewModel(context);
+        Banner = new UiAccessBannerViewModel(context);
         Bindings.Update();
 
         // Hotkeys and the tray change the state too; the render threads never call into the UI.
@@ -45,4 +49,12 @@ public sealed partial class OverviewPage : Page
     }
 
     private void OnLocate(object sender, RoutedEventArgs e) => Vm?.Locate();
+
+    private async void OnInstallSigned(object sender, RoutedEventArgs e)
+    {
+        if (Banner is not null)
+        {
+            await Banner.InstallAsync();
+        }
+    }
 }

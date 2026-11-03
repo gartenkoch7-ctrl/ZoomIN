@@ -108,3 +108,6 @@ WINTRUST_ACTION_GENERIC_VERIFY_V2
 
 // Shell/MessageDialog
 MessageBox
+
+// Lifecycle/Win32UiAccessProbe
+GetTokenInformation

@@ -51,7 +51,7 @@ public static class GitHubReleaseParser
             return false;
         }
 
-        info = new ReleaseInfo(version, published, package, checksums);
+        info = new ReleaseInfo(version, published, package, checksums, AssetUrl(assets, ReleaseAssets.SetupName));
         return true;
     }
 
