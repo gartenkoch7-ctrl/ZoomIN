@@ -85,6 +85,10 @@ Installation (braucht einen Release) und die Benutzer-Optionen (Autostart, Deskt
 - [x] Autostart zeigt auf `current\ZoomIN.exe`, nicht auf einen Versionsordner
 - [x] Erststart-Assistent überspringen, wenn das Setup schon eingerichtet hat (`FirstRunCompleted`)
 - [ ] Ende-zu-Ende mit echtem Release (Klick in der App) – geht erst, wenn ein signierter Release existiert
+- [x] Ohne UIAccess (Entwickler-Build, ZIP): Tray-Meldung je Start, Banner auf der Übersicht, Knopf
+      lädt und prüft `ZoomIN-Setup.exe` und startet es (ADR-0017). Sichttest 2026-11-03 mit Dev-Build ✅;
+      Knopf meldet „noch keine Version mit Setup“, solange kein Release veröffentlicht ist
+- [ ] Setup-Knopf Ende-zu-Ende, sobald ein signierter Release mit `ZoomIN-Setup.exe` existiert
 
 **Geprüft 2026-11-03 (lokal, Zertifikat dieses PCs):** Installation in die neue Struktur,
 UIAccess über `current` (Band 2), Update `1.0.0-dev.100` → `.101` per Admin-Schritt (Exit 0,

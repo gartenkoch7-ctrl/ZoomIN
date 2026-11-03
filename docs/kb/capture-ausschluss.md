@@ -74,6 +74,14 @@ Gemessen 2026-11-02 (Build 22631, `GetWindowBand` aus user32, undokumentiert):
   der Sichttest muss von Hand erfolgen.
 - Sichttest 2026-11-02 (Build 22631, UIAccess-Build aus `Program Files`): Ton/Netzwerk/Bluetooth-Menü
   nur noch vergrößert, kein Original darüber ✅.
+- Erkennen zur Laufzeit: `GetTokenInformation(TokenUIAccess)` auf dem eigenen Token
+  (`Win32UiAccessProbe`). Beobachtet 2026-11-03: Auf einem zweiten PC mit selbst gebautem develop-Stand
+  fehlte UIAccess, das Original-Menü lag wieder über dem Zoom. Seitdem zeigt ZoomIN dann Tray-Meldung
+  und Banner mit Setup-Knopf (ADR-0017). Nebenbei: Bei einem UIAccess-Prozess liefern
+  `Get-Process`/`Win32_Process` als normaler Benutzer **keinen** Pfad – ein leerer Pfad ist ein
+  Hinweis, dass UIAccess aktiv ist.
+- Auch die **Taskleiste** liegt ohne UIAccess über dem Vollbild-Zoom (beobachtet 2026-11-03 mit
+  Dev-Build: Zoom „komisch an der Seite der Taskleiste“; mit dem UIAccess-Build normal).
 
 ## Pflichttest (manuell, vor jedem Release)
 1. Zoom aktivieren (alle drei Modi).
