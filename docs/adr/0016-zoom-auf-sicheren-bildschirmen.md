@@ -20,7 +20,9 @@ das, indem ein Prozess mit SYSTEM-Rechten auf dem sicheren Desktop läuft.
   `docs/kb/sichere-desktops.md` fest.
 - **Umfang:** alle vier sicheren Bildschirme – Anmeldung nach Start, Sperre, Strg+Alt+Entf,
   UAC-Abfragen.
-- **Sicherer Modus:** dieselbe `current\ZoomIN.exe`, gestartet mit `--secure-desktop`. Volle
+- **Sicherer Modus:** dieselbe `current\ZoomIN.exe`. Windows startet sie ohne Argumente; läuft
+  sie als SYSTEM, ist sie immer der sichere Modus (Nachtrag vor dem Merge). `--secure-desktop`
+  startet ihn zusätzlich von Hand zum Testen. Volle
   Zoom-Engine (alle Modi, Farbfilter inkl. pro Monitor, Mauszeiger, Fokus/Caret-Tracking,
   Tastenkürzel, Profilwechsel) – aber **ohne WinUI, Tray, Einstellungsfenster, Updates,
   Dateidialoge, Links oder Hilfe**. Bedienung nur über Tastenkürzel. Eigener Einzelinstanz-Name,

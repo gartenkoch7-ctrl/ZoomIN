@@ -11,8 +11,10 @@ namespace ZoomIN.Setup.Install;
 /// <param name="CheckForUpdates">Check at start-up and daily.</param>
 /// <param name="ZoomLevel">Fullscreen zoom level to start with.</param>
 /// <param name="Filter">Colour filter switched on from the start, or null for none.</param>
+/// <param name="SecureDesktop">Also magnify the sign-in screen, lock screen, Ctrl+Alt+Del and UAC (ADR-0016).</param>
 internal sealed record SetupChoices(
-    ReleaseChannel Channel, bool Autostart, bool DesktopShortcut, bool CheckForUpdates, double ZoomLevel, ColorFilter? Filter)
+    ReleaseChannel Channel, bool Autostart, bool DesktopShortcut, bool CheckForUpdates, double ZoomLevel, ColorFilter? Filter,
+    bool SecureDesktop = true)
 {
     /// <summary>
     /// Merges the choices into existing settings (a reinstall keeps everything else) and marks the

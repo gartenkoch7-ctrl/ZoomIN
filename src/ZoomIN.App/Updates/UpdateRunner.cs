@@ -1,5 +1,6 @@
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Updates;
+using ZoomIN.Platform.SecureDesktop;
 using ZoomIN.Platform.Updates;
 
 namespace ZoomIN.App.Updates;
@@ -31,6 +32,8 @@ internal static class UpdateRunner
             {
                 log.Error("[Update] Refreshing the Apps entry failed", ex);
             }
+
+            SecureDesktopInstall.Apply(layout, command.SecureDesktop, log);
         }
 
         return (int)result;

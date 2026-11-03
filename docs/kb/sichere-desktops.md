@@ -70,7 +70,18 @@ Schlüssel `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Accessibility\ATs\
 - Rauchtest auf dem normalen Desktop: Kürzel, die die Tray-App schon belegt, meldet der sichere
   Modus als „already in use“ – dort erwartet, weil beide auf demselben Desktop laufen.
 
+- Registrierung (`SecureDesktopRegistration`): `ATs\ZoomIN` mit `ApplicationName`,
+  `Description`, `ATExe=ZoomIN.exe`, `StartExe=<Program Files>\ZoomIN\current\ZoomIN.exe`,
+  `Profile` (mild/severe vision), `SimpleProfile=Magnifier`, `TerminateOnDesktopSwitch=1`, keine
+  `StartParams`; dazu `ZoomIN` in HKLM `Configuration`. Merker der Nutzerwahl:
+  `HKLM\SOFTWARE\ZoomIN\SecureDesktop` (DWORD). Geschrieben nur von erhöhten Schritten (Setup,
+  `--apply-update`, `--secure-desktop-setting on|off`, Deinstallation).
+- Erkennung ohne Argument: Läuft ZoomIN als SYSTEM, startet immer der sichere Modus.
+
 ## Offen (Spike mit ZoomIN selbst)
+- Startet Windows ZoomIN bei Sperre/Strg+Alt+Entf/UAC, obwohl die Tray-App über unseren eigenen
+  Autostart lief und nur HKLM-`Configuration` gesetzt ist? Falls nein: HKCU-`Configuration`
+  prüfen (Nebenwirkung: Start nach der Anmeldung im Job).
 - Gelten Tastenkürzel (`RegisterHotKey`) pro Desktop? Sonst würde die Tray-App auf `Default` die
   Kürzel der sicheren Instanz blockieren.
 - Startet ATBroker den Wächter mit im Job, und wird er beim Wechsel mit beendet?

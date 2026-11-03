@@ -66,10 +66,19 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
       um; der Pfadvergleich weist das ab → Standardwerte. Für SYSTEM nicht relevant
 
 ### 4 · Registrierung, Setup & Updates
-- [ ] Platform: `SecureDesktopRegistration` (registrieren/entfernen/abfragen, Merker „vom Nutzer aus“)
-- [ ] Setup: Kontrollkästchen „Auch auf dem Anmeldebildschirm verwenden“ (vorausgewählt)
-- [ ] `--apply-update`: registrieren, sofern nicht ausgeschaltet; Deinstallation entfernt alles
-- [ ] App, Seite „Allgemein“: Schalter mit Admin-Abfrage (erhöhter Schritt wie bei Updates), DE/EN
+- [x] Platform: `SecureDesktopRegistration` (HKLM `ATs\ZoomIN` + `Configuration`, Merker
+      `HKLM\SOFTWARE\ZoomIN\SecureDesktop`); andere Einträge (z. B. `magnifierpane`) bleiben – Tests
+- [x] Windows startet `current\ZoomIN.exe` **ohne Argumente**; als SYSTEM ist ZoomIN immer der
+      sichere Modus, egal mit welchen Argumenten (SYSTEM bekommt nie WinUI, Dialoge oder Updates)
+- [x] Setup: Kontrollkästchen „Auch auf dem Anmeldebildschirm …“ (vorausgewählt), als
+      `--secure-desktop on|off` an den erhöhten Schritt
+- [x] `--apply-update`: registriert, sofern nicht ausgeschaltet; Deinstallation entfernt
+      Registrierung, Merker und den Ordner in SYSTEMs Profil
+- [x] App, Seite „Allgemein“: Schalter „Auf dem Anmeldebildschirm verwenden“, Admin-Abfrage über
+      `--secure-desktop-setting on|off`; bei „Nein“ springt er zurück; aus bei Dev-Build/ZIP. DE/EN
+- [ ] HKCU-`Configuration` wird bewusst **nicht** geschrieben (würde ZoomIN nach der Anmeldung
+      zusätzlich im Job starten). Spike klärt, ob Sperre/UAC ohne sie starten (laut Doku: wenn
+      `ATExe` schon läuft)
 
 ### 5 · Sicherheit & Robustheit
 - [x] Tastatur-Hook: Schnittstelle liefert nachweislich nur zwei Ereignisse (`InputActivityPrivacyTests`)

@@ -37,6 +37,7 @@ internal static class SetupTextsEnglish
         ["Autostart"] = "Start ZoomIN with Windows",
         ["Desktop"] = "Shortcut on the desktop",
         ["Updates"] = "Check for new versions",
+        ["SecureDesktop"] = "Also magnify the sign-in screen, lock screen and administrator prompts",
         ["Updates.Desc"] = "At start-up and once a day. Nothing is installed without a click.",
         ["ZoomLevel"] = "Zoom level",
         ["Filter"] = "Colour filter",

@@ -72,6 +72,8 @@ public sealed partial class SetupViewModel : ObservableObject
 
     public bool CheckForUpdates { get; set; } = true;
 
+    public bool SecureDesktop { get; set; } = true;
+
     public double ZoomLevel { get; set; } = ZoomLimits.DefaultLevel;
 
     public int FilterIndex { get; set; }
@@ -164,7 +166,7 @@ public sealed partial class SetupViewModel : ObservableObject
         IsBusy = true;
         Failed = false;
         Progress = 0;
-        var choices = new SetupChoices((ReleaseChannel)ChannelIndex, Autostart, DesktopShortcut, CheckForUpdates, ZoomLevel, s_filters[FilterIndex]);
+        var choices = new SetupChoices((ReleaseChannel)ChannelIndex, Autostart, DesktopShortcut, CheckForUpdates, ZoomLevel, s_filters[FilterIndex], SecureDesktop);
         var result = await new SetupInstaller(_log).InstallAsync(
             release, choices, new Progress<string>(text => Status = text), new Progress<double>(value => Progress = value * 100), CancellationToken.None);
         IsBusy = false;

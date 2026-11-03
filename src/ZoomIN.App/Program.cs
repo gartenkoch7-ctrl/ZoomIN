@@ -7,6 +7,7 @@ using ZoomIN.App.Updates;
 using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Diagnostics;
+using ZoomIN.Platform.SecureDesktop;
 using ZoomIN.Watchdog;
 using ZoomIN.Watchdog.Crashes;
 
@@ -28,6 +29,20 @@ public static class Program
             return WatchdogRunner.Run(processId, Environment.ProcessPath!, new FileLog(), cleanup: [new AppBarCleanup(), new SystemCursorCleanup()], secure);
         }
 
+        // As SYSTEM, ZoomIN is always the secure-desktop instance, whatever the arguments: Windows
+        // starts it that way on the sign-in screen, and SYSTEM must never get WinUI, dialogs or
+        // the updater (ADR-0016).
+        if (args is [SecureDesktopMode.Switch] || SessionUserFolders.IsSystem)
+        {
+            LogBackgroundFailures(new FileLog());
+            return SecureDesktopHost.Run();
+        }
+
+        if (SecureDesktopSetting.TryParse(args, out var secureDesktopOn))
+        {
+            return SecureDesktopSetting.RunElevated(secureDesktopOn, new FileLog());
+        }
+
         if (UpdateCommand.TryParse(args, out var update))
         {
             return UpdateRunner.Run(update, new FileLog());
@@ -41,12 +56,6 @@ public static class Program
         if (args is [UninstallEntry.RemoveSwitch, var pid] && int.TryParse(pid, NumberStyles.None, CultureInfo.InvariantCulture, out var asker))
         {
             return UninstallFlow.RemoveElevated(asker, new FileLog());
-        }
-
-        if (args is [SecureDesktopMode.Switch])
-        {
-            LogBackgroundFailures(new FileLog());
-            return SecureDesktopHost.Run();
         }
 
         RestartArguments.WaitIfRequested(args);

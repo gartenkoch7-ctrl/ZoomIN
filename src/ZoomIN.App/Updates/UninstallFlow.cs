@@ -6,6 +6,7 @@ using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Lifecycle;
+using ZoomIN.Platform.SecureDesktop;
 using ZoomIN.Platform.Shell;
 using ZoomIN.Platform.Updates;
 
@@ -75,6 +76,7 @@ internal static class UninstallFlow
         }
 
         InstallRegistration.Unregister();
+        SecureDesktopInstall.Remove(log);
         var script = string.Create(
             CultureInfo.InvariantCulture,
             $"Wait-Process -Id {waitForProcessId},{Environment.ProcessId} -ErrorAction SilentlyContinue; Start-Sleep 1; Remove-Item -LiteralPath '{layout.Root}' -Recurse -Force");

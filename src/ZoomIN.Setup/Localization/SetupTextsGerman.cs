@@ -37,6 +37,7 @@ internal static class SetupTextsGerman
         ["Autostart"] = "ZoomIN mit Windows starten",
         ["Desktop"] = "Verknüpfung auf dem Desktop",
         ["Updates"] = "Nach neuen Versionen suchen",
+        ["SecureDesktop"] = "Auch auf dem Anmeldebildschirm, Sperrbildschirm und bei Admin-Abfragen vergrößern",
         ["Updates.Desc"] = "Beim Start und einmal täglich. Installiert wird nur auf Klick.",
         ["ZoomLevel"] = "Zoomstufe",
         ["Filter"] = "Farbfilter",

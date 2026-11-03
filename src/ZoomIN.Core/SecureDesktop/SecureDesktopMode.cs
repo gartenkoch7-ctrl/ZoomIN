@@ -6,6 +6,9 @@ public static class SecureDesktopMode
     /// <summary>"ZoomIN.exe --secure-desktop".</summary>
     public const string Switch = "--secure-desktop";
 
+    /// <summary>"ZoomIN.exe --secure-desktop-setting on|off", elevated, from the settings page.</summary>
+    public const string SettingSwitch = "--secure-desktop-setting";
+
     /// <summary>
     /// After the watchdog gave up (<see cref="Lifecycle.RestartPolicy"/>), ZoomIN stays off on secure
     /// desktops until Windows restarts, so a crash loop can never stand between the user and sign-in.

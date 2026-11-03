@@ -124,6 +124,8 @@ internal static class TextsEnglishCards
         ["TrackingCaretMarker.Desc"] = "Clearly visible bar at the typing position.",
 
         ["GeneralAutostart.Desc"] = "ZoomIN starts in the notification area after sign-in.",
+        ["GeneralSecureDesktop"] = "Use on the sign-in screen",
+        ["GeneralSecureDesktop.Desc"] = "Also magnifies sign-in, the lock screen, Ctrl+Alt+Del and administrator prompts – with your settings. Changing this needs administrator rights. Ctrl+Alt+Shift+Z ends ZoomIN there.",
         ["GeneralGroupUpdates"] = "Updates",
         ["InfoCapture.Desc"] = "Teams, Zoom, Discord and browsers do not see the zoom.",
         ["InfoLogsTitle"] = "Logs",

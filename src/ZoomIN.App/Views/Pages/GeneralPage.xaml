@@ -20,6 +20,9 @@
             <c:SettingCard Description="{x:Bind loc:Text.Get('GeneralAutostart.Desc')}" Glyph="&#xE7E8;" Header="{x:Bind loc:Text.GeneralAutostart}">
                 <ToggleSwitch IsOn="{x:Bind Vm.Autostart, Mode=TwoWay}" />
             </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('GeneralSecureDesktop.Desc')}" Glyph="&#xE72E;" Header="{x:Bind loc:Text.Get('GeneralSecureDesktop')}">
+                <ToggleSwitch IsEnabled="{x:Bind Vm.SecureDesktopAvailable}" IsOn="{x:Bind Vm.SecureDesktop, Mode=TwoWay}" />
+            </c:SettingCard>
         </StackPanel>
     </ScrollViewer>
 </Page>
