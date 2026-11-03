@@ -57,6 +57,30 @@ public sealed class HttpPackageDownloaderTests : IDisposable
     }
 
     [Fact]
+    public async Task Setup_IsCheckedAgainstItsOwnChecksum()
+    {
+        var release = s_release with { SetupUrl = new Uri("https://example.invalid/ZoomIN-Setup.exe") };
+        var checksums = $"{Convert.ToHexStringLower(SHA256.HashData(s_package))}  {ReleaseAssets.SetupName}\n";
+        using var http = new HttpClient(new FakeServer(checksums, s_package));
+
+        var result = await new HttpPackageDownloader(NullLog.Instance, http).DownloadSetupAsync(release, _directory, null, Token);
+
+        Assert.Equal(PackageCheck.Ok, result.Result);
+        Assert.EndsWith(ReleaseAssets.SetupName, result.Path, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ReleaseWithoutSetup_DownloadsNothing()
+    {
+        using var http = new HttpClient(new FakeServer("", s_package));
+
+        var result = await new HttpPackageDownloader(NullLog.Instance, http).DownloadSetupAsync(s_release, _directory, null, Token);
+
+        Assert.Equal(PackageCheck.DownloadFailed, result.Result);
+        Assert.False(Directory.Exists(_directory));
+    }
+
+    [Fact]
     public async Task Cancellation_IsPassedOn()
     {
         using var cancel = new CancellationTokenSource();

@@ -9,4 +9,8 @@ public interface IPackageDownloader
     /// <param name="cancellationToken">Cancels the download; a partial file is removed.</param>
     Task<PackageDownload> DownloadAsync(
         ReleaseInfo release, string directory, IProgress<double>? progress, CancellationToken cancellationToken);
+
+    /// <summary>Same checks for the release's setup program; <see cref="PackageCheck.DownloadFailed"/> if it has none.</summary>
+    Task<PackageDownload> DownloadSetupAsync(
+        ReleaseInfo release, string directory, IProgress<double>? progress, CancellationToken cancellationToken);
 }

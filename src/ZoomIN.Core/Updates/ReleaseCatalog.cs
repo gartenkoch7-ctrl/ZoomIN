@@ -14,6 +14,10 @@ public static class ReleaseCatalog
     public static ReleaseInfo? Update(IEnumerable<ReleaseInfo> releases, ReleaseChannel channel, AppVersion current) =>
         Offered(releases, channel).FirstOrDefault(release => release.Version > current);
 
+    /// <summary>The newest release of <paramref name="channel"/> that carries a setup program, or null.</summary>
+    public static ReleaseInfo? NewestSetup(IEnumerable<ReleaseInfo> releases, ReleaseChannel channel) =>
+        Offered(releases, channel).FirstOrDefault(release => release.SetupUrl is not null);
+
     public static UpdateKind Classify(AppVersion current, AppVersion target) => target.CompareTo(current) switch
     {
         > 0 => UpdateKind.Upgrade,

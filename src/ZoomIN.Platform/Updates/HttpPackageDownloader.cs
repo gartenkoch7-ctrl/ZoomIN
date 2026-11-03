@@ -28,11 +28,25 @@ public sealed class HttpPackageDownloader : IPackageDownloader
         _http = http;
     }
 
-    public async Task<PackageDownload> DownloadAsync(
+    public Task<PackageDownload> DownloadAsync(
         ReleaseInfo release, string directory, IProgress<double>? progress, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(release);
-        var name = ReleaseAssets.PackageName(release.Version);
+        return DownloadAssetAsync(release, ReleaseAssets.PackageName(release.Version), release.PackageUrl, directory, progress, cancellationToken);
+    }
+
+    public Task<PackageDownload> DownloadSetupAsync(
+        ReleaseInfo release, string directory, IProgress<double>? progress, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(release);
+        return release.SetupUrl is { } url
+            ? DownloadAssetAsync(release, ReleaseAssets.SetupName, url, directory, progress, cancellationToken)
+            : Task.FromResult(new PackageDownload(PackageCheck.DownloadFailed, null));
+    }
+
+    private async Task<PackageDownload> DownloadAssetAsync(
+        ReleaseInfo release, string name, Uri url, string directory, IProgress<double>? progress, CancellationToken cancellationToken)
+    {
         var target = Path.Combine(directory, name);
         var partial = target + ".partial";
         try
@@ -44,7 +58,7 @@ public sealed class HttpPackageDownloader : IPackageDownloader
             }
 
             Directory.CreateDirectory(directory);
-            var actual = await DownloadAndHashAsync(release.PackageUrl, partial, progress, cancellationToken).ConfigureAwait(false);
+            var actual = await DownloadAndHashAsync(url, partial, progress, cancellationToken).ConfigureAwait(false);
             if (!CryptographicOperations.FixedTimeEquals(actual, expected))
             {
                 File.Delete(partial);

@@ -56,6 +56,22 @@ public sealed class ReleaseCatalogTests
     }
 
     [Fact]
+    public void NewestSetup_SkipsReleasesWithoutSetup()
+    {
+        var url = new Uri("https://example.invalid/setup");
+        ReleaseInfo[] releases =
+        [
+            Release("1.0.1"),
+            Release("1.0.0") with { SetupUrl = url },
+            Release("1.1.0-dev.3") with { SetupUrl = url },
+        ];
+
+        Assert.Equal("1.0.0", ReleaseCatalog.NewestSetup(releases, ReleaseChannel.Stable)?.Version.ToString());
+        Assert.Equal("1.1.0-dev.3", ReleaseCatalog.NewestSetup(releases, ReleaseChannel.Experimental)?.Version.ToString());
+        Assert.Null(ReleaseCatalog.NewestSetup(s_releases, ReleaseChannel.Experimental));
+    }
+
+    [Fact]
     public void PackageName_ContainsVersion()
     {
         Assert.Equal("ZoomIN-1.1.0-dev.3-win-x64-uiaccess.zip", ReleaseAssets.PackageName(new AppVersion(1, 1, 0, "dev.3")));

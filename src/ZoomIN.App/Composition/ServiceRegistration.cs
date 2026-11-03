@@ -34,7 +34,10 @@ internal static class ServiceRegistration
         services.AddSingleton<IReleaseFeed, GitHubReleaseFeed>();
         services.AddSingleton<IPackageDownloader, HttpPackageDownloader>();
         services.AddSingleton<ISettingsBackup, FolderSettingsBackup>();
+        services.AddSingleton<ISignatureVerifier, AuthenticodeVerifier>();
+        services.AddSingleton<IUiAccessProbe, Win32UiAccessProbe>();
         services.AddSingleton<UpdateService>();
+        services.AddSingleton<SetupLauncher>();
         services.AddSingleton<AppShell>();
         return services.BuildServiceProvider();
     }

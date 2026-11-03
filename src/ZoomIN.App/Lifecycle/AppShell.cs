@@ -22,6 +22,7 @@ public sealed class AppShell
     private readonly ProfileService _profiles;
     private readonly ITrayIcon _tray;
     private readonly UpdateService _updates;
+    private readonly IUiAccessProbe _uiAccess;
     private readonly ILog _log;
     private readonly PageContext _pages;
     private readonly DispatcherQueue _dispatcher;
@@ -29,17 +30,20 @@ public sealed class AppShell
 
     public AppShell(
         ZoomController controller, SettingsService settings, ProfileService profiles, ITrayIcon tray,
-        UpdateService updates, IAutostart autostart, ICursorShapeSource cursorShapes, ILog log)
+        UpdateService updates, IAutostart autostart, ICursorShapeSource cursorShapes, IUiAccessProbe uiAccess,
+        SetupLauncher setup, ILog log)
     {
         _controller = controller;
         _settings = settings;
         _profiles = profiles;
         _tray = tray;
         _updates = updates;
+        _uiAccess = uiAccess;
         _log = log;
         _dispatcher = DispatcherQueue.GetForCurrentThread();
         _pages = new PageContext(
-            settings, profiles, controller, autostart, cursorShapes, updates, () => _window?.Handle ?? 0, () => _window?.ShowOverview(), ExitForUpdate);
+            settings, profiles, controller, autostart, cursorShapes, updates, uiAccess, setup,
+            () => _window?.Handle ?? 0, () => _window?.ShowOverview(), ExitForUpdate);
     }
 
     /// <summary>Raised on the UI thread when the user chose "Exit".</summary>
@@ -63,6 +67,13 @@ public sealed class AppShell
 
         _updates.UpdateAvailable += update => _tray.Notify(Text.UpdateTitle, Text.Format("UpdateText", update.Version));
         _ = RunUpdateChecksAsync();
+
+        // Once per start; the overview keeps a banner with the install button (ADR-0017).
+        if (!_uiAccess.IsActive)
+        {
+            _log.Info("UIAccess is not active: quick settings and Start stay above the zoom");
+            _tray.Notify(Text.Get("UiAccess.Title"), Text.Get("UiAccess.Tray"));
+        }
     }
 
     /// <summary>Thread-safe: e.g. called when a second ZoomIN start asks for the settings.</summary>
