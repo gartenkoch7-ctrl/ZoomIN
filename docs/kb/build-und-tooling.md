@@ -71,6 +71,9 @@ powershell -ExecutionPolicy Bypass -File scripts/install-uiaccess.ps1  # als Adm
 - Update-Schritt von Hand (wie die App ihn startet), mit Admin-Abfrage:
   `"C:\Program Files\ZoomIN\current\ZoomIN.exe" --apply-update "<paket.zip>" <sha256> <version>`;
   Exit-Code = `UpdateResult` (0 = installiert, 7 = Abfrage abgelehnt).
+  Aus einem Skript mit `Start-Process … -Verb RunAs` starten: ohne Erhöhung kein eigener
+  Admin-Dialog, sondern Exit-Code 6 (`UnauthorizedAccessException` auf `Program Files`).
+  Die laufende alte Instanz beendet der Schritt nicht; danach neu starten (über Explorer).
 - Execution Policy blockt unsignierte Skripte → `-ExecutionPolicy Bypass` bzw. PowerShell-Tool.
 
 ## Release-Assets und Versionen (ADR-0014)
