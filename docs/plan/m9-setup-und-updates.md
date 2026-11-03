@@ -38,7 +38,9 @@ Zoom liegt über den Schnelleinstellungen. Danach Update per Klick und Downgrade
       `TrustedPublishers`); Core: `ChecksumList`, `PackageCheck`
 - [ ] SignPath-Zertifikatsname in `TrustedPublishers` eintragen, Sperrlisten-Prüfung
       (`WTD_REVOKE_WHOLECHAIN`) dann einschalten – das lokale Zertifikat hat keine Sperrliste
-- [ ] App: alten `IUpdateChecker`/`GitHubUpdateChecker` durch `IReleaseFeed` ersetzen
+- [x] App: alten `IUpdateChecker`/`GitHubUpdateChecker` durch `IReleaseFeed` ersetzt
+- [x] Ordnerstruktur `app-<version>` + Link `current` ([ADR-0015](../adr/0015-versionsordner-und-current-link.md)),
+      Admin-Schritt `--apply-update` (`UpdateApplier`), Neustart mit `--wait-for`
 
 **Pflicht-Assets je Release** (sonst ignoriert der Feed den Release):
 `ZoomIN-<version>-win-x64-uiaccess.zip` (signierter UIAccess-Build) und `checksums.txt`
@@ -64,9 +66,18 @@ Zoom liegt über den Schnelleinstellungen. Danach Update per Klick und Downgrade
 - [ ] Deinstallation mit Frage nach den Einstellungen
 
 ### App
-- [ ] Einstellungsseite „Updates“: Kanal, Versionsliste, Prüfung an/aus, „Jetzt installieren“
-- [ ] Update-Hinweis (Tray + Einstellungen), Sicherung von Einstellungen/Profilen vor Wechsel
-- [ ] Update-Prüfung beim Start + täglich; Erststart-Assistent überspringen, wenn eingerichtet
+- [x] Einstellungsseite „Updates“: Kanal, Versionsliste, Prüfung an/aus, Aktualisieren/Zurückgehen,
+      Status als Live-Region für Screenreader
+- [x] Update-Hinweis im Tray, Sicherung von Einstellungen/Profilen vor einem Downgrade
+- [x] Update-Prüfung beim Start + täglich; im Erststart-Assistenten vorausgewählt
+- [x] Autostart zeigt auf `current\ZoomIN.exe`, nicht auf einen Versionsordner
+- [ ] Erststart-Assistent überspringen, wenn das Setup schon eingerichtet hat (mit `ZoomIN.Setup`)
+- [ ] Ende-zu-Ende mit echtem Release (Klick in der App) – geht erst, wenn ein signierter Release existiert
+
+**Geprüft 2026-11-03 (lokal, Zertifikat dieses PCs):** Installation in die neue Struktur,
+UIAccess über `current` (Band 2), Update `1.0.0-dev.100` → `.101` per Admin-Schritt (Exit 0,
+Link umgesetzt, alte Version behalten), abgelehnte Abfrage ändert nichts, Neustart mit
+`--wait-for` übernimmt nach dem Ende der alten Instanz.
 
 ### Doku
 - [ ] `docs/kb/build-und-tooling.md`, Handbuch (de/en), README: neuer Installationsweg
