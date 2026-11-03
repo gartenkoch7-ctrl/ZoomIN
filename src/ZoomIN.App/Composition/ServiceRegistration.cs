@@ -49,7 +49,7 @@ internal static class ServiceRegistration
         services.AddSingleton<ILog, FileLog>();
 
         // Created by a factory, so the provider disposes it (and the user's token) at exit.
-        services.AddSingleton(_ => SessionUser.Open());
+        services.AddSingleton(sp => SessionUser.Open(sp.GetRequiredService<ILog>()));
         services.AddSingleton<ISettingsStore>(sp => new SecureSettingsStore(
             sp.GetRequiredService<ILog>(), sp.GetRequiredService<SessionUser>(), SessionUserFolders.MachineFolder));
         services.AddSingleton<IProfileStore>(sp => new SecureProfileStore(sp.GetRequiredService<SessionUser>()));

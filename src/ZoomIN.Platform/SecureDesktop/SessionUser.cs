@@ -1,8 +1,10 @@
+using System.Runtime.InteropServices;
 using System.Security.Principal;
 using Microsoft.Win32.SafeHandles;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Shell;
+using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.SecureDesktop;
 
 namespace ZoomIN.Platform.SecureDesktop;
@@ -33,8 +35,10 @@ public sealed unsafe class SessionUser : IDisposable
     /// <summary>A plain folder, read as the current account (tests, developer switch).</summary>
     public static SessionUser ForFolder(string? zoomFolder) => new(zoomFolder, null);
 
-    public static SessionUser Open()
+    /// <param name="log">Only error codes are logged, never paths or names (secure log, ADR-0016).</param>
+    public static SessionUser Open(ILog log)
     {
+        ArgumentNullException.ThrowIfNull(log);
         if (!SessionUserFolders.IsSystem)
         {
             return ForFolder(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ZoomIN"));
@@ -42,20 +46,23 @@ public sealed unsafe class SessionUser : IDisposable
 
         if (!PInvoke.ProcessIdToSessionId((uint)Environment.ProcessId, out var session))
         {
+            log.Warn($"Secure desktop: session id unknown (error {Marshal.GetLastPInvokeError()})");
             return None;
         }
 
-        // Fails with ERROR_NO_TOKEN while nobody is signed in to the session (sign-in after boot).
-        HANDLE raw;
-        if (!PInvoke.WTSQueryUserToken(session, &raw))
+        if (SessionUserToken.Open(session, log) is not { } token)
         {
             return None;
         }
 
-        var token = new SafeAccessTokenHandle((nint)raw.Value);
-        var folder = WindowsIdentity.RunImpersonated(token, () => RoamingAppData(token));
+        var folder = WindowsIdentity.RunImpersonated(token, () => RoamingAppData(token, log));
         if (folder is null || !IsLocalFixedDisk(folder))
         {
+            if (folder is not null)
+            {
+                log.Info("Secure desktop: the user's AppData is not on a local fixed disk");
+            }
+
             token.Dispose();
             return None;
         }
@@ -90,12 +97,14 @@ public sealed unsafe class SessionUser : IDisposable
         }
     }
 
-    private static string? RoamingAppData(SafeAccessTokenHandle token)
+    private static string? RoamingAppData(SafeAccessTokenHandle token, ILog log)
     {
         PWSTR path;
         var folder = PInvoke.FOLDERID_RoamingAppData;
-        if (PInvoke.SHGetKnownFolderPath(&folder, KNOWN_FOLDER_FLAG.KF_FLAG_DEFAULT, (HANDLE)token.DangerousGetHandle(), &path).Failed)
+        var result = PInvoke.SHGetKnownFolderPath(&folder, KNOWN_FOLDER_FLAG.KF_FLAG_DEFAULT, (HANDLE)token.DangerousGetHandle(), &path);
+        if (result.Failed)
         {
+            log.Warn($"Secure desktop: the user's AppData is unknown (0x{result.Value:X8})");
             return null;
         }
 

@@ -30,11 +30,16 @@ public sealed class SecureSettingsStore : ISettingsStore
     public AppSettings Load()
     {
         // Read as the user, write the copy as SYSTEM: the copy lives in SYSTEM's own profile.
-        if (_user.ZoomFolder is { } folder && _user.Read(() => Parse(Path.Combine(folder, FileName))) is { } user)
+        if (_user.ZoomFolder is { } folder)
         {
-            _log.Info("Secure desktop: using the session user's settings");
-            KeepCopy(user);
-            return user;
+            if (_user.Read(() => Parse(Path.Combine(folder, FileName))) is { } user)
+            {
+                _log.Info("Secure desktop: using the session user's settings");
+                KeepCopy(user);
+                return user;
+            }
+
+            _log.Warn("Secure desktop: the session user's settings are missing, refused or invalid");
         }
 
         if (Parse(Path.Combine(_copyFolder, FileName)) is { } copy)
