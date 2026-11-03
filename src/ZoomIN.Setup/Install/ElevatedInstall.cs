@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Updates;
+using ZoomIN.Platform.SecureDesktop;
 using ZoomIN.Platform.Updates;
 
 namespace ZoomIN.Setup.Install;
@@ -46,6 +47,8 @@ internal static class ElevatedInstall
                 log.Error("[Setup] Registering the installation failed", ex);
                 return UpdateResult.Failed;
             }
+
+            SecureDesktopInstall.Apply(Layout, command.SecureDesktop, log);
         }
 
         return result;

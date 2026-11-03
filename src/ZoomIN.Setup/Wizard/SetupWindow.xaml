@@ -80,6 +80,7 @@
                 <StackPanel Spacing="12" Visibility="{x:Bind local:SetupWindow.On(Vm.Step, 2), Mode=OneWay}">
                     <CheckBox Content="{x:Bind loc:SetupText.Get('Autostart')}" IsChecked="{x:Bind Vm.Autostart, Mode=TwoWay}" />
                     <CheckBox Content="{x:Bind loc:SetupText.Get('Desktop')}" IsChecked="{x:Bind Vm.DesktopShortcut, Mode=TwoWay}" />
+                    <CheckBox Content="{x:Bind loc:SetupText.Get('SecureDesktop')}" IsChecked="{x:Bind Vm.SecureDesktop, Mode=TwoWay}" />
                     <StackPanel>
                         <CheckBox Content="{x:Bind loc:SetupText.Get('Updates')}" IsChecked="{x:Bind Vm.CheckForUpdates, Mode=TwoWay}" />
                         <TextBlock Margin="28,0,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind loc:SetupText.Get('Updates.Desc')}" TextWrapping="Wrap" />

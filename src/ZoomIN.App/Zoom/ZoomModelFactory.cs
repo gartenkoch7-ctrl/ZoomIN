@@ -26,6 +26,7 @@ internal static class ZoomModelFactory
 
     public static AppSettings Apply(AppSettings settings, ZoomModel model) => model.Read(levels => settings with
     {
+        ZoomOn = model.IsOn,
         LastMode = model.Mode,
         PerMonitorZoom = model.PerMonitor,
         AnimationMilliseconds = (int)Math.Round(model.AnimationSeconds * 1000),

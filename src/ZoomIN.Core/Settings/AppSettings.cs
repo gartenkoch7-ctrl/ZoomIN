@@ -42,6 +42,12 @@ public sealed record AppSettings
 
     // --- Display (stored per profile, see ProfileFields) ---
 
+    /// <summary>
+    /// Zoom was on when last saved. Only the secure-desktop instance starts with it, so the lock
+    /// screen looks like the desktop just left (ADR-0016); a normal start begins unzoomed.
+    /// </summary>
+    public bool ZoomOn { get; set; }
+
     /// <summary>Mode used by Strg+Alt+Z.</summary>
     public ZoomMode LastMode { get; set; } = ZoomMode.Fullscreen;
 

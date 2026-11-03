@@ -42,7 +42,7 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
 | `DXGI_ERROR_DEVICE_REMOVED` (Treiber-Reset) | Device + alle Ressourcen neu erstellen |
 | Monitor an/ab, DPI-Wechsel | Monitorliste neu aufbauen, Pipelines anpassen |
 | Geschützte Inhalte (DRM-Video) | erscheinen schwarz – erwartet, nicht behebbar |
-| Secure Desktop (UAC, Strg+Alt+Entf) | nicht erfassbar ohne Systemdienst – nicht im MVP |
+| Secure Desktop (UAC, Strg+Alt+Entf) | für die Benutzerinstanz nicht erfassbar; dort läuft eine eigene Instanz als SYSTEM (`--secure-desktop`, ADR-0016, [sichere-desktops.md](sichere-desktops.md)) |
 
 ## Filter, Glättung, Zeiger (M5)
 - `Magnify.hlsl`: Abtastung (Catmull-Rom/bilinear/Punkt) → Farbmatrix (3×3 + Offset) → saturate.

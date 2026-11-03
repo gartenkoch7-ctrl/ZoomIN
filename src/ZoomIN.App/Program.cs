@@ -2,9 +2,12 @@ using System.Globalization;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using ZoomIN.App.Lifecycle;
+using ZoomIN.App.SecureDesktop;
 using ZoomIN.App.Updates;
+using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Diagnostics;
+using ZoomIN.Platform.SecureDesktop;
 using ZoomIN.Watchdog;
 using ZoomIN.Watchdog.Crashes;
 
@@ -21,9 +24,23 @@ public static class Program
     [STAThread]
     public static int Main(string[] args)
     {
-        if (WatchdogArguments.TryParse(args, out var processId))
+        if (WatchdogArguments.TryParse(args, out var processId, out var secure))
         {
-            return WatchdogRunner.Run(processId, Environment.ProcessPath!, new FileLog(), cleanup: [new AppBarCleanup(), new SystemCursorCleanup()]);
+            return WatchdogRunner.Run(processId, Environment.ProcessPath!, new FileLog(), cleanup: [new AppBarCleanup(), new SystemCursorCleanup()], secure);
+        }
+
+        // As SYSTEM, ZoomIN is always the secure-desktop instance, whatever the arguments: Windows
+        // starts it that way on the sign-in screen, and SYSTEM must never get WinUI, dialogs or
+        // the updater (ADR-0016).
+        if (args is [SecureDesktopMode.Switch] || SessionUserFolders.IsSystem)
+        {
+            LogBackgroundFailures(new FileLog());
+            return SecureDesktopHost.Run();
+        }
+
+        if (SecureDesktopSetting.TryParse(args, out var secureDesktopOn))
+        {
+            return SecureDesktopSetting.RunElevated(secureDesktopOn, new FileLog());
         }
 
         if (UpdateCommand.TryParse(args, out var update))

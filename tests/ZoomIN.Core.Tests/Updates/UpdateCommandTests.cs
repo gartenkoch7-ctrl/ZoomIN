@@ -33,6 +33,29 @@ public sealed class UpdateCommandTests
         Assert.False(UpdateCommand.TryParse([UpdateCommand.Switch], out _));
     }
 
+    [Theory]
+    [InlineData("on", true)]
+    [InlineData("off", false)]
+    public void SecureDesktopChoice_RoundTrips(string value, bool expected)
+    {
+        Assert.True(UpdateCommand.TryParse([UpdateCommand.Switch, "p.zip", Hash, "1.0.0", UpdateCommand.SecureDesktopFlag, value], out var command));
+        Assert.Equal(expected, command.SecureDesktop);
+        Assert.EndsWith($" {UpdateCommand.SecureDesktopFlag} {value}", command.Format(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WithoutSecureDesktopChoice_KeepsThePreference()
+    {
+        Assert.True(UpdateCommand.TryParse([UpdateCommand.Switch, "p.zip", Hash, "1.0.0"], out var command));
+        Assert.Null(command.SecureDesktop);
+    }
+
+    [Theory]
+    [InlineData("--secure-desktop", "yes")]
+    [InlineData("--other", "on")]
+    public void InvalidSecureDesktopChoice_IsRejected(string flag, string value) =>
+        Assert.False(UpdateCommand.TryParse([UpdateCommand.Switch, "p.zip", Hash, "1.0.0", flag, value], out _));
+
     [Fact]
     public void Format_QuotesThePath()
     {

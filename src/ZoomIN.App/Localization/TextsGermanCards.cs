@@ -124,6 +124,8 @@ internal static class TextsGermanCards
         ["TrackingCaretMarker.Desc"] = "Gut sichtbarer Balken an der Schreibposition.",
 
         ["GeneralAutostart.Desc"] = "ZoomIN startet nach der Anmeldung im Infobereich.",
+        ["GeneralSecureDesktop"] = "Auf dem Anmeldebildschirm verwenden",
+        ["GeneralSecureDesktop.Desc"] = "Vergrößert auch Anmeldung, Sperrbildschirm, Strg+Alt+Entf und Admin-Abfragen – mit Ihren Einstellungen. Ändern braucht Administratorrechte. Strg+Alt+Umschalt+Z beendet ZoomIN dort.",
         ["GeneralGroupUpdates"] = "Updates",
         ["InfoCapture.Desc"] = "Teams, Zoom, Discord und Browser sehen den Zoom nicht.",
         ["InfoLogsTitle"] = "Protokolle",

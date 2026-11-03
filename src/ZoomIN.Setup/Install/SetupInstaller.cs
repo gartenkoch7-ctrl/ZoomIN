@@ -50,7 +50,7 @@ internal sealed class SetupInstaller
         {
             status.Report(SetupText.Format("Installing", release.Version));
             var hash = await Task.Run(() => ElevatedStep.HashOf(download.Path), cancellationToken);
-            var command = new UpdateCommand(download.Path, hash, release.Version);
+            var command = new UpdateCommand(download.Path, hash, release.Version, choices.SecureDesktop);
             var result = await Task.Run(() => ElevatedStep.Run(Environment.ProcessPath!, command, _log), cancellationToken);
             if (result is not (UpdateResult.Installed or UpdateResult.AlreadyActive))
             {
