@@ -32,6 +32,9 @@ public readonly record struct HotkeyGesture(HotkeyModifiers Modifiers, int Virtu
 
     public static HotkeyGesture NextProfile { get; } = new(CtrlAlt, 0x50); // P
 
+    /// <summary>Ends ZoomIN on the secure desktop only (ADR-0016); Shift+Z, because Q types @ with AltGr.</summary>
+    public static HotkeyGesture ExitSecureDesktop { get; } = new(CtrlAltShift, 0x5A); // Shift+Z
+
     // Ctrl+Alt+arrows rotate the screen on some Intel drivers, hence Shift (ADR-0008).
     public static HotkeyGesture LensWider { get; } = new(CtrlAltShift, 0x27); // Right
 

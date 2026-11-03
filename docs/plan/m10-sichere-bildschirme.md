@@ -15,21 +15,23 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
 | Weg | Windows-AT-Registrierung (AtBroker), kein eigener Dienst |
 | Umfang | Anmeldung nach Start, Sperre, Strg+Alt+Entf/Kennwort ändern, UAC |
 | Prozess | `ZoomIN.exe --secure-desktop`: volle Engine, kein WinUI/Tray/Einstellungsfenster/Updates |
-| Einstellungen | Hybrid: Sitzungsbenutzer lesen (nur lesen, streng geprüft); Kopie in `%ProgramData%\ZoomIN\secure` für den Start ohne Anmeldung |
+| Einstellungen | Hybrid: Sitzungsbenutzer lesen (nur lesen, streng geprüft); Kopie in SYSTEMs Profil (`…\systemprofile\AppData\Local\ZoomIN\secure`) für den Start ohne Anmeldung |
 | Zustand | Live-Zustand beim Wechsel übernehmen, Einbahn (nichts zurückschreiben) |
 | Schalter | Setup (vorausgewählt) + App-Schalter mit Admin-Abfrage; Updates schalten ein, „aus“ bleibt aus |
 | Tastatur | Hook bleibt, liefert nur „Zeichentaste“ und „Strg allein“ |
 | Startzeit | ≤ 1 s bis zum vergrößerten Bild |
 | Notbremse | Strg+Alt+Z, Beenden-Kürzel (nur sicherer Modus), max. 3 Neustarts, nie Schwarzbild |
 | Plan B | Minimaler Startdienst – nur mit neuem ADR und Rücksprache |
-| Tests | Dev-Schalter, Logs in `%ProgramData%\ZoomIN\logs`, Checkliste auf dem echten Anmeldebildschirm |
+| Tests | Dev-Schalter, Logs in SYSTEMs Profil (`…\ZoomIN\logs`), Checkliste auf dem echten Anmeldebildschirm |
 | Portables ZIP | nicht unterstützt |
 
 ## Aufgaben
 ### 1 · Spike (Risiko zuerst)
-- [ ] AT-Registrierung von Hand (Skript `scripts/spike-secure-desktop.ps1`, Admin): welche Werte
-      unter `ATs\ZoomIN` und `Configuration` (HKLM für Anmeldung, HKCU für Sperre/UAC?) nötig sind
-- [ ] Minimaler Testlauf als SYSTEM auf `Winlogon`: Log mit Benutzer, Sitzung, Desktop, Startzeit
+- [x] Microsoft-Doku zur AT-Registrierung ausgewertet → `docs/kb/sichere-desktops.md`
+- [ ] Registrierung von Hand (Nutzer, Admin) laut KB mit `current\ZoomIN.exe --secure-desktop`:
+      welche Werte unter `ATs\…` und `Configuration` (HKLM für Anmeldung, HKCU für Sperre/UAC) nötig
+      sind. Ein eigenes Prüfskript wird nicht gebaut – getestet wird mit ZoomIN selbst und dessen Log
+- [ ] Testlauf als SYSTEM auf `Winlogon`: Log zeigt `SYSTEM: True` und die Startzeit
 - [ ] Desktop Duplication auf dem sicheren Desktop: liefert Bilder? `WDA_EXCLUDEFROMCAPTURE` wirkt?
 - [ ] Z-Reihenfolge: liegt das Overlay über LogonUI, Sperrbildschirm und UAC-Dialog? Braucht es
       UIAccess bzw. eine Signatur, auch ohne SignPath?
@@ -37,21 +39,28 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
 - [ ] Ergebnis in `docs/kb/sichere-desktops.md`; bei Fehlschlag → Plan B mit Rücksprache
 
 ### 2 · Engine ohne WinUI
-- [ ] Gemeinsame Zusammenstellung der Engine aus `ServiceRegistration`/`AppShell` herauslösen
-      (Zoom, Effekte, Tracking, Hotkeys, Hooks, Render-Threads), WinUI-frei
-- [ ] Startpfad `--secure-desktop` in `Program.cs`: eigener Einzelinstanz-Name, Win32-Nachrichten-
-      schleife statt `Application.Start`, keine Updates/Autostart/Tray
-- [ ] Dev-Schalter: sicherer Modus auf dem normalen Desktop startbar (schnelle Tests)
-- [ ] Startzeit messen und loggen (Prozessstart → erstes vergrößertes Bild)
+- [x] Engine-Zusammenstellung WinUI-frei: `EngineRegistration.AddEngine` (geteilt von Tray-App und
+      sicherem Modus), `ServiceRegistration.BuildSecureDesktop`
+- [x] Startpfad `--secure-desktop` (`SecureDesktopHost`): eigener Einzelinstanz-Name, kein
+      `Application.Start`, keine Updates/Autostart/Tray; Hauptthread wartet auf das Beenden-Kürzel
+- [x] Dev-Schalter: derselbe Schalter als normaler Benutzer läuft auf dem normalen Desktop
+      (Rauchtest 2026-11-03: Engine nach 646 ms bereit)
+- [ ] Startzeit bis zum **ersten vergrößerten Bild** messen (bisher nur bis „Engine läuft“)
 
 ### 3 · Einstellungen & Zustand
-- [ ] Core: `SecureSettingsPolicy` – wählt Quelle (Sitzungsbenutzer / Maschinenkopie / Standard),
-      begrenzt jeden Wert auf seinen Bereich (Unit-Tests mit kaputten und bösartigen Dateien)
-- [ ] Platform: Benutzerordner des Sitzungsbenutzers ermitteln (Sitzungs-Token), Datei sicher lesen
-      (Größenlimit, keine Reparse-Points, Fehler → Kopie bzw. Standard)
-- [ ] Platform: Maschinenkopie in `%ProgramData%\ZoomIN\secure` schreiben, Ordner-ACL nur SYSTEM/Admins
-- [ ] Profile mitlesen, damit Strg+Alt+P auch dort funktioniert
-- [ ] Benutzerinstanz: bei Sperre/Desktopwechsel (`WTS_SESSION_LOCK` u. a.) Zustand sofort speichern
+- [x] Core: `SecureSettingsSanitizer` begrenzt jeden Wert (NaN, unbekannte Enums, zu große
+      Wörterbücher/Texte, Kürzel, die Tippen blockieren) – Unit-Tests
+- [x] Platform: `SessionUserFolders` (Sitzungs-Token → Roaming-AppData des Benutzers),
+      `GuardedFileReader` (echter Pfad = erwarteter Pfad, kein Hardlink, ≤ 256 KB) – Tests mit
+      Junction und Hardlink
+- [x] Platform: `SecureSettingsStore` – Benutzer → Kopie → Standard; Kopie in SYSTEMs Profil;
+      `Save` schreibt nie
+- [x] `SecureProfileStore`: Profile nur lesen, damit Strg+Alt+P auch dort funktioniert
+- [x] Neues Feld `ZoomOn`; der sichere Modus startet damit gezoomt
+- [ ] Benutzerinstanz: bei Sperre/Desktopwechsel (`WTS_SESSION_LOCK` u. a.) Zustand sofort
+      speichern (bisher nach 1 s Verzögerung – Sperre direkt nach Strg+Alt+Z geht noch verloren)
+- [ ] Erkenntnis: In einer MSIX-Umgebung (z. B. Shell aus einer Paket-App) leitet Windows AppData
+      um; der Pfadvergleich weist das ab → Standardwerte. Für SYSTEM nicht relevant
 
 ### 4 · Registrierung, Setup & Updates
 - [ ] Platform: `SecureDesktopRegistration` (registrieren/entfernen/abfragen, Merker „vom Nutzer aus“)
@@ -60,11 +69,13 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
 - [ ] App, Seite „Allgemein“: Schalter mit Admin-Abfrage (erhöhter Schritt wie bei Updates), DE/EN
 
 ### 5 · Sicherheit & Robustheit
-- [ ] Tastatur-Hook: Schnittstelle liefert nachweislich nur zwei Ereignisse (Test)
-- [ ] Beenden-Kürzel nur im sicheren Modus (gegen `HotkeyRules`/ADR-0008 prüfen)
+- [x] Tastatur-Hook: Schnittstelle liefert nachweislich nur zwei Ereignisse (`InputActivityPrivacyTests`)
+- [x] Beenden-Kürzel Strg+Alt+Umschalt+Z nur im sicheren Modus (Test gegen AltGr-Regel)
 - [ ] Wächter im sicheren Modus: Neustart ohne Shell, max. 3×, danach aus bis Systemstart
 - [ ] Overlay zeigt nichts, solange kein Bild erfasst wurde (kein Schwarzbild)
-- [ ] Logs nach `%ProgramData%\ZoomIN\logs`, keine Eingabedaten
+- [x] Logs als SYSTEM automatisch in SYSTEMs Profil (`FileLog` nutzt LocalAppData); JSON-Fehler
+      werden nicht mit Inhalt geloggt
+- [ ] Logs: prüfen, dass UIA/Tracking im sicheren Modus keinen Text loggen
 - [ ] `/security-review` des Branches vor dem Merge
 
 ### 6 · Test auf dem echten PC (Nutzer, Checkliste)

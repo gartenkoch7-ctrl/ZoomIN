@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using ZoomIN.App.Lifecycle;
+using ZoomIN.App.SecureDesktop;
 using ZoomIN.App.Updates;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Diagnostics;
@@ -39,6 +40,12 @@ public static class Program
         if (args is [UninstallEntry.RemoveSwitch, var pid] && int.TryParse(pid, NumberStyles.None, CultureInfo.InvariantCulture, out var asker))
         {
             return UninstallFlow.RemoveElevated(asker, new FileLog());
+        }
+
+        if (args is [SecureDesktopHost.Switch])
+        {
+            LogBackgroundFailures(new FileLog());
+            return SecureDesktopHost.Run();
         }
 
         RestartArguments.WaitIfRequested(args);

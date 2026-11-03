@@ -108,3 +108,13 @@ WINTRUST_ACTION_GENERIC_VERIFY_V2
 
 // Shell/MessageDialog
 MessageBox
+
+// SecureDesktop/GuardedFileReader, SecureDesktop/SessionUserFolders
+GetFinalPathNameByHandle
+GetFileInformationByHandle
+GetFileType
+ProcessIdToSessionId
+WTSQueryUserToken
+SHGetKnownFolderPath
+FOLDERID_RoamingAppData
+CoTaskMemFree

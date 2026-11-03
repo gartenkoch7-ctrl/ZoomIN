@@ -29,8 +29,9 @@ das, indem ein Prozess mit SYSTEM-Rechten auf dem sicheren Desktop läuft.
   - In einer angemeldeten Sitzung (Sperre, Strg+Alt+Entf, UAC) liest der sichere Modus Einstellungen
     und Profile **des Sitzungsbenutzers** – nur lesen, Größenlimit, keine Reparse-Points folgen,
     jeder Wert wird auf seinen gültigen Bereich begrenzt.
-  - Davon legt er eine Kopie in `%ProgramData%\ZoomIN\secure\` ab (Schreibrecht nur SYSTEM und
-    Administratoren). Diese Kopie gilt auf dem Anmeldebildschirm nach dem Start, wenn noch niemand
+  - Davon legt er eine Kopie in SYSTEMs eigenem Profil ab
+    (`%SystemRoot%\System32\config\systemprofile\AppData\Local\ZoomIN\secure\`, Schreibrecht nur
+    SYSTEM und Administratoren). Diese Kopie gilt auf dem Anmeldebildschirm nach dem Start, wenn noch niemand
     angemeldet ist. Fehlt sie: Standardwerte.
 - **Live-Zustand, Einbahn:** Meldet Windows Sperre bzw. Desktopwechsel, speichert die
   Benutzerinstanz ihren aktuellen Zustand (Zoom an/aus, Stufen, Modus, Filter) sofort; der sichere
@@ -39,7 +40,7 @@ das, indem ein Prozess mit SYSTEM-Rechten auf dem sicheren Desktop läuft.
 - **Ein/Aus:** Standard „an“. Kontrollkästchen im Setup (vorausgewählt), ein gemeinsamer Schalter
   in der App (Seite „Allgemein“, Admin-Abfrage, weil HKLM). Die Wahl wird maschinenweit gemerkt;
   Updates (`--apply-update`, ohnehin erhöht) schalten bestehende Installationen ein, außer der
-  Nutzer hat ausgeschaltet. Deinstallation entfernt die Registrierung und `%ProgramData%\ZoomIN`.
+  Nutzer hat ausgeschaltet. Deinstallation entfernt die Registrierung und den ZoomIN-Ordner in SYSTEMs Profil.
   Das portable ZIP unterstützt die Funktion nicht.
 - **Sicherheitsregeln:**
   1. Der Tastatur-Hook liefert im sicheren Modus (wie überall) nur zwei Ereignisse nach außen:
@@ -47,9 +48,15 @@ das, indem ein Prozess mit SYSTEM-Rechten auf dem sicheren Desktop läuft.
      geloggt; ein Test sichert die Schnittstelle ab.
   2. UI Automation liefert nur Rechtecke (Fokus, Caret), nie Text oder Werte.
   3. Keine Netzwerkzugriffe, keine Prozessstarts außer dem eigenen Wächter.
-  4. Logs nach `%ProgramData%\ZoomIN\logs` (nur SYSTEM/Admins), ohne Eingabedaten.
+  4. Logs in SYSTEMs Profil (`…\systemprofile\AppData\Local\ZoomIN\logs`, nur SYSTEM/Admins),
+     ohne Eingabedaten.
+  5. **Nicht `%ProgramData%`** (Nachtrag 2026-11-03, vor dem Merge): Dort dürfen Benutzer Ordner
+     anlegen und könnten per Verzeichnis-Link SYSTEMs Schreibzugriffe umlenken.
+  6. Gelesene Benutzerdateien: Der Pfad, den Windows tatsächlich geöffnet hat, muss dem erwarteten
+     entsprechen (keine Junctions/Symlinks, auch nicht nachträglich getauscht), genau ein
+     Dateiname (kein Hardlink), höchstens 256 KB.
 - **Notbremse:** Strg+Alt+Z schaltet den Zoom aus; eigenes Kürzel zum Beenden nur im sicheren
-  Modus (Vorschlag Strg+Alt+Umschalt+Q, Prüfung gegen ADR-0008); Wächter startet höchstens 3×
+  Modus: **Strg+Alt+Umschalt+Z** (Q schied aus, AltGr+Q ergibt @ – ADR-0008); Wächter startet höchstens 3×
   neu, danach bleibt der sichere Modus bis zum nächsten Systemstart aus; liefert die Erfassung
   kein Bild, zeigt das Overlay **nichts** statt Schwarz.
 - **Startzeit:** vergrößertes Bild spätestens **1 s** nach Win+L bzw. Strg+Alt+Entf (gemessen und

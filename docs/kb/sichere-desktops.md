@@ -48,7 +48,20 @@ Schlüssel `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Accessibility\ATs\
   MITRE T1546.008). Darum: `StartExe` zeigt nur in `Program Files`, nie in einen
   Benutzerordner.
 
-## Offen (Spike, `scripts/spike-secure-desktop.ps1`)
+## Umgesetzt (Stand 2026-11-03)
+- `ZoomIN.exe --secure-desktop` startet nur die Engine (`SecureDesktopHost`), Einzelinstanz
+  `Local\ZoomIN.SecureInstance`, Ende mit Strg+Alt+Umschalt+Z. Als normaler Benutzer gestartet
+  läuft derselbe Modus auf dem normalen Desktop (Entwicklertest).
+- Ablage als SYSTEM: `Environment.SpecialFolder.LocalApplicationData` = SYSTEMs Profil
+  (`%SystemRoot%\System32\config\systemprofile\AppData\Local\ZoomIN`), darin `secure\settings.json`
+  (Kopie) und `logs\`. Bewusst nicht `%ProgramData%` (Benutzer dürfen dort Ordner anlegen).
+- Benutzerdateien liest `GuardedFileReader`: Datei öffnen, dann per `GetFinalPathNameByHandle`
+  prüfen, dass Windows wirklich den erwarteten Pfad geöffnet hat; `nNumberOfLinks == 1`; ≤ 256 KB.
+- Falle beim Testen: Eine Shell aus einer MSIX-Paket-App (z. B. ein Agent-Terminal) bekommt
+  `AppData` umgeleitet (`…\Packages\<App>\LocalCache\Roaming`). Der Pfadvergleich lehnt das ab,
+  der sichere Modus nimmt dann Standardwerte. Für den echten Start als SYSTEM nicht relevant.
+
+## Offen (Spike mit ZoomIN selbst)
 - Unter welchem Konto, in welcher Sitzung und auf welchem Desktop startet ATBroker das Programm?
 - Startet es bei Sperre/UAC, wenn die Benutzerinstanz **nicht** über die Erleichterte Bedienung
   gestartet wurde (unser eigener Autostart)?
