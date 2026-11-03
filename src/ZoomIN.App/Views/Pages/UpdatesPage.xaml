@@ -39,6 +39,7 @@
                 <StackPanel Spacing="8">
                     <!-- Polite live region: screen readers announce search, download and result. -->
                     <TextBlock
+                        x:Name="StatusText"
                         Margin="8,4,8,0"
                         AutomationProperties.LiveSetting="Polite"
                         Text="{x:Bind Vm.Status, Mode=OneWay}"

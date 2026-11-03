@@ -1,13 +1,12 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Builds a release of ZoomIN (ADR-0009): self-contained win-x64 folder, ZIP and – if Inno Setup
-    is installed – the per-user installer.
+    Builds ZoomIN (ADR-0014): self-contained win-x64 folder and the portable ZIP.
 .DESCRIPTION
-    With -UiAccess (ADR-0012) it builds the installer variant instead: uiAccess manifest, ZoomIN.exe
-    signed with the certificate from scripts/setup-signing.ps1, installed to Program Files (asks for
-    admin rights once). Only this variant draws the zoom above Start, quick settings and the
-    notification center. No ZIP for it: a uiAccess exe does not start outside Program Files.
+    With -UiAccess (ADR-0012) it builds the installed variant instead: uiAccess manifest, ZoomIN.exe
+    signed with the certificate from scripts/setup-signing.ps1. Only this variant draws the zoom
+    above Start, quick settings and the notification center, and only from Program Files, so there
+    is no ZIP for it: ZoomIN-Setup.exe (publish-setup.ps1) or install-uiaccess.ps1 install it.
 .EXAMPLE
     ./scripts/publish.ps1 -Version 1.0.0-rc1
     ./scripts/publish.ps1 -Version 1.0.0-rc1 -UiAccess
@@ -72,32 +71,7 @@ else {
     Write-Host "ZIP: $zip" -ForegroundColor Green
 }
 
-# Inno Setup is optional locally; the release workflow installs it.
-$iscc = @(
-    (Get-Command iscc -ErrorAction SilentlyContinue).Source,
-    "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
-    "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
-    "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
-) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
-
-if (-not $iscc) {
-    if ($UiAccess) {
-        # The exe only starts from Program Files; install-uiaccess.ps1 copies it there.
-        Write-Host 'Inno Setup not found: installer skipped. Next, as administrator: ./scripts/install-uiaccess.ps1' -ForegroundColor Yellow
-        exit 0
-    }
-    Write-Host 'Inno Setup not found: installer skipped (ZIP only).' -ForegroundColor Yellow
-    exit 0
-}
-
-$isccArgs = @("/DAppVersion=$Version", "/DSourceDir=$publish", "/DOutputDir=$out")
 if ($UiAccess) {
-    $isccArgs += '/DUiAccess=1'
+    # The exe only starts from Program Files; install-uiaccess.ps1 copies it there.
+    Write-Host "Next, as administrator: ./scripts/install-uiaccess.ps1" -ForegroundColor Yellow
 }
-& $iscc @isccArgs (Join-Path $root 'installer\ZoomIN.iss')
-if ($LASTEXITCODE -ne 0) {
-    throw "Inno Setup failed ($LASTEXITCODE)."
-}
-
-$setupName = if ($UiAccess) { "ZoomIN-$Version-setup-uiaccess.exe" } else { "ZoomIN-$Version-setup.exe" }
-Write-Host "Installer: $(Join-Path $out $setupName)" -ForegroundColor Green

@@ -19,6 +19,20 @@ internal static class UpdateRunner
             return (int)UpdateResult.NotInstalled;
         }
 
-        return (int)new UpdateApplier(new AuthenticodeVerifier(), log).Apply(layout, command);
+        var result = new UpdateApplier(new AuthenticodeVerifier(), log).Apply(layout, command);
+        if (result == UpdateResult.Installed)
+        {
+            try
+            {
+                // Windows "Apps" shows the version from the registry; the shortcut is refreshed too.
+                InstallRegistration.Register(layout, command.Version);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            {
+                log.Error("[Update] Refreshing the Apps entry failed", ex);
+            }
+        }
+
+        return (int)result;
     }
 }
