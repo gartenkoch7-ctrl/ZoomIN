@@ -14,6 +14,7 @@ Thematisch aufgeteilt, damit Agents nur laden, was sie brauchen. Jede Datei blei
 | [supernova-analyse.md](supernova-analyse.md) | Black-Box-Beobachtungen zum Vorbild |
 | [testumgebung.md](testumgebung.md) | Vorhandene Hardware, Teststrategie, was ungetestet bleibt |
 | [build-und-tooling.md](build-und-tooling.md) | .NET-10-Tests (MTP), WinUI 3 unpackaged, Analyzer |
+| [telemetrie.md](telemetrie.md) | Logs, Abläufe, Messwerte: Ablage, Stufen, EventId-Bereiche, Katalog |
 
 Architekturentscheidungen: [../adr/](../adr/) · Roadmap & Meilensteine: [../plan/](../plan/README.md)
 

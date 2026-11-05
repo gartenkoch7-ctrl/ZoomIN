@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Windows.Win32.UI.Accessibility;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Viewport;
 using ZoomIN.Platform.Automation;
@@ -174,7 +174,7 @@ internal static class AutoRunner
     private static int CountCaretNews(nint window)
     {
         var model = new TrackingModel(TrackingOptions.Default);
-        using var source = new UiaTrackingSource(NullLog.Instance);
+        using var source = new UiaTrackingSource(NullLogger<UiaTrackingSource>.Instance);
         source.Start(model);
         var first = 0L;
         var news = 0;

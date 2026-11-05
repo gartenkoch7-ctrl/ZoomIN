@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Platform.Diagnostics;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Lifecycle;
 using ZoomIN.Platform.Settings;
@@ -15,13 +17,15 @@ namespace ZoomIN.Setup.Install;
 /// </summary>
 internal sealed class SetupInstaller
 {
-    private readonly ILog _log;
+    private readonly TelemetryHost _telemetry;
+    private readonly ILogger _log;
     private readonly HttpPackageDownloader _downloader;
 
-    public SetupInstaller(ILog log)
+    public SetupInstaller(TelemetryHost telemetry)
     {
-        _log = log;
-        _downloader = new HttpPackageDownloader(log);
+        _telemetry = telemetry;
+        _log = telemetry.Logger<SetupInstaller>();
+        _downloader = new HttpPackageDownloader(telemetry.Logger<HttpPackageDownloader>());
     }
 
     /// <param name="steps">Ticked step by step; the caller marks the running step failed on an error result.</param>
@@ -30,10 +34,13 @@ internal sealed class SetupInstaller
     {
         ArgumentNullException.ThrowIfNull(release);
         ArgumentNullException.ThrowIfNull(steps);
+
+        // One trace from the wizard through the elevated step to the first start (ADR-0019).
+        using var operation = Telemetry.Source.StartActivity("zoomin.setup.install")?.SetTag("zoomin.version", release.Version.ToString());
         steps.Begin(InstallStep.RemoveOld);
         if (await Task.Run(() => InstallRegistration.RemoveLegacyInstall(TimeSpan.FromSeconds(60)), cancellationToken))
         {
-            _log.Info("[Setup] Old Inno installation removed.");
+            _log.InnoRemoved();
         }
 
         steps.Begin(InstallStep.Download);
@@ -72,7 +79,7 @@ internal sealed class SetupInstaller
     public static void StartZoomIN()
     {
         // Through the shell: CreateProcess refuses UIAccess executables (ADR-0012).
-        using var _ = Process.Start(new ProcessStartInfo(ElevatedInstall.Layout.CurrentExecutable) { UseShellExecute = true });
+        using var _ = Process.Start(new ProcessStartInfo(ElevatedInstall.Layout.CurrentExecutable, TraceParentArgument.Append(string.Empty)) { UseShellExecute = true });
     }
 
     // Per-user parts run here, not in the elevated step: with "over the shoulder" elevation the
@@ -90,7 +97,7 @@ internal sealed class SetupInstaller
             ShellShortcut.Remove(ShellShortcut.UserDesktop);
         }
 
-        var store = new JsonSettingsStore(_log);
+        var store = new JsonSettingsStore(_telemetry.Logger<JsonSettingsStore>());
         store.Save(choices.ApplyTo(store.Load()));
     }
 }

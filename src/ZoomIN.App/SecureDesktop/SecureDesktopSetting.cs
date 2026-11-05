@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Updates;
@@ -29,7 +30,7 @@ internal static class SecureDesktopSetting
     }
 
     /// <summary>The elevated step: registers or removes, and keeps the choice for updates.</summary>
-    public static int RunElevated(bool on, ILog log)
+    public static int RunElevated(bool on, ILogger log)
     {
         if (!InstallLayout.TryFromExecutable(Environment.ProcessPath, out var layout))
         {
@@ -39,24 +40,24 @@ internal static class SecureDesktopSetting
         try
         {
             SecureDesktopRegistration.Default.Apply(layout, on);
-            log.Info($"Secure desktop support switched {(on ? "on" : "off")}");
+            log.SupportSwitched(on ? "on" : "off");
             return 0;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
-            log.Error("Changing the secure desktop registration failed", ex);
+            log.ChangeFailed(ex);
             return 1;
         }
     }
 
     /// <summary>Asks for administrator rights and switches. Blocks until done; call off the UI thread.</summary>
     /// <returns>True if the switch now has the requested state.</returns>
-    public static bool RequestChange(bool on, ILog log)
+    public static bool RequestChange(bool on, ILogger log)
     {
         try
         {
             using var process = Process.Start(new ProcessStartInfo(
-                Environment.ProcessPath!, $"{SecureDesktopMode.SettingSwitch} {(on ? "on" : "off")}")
+                Environment.ProcessPath!, TraceParentArgument.Append($"{SecureDesktopMode.SettingSwitch} {(on ? "on" : "off")}"))
             {
                 UseShellExecute = true,
                 Verb = "runas",
@@ -70,7 +71,7 @@ internal static class SecureDesktopSetting
         }
         catch (Win32Exception ex)
         {
-            log.Error("Starting the secure desktop switch failed", ex);
+            log.SwitchStartFailed(ex);
             return false;
         }
     }

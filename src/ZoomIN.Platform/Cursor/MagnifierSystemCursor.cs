@@ -1,5 +1,5 @@
 using Windows.Win32;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Tracking;
 
 namespace ZoomIN.Platform.Cursor;
@@ -10,18 +10,18 @@ namespace ZoomIN.Platform.Cursor;
 /// </summary>
 public sealed class MagnifierSystemCursor : ISystemCursor
 {
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly Lock _gate = new();
     private readonly bool _available;
     private bool _visible = true;
 
-    public MagnifierSystemCursor(ILog log)
+    public MagnifierSystemCursor(ILogger<MagnifierSystemCursor> log)
     {
         _log = log;
         _available = PInvoke.MagInitialize();
         if (!_available)
         {
-            _log.Warn("MagInitialize failed: the system pointer stays visible while zoomed.");
+            _log.MagnifierUnavailable();
         }
     }
 

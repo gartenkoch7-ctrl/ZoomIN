@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Tracking;
@@ -20,7 +20,7 @@ internal sealed class MonitorRenderer : IDisposable
     private readonly EffectsModel _effects;
     private readonly TrackingModel _tracking;
     private readonly PointerServices _pointer;
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly Action _requestRebuild;
     private readonly AutoResetEvent _wake = new(false);
     private readonly Thread _thread;
@@ -31,7 +31,7 @@ internal sealed class MonitorRenderer : IDisposable
     private long _heartbeat;
 
     public MonitorRenderer(
-        string deviceName, RenderModels models, PointerServices pointer, ILog log, Action requestRebuild)
+        string deviceName, RenderModels models, PointerServices pointer, ILogger log, Action requestRebuild)
     {
         _deviceName = deviceName;
         _model = models.Zoom;
@@ -91,20 +91,20 @@ internal sealed class MonitorRenderer : IDisposable
             try
             {
                 using var session = new RenderSession(_pointer, _deviceName);
-                _log.Info($"Zoom pipeline ready for {_deviceName}");
+                _log.PipelineReady(_deviceName);
                 SetStatus(ZoomStatus.Idle with { IsCaptureExcluded = true });
                 RunSession(session);
             }
             catch (DisplayChangedException ex)
             {
                 // The monitor set may have changed: the engine rebuilds all renderers.
-                _log.Info($"{_deviceName}: {ex.Message}");
+                _log.DisplayChanged(_deviceName, ex.Message);
                 _requestRebuild();
                 return;
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
-                _log.Error($"Zoom pipeline for {_deviceName} failed", ex);
+                _log.PipelineFailed(ex, _deviceName);
                 SetStatus(ZoomStatus.Idle with { LastError = ex.Message });
                 var needed = _model.TargetFor(_deviceName) > ZoomLimits.Min || NeedsOverlayUnzoomed(_effects.CurrentFor(_deviceName));
                 Sleep(needed ? RetryDelay : Timeout.InfiniteTimeSpan);

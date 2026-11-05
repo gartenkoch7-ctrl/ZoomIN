@@ -1,3 +1,4 @@
+using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
@@ -35,6 +36,12 @@ public static class SecureSettingsSanitizer
             SchemaVersion = AppSettings.CurrentSchemaVersion,
             Language = Defined(s.Language, d.Language),
             UpdateChannel = Defined(s.UpdateChannel, d.UpdateChannel),
+            TelemetryLevel = Defined(s.TelemetryLevel, d.TelemetryLevel),
+            TelemetryLogLevel = Defined(s.TelemetryLogLevel, d.TelemetryLogLevel),
+            TelemetryRetentionDays = Math.Clamp(s.TelemetryRetentionDays, 1, TelemetryOptions.MaxRetentionDays),
+
+            // SYSTEM never sends telemetry anywhere (ADR-0019), whatever the user's file says.
+            TelemetryOtlpEndpoint = string.Empty,
             ActiveProfile = Text(s.ActiveProfile, d.ActiveProfile),
             LastMode = Defined(s.LastMode, d.LastMode),
             LastZoomLevel = Level(s.LastZoomLevel, d.LastZoomLevel),

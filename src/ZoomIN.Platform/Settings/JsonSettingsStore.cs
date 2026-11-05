@@ -1,5 +1,5 @@
 using System.Text.Json;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Settings;
 
@@ -11,17 +11,17 @@ namespace ZoomIN.Platform.Settings;
 /// </summary>
 public sealed class JsonSettingsStore : ISettingsStore
 {
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly string _path;
     private readonly Lock _gate = new();
 
-    public JsonSettingsStore(ILog log)
+    public JsonSettingsStore(ILogger<JsonSettingsStore> log)
         : this(log, Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ZoomIN", "settings.json"))
     {
     }
 
-    public JsonSettingsStore(ILog log, string path)
+    public JsonSettingsStore(ILogger<JsonSettingsStore> log, string path)
     {
         _log = log;
         _path = path;
@@ -52,7 +52,7 @@ public sealed class JsonSettingsStore : ISettingsStore
             }
             catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
             {
-                _log.Error($"Settings file '{_path}' is unreadable; using defaults.", ex);
+                _log.SettingsUnreadable(ex, Path.GetFileName(_path));
                 BackUpBrokenFile();
                 return new AppSettings();
             }
@@ -74,7 +74,7 @@ public sealed class JsonSettingsStore : ISettingsStore
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                _log.Error($"Saving settings to '{_path}' failed.", ex);
+                _log.SaveFailed(ex, Path.GetFileName(_path));
             }
         }
     }
@@ -87,7 +87,7 @@ public sealed class JsonSettingsStore : ISettingsStore
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            _log.Warn($"Could not back up broken settings file: {ex.Message}");
+            _log.BrokenBackupFailed(ex.Message);
         }
     }
 }

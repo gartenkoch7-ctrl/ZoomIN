@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.App.Updates;
-using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Updates;
@@ -21,10 +21,10 @@ namespace ZoomIN.App.Composition;
 internal static class ServiceRegistration
 {
     /// <summary>The tray app on the user's desktop.</summary>
-    public static ServiceProvider Build()
+    public static ServiceProvider Build(TelemetryHost telemetry)
     {
         var services = new ServiceCollection();
-        services.AddSingleton<ILog, FileLog>();
+        services.AddTelemetry(telemetry);
         services.AddSingleton<ISettingsStore, JsonSettingsStore>();
         services.AddSingleton<IProfileStore, JsonProfileStore>();
         services.AddEngine();
@@ -46,15 +46,15 @@ internal static class ServiceRegistration
     /// The secure-desktop instance (ADR-0016): engine only, settings read-only from the session
     /// user, nothing that opens windows, files chosen by the user or the network.
     /// </summary>
-    public static ServiceProvider BuildSecureDesktop()
+    public static ServiceProvider BuildSecureDesktop(TelemetryHost telemetry)
     {
         var services = new ServiceCollection();
-        services.AddSingleton<ILog, FileLog>();
+        services.AddTelemetry(telemetry);
 
         // Created by a factory, so the provider disposes it (and the user's token) at exit.
-        services.AddSingleton(sp => SessionUser.Open(sp.GetRequiredService<ILog>()));
+        services.AddSingleton(sp => SessionUser.Open(sp.GetRequiredService<ILogger<SessionUser>>()));
         services.AddSingleton<ISettingsStore>(sp => new SecureSettingsStore(
-            sp.GetRequiredService<ILog>(), sp.GetRequiredService<SessionUser>(), SessionUserFolders.MachineFolder));
+            sp.GetRequiredService<ILogger<SecureSettingsStore>>(), sp.GetRequiredService<SessionUser>(), SessionUserFolders.MachineFolder));
         services.AddSingleton<IProfileStore>(sp => new SecureProfileStore(sp.GetRequiredService<SessionUser>()));
         services.AddEngine();
         return services.BuildServiceProvider();

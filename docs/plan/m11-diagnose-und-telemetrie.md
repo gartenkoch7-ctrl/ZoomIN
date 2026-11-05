@@ -31,26 +31,35 @@ antwortet. Auf „Diagnose“ → „Diagnosepaket erstellen“ → ZIP mit Logs
 
 ## Aufgaben
 ### 1 · Fundament
-- [ ] Pakete (Begründung im PR): `Microsoft.Extensions.Logging.Abstractions` (Core),
-      `OpenTelemetry`, `OpenTelemetry.Exporter.OpenTelemetryProtocol` (nur App, nachgeladen)
-- [ ] Core: `Diagnostics/Telemetry` – eine `ActivitySource` und ein `Meter` „ZoomIN“, Namensschema
-      `zoomin.<feature>.<vorgang>`; Modell `TelemetryOptions` (Stufe, Schalter, Log-Stufe, Tage,
-      Adresse, „erhöht bis“) mit Logik für Stufen → Filter und das Zurückfallen nach 7 Tagen + Tests
-- [ ] Platform: Datei-Senken – Log-Tagesdatei (TraceId/SpanId je Zeile) und Ablauf-Datei
-      (JSON-Zeilen), gepuffert auf eigenem Thread, 20 MB/Tag, Aufräumen beim Start und täglich
-- [ ] App: gemeinsamer Telemetrie-Start für **jede** Rolle (app, watchdog, update, elevated,
-      uninstall, secure, setup) mit `zoomin.role`; Stufe wird zur Laufzeit gewechselt
-- [ ] Trace-Kontext weitergeben, wo ZoomIN sich selbst startet (Watchdog, Updater, Hilfsprozess,
-      Setup → App): `TRACEPARENT` setzen und beim Start übernehmen
-- [ ] Sicherer Modus: nur Datei-Senken, Stufe aus der Einstellungskopie in SYSTEMs Profil, kein Export
-- [ ] `ILog`/`FileLog` durch `ILogger<T>` ersetzen (alle ~87 Stellen), EventIds je Feature-Bereich
-      vergeben; `ILog`, `NullLog`, `FileLog` entfernen
-- [ ] AGENTS.md: Abschnitt „Telemetrie“ (Pflicht, Datenschutz, Render-Loop) + Punkt in der
-      Definition of Done; Katalog `docs/kb/telemetrie.md` anlegen
-- [ ] Architekturtests: nur Quelle/Meter „ZoomIN“, Namensschema, eindeutige EventIds, kein
-      `Console.Write*`/`Debug.Write*`, nur Core-Abstraktionen in Core; Datenschutz-Test gegen
-      verbotene Attribut-Namen (`title`, `name`, `text`, `path` …)
-- [ ] Startzeit vorher/nachher messen (Log „erstes Bild nach … ms“, normal und sicherer Modus)
+- [x] Pakete: `Microsoft.Extensions.Logging.Abstractions` 10.0.14 (Core; direkt auch in App,
+      Rendering, Watchdog, Setup, damit der `[LoggerMessage]`-Generator läuft), `Microsoft.Extensions.Logging`,
+      `OpenTelemetry`, `OpenTelemetry.Exporter.OpenTelemetryProtocol` 1.20.1 (Platform; Apache-2.0/MIT)
+- [x] Core: `Telemetry` (Quelle/Meter „ZoomIN“, `FlushBeforeExit`), `TelemetryRole`, `TelemetryLevel`,
+      `TelemetryOptions`/`TelemetryFilter` (Stufen, Fehler immer, Zurückfallen nach 7 Tagen),
+      `TraceParentArgument`, `TelemetryPrivacy`, Einstellungen `Telemetry*` + Sanitizer + Tests
+- [x] Platform: `TelemetryFiles` (**stündliche** Dateien statt Tagesdatei, damit „1 Tag“ höchstens
+      24 h heißt; 20 MB/Tag, Aufräumen beim Start und stündlich), `LogFileExporter`, `TraceFileExporter`
+- [x] Gemeinsamer Start für jede Rolle (`TelemetryHost`, `Program.Main` in App und Setup); Stufe
+      und Export-Adresse wechseln ohne Neustart (`SwitchableLoggerProvider`)
+- [x] Trace-Kontext per `--traceparent` an allen Selbststarts (Watchdog, Neustart nach Update,
+      Hilfsprozesse mit runas, Deinstallation, Setup ↔ App); `TRACEPARENT` als Rückfall
+- [x] Sicherer Modus: nur Dateien im SYSTEM-Profil, Stufe aus der geprüften Einstellung, Adresse
+      vom Sanitizer geleert und vom Host ignoriert
+- [x] Alle 85 Log-Stellen auf `[LoggerMessage]` mit EventIds je Bereich; `ILog`, `NullLog`,
+      `FileLog` entfernt. Dabei 5 Meldungen mit vollen Pfaden (Benutzername) auf Datei-/Ordnernamen gekürzt
+- [x] AGENTS.md 2.5 + Definition of Done; Katalog `docs/kb/telemetrie.md`
+- [x] `TelemetryConventionTests`: Quelle/Meter nur in Core, Namensschema, EventIds eindeutig und
+      im Projektbereich, Attribut-Schlüssel und Log-Platzhalter ohne Nutzerinhalte, keine Konsolenausgabe
+- [x] Startzeit gemessen: zuerst ~90 ms auf dem Startpfad (Budget 20 ms) → Pipelines werden jetzt
+      im Hintergrund gebaut, Frühes wird gepuffert und nachgeschrieben (`EarlyActivities`,
+      `ReplayContextProcessor`): **~4 ms Host-Start, ~9 ms inkl. erster Logzeile und Operation**
+      ([performance.md](../kb/performance.md))
+- [x] Test mit echter App 2026-11-05 (Release, warm): Overlay nach 419–437 ms mit M11 gegenüber
+      451–483 ms ohne – kein Nachteil; `zoomin.app.start` 309–312 ms; Watchdog bekommt
+      `--traceparent` mit der Trace-Id des App-Starts; 118 Logzeilen ohne Fehler und ohne
+      Benutzernamen; alte Tageslogs wie vorgesehen aufgeräumt
+- [ ] Sicherer Bildschirm (`zoomin.secure.start` auf Sperre/UAC) – braucht Test am Anmeldebildschirm
+- [ ] Einstellungsänderung zur Laufzeit an den Host weitergeben (kommt mit der Diagnose-Seite, Schritt 3)
 
 ### 2 · Abläufe und Metriken je Bereich (je ein eigener Commit)
 - [ ] **Start, Monitore, Pipeline:** Span App-Start → erstes Bild; Anzeigeänderung; Pipeline

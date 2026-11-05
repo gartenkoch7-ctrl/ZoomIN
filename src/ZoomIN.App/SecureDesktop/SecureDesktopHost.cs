@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ZoomIN.App.Composition;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.App.Zoom;
-using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Settings;
 using ZoomIN.Platform.Diagnostics;
@@ -25,11 +25,12 @@ internal static class SecureDesktopHost
 
     private static readonly TimeSpan FirstFrameTimeout = TimeSpan.FromSeconds(10);
 
-    public static int Run()
+    public static int Run(TelemetryHost telemetry)
     {
+        var log = telemetry.Logger<SecureDesktopHostCategory>();
         if (SecureDesktopGiveUp.IsActive())
         {
-            new FileLog().Warn("Secure desktop: off until Windows restarts (watchdog gave up after repeated crashes)");
+            log.GaveUp();
             return 0;
         }
 
@@ -47,21 +48,24 @@ internal static class SecureDesktopHost
         }
 
         using var exit = new ManualResetEventSlim();
-        using (var services = ServiceRegistration.BuildSecureDesktop())
+        var start = telemetry.StartOperation("zoomin.secure.start");
+        using (var services = ServiceRegistration.BuildSecureDesktop(telemetry))
         {
-            var log = services.GetRequiredService<ILog>();
-            log.Info($"ZoomIN secure desktop started (SYSTEM: {SessionUserFolders.IsSystem})");
+            // The sanitizer has already cleared any export address: SYSTEM never sends (ADR-0019).
+            telemetry.Apply(services.GetRequiredService<AppSettings>().Telemetry());
+            log.Started(SessionUserFolders.IsSystem);
             WatchdogStarter.Start(log, secure: true);
-            Start(services, exit, log);
+            Start(services, exit, log, start);
             exit.Wait();
-            log.Info("ZoomIN secure desktop exits");
+            log.Exits();
         }
 
         mutex.ReleaseMutex();
         return 0;
     }
 
-    private static void Start(ServiceProvider services, ManualResetEventSlim exit, ILog log)
+    /// <param name="start">Ended when the engine runs, or with the first magnified image if the zoom starts on.</param>
+    private static void Start(ServiceProvider services, ManualResetEventSlim exit, ILogger log, Activity? start)
     {
         var controller = services.GetRequiredService<ZoomController>();
         // The loaded settings, not SettingsService.Current: Current reports the live model, which
@@ -71,34 +75,48 @@ internal static class SecureDesktopHost
         if (settings.ZoomOn)
         {
             controller.Activate(settings.LastMode);
-            _ = Task.Run(() => LogFirstFrame(controller, log));
+            _ = Task.Run(() => LogFirstFrame(controller, log, start));
         }
 
         if (!services.GetRequiredService<IHotkeyService>().Register(HotkeyGesture.ExitSecureDesktop, exit.Set))
         {
-            log.Warn("Exit shortcut for the secure desktop is unavailable");
+            log.ExitShortcutUnavailable();
         }
 
-        log.Info($"Secure desktop engine running after {SinceStart().TotalMilliseconds:0} ms (zoom on: {settings.ZoomOn})");
+        start?.SetTag("zoomin.secure.zoom_on", settings.ZoomOn);
+        var running = SinceStart().TotalMilliseconds;
+        log.EngineRunning(running, settings.ZoomOn);
+        if (!settings.ZoomOn)
+        {
+            start?.Dispose();
+        }
     }
 
     /// <summary>Acceptance criterion of M10: the magnified image within 1 s of the switch.</summary>
-    private static async Task LogFirstFrame(ZoomController controller, ILog log)
+    private static async Task LogFirstFrame(ZoomController controller, ILogger log, Activity? start)
     {
-        var deadline = Stopwatch.StartNew();
-        while (!controller.Status.IsVisible)
+        using (start)
         {
-            if (deadline.Elapsed > FirstFrameTimeout)
+            var deadline = Stopwatch.StartNew();
+            while (!controller.Status.IsVisible)
             {
-                log.Warn($"Secure desktop: no magnified image after {FirstFrameTimeout.TotalSeconds:0} s");
-                return;
+                if (deadline.Elapsed > FirstFrameTimeout)
+                {
+                    log.NoFirstImage(FirstFrameTimeout.TotalSeconds);
+                    start?.SetStatus(ActivityStatusCode.Error, "no magnified image");
+                    return;
+                }
+
+                await Task.Delay(10).ConfigureAwait(false);
             }
 
-            await Task.Delay(10).ConfigureAwait(false);
+            var firstImage = SinceStart().TotalMilliseconds;
+            log.FirstImage(firstImage);
         }
-
-        log.Info($"Secure desktop: first magnified image after {SinceStart().TotalMilliseconds:0} ms");
     }
 
     private static TimeSpan SinceStart() => DateTime.Now - Process.GetCurrentProcess().StartTime;
+
+    /// <summary>Log category of the static host.</summary>
+    private sealed class SecureDesktopHostCategory;
 }

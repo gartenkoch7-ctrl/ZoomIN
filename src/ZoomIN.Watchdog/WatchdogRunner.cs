@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.SecureDesktop;
@@ -16,7 +17,7 @@ namespace ZoomIN.Watchdog;
 public static class WatchdogRunner
 {
     /// <param name="secure">Watches the secure-desktop instance (ADR-0016): restarts it with its switch, never notifies.</param>
-    public static int Run(int processId, string appPath, ILog log, IReadOnlyList<ICleanupStep> cleanup, bool secure = false)
+    public static int Run(int processId, string appPath, ILogger log, IReadOnlyList<ICleanupStep> cleanup, bool secure = false)
     {
         int exitCode;
         try
@@ -30,7 +31,7 @@ public static class WatchdogRunner
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Win32Exception)
         {
-            log.Warn($"[Watchdog] Cannot watch process {processId}: {ex.Message}");
+            log.CannotWatch(processId, ex.Message);
             return 1;
         }
 
@@ -46,19 +47,20 @@ public static class WatchdogRunner
             Thread.Sleep(500);
         }
 
-        log.Error($"[Watchdog] ZoomIN ended unexpectedly (exit code 0x{exitCode:X8}).");
+        log.UnexpectedExit(exitCode);
         RunCleanup(cleanup, log);
 
         var crashes = CrashHistory.Default.Record(DateTimeOffset.Now);
         if (RestartPolicy.ShouldRestart(crashes, DateTimeOffset.Now))
         {
-            log.Info("[Watchdog] Restarting ZoomIN.");
+            log.Restarting();
             // Through the shell, as CreateProcess cannot start the uiAccess build (ADR-0012).
-            Process.Start(new ProcessStartInfo(appPath, secure ? SecureDesktopMode.Switch : "") { UseShellExecute = true })?.Dispose();
+            var arguments = TraceParentArgument.Append(secure ? SecureDesktopMode.Switch : string.Empty);
+            Process.Start(new ProcessStartInfo(appPath, arguments) { UseShellExecute = true })?.Dispose();
             return 0;
         }
 
-        log.Error($"[Watchdog] Giving up after {RestartPolicy.MaxRestarts} restarts within {RestartPolicy.Window.TotalMinutes:0} minutes.");
+        log.GivingUp(RestartPolicy.MaxRestarts, RestartPolicy.Window.TotalMinutes);
         if (secure)
         {
             // No notification on a secure desktop; stay off there until Windows restarts.
@@ -73,19 +75,19 @@ public static class WatchdogRunner
         return 2;
     }
 
-    private static void RunCleanup(IReadOnlyList<ICleanupStep> cleanup, ILog log)
+    private static void RunCleanup(IReadOnlyList<ICleanupStep> cleanup, ILogger log)
     {
         foreach (var step in cleanup)
         {
             try
             {
                 step.Run();
-                log.Info($"[Watchdog] Cleanup '{step.Name}' done.");
+                log.CleanupDone(step.Name);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
                 // One failing step must not prevent the others or the restart.
-                log.Error($"[Watchdog] Cleanup '{step.Name}' failed.", ex);
+                log.CleanupFailed(ex, step.Name);
             }
         }
     }

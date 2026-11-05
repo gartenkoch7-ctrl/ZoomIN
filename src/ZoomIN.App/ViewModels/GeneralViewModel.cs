@@ -3,7 +3,6 @@ using ZoomIN.App.Localization;
 using ZoomIN.App.SecureDesktop;
 using ZoomIN.App.Views;
 using ZoomIN.Core.Settings;
-using ZoomIN.Platform.Diagnostics;
 
 namespace ZoomIN.App.ViewModels;
 
@@ -71,7 +70,8 @@ public sealed partial class GeneralViewModel : ObservableObject
     private async Task ChangeSecureDesktopAsync(bool value)
     {
         // The administrator prompt blocks until answered; keep the UI responsive meanwhile.
-        await Task.Run(() => SecureDesktopSetting.RequestChange(value, new FileLog()));
+        var log = Program.Telemetry!.Logger<GeneralViewModel>();
+        await Task.Run(() => SecureDesktopSetting.RequestChange(value, log));
 
         // "No" at the prompt or a failure: show the real state again.
         var actual = SecureDesktopSetting.IsEnabled;

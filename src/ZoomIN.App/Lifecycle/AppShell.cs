@@ -4,6 +4,7 @@ using ZoomIN.App.Settings;
 using ZoomIN.App.Updates;
 using ZoomIN.App.Views;
 using ZoomIN.App.Zoom;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.Modes;
@@ -23,7 +24,7 @@ public sealed class AppShell
     private readonly ITrayIcon _tray;
     private readonly UpdateService _updates;
     private readonly IUiAccessProbe _uiAccess;
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly PageContext _pages;
     private readonly DispatcherQueue _dispatcher;
     private SettingsWindow? _window;
@@ -31,7 +32,7 @@ public sealed class AppShell
     public AppShell(
         ZoomController controller, SettingsService settings, ProfileService profiles, ITrayIcon tray,
         UpdateService updates, IAutostart autostart, ICursorShapeSource cursorShapes, IUiAccessProbe uiAccess,
-        SetupLauncher setup, ILog log)
+        SetupLauncher setup, ILogger<AppShell> log)
     {
         _controller = controller;
         _settings = settings;
@@ -71,7 +72,7 @@ public sealed class AppShell
         // Once per start; the overview keeps a banner with the install button (ADR-0017).
         if (!_uiAccess.IsActive)
         {
-            _log.Info("UIAccess is not active: quick settings and Start stay above the zoom");
+            _log.UiAccessInactive();
             _tray.Notify(Text.Get("UiAccess.Title"), Text.Get("UiAccess.Tray"));
         }
     }
@@ -148,7 +149,7 @@ public sealed class AppShell
         catch (Exception ex) when (ex is HttpRequestException or IOException)
         {
             // Never important enough to disturb the magnifier; the feed already logged it.
-            _log.Info($"Update checks stopped: {ex.Message}");
+            _log.UpdateChecksStopped(ex.Message);
         }
     }
 

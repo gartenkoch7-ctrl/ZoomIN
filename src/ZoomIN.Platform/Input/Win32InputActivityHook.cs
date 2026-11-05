@@ -3,7 +3,7 @@ using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
 using Windows.Win32.UI.WindowsAndMessaging;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Pointer;
 
 namespace ZoomIN.Platform.Input;
@@ -20,7 +20,7 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
     private static readonly HOOKPROC s_mouseProc = MouseProc;
     private static readonly HOOKPROC s_keyboardProc = KeyboardProc;
 
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private Thread? _thread;
     private uint _threadId;
     private IInputActivityHandler? _handler;
@@ -28,7 +28,7 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
     // Ctrl went down with nothing else pressed; a release now counts as "Ctrl alone".
     private bool _ctrlAlone;
 
-    public Win32InputActivityHook(ILog log)
+    public Win32InputActivityHook(ILogger<Win32InputActivityHook> log)
     {
         _log = log;
     }
@@ -68,7 +68,7 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
         using var keyboard = PInvoke.SetWindowsHookEx(WINDOWS_HOOK_ID.WH_KEYBOARD_LL, s_keyboardProc, module, 0);
         if (mouse.IsInvalid || keyboard.IsInvalid)
         {
-            _log.Error("Installing the activity hooks failed; shake/Ctrl locator and hiding while typing are unavailable.");
+            _log.ActivityHooksUnavailable();
         }
 
         started.Set();
@@ -163,7 +163,7 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            _log.Error("Input activity handler failed", ex);
+            _log.ActivityHandlerFailed(ex);
         }
     }
 
@@ -183,7 +183,7 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             // An exception escaping a hook callback would crash the process.
-            _log.Error("Input activity handler failed", ex);
+            _log.ActivityHandlerFailed(ex);
         }
     }
 

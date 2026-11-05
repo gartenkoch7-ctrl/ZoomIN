@@ -1,5 +1,5 @@
 using Microsoft.Win32;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using ZoomIN.Platform.SecureDesktop;
 
 namespace ZoomIN.Platform.Tests.SecureDesktop;
@@ -19,7 +19,7 @@ public sealed class EaseOfAccessNotifierTests : IDisposable
     }
 
     private EaseOfAccessNotifier Notifier(bool registered) =>
-        new(_root, () => registered, () => _winUCount++, NullLog.Instance);
+        new(_root, () => registered, () => _winUCount++, NullLogger.Instance);
 
     [Fact]
     public void Started_WritesStartingAndSendsWinU()

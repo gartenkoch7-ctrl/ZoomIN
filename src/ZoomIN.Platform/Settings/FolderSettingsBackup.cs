@@ -1,5 +1,5 @@
 using System.Globalization;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Updates;
 
 namespace ZoomIN.Platform.Settings;
@@ -11,14 +11,14 @@ namespace ZoomIN.Platform.Settings;
 public sealed class FolderSettingsBackup : ISettingsBackup
 {
     private readonly string _root;
-    private readonly ILog _log;
+    private readonly ILogger _log;
 
-    public FolderSettingsBackup(ILog log)
+    public FolderSettingsBackup(ILogger<FolderSettingsBackup> log)
         : this(log, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ZoomIN"))
     {
     }
 
-    internal FolderSettingsBackup(ILog log, string root)
+    internal FolderSettingsBackup(ILogger<FolderSettingsBackup> log, string root)
     {
         _log = log;
         _root = root;
@@ -53,12 +53,14 @@ public sealed class FolderSettingsBackup : ISettingsBackup
                 }
             }
 
-            _log.Info($"Settings backed up to {target}");
+            // Only the folder name: the full path contains the Windows user name (ADR-0019).
+            var folder = Path.GetFileName(target);
+            _log.BackedUp(folder);
             return target;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            _log.Error("Settings backup failed", ex);
+            _log.BackupFailed(ex);
             return null;
         }
     }

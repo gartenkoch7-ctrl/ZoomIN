@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Updates;
 
@@ -14,7 +15,7 @@ public static class ElevatedStep
     // ERROR_CANCELLED: the user said "No" at the administrator prompt.
     private const int ErrorCancelled = 1223;
 
-    public static UpdateResult Run(string executable, UpdateCommand command, ILog log)
+    public static UpdateResult Run(string executable, UpdateCommand command, ILogger log)
     {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(log);
@@ -22,7 +23,7 @@ public static class ElevatedStep
         {
             // Through the shell with "runas": CreateProcess can neither elevate nor start the
             // UIAccess build (ADR-0012).
-            using var process = Process.Start(new ProcessStartInfo(executable, command.Format())
+            using var process = Process.Start(new ProcessStartInfo(executable, TraceParentArgument.Append(command.Format()))
             {
                 UseShellExecute = true,
                 Verb = "runas",
@@ -34,7 +35,7 @@ public static class ElevatedStep
 
             process.WaitForExit();
             var result = (UpdateResult)process.ExitCode;
-            log.Info($"Install step for {command.Version}: {result}");
+            log.InstallStepResult(command.Version, result);
             return Enum.IsDefined(result) ? result : UpdateResult.Failed;
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == ErrorCancelled)
@@ -43,7 +44,7 @@ public static class ElevatedStep
         }
         catch (Win32Exception ex)
         {
-            log.Error("Starting the install step failed", ex);
+            log.InstallStepFailed(ex);
             return UpdateResult.Failed;
         }
     }

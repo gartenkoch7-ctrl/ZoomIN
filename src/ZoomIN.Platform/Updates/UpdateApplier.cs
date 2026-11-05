@@ -1,6 +1,6 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Updates;
 
 namespace ZoomIN.Platform.Updates;
@@ -13,9 +13,9 @@ namespace ZoomIN.Platform.Updates;
 public sealed class UpdateApplier
 {
     private readonly ISignatureVerifier _verifier;
-    private readonly ILog _log;
+    private readonly ILogger _log;
 
-    public UpdateApplier(ISignatureVerifier verifier, ILog log)
+    public UpdateApplier(ISignatureVerifier verifier, ILogger log)
     {
         _verifier = verifier;
         _log = log;
@@ -56,12 +56,12 @@ public sealed class UpdateApplier
             Directory.Move(staging, target);
             SwitchCurrent(layout, target);
             RemoveOldFolders(layout, command.Version, previous);
-            _log.Info($"[Update] {previous?.ToString() ?? "-"} -> {command.Version} installed.");
+            _log.Installed(previous, command.Version);
             return result = UpdateResult.Installed;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
-            _log.Error($"[Update] Installing {command.Version} failed", ex);
+            _log.InstallFailed(ex, command.Version);
             return UpdateResult.Failed;
         }
         finally
@@ -110,7 +110,7 @@ public sealed class UpdateApplier
             // Still in use (an old ZoomIN that did not exit yet): the next update removes it.
             if (!TryDelete(() => Directory.Delete(Path.Combine(layout.Root, name), recursive: true)))
             {
-                _log.Info($"[Update] {name} kept for now, still in use.");
+                _log.KeptInUse(name);
             }
         }
     }

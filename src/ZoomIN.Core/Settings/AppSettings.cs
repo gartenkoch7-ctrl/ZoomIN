@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
@@ -39,6 +41,23 @@ public sealed record AppSettings
     public ReleaseChannel UpdateChannel { get; set; } = ReleaseChannel.Stable;
 
     public string ActiveProfile { get; set; } = ProfileFields.DefaultProfileName;
+
+    // --- Diagnostics (shared by all profiles; ADR-0019, read through AppSettingsTelemetry) ---
+    public TelemetryLevel TelemetryLevel { get; set; } = TelemetryOptions.Default.Level;
+
+    public bool TelemetryLogs { get; set; } = TelemetryOptions.Default.Logs;
+
+    public bool TelemetryTraces { get; set; } = TelemetryOptions.Default.Traces;
+
+    public bool TelemetryMetrics { get; set; } = TelemetryOptions.Default.Metrics;
+
+    public LogLevel TelemetryLogLevel { get; set; } = TelemetryOptions.Default.LogLevel;
+
+    public int TelemetryRetentionDays { get; set; } = TelemetryOptions.Default.RetentionDays;
+
+    public DateTimeOffset? TelemetryRaisedUntil { get; set; }
+
+    public string TelemetryOtlpEndpoint { get; set; } = string.Empty;
 
     // --- Display (stored per profile, see ProfileFields) ---
 

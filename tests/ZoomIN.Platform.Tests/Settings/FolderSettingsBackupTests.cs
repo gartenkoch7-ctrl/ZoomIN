@@ -1,4 +1,4 @@
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Settings;
 
@@ -16,7 +16,7 @@ public sealed class FolderSettingsBackupTests : IDisposable
         var profiles = Directory.CreateDirectory(Path.Combine(_root, "profiles")).FullName;
         File.WriteAllText(Path.Combine(profiles, "Lesen.json"), "{}");
 
-        var backup = new FolderSettingsBackup(NullLog.Instance, _root).Backup(new AppVersion(1, 1, 0));
+        var backup = new FolderSettingsBackup(NullLogger<FolderSettingsBackup>.Instance, _root).Backup(new AppVersion(1, 1, 0));
 
         Assert.NotNull(backup);
         Assert.StartsWith(Path.Combine(_root, "backups", "1.1.0-"), backup, StringComparison.Ordinal);
@@ -27,7 +27,7 @@ public sealed class FolderSettingsBackupTests : IDisposable
     [Fact]
     public void NothingToBackUp_ReturnsNull()
     {
-        Assert.Null(new FolderSettingsBackup(NullLog.Instance, _root).Backup(new AppVersion(1, 0, 0)));
+        Assert.Null(new FolderSettingsBackup(NullLogger<FolderSettingsBackup>.Instance, _root).Backup(new AppVersion(1, 0, 0)));
         Assert.False(Directory.Exists(Path.Combine(_root, "backups")));
     }
 

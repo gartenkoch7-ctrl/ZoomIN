@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Updates;
 
@@ -17,9 +18,9 @@ public sealed class SetupLauncher
     private readonly UpdateService _updates;
     private readonly IPackageDownloader _downloader;
     private readonly ISignatureVerifier _verifier;
-    private readonly ILog _log;
+    private readonly ILogger _log;
 
-    public SetupLauncher(UpdateService updates, IPackageDownloader downloader, ISignatureVerifier verifier, ILog log)
+    public SetupLauncher(UpdateService updates, IPackageDownloader downloader, ISignatureVerifier verifier, ILogger<SetupLauncher> log)
     {
         _updates = updates;
         _downloader = downloader;
@@ -35,7 +36,7 @@ public sealed class SetupLauncher
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException)
         {
-            _log.Info($"Setup: release list unavailable: {ex.Message}");
+            _log.SetupReleaseListUnavailable(ex.Message);
             return SetupLaunch.DownloadFailed;
         }
 
@@ -55,19 +56,19 @@ public sealed class SetupLauncher
         var check = _verifier.Verify(download.Path);
         if (check != PackageCheck.Ok)
         {
-            _log.Info($"Setup {release.Version} not started: {check}");
+            _log.SetupNotStarted(release.Version, check.ToString());
             return SetupLaunch.NotTrusted;
         }
 
         try
         {
-            using var _ = Process.Start(new ProcessStartInfo(download.Path) { UseShellExecute = true });
-            _log.Info($"Setup {release.Version} started");
+            using var _ = Process.Start(new ProcessStartInfo(download.Path, TraceParentArgument.Append(string.Empty)) { UseShellExecute = true });
+            _log.SetupStarted(release.Version);
             return SetupLaunch.Started;
         }
         catch (Win32Exception ex)
         {
-            _log.Info($"Setup {release.Version} not started: {ex.Message}");
+            _log.SetupNotStarted(release.Version, ex.Message);
             return SetupLaunch.DownloadFailed;
         }
     }

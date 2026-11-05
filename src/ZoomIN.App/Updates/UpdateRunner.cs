@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.SecureDesktop;
@@ -12,11 +13,11 @@ namespace ZoomIN.App.Updates;
 /// </summary>
 internal static class UpdateRunner
 {
-    public static int Run(UpdateCommand command, ILog log)
+    public static int Run(UpdateCommand command, ILogger log)
     {
         if (!InstallLayout.TryFromExecutable(Environment.ProcessPath, out var layout))
         {
-            log.Error($"[Update] Not a versioned installation: {Environment.ProcessPath}");
+            log.NotVersioned();
             return (int)UpdateResult.NotInstalled;
         }
 
@@ -30,7 +31,7 @@ internal static class UpdateRunner
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
             {
-                log.Error("[Update] Refreshing the Apps entry failed", ex);
+                log.AppsEntryFailed(ex);
             }
 
             SecureDesktopInstall.Apply(layout, command.SecureDesktop, log);

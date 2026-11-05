@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using ZoomIN.App.Settings;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Updates;
@@ -20,12 +21,12 @@ public sealed class UpdateService
     private readonly IPackageDownloader _downloader;
     private readonly ISettingsBackup _backup;
     private readonly SettingsService _settings;
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly InstallLayout? _layout;
     private AppVersion? _notified;
 
     public UpdateService(
-        IReleaseFeed feed, IPackageDownloader downloader, ISettingsBackup backup, SettingsService settings, ILog log)
+        IReleaseFeed feed, IPackageDownloader downloader, ISettingsBackup backup, SettingsService settings, ILogger<UpdateService> log)
     {
         _feed = feed;
         _downloader = downloader;
@@ -69,7 +70,7 @@ public sealed class UpdateService
                 if (AvailableUpdate is { } update && update.Version != _notified)
                 {
                     _notified = update.Version;
-                    _log.Info($"Update available: {update.Version}");
+                    _log.UpdateAvailable(update.Version);
                     UpdateAvailable?.Invoke(update);
                 }
             }
@@ -121,7 +122,7 @@ public sealed class UpdateService
         }
 
         // Through the shell: CreateProcess refuses UIAccess executables (ADR-0012).
-        using var _ = Process.Start(new ProcessStartInfo(_layout.CurrentExecutable, RestartArguments.Format(Environment.ProcessId))
+        using var _ = Process.Start(new ProcessStartInfo(_layout.CurrentExecutable, TraceParentArgument.Append(RestartArguments.Format(Environment.ProcessId)))
         {
             UseShellExecute = true,
         });

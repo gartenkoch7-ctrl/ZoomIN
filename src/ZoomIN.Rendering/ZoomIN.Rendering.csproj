@@ -13,6 +13,8 @@
 
   <ItemGroup>
     <PackageReference Include="Vortice.Direct3D11" />
+    <!-- Direct, so the [LoggerMessage] source generator runs here too (ADR-0019). -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Vortice.DXGI" />
     <PackageReference Include="Vortice.D3DCompiler" />
     <PackageReference Include="Vortice.DirectComposition" />

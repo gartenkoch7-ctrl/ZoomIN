@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using ZoomIN.App.Localization;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Updates;
@@ -21,7 +22,7 @@ internal static class UninstallFlow
     // ERROR_CANCELLED: the user said "No" at the administrator prompt.
     private const int ErrorCancelled = 1223;
 
-    public static int Run(ILog log)
+    public static int Run(ILogger log)
     {
         Text.SetLanguage(AppLanguage.System);
         var title = Text.Get("Uninstall.Title");
@@ -50,7 +51,7 @@ internal static class UninstallFlow
             TryRun(() => Directory.Delete(DataFolder(Environment.SpecialFolder.LocalApplicationData), recursive: true));
         }
 
-        log.Info("ZoomIN uninstalled.");
+        log.Uninstalled();
         MessageDialog.Inform(title, Text.Get("Uninstall.Done"));
         return 0;
     }
@@ -60,7 +61,7 @@ internal static class UninstallFlow
     /// Start menu shortcut, and deletes Program Files\ZoomIN once the asking process has ended
     /// (its own files are in use until then).
     /// </summary>
-    public static int RemoveElevated(int waitForProcessId, ILog log)
+    public static int RemoveElevated(int waitForProcessId, ILogger log)
     {
         if (!InstallLayout.TryFromExecutable(Environment.ProcessPath, out var layout))
         {
@@ -85,17 +86,17 @@ internal static class UninstallFlow
             CreateNoWindow = true,
             UseShellExecute = false,
         });
-        log.Info("[Uninstall] Removal scheduled.");
+        log.RemovalScheduled();
         return 0;
     }
 
-    private static bool RunElevatedRemoval(ILog log)
+    private static bool RunElevatedRemoval(ILogger log)
     {
         try
         {
             using var process = Process.Start(new ProcessStartInfo(
                 Environment.ProcessPath!,
-                string.Create(CultureInfo.InvariantCulture, $"{UninstallEntry.RemoveSwitch} {Environment.ProcessId}"))
+                TraceParentArgument.Append(string.Create(CultureInfo.InvariantCulture, $"{UninstallEntry.RemoveSwitch} {Environment.ProcessId}")))
             {
                 UseShellExecute = true,
                 Verb = "runas",
@@ -109,7 +110,7 @@ internal static class UninstallFlow
         }
         catch (Win32Exception ex)
         {
-            log.Error("[Uninstall] Starting the removal failed", ex);
+            log.RemovalFailed(ex);
             return false;
         }
     }
