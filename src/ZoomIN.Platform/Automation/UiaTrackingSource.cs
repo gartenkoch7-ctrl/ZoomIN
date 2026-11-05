@@ -131,14 +131,32 @@ public sealed unsafe class UiaTrackingSource : ITrackingSource
             return null;
         }
 
+        // rcCaret is in the client coordinates of the caret window, i.e. in that window's DPI
+        // space. Converted from a per-monitor-aware thread, a DPI-unaware or system-aware window
+        // on a scaled monitor would put the caret off by the scale factor (too far right/down,
+        // too small). So: client → screen in the window's own DPI context, then → physical.
         var r = info.rcCaret;
         var topLeft = new Point(r.left, r.top);
-        if (!PInvoke.ClientToScreen(info.hwndCaret, ref topLeft))
+        var bottomRight = new Point(Math.Max(r.right, r.left + 1), Math.Max(r.bottom, r.top + 1));
+        var previous = PInvoke.SetThreadDpiAwarenessContext(PInvoke.GetWindowDpiAwarenessContext(info.hwndCaret));
+        try
         {
-            return null;
+            if (!PInvoke.ClientToScreen(info.hwndCaret, ref topLeft) || !PInvoke.ClientToScreen(info.hwndCaret, ref bottomRight))
+            {
+                return null;
+            }
+        }
+        finally
+        {
+            PInvoke.SetThreadDpiAwarenessContext(previous);
         }
 
+        // Fails (and leaves the point unchanged) only if it lies outside the window; a caret
+        // there is clipped anyway, so the unconverted point is the best guess.
+        PInvoke.LogicalToPhysicalPointForPerMonitorDPI(info.hwndCaret, ref topLeft);
+        PInvoke.LogicalToPhysicalPointForPerMonitorDPI(info.hwndCaret, ref bottomRight);
+
         // Some applications report a zero-width caret.
-        return new PhysicalRect(topLeft.X, topLeft.Y, Math.Max(r.right - r.left, 1), Math.Max(r.bottom - r.top, 1));
+        return new PhysicalRect(topLeft.X, topLeft.Y, Math.Max(bottomRight.X - topLeft.X, 1), Math.Max(bottomRight.Y - topLeft.Y, 1));
     }
 }

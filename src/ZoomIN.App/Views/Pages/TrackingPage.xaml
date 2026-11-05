@@ -21,6 +21,9 @@
             </c:SettingCard>
 
             <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('TrackingGroupMotion')}" />
+            <c:SettingCard Description="{x:Bind loc:Text.Get('TrackingCenterMouse.Desc')}" Glyph="&#xE962;" Header="{x:Bind loc:Text.TrackingCenterMouse}">
+                <ToggleSwitch IsOn="{x:Bind Vm.CenterMouse, Mode=TwoWay}" />
+            </c:SettingCard>
             <c:SettingCard Description="{x:Bind loc:Text.Get('TrackingPan.Desc')}" Glyph="&#xE916;" Header="{x:Bind loc:Text.Get('TrackingPanTitle')}">
                 <c:ValueSlider Format="{}{0:0} ms" Maximum="1000" Minimum="0" Step="50" Value="{x:Bind Vm.PanMs, Mode=TwoWay}" />
             </c:SettingCard>

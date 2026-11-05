@@ -122,6 +122,7 @@ internal static class TextsEnglishCards
         ["TrackingGroupMarks"] = "Highlights",
         ["TrackingFocusFrame.Desc"] = "Magenta frame in the magnified view.",
         ["TrackingCaretMarker.Desc"] = "Clearly visible bar at the typing position.",
+        ["TrackingCenterMouse.Desc"] = "The magnified view moves with the mouse so the pointer stays in the middle. Off: the pointer is shown where it is on the desktop.",
 
         ["GeneralAutostart.Desc"] = "ZoomIN starts in the notification area after sign-in.",
         ["GeneralSecureDesktop"] = "Use on the sign-in screen",

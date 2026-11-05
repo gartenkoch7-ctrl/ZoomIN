@@ -122,6 +122,7 @@ internal static class TextsGermanCards
         ["TrackingGroupMarks"] = "Markierungen",
         ["TrackingFocusFrame.Desc"] = "Magentafarbener Rahmen in der Vergrößerung.",
         ["TrackingCaretMarker.Desc"] = "Gut sichtbarer Balken an der Schreibposition.",
+        ["TrackingCenterMouse.Desc"] = "Die Vergrößerung läuft mit der Maus mit, der Zeiger bleibt in der Bildmitte. Aus: Der Zeiger steht dort, wo er auf dem Desktop ist.",
 
         ["GeneralAutostart.Desc"] = "ZoomIN startet nach der Anmeldung im Infobereich.",
         ["GeneralSecureDesktop"] = "Auf dem Anmeldebildschirm verwenden",

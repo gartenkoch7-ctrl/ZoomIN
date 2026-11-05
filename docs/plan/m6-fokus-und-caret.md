@@ -14,6 +14,11 @@ schwenkt zum fokussierten Element, das magenta umrahmt ist.
 - **Alle Modi** folgen (Vollbild schwenkt, Lupe springt, Streifen zeigt die Umgebung)
 - **Fokusrahmen Magenta** (an), **Caret-Balken** (an), beide abschaltbar
 - **Strg+Alt+T** schaltet Fokus-/Caret-Verfolgung an/aus
+- Nachtrag 2026-11-03: Fokus wird bei **jedem** Wechsel in die **Bildmitte** gelegt (am
+  Monitorrand begrenzt); Caret wird am Randabstand **geschoben** statt neu zentriert. Ursache
+  und Umsetzung: [eingabe-und-tracking.md](../kb/eingabe-und-tracking.md) („Fixpunkt ≠ Bildmitte“)
+- Nachtrag 2026-11-03: Die **Maus** steht standardmäßig ebenfalls in der Bildmitte (Einstellung
+  „Mauszeiger in der Mitte halten“, abschaltbar; ADR-0018). Am Monitorrand bleibt die Ansicht stehen.
 
 ## Umsetzung
 - **Erkennung (`Platform/Automation/UiaTrackingSource`):** eigener Thread fragt ~30×/s

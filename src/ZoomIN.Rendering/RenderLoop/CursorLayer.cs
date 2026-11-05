@@ -21,6 +21,7 @@ internal sealed class CursorLayer
     private readonly CursorPass _pass;
     private readonly ICursorShapeSource _shapes;
     private readonly ISystemCursor _systemCursor;
+    private PointerPlacement _placement;
 
     public CursorLayer(CursorPass pass, ICursorShapeSource shapes, ISystemCursor systemCursor)
     {
@@ -85,16 +86,21 @@ internal sealed class CursorLayer
         var width = (pointer.Width * texel) + (2 * rim);
         var height = (pointer.Height * texel) + (2 * rim);
         var tint = FrameColor.From(style.Color) with { A = (float)style.ColorMode };
+
+        // Near the bottom/right edge the image is mirrored so it stays on screen; the tip keeps
+        // marking the real click point.
+        _placement = PointerPlacement.Place(
+            shown, width, height, (pointer.HotspotX * texel) + rim, (pointer.HotspotY * texel) + rim, monitor, _placement);
         var constants = CursorConstants.ForPointer(
             (float)(rim / width), (float)(rim / height), pointer.Width, pointer.Height, (float)(rim / texel),
-            FrameColor.From(style.RimColor), tint);
+            FrameColor.From(style.RimColor), tint, _placement.FlipX, _placement.FlipY);
 
         _pass.DrawPointer(
             context,
             target,
             pointer,
-            (float)(shown.X - (pointer.HotspotX * texel) - rim - monitor.X),
-            (float)(shown.Y - (pointer.HotspotY * texel) - rim - monitor.Y),
+            (float)(_placement.X - monitor.X),
+            (float)(_placement.Y - monitor.Y),
             (float)width,
             (float)height,
             constants);

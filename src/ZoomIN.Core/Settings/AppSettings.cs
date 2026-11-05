@@ -159,6 +159,9 @@ public sealed record AppSettings
 
     public bool CaretMarker { get; set; } = true;
 
+    /// <summary>Keep the pointer in the middle of the view (ADR-0018); off = fixpoint at the mouse (ADR-0003).</summary>
+    public bool CenterMouse { get; set; } = true;
+
     /// <summary>Glide duration for zoom changes in milliseconds; 0 = instant.</summary>
     public int AnimationMilliseconds { get; set; } = 150;
 

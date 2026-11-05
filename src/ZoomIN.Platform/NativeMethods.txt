@@ -41,6 +41,9 @@ IUIAutomationElement
 GetGUIThreadInfo
 GUITHREADINFO
 ClientToScreen
+GetWindowDpiAwarenessContext
+SetThreadDpiAwarenessContext
+LogicalToPhysicalPointForPerMonitorDPI
 
 // Shell/Win32TrayIcon
 Shell_NotifyIcon

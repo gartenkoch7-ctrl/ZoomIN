@@ -24,12 +24,14 @@ internal readonly struct CursorConstants
 
     private CursorConstants(
         float marginU, float marginV, FrameColor rim, float texelU, float texelV, float rimTexels, float ringThickness, FrameColor ring,
-        FrameColor tint)
+        FrameColor tint, bool flipU = false, bool flipV = false)
     {
-        InnerOffsetU = marginU;
-        InnerOffsetV = marginV;
-        InnerScaleU = 1 - (2 * marginU);
-        InnerScaleV = 1 - (2 * marginV);
+        // Mirroring needs no shader change: the shader computes uv = (Uv − offset) / scale, so
+        // starting at the far margin with a negative scale yields 1 − uv.
+        InnerOffsetU = flipU ? 1 - marginU : marginU;
+        InnerOffsetV = flipV ? 1 - marginV : marginV;
+        InnerScaleU = (flipU ? -1 : 1) * (1 - (2 * marginU));
+        InnerScaleV = (flipV ? -1 : 1) * (1 - (2 * marginV));
         Rim = rim;
         TexelU = texelU;
         TexelV = texelV;
@@ -46,9 +48,12 @@ internal readonly struct CursorConstants
     /// <param name="rimTexels">Rim width in texels; 0 = no rim.</param>
     /// <param name="rim">Rim colour.</param>
     /// <param name="tint">Colour mode, see <see cref="Tint"/>.</param>
+    /// <param name="flipU">Mirror the image left/right (pointer at the right monitor edge).</param>
+    /// <param name="flipV">Mirror the image top/bottom (pointer at the bottom monitor edge).</param>
     public static CursorConstants ForPointer(
-        float marginU, float marginV, int width, int height, float rimTexels, FrameColor rim, FrameColor tint) =>
-        new(marginU, marginV, rimTexels > 0 ? rim : default, 1f / width, 1f / height, rimTexels, 0, default, tint);
+        float marginU, float marginV, int width, int height, float rimTexels, FrameColor rim, FrameColor tint,
+        bool flipU = false, bool flipV = false) =>
+        new(marginU, marginV, rimTexels > 0 ? rim : default, 1f / width, 1f / height, rimTexels, 0, default, tint, flipU, flipV);
 
     public static CursorConstants ForRing(float thickness, FrameColor color) =>
         new(0, 0, default, 0, 0, 0, thickness, color, default);
