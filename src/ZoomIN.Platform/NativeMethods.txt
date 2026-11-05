@@ -159,3 +159,35 @@ GetWindowThreadProcessId
 SHParseDisplayName
 SHOpenFolderAndSelectItems
 ILFree
+
+// WindowFilters/Win32WindowFilterSource, WindowFilters/WindowEnumerator, WindowFilters/ScreenSampler
+SetWinEventHook
+UnhookWinEvent
+EnumWindows
+IsWindowVisible
+IsIconic
+IsWindow
+GetWindowLong
+GetWindow
+GetWindowRect
+DwmGetWindowAttribute
+DWMWINDOWATTRIBUTE
+QueryFullProcessImageName
+CloseHandle
+SetTimer
+KillTimer
+WM_TIMER
+CreateCompatibleDC
+DeleteDC
+CreateDIBSection
+SelectObject
+StretchBlt
+SetStretchBltMode
+SetBrushOrgEx
+BITMAPINFO
+GetCurrentProcessId
+
+// Tests: solid test windows (WindowFilters tests)
+GetStockObject
+UnregisterClass
+UpdateWindow

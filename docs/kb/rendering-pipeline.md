@@ -51,6 +51,28 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   danach wird das Blending wieder abgeschaltet.
 - Bei Zoom 1× mit aktivem Filter rendert das Overlay weiter (Vollbild-Geometrie).
 
+## Filter pro Fenster (M12, ADR-0020/0021)
+- **Tracker-Thread** (`Platform/WindowFilters/Win32WindowFilterSource`): WinEvents (Vordergrund,
+  Verschieben, Minimieren, Anzeigen/Verbergen/Z-Reihenfolge, Ort, Cloaking) → `WindowTracker.Update`
+  listet die sichtbaren Top-Level-Fenster (`EnumWindows` = Z-Reihenfolge) mit
+  `DWMWA_EXTENDED_FRAME_BOUNDS` (ohne unsichtbaren Rand), überspringt verborgene, minimierte,
+  ge-cloakte und klick-durchlässige Overlays (`WS_EX_TRANSPARENT|WS_EX_LAYERED`, auch ZoomINs
+  eigene) und Schatten (`SysShadow`). Name/Klasse je Fenster nur einmal lesen.
+- **Einstufung** einmal beim ersten Erscheinen: GDI-`StretchBlt(HALFTONE)` auf 64×64 auf dem
+  Tracker-Thread (Overlays sind aus der Kopie ausgenommen); `BrightnessMeter` zählt nur sichtbare
+  Pixel (nicht verdeckt, auf einem Monitor), `BrightnessVote` entscheidet 2 von 3. Verborgen und
+  wieder gezeigt = keine neue Messung (Zustand lebt bis `IsWindow` false).
+- **Snapshot** `WindowRegions` (≤ 32 Rechtecke + Palettenindex) per `WindowFilterModel.Publish`;
+  gleicher Inhalt → kein Wecken. Render-Thread: `ChangesMonitor` (33 ns, 0 B) entscheidet über
+  Pause; `WindowConstants.Fill` + Upload in `b1` nur bei neuem Snapshot oder neuen Effekten.
+- **Shader:** Quell-UV gegen die Rechtecke (Monitor-UV), erstes Treffer-Rechteck wählt die Matrix
+  aus `Palette` (9 Einträge), sonst Monitor-Matrix. Gilt auch beim Zoom, weil im Quellraum geprüft.
+- **Gemessen (Dev-PC, 2026-11-06):** Aktualisieren 0,10 ms bei 16 sichtbaren Fenstern; ein Blick
+  16,5 ms (1200×800) bzw. 17 ms (ganzer Monitor) – GDI wartet auf den nächsten DWM-Frame; ein
+  sichtbares Fenster ist nach ≈ 0,6 s entschieden (Blicke bei 250 und 600 ms).
+- **Nicht automatisch prüfbar:** Versatz beim Ziehen (Ereignis vs. Duplication-Frame) und die
+  sichtbare Wirkung – das Overlay ist aus Screenshots ausgenommen; Sichtprüfung durch Menschen.
+
 ## Shader-Regeln
 - HLSL-Dateien in `ZoomIN.Rendering/Shaders/`, als Embedded Resource eingebettet und beim
   Start mit dem in Windows enthaltenen D3DCompiler übersetzt (Entscheidung M1: kein SDK-Tool

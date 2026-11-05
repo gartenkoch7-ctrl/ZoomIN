@@ -5,6 +5,7 @@ using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Updates;
+using ZoomIN.Core.WindowFilters;
 using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.Core.SecureDesktop;
@@ -87,6 +88,10 @@ public static class SecureSettingsSanitizer
             CrosshairHotkey = Hotkey(s.CrosshairHotkey, d.CrosshairHotkey),
             TrackingHotkey = Hotkey(s.TrackingHotkey, d.TrackingHotkey),
             ProfileHotkey = Hotkey(s.ProfileHotkey, d.ProfileHotkey),
+
+            // Filter per window off on the secure desktop (ADR-0020): no window tracking there.
+            WindowFilter = new WindowFilterOptions { Enabled = false },
+            WindowFilterHotkey = default,
             WheelModifiers = Wheel(s.WheelModifiers, d.WheelModifiers),
         };
     }

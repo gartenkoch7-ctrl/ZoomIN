@@ -4,6 +4,8 @@
     <SupportedOSPlatformVersion>$(ZoomInMinWindows)</SupportedOSPlatformVersion>
     <OutputType>Exe</OutputType>
     <IsTestProject>true</IsTestProject>
+    <!-- Solid test windows for the filter per window are made with CsWin32 pointers. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

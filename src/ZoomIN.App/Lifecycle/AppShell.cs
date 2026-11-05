@@ -9,6 +9,7 @@ using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Tracking;
+using ZoomIN.Core.WindowFilters;
 
 namespace ZoomIN.App.Lifecycle;
 
@@ -61,6 +62,9 @@ public sealed class AppShell
         Text.LanguageChanged += UpdateTray;
         UpdateTray();
 
+        // Short status after the window filter shortcut (ADR-0020); the tray works from any thread.
+        _controller.WindowFilterToggled += rule => _tray.Notify(Text.Get("WinFilter.Title"), WindowFilterStatus(rule));
+
         if (!_settings.Current.FirstRunCompleted)
         {
             OpenSettings();
@@ -90,6 +94,13 @@ public sealed class AppShell
         window.HiddenToTray += OnHiddenToTray;
         return window;
     }
+
+    private static string WindowFilterStatus(WindowFilterRule? rule) => rule switch
+    {
+        null => Text.Get("WinFilter.Status.Nothing"),
+        { Choice: WindowFilterChoice.Filter } => Text.Format("WinFilter.Status.On", rule.Process, Text.Get("Filter." + rule.Filter)),
+        _ => Text.Format("WinFilter.Status.Off", rule.Process),
+    };
 
     private void OnHiddenToTray()
     {

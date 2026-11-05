@@ -5,6 +5,7 @@ using ZoomIN.Core.Filters;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Viewport;
+using ZoomIN.Core.WindowFilters;
 using ZoomIN.Rendering.Capture;
 using ZoomIN.Rendering.Gpu;
 using ZoomIN.Rendering.Overlay;
@@ -38,6 +39,11 @@ internal sealed class RenderSession : IDisposable
     private bool _cursorInside;
     private bool _shown;
 
+    // Window regions as last uploaded; compared by reference, both are immutable snapshots.
+    private WindowConstants _windowConstants;
+    private WindowRegions? _uploadedWindows;
+    private DisplayEffects? _uploadedEffects;
+
     public RenderSession(PointerServices pointer, string deviceName)
     {
         _pointer = pointer;
@@ -70,6 +76,10 @@ internal sealed class RenderSession : IDisposable
 
     /// <summary>The pointer locator was still animating in the last frame.</summary>
     public bool LocatorActive { get; private set; }
+
+    /// <summary>Some window on this monitor looks different from the rest; per frame, no allocation.</summary>
+    public bool FiltersWindows(WindowRegions windows, DisplayEffects effects) =>
+        windows.ChangesMonitor(_monitor.Bounds, effects);
 
     /// <summary>Hides the overlay but keeps every resource warm for an instant restart.</summary>
     public void Hide()
@@ -133,7 +143,7 @@ internal sealed class RenderSession : IDisposable
         }
         else
         {
-            Draw(frame, request.Effects);
+            Draw(frame, request.Effects, request.Windows);
         }
 
         _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions);
@@ -162,9 +172,19 @@ internal sealed class RenderSession : IDisposable
         _owned.Clear();
     }
 
-    private void Draw(in ModeFrame frame, DisplayEffects effects)
+    private void Draw(in ModeFrame frame, DisplayEffects effects, WindowRegions windows)
     {
         var monitor = _monitor.Bounds;
+
+        // Only when windows or filters changed: while nothing moves the upload is skipped.
+        if (!ReferenceEquals(windows, _uploadedWindows) || !ReferenceEquals(effects, _uploadedEffects))
+        {
+            WindowConstants.Fill(ref _windowConstants, windows, monitor, effects);
+            _pass.UpdateWindows(_gpu.Context, _windowConstants);
+            _uploadedWindows = windows;
+            _uploadedEffects = effects;
+        }
+
         var matrix = effects.Matrix;
         if (!frame.HasFrame)
         {

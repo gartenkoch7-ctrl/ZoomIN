@@ -32,6 +32,7 @@ public sealed class SettingsService : IDisposable
         _models.Zoom.Changed += OnZoomChanged;
         _models.Effects.Changed += ScheduleSave;
         _models.Tracking.Changed += ScheduleSave;
+        _models.Windows.OptionsChanged += ScheduleSave;
     }
 
     /// <summary>Raised after shared settings changed (language, hotkeys, …), on the caller's thread.</summary>
@@ -52,7 +53,10 @@ public sealed class SettingsService : IDisposable
 
             var settings = ZoomModelFactory.Apply(shared, _models.Zoom);
             settings = EffectsFactory.Apply(settings, _models.Effects);
-            return TrackingFactory.Apply(settings, _models.Tracking);
+            settings = TrackingFactory.Apply(settings, _models.Tracking);
+
+            // Shared by all profiles (ADR-0020): ApplyDisplay never takes it from a profile.
+            return settings with { WindowFilter = _models.Windows.Options };
         }
     }
 
@@ -88,6 +92,7 @@ public sealed class SettingsService : IDisposable
         _models.Zoom.Changed -= OnZoomChanged;
         _models.Effects.Changed -= ScheduleSave;
         _models.Tracking.Changed -= ScheduleSave;
+        _models.Windows.OptionsChanged -= ScheduleSave;
         _saveTimer.Dispose();
         SaveNow();
     }

@@ -16,6 +16,21 @@ cbuffer MagnifyConstants : register(b0)
     float Padding;
 };
 
+// Filter per window (ADR-0020): window rectangles front to back, each with a palette entry. The
+// first rectangle holding the source pixel wins, so windows above hide the ones below; pixels in
+// none of them keep the monitor's matrix (ColorRow0–2). Updated only when windows or filters change.
+#define MAX_REGIONS 32
+#define PALETTE_SIZE 9
+
+cbuffer WindowConstants : register(b1)
+{
+    uint RegionCount;
+    float3 RegionPadding;
+    float4 RegionRects[MAX_REGIONS];       // left, top, right, bottom in desktop texture UV space
+    float4 RegionEntries[MAX_REGIONS];     // x = palette entry
+    float4 Palette[PALETTE_SIZE * 3];      // three colour matrix rows per entry
+};
+
 Texture2D Desktop : register(t0);
 SamplerState LinearSampler : register(s0);
 SamplerState PointSampler : register(s1);
@@ -86,11 +101,30 @@ float4 PSMain(VertexOutput input) : SV_Target
         return FrameColor;
     }
 
-    float3 c = SampleDesktop(SourceOffset + inner * SourceScale);
+    float2 uv = SourceOffset + inner * SourceScale;
+    float3 c = SampleDesktop(uv);
+
+    float4 row0 = ColorRow0;
+    float4 row1 = ColorRow1;
+    float4 row2 = ColorRow2;
+    [loop]
+    for (uint i = 0; i < RegionCount; i++)
+    {
+        float4 rect = RegionRects[i];
+        if (all(uv >= rect.xy) && all(uv < rect.zw))
+        {
+            uint entry = (uint)RegionEntries[i].x * 3;
+            row0 = Palette[entry];
+            row1 = Palette[entry + 1];
+            row2 = Palette[entry + 2];
+            break;
+        }
+    }
+
     float3 filtered = saturate(float3(
-        dot(ColorRow0.xyz, c) + ColorRow0.w,
-        dot(ColorRow1.xyz, c) + ColorRow1.w,
-        dot(ColorRow2.xyz, c) + ColorRow2.w));
+        dot(row0.xyz, c) + row0.w,
+        dot(row1.xyz, c) + row1.w,
+        dot(row2.xyz, c) + row2.w));
 
     // The overlay is premultiplied-alpha; the desktop is opaque.
     return float4(filtered, 1);

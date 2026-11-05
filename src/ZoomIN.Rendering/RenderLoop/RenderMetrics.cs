@@ -13,6 +13,7 @@ internal sealed class RenderMetrics
 {
     public const string MonitorTag = "zoomin.monitor";
     public const string ReasonTag = "zoomin.reason";
+    public const string StateTag = "zoomin.state";
 
     private static readonly Histogram<double> s_frameInterval = Telemetry.Meter.CreateHistogram<double>(
         "zoomin.render.frame_interval", "ms", "Time between two presented frames; spikes are stutters");
@@ -26,7 +27,13 @@ internal sealed class RenderMetrics
     private static readonly Counter<long> s_restarts = Telemetry.Meter.CreateCounter<long>(
         "zoomin.render.pipeline_restarts", "{restart}", "Render pipeline rebuilt after a failure or display change");
 
+    // Active vs paused time gives the pause share of the filter per window (ADR-0020).
+    private static readonly Counter<double> s_overlayTime = Telemetry.Meter.CreateCounter<double>(
+        "zoomin.render.overlay_time", "s", "Time the render thread worked (active) or slept (paused)");
+
     private readonly KeyValuePair<string, object?> _monitor;
+    private readonly KeyValuePair<string, object?> _active = new(StateTag, "active");
+    private readonly KeyValuePair<string, object?> _paused = new(StateTag, "paused");
 
     public RenderMetrics(string deviceName)
     {
@@ -40,6 +47,12 @@ internal sealed class RenderMetrics
     public void FrameMissed() => s_framesMissed.Add(1, _monitor);
 
     public void Shown(double latencyMs) => s_showLatency.Record(latencyMs, _monitor);
+
+    /// <summary>The thread worked for <paramref name="seconds"/> before going to sleep.</summary>
+    public void Active(double seconds) => s_overlayTime.Add(seconds, _monitor, _active);
+
+    /// <summary>The thread slept for <paramref name="seconds"/> (nothing to zoom or filter).</summary>
+    public void Paused(double seconds) => s_overlayTime.Add(seconds, _monitor, _paused);
 
     /// <param name="reason">"failure" or "display_changed".</param>
     public void Restarted(string reason) => s_restarts.Add(1, _monitor, new KeyValuePair<string, object?>(ReasonTag, reason));

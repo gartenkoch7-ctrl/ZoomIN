@@ -1,0 +1,45 @@
+namespace ZoomIN.App.Localization;
+
+/// <summary>English texts of the filter per window (M12, ADR-0020).</summary>
+internal static class TextsEnglishWindowFilter
+{
+    public static IReadOnlyDictionary<string, string> All { get; } = new Dictionary<string, string>
+    {
+        ["WinFilter.Title"] = "Filter per window",
+        ["WinFilter.Card.Desc"] = "Invert light windows automatically and leave dark ones as they are – also without zoom. Choose here which window gets which filter.",
+        ["WinFilter.Open"] = "Set up",
+        ["WinFilter.Back"] = "Back to colour filter",
+        ["WinFilter.On"] = "Filter light windows automatically",
+        ["WinFilter.On.Desc"] = "Every window is checked briefly when it opens. If it is mostly light, it gets the automatic filter. A window with its own filter is left out of the monitor filter (Ctrl+Alt+C), so it is never inverted twice. Window titles are never stored.",
+        ["WinFilter.Auto"] = "Automatic filter",
+        ["WinFilter.Auto.Desc"] = "Filter for windows that are recognised as light.",
+        ["WinFilter.Sensitivity"] = "Sensitivity",
+        ["WinFilter.Sensitivity.Desc"] = "How easily a window counts as light. Applies to windows opened from now on.",
+        ["WinFilter.Low"] = "Low – only very light windows",
+        ["WinFilter.Medium"] = "Medium (recommended)",
+        ["WinFilter.High"] = "High – partly light windows too",
+        ["WinFilter.Custom"] = "Custom",
+        ["WinFilter.Percent"] = "Advanced: light share from",
+        ["WinFilter.Percent.Desc"] = "From this share of light area on, a window counts as light.",
+        ["WinFilter.Rules"] = "Own settings per app",
+        ["WinFilter.Rules.Empty"] = "No own settings yet. Add an open window below, or assign the shortcut “Filter for active window on/off” under “Shortcuts”.",
+        ["WinFilter.Rule.Desc"] = "Window kind: {0}",
+        ["WinFilter.Choice.Automatic"] = "Automatic",
+        ["WinFilter.Choice.None"] = "None (original colours)",
+        ["WinFilter.Remove"] = "Remove",
+        ["WinFilter.RemoveFor"] = "Remove setting for {0}",
+        ["WinFilter.Add"] = "Add an open window",
+        ["WinFilter.Add.Desc"] = "Pick an open program, then choose its filter in the list.",
+        ["WinFilter.Add.None"] = "No further windows open",
+        ["WinFilter.AddButton"] = "Add",
+        ["WinFilter.Reset"] = "Reset all",
+        ["WinFilter.Reset.Desc"] = "Deletes all own settings. Photo, video and image apps still stay unfiltered, the Windows interface is never filtered automatically.",
+        ["WinFilter.ResetConfirm"] = "Yes, delete all",
+        ["WinFilter.Status.On"] = "{0}: {1} – remembered for this window kind.",
+        ["WinFilter.Status.Off"] = "{0}: no filter – remembered for this window kind.",
+        ["WinFilter.Status.Nothing"] = "No window the filter acts on, or “Filter per window” is off.",
+        ["Act.WindowFilter"] = "Filter for active window on/off",
+        ["HotkeyNone"] = "Not assigned",
+        ["HotkeyClearHint"] = "Press a key combination … (Del removes the shortcut)",
+    };
+}

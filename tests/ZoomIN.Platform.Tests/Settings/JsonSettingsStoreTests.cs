@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Settings;
+using ZoomIN.Core.WindowFilters;
 using ZoomIN.Platform.Settings;
 
 namespace ZoomIN.Platform.Tests.Settings;
@@ -34,6 +35,11 @@ public sealed class JsonSettingsStoreTests : IDisposable
             PerMonitorFilter = false,
             MonitorFilters = new Dictionary<string, MonitorFilter> { [@"\\.\DISPLAY2"] = new(true, ColorFilter.BlackOnYellow) },
             MonitorZoomLevels = new Dictionary<string, double> { [@"\\.\DISPLAY1"] = 2.5, [@"\\.\DISPLAY2"] = 4 },
+            WindowFilterHotkey = new HotkeyGesture(HotkeyModifiers.Control | HotkeyModifiers.Alt, 0x57),
+            WindowFilter = WindowFilterOptions.Default
+                .WithRule(WindowFilterRule.For(new WindowKind("winword.exe", "OpusApp"), WindowFilterChoice.None))
+                .WithRule(WindowFilterRule.For(new WindowKind("excel.exe", "XLMAIN"), WindowFilterChoice.Filter, ColorFilter.Grayscale))
+                with { Sensitivity = WindowFilterSensitivity.Custom, CustomPercent = 70, AutoFilter = ColorFilter.WhiteOnBlue },
         };
 
         store.Save(settings);
@@ -83,6 +89,21 @@ public sealed class JsonSettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void OldFile_WithoutWindowFilter_KeepsItsDefaults_AndComputedValuesStayOutOfTheFile()
+    {
+        Directory.CreateDirectory(_directory);
+        File.WriteAllText(SettingsPath, """{ "LastZoomLevel": 2 }""");
+        var store = new JsonSettingsStore(NullLogger<JsonSettingsStore>.Instance, SettingsPath);
+
+        var loaded = store.Load();
+        store.Save(loaded);
+
+        Assert.True(loaded.WindowFilter.Enabled);
+        Assert.Equal(0, loaded.WindowFilterHotkey.VirtualKey);
+        Assert.DoesNotContain("ThresholdPercent", File.ReadAllText(SettingsPath), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Load_NullLevels_BecomeEmpty()
     {
         Directory.CreateDirectory(_directory);
@@ -109,6 +130,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
         Assert.Equal(expected.LensMonitorZoomLevels, actual.LensMonitorZoomLevels);
         Assert.Equal(expected.DockedMonitorZoomLevels, actual.DockedMonitorZoomLevels);
         Assert.Equal(expected.MonitorFilters, actual.MonitorFilters);
+        Assert.Equal(expected.WindowFilter.Rules, actual.WindowFilter.Rules);
         Assert.Equal(
             expected with
             {
@@ -116,6 +138,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
                 LensMonitorZoomLevels = actual.LensMonitorZoomLevels,
                 DockedMonitorZoomLevels = actual.DockedMonitorZoomLevels,
                 MonitorFilters = actual.MonitorFilters,
+                WindowFilter = expected.WindowFilter with { Rules = actual.WindowFilter.Rules },
             },
             actual);
     }

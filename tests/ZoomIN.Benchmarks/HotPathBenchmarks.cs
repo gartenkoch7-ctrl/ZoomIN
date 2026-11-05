@@ -5,6 +5,7 @@ using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Viewport;
+using ZoomIN.Core.WindowFilters;
 using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.Benchmarks;
@@ -21,6 +22,11 @@ public class HotPathBenchmarks
     });
 
     private readonly AnchorController _anchors = new();
+
+    // Worst case of the filter per window: the full shader limit, none on the monitor asked about.
+    private readonly WindowRegions _windows = new(
+        Enumerable.Range(0, WindowRegions.Max).Select(i => new PhysicalRect(4000 + (i * 20), i * 10, 600, 400)).ToArray(),
+        Enumerable.Range(0, WindowRegions.Max).Select(i => WindowPalette.For(ColorFilter.Inverted)).ToArray());
 
     // Published by the tracking thread, not per frame. Only the first round is news; afterwards
     // this measures the per-frame cost while following (the allocation test covers every path).
@@ -86,4 +92,8 @@ public class HotPathBenchmarks
     [Benchmark]
     public float EffectsRead() =>
         _effects.CurrentFor(@"\\.\DISPLAY1").Matrix.M00 + _effects.CurrentFor(@"\\.\DISPLAY2").Matrix.M00;
+
+    /// <summary>Filter per window: does any window on this monitor need the overlay (ADR-0020)?</summary>
+    [Benchmark]
+    public bool WindowRegionsCheck() => _windows.ChangesMonitor(_monitor, _effects.CurrentFor(@"\\.\DISPLAY1"));
 }

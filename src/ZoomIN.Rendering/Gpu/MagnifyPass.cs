@@ -14,6 +14,7 @@ internal sealed class MagnifyPass : IDisposable
     private readonly ID3D11SamplerState _sampler;
     private readonly ID3D11SamplerState _pointSampler;
     private readonly ID3D11Buffer _constants;
+    private readonly ID3D11Buffer _windows;
 
     public MagnifyPass(ID3D11Device device)
     {
@@ -22,7 +23,15 @@ internal sealed class MagnifyPass : IDisposable
         _sampler = device.CreateSamplerState(SamplerDescription.LinearClamp);
         _pointSampler = device.CreateSamplerState(SamplerDescription.PointClamp);
         _constants = device.CreateBuffer(new BufferDescription(MagnifyConstants.SizeInBytes, BindFlags.ConstantBuffer, ResourceUsage.Default));
+
+        // Starts with no regions, so the monitor matrix applies everywhere until the first update.
+        var none = default(WindowConstants);
+        _windows = device.CreateBuffer(in none, new BufferDescription((uint)WindowConstants.SizeInBytes, BindFlags.ConstantBuffer, ResourceUsage.Default));
     }
+
+    /// <summary>New window regions or palette; call only when they changed (1.5 KB upload).</summary>
+    public void UpdateWindows(ID3D11DeviceContext context, in WindowConstants windows) =>
+        context.UpdateSubresource(windows, _windows);
 
     /// <summary>Draws into the whole render target.</summary>
     public void Draw(
@@ -57,11 +66,13 @@ internal sealed class MagnifyPass : IDisposable
         context.PSSetSampler(0, _sampler);
         context.PSSetSampler(1, _pointSampler);
         context.PSSetConstantBuffer(0, _constants);
+        context.PSSetConstantBuffer(1, _windows);
         context.Draw(3, 0);
     }
 
     public void Dispose()
     {
+        _windows.Dispose();
         _constants.Dispose();
         _pointSampler.Dispose();
         _sampler.Dispose();

@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ZoomIN.Core.Pointer;
+using ZoomIN.Core.WindowFilters;
 
 namespace ZoomIN.Core.Filters;
 
@@ -30,6 +31,7 @@ public sealed record DisplayEffects
         {
             _filter = value;
             Matrix = ColorFilters.Build(value);
+            WindowMatrices = WindowPalette.Build(value);
         }
     }
 
@@ -39,6 +41,9 @@ public sealed record DisplayEffects
 
     /// <summary>Precomputed, so the render thread never builds matrices.</summary>
     public ColorMatrix Matrix { get; private init; } = ColorMatrix.Identity;
+
+    /// <summary>Matrices for the filter per window, indexed like <see cref="WindowPalette"/>; entry 0 is <see cref="Matrix"/>.</summary>
+    public ColorMatrix[] WindowMatrices { get; private init; } = WindowPalette.Build(FilterSettings.Default);
 
     /// <summary>Monitors may have their own filter (on by default, like the zoom level).</summary>
     public bool PerMonitorFilter { get; init; } = true;

@@ -12,13 +12,19 @@ public sealed partial class FilterPage : Page
         InitializeComponent();
     }
 
+    private PageContext? _context;
+
     public FilterViewModel? Vm { get; private set; }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        Vm = new FilterViewModel((PageContext)e.Parameter);
+        _context = (PageContext)e.Parameter;
+        Vm = new FilterViewModel(_context);
         Bindings.Update();
     }
+
+    // Detail page of the filter per window (ADR-0020); "Back" there returns here.
+    private void OnWindowFilter(object sender, RoutedEventArgs e) => Frame.Navigate(typeof(WindowFilterPage), _context);
 
     private void OnReset(object sender, RoutedEventArgs e) => Vm?.Reset();
 }

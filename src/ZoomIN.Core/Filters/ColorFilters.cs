@@ -41,12 +41,14 @@ public static class ColorFilters
     /// Filter (if enabled), then contrast around mid-grey and brightness offset.
     /// Contrast 1 and brightness 0 leave colours unchanged.
     /// </summary>
-    public static ColorMatrix Build(FilterSettings settings)
+    public static ColorMatrix Build(FilterSettings settings) =>
+        Adjust(settings).After(settings.Enabled ? For(settings.Filter) : ColorMatrix.Identity);
+
+    /// <summary>Contrast and brightness only; what windows with "None" get (they still follow both).</summary>
+    public static ColorMatrix Adjust(FilterSettings settings)
     {
-        var filter = settings.Enabled ? For(settings.Filter) : ColorMatrix.Identity;
         var c = (float)settings.Contrast;
         var offset = (0.5f * (1 - c)) + (float)settings.Brightness;
-        var adjust = new ColorMatrix(c, 0, 0, 0, c, 0, 0, 0, c, offset, offset, offset);
-        return adjust.After(filter);
+        return new ColorMatrix(c, 0, 0, 0, c, 0, 0, 0, c, offset, offset, offset);
     }
 }

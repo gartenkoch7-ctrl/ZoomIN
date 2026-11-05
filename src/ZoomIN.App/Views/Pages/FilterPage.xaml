@@ -27,6 +27,10 @@
                 <ComboBox MinWidth="240" ItemsSource="{x:Bind Vm.FilterNames}" SelectedIndex="{x:Bind Vm.FilterIndex, Mode=TwoWay}" />
             </c:SettingCard>
 
+            <c:SettingCard Description="{x:Bind loc:Text.Get('WinFilter.Card.Desc')}" Glyph="&#xE737;" Header="{x:Bind loc:Text.Get('WinFilter.Title')}">
+                <Button Click="OnWindowFilter" Content="{x:Bind loc:Text.Get('WinFilter.Open')}" />
+            </c:SettingCard>
+
             <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('FilterAdjust')}" />
             <c:SettingCard Description="{x:Bind loc:Text.Get('FilterContrast.Desc')}" Glyph="&#xE793;" Header="{x:Bind loc:Text.Get('FilterContrast')}">
                 <c:ValueSlider Format="{}{0:0} %" Maximum="300" Minimum="50" Step="5" Value="{x:Bind Vm.Contrast, Mode=TwoWay}" />

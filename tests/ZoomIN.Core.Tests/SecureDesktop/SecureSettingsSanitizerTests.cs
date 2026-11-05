@@ -4,6 +4,7 @@ using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Settings;
+using ZoomIN.Core.WindowFilters;
 
 namespace ZoomIN.Core.Tests.SecureDesktop;
 
@@ -30,6 +31,21 @@ public sealed class SecureSettingsSanitizerTests
         Assert.Equal("#FF00FF", result.CursorColor);
         Assert.Equal(4, result.MonitorZoomLevels[@"\\.\DISPLAY1"]);
         Assert.Equal(ColorFilter.YellowOnBlack, result.MonitorFilters[@"\\.\DISPLAY2"].Filter);
+    }
+
+    [Fact]
+    public void FilterPerWindow_IsOff_OnTheSecureDesktop()
+    {
+        var result = SecureSettingsSanitizer.Sanitize(new AppSettings
+        {
+            WindowFilter = WindowFilterOptions.Default.WithRule(
+                WindowFilterRule.For(new WindowKind("logonui.exe", "x"), WindowFilterChoice.Filter)),
+            WindowFilterHotkey = new HotkeyGesture(HotkeyModifiers.Control | HotkeyModifiers.Alt, 0x57),
+        });
+
+        Assert.False(result.WindowFilter.Enabled);
+        Assert.Empty(result.WindowFilter.Rules);
+        Assert.Equal(0, result.WindowFilterHotkey.VirtualKey);
     }
 
     [Fact]

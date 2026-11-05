@@ -4,7 +4,9 @@ using ZoomIN.Core.Settings;
 namespace ZoomIN.App.Hotkeys;
 
 /// <summary>One editable shortcut: its label key and where it lives in <see cref="AppSettings"/>.</summary>
-public sealed record HotkeyBinding(string TextKey, Func<AppSettings, HotkeyGesture> Get, Func<AppSettings, HotkeyGesture, AppSettings> Set)
+/// <param name="Optional">May stay unassigned (Del removes it), like the window filter shortcut.</param>
+public sealed record HotkeyBinding(
+    string TextKey, Func<AppSettings, HotkeyGesture> Get, Func<AppSettings, HotkeyGesture, AppSettings> Set, bool Optional = false)
 {
     public static IReadOnlyList<HotkeyBinding> All { get; } =
     [
@@ -20,5 +22,6 @@ public sealed record HotkeyBinding(string TextKey, Func<AppSettings, HotkeyGestu
         new("Act.Crosshair", s => s.CrosshairHotkey, (s, g) => s with { CrosshairHotkey = g }),
         new("Act.Tracking", s => s.TrackingHotkey, (s, g) => s with { TrackingHotkey = g }),
         new("Act.Profile", s => s.ProfileHotkey, (s, g) => s with { ProfileHotkey = g }),
+        new("Act.WindowFilter", s => s.WindowFilterHotkey, (s, g) => s with { WindowFilterHotkey = g }, Optional: true),
     ];
 }

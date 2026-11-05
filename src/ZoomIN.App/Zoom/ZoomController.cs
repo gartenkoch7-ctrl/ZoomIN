@@ -8,6 +8,8 @@ using ZoomIN.Core.Modes;
 using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Tracking;
+using ZoomIN.Core.Viewport;
+using ZoomIN.Core.WindowFilters;
 using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.App.Zoom;
@@ -23,6 +25,7 @@ public sealed class ZoomController : IDisposable
     private readonly ProfileService _profiles;
     private readonly IZoomOutput _output;
     private readonly ITrackingSource _trackingSource;
+    private readonly IWindowFilterSource _windowFilter;
     private readonly IHotkeyService _hotkeys;
     private readonly IMouseWheelHook _wheel;
     private readonly IInputActivitySource _activity;
@@ -36,6 +39,7 @@ public sealed class ZoomController : IDisposable
         ProfileService profiles,
         IZoomOutput output,
         ITrackingSource trackingSource,
+        IWindowFilterSource windowFilter,
         IHotkeyService hotkeys,
         IMouseWheelHook wheel,
         IInputActivitySource activity,
@@ -48,6 +52,7 @@ public sealed class ZoomController : IDisposable
         _profiles = profiles;
         _output = output;
         _trackingSource = trackingSource;
+        _windowFilter = windowFilter;
         _hotkeys = hotkeys;
         _wheel = wheel;
         _activity = activity;
@@ -63,7 +68,12 @@ public sealed class ZoomController : IDisposable
 
     public TrackingModel Tracking => _settings.Models.Tracking;
 
+    public WindowFilterModel Windows => _settings.Models.Windows;
+
     public ZoomStatus Status => _output.Status;
+
+    /// <summary>After the window filter shortcut: the new rule, or null if nothing changed. On the hotkey thread.</summary>
+    public event Action<WindowFilterRule?>? WindowFilterToggled;
 
     /// <summary>Hotkeys that could not be registered because another application owns them.</summary>
     public IReadOnlyList<HotkeyGesture> UnavailableHotkeys { get; private set; } = [];
@@ -78,6 +88,7 @@ public sealed class ZoomController : IDisposable
         Model.Changed += _dockedStrip.Update;
         _output.Start();
         _trackingSource.Start(Tracking);
+        _windowFilter.Start(Windows);
     }
 
     /// <summary>Registers all shortcuts again, e.g. after one was changed in the settings.</summary>
@@ -121,6 +132,36 @@ public sealed class ZoomController : IDisposable
     public string MonitorUnderMouse() =>
         _monitors.MonitorAt(_cursor.TryGetPosition(out var position) ? position : default);
 
+    /// <summary>App + class of the windows open now, for the detail page of the filter per window.</summary>
+    public IReadOnlyList<WindowKind> OpenWindowKinds() => _windowFilter.OpenKinds();
+
+    /// <summary>
+    /// Shortcut "filter for the active window on/off" (ADR-0020): remembered for app + window
+    /// class. Returns the new rule, or null if there is no window the filter acts on (or it is off).
+    /// </summary>
+    public WindowFilterRule? ToggleWindowFilter()
+    {
+        var options = Windows.Options;
+        if (!options.Enabled || !_windowFilter.TryGetForeground(out var window))
+        {
+            WindowFilterToggled?.Invoke(null);
+            return null;
+        }
+
+        var center = new PhysicalPoint(window.Bounds.X + (window.Bounds.Width / 2), window.Bounds.Y + (window.Bounds.Height / 2));
+        var monitorFiltered = Effects.CurrentFor(_monitors.MonitorAt(center)).Filter.Enabled;
+        var rule = WindowFilterToggle.Next(window.Kind, window.Palette, monitorFiltered, options);
+        using (Telemetry.Source.StartActivity("zoomin.windowfilter.toggle")?
+            .SetTag("process.name", window.Kind.Process)
+            .SetTag("zoomin.choice", rule.Choice.ToString()))
+        {
+            Windows.SetOptions(options.WithRule(rule));
+        }
+
+        WindowFilterToggled?.Invoke(rule);
+        return rule;
+    }
+
     public void Dispose() => Model.Changed -= _dockedStrip.Update;
 
     private void RegisterHotkeys()
@@ -129,6 +170,12 @@ public sealed class ZoomController : IDisposable
         var unavailable = new List<HotkeyGesture>();
         void Register(HotkeyGesture gesture, Action action, bool repeat = false)
         {
+            // Unassigned (e.g. the window filter shortcut from the start).
+            if (gesture.VirtualKey == 0)
+            {
+                return;
+            }
+
             if (_hotkeys.Register(gesture, action, repeat))
             {
                 _log.HotkeyRegistered(gesture);
@@ -159,6 +206,7 @@ public sealed class ZoomController : IDisposable
         Register(s.CrosshairHotkey, Effects.ToggleCrosshair);
         Register(s.TrackingHotkey, Tracking.ToggleEnabled);
         Register(s.ProfileHotkey, _profiles.Next);
+        Register(s.WindowFilterHotkey, () => ToggleWindowFilter());
         UnavailableHotkeys = unavailable;
     }
 

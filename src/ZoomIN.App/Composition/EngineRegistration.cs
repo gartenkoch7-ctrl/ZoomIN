@@ -8,12 +8,14 @@ using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
+using ZoomIN.Core.WindowFilters;
 using ZoomIN.Core.Zoom;
 using ZoomIN.Platform.Automation;
 using ZoomIN.Platform.Cursor;
 using ZoomIN.Platform.Input;
 using ZoomIN.Platform.Monitors;
 using ZoomIN.Platform.Shell;
+using ZoomIN.Platform.WindowFilters;
 using ZoomIN.Rendering.RenderLoop;
 
 namespace ZoomIN.App.Composition;
@@ -33,10 +35,12 @@ internal static class EngineRegistration
         services.AddSingleton(sp => ZoomModelFactory.Create(sp.GetRequiredService<AppSettings>()));
         services.AddSingleton(sp => EffectsFactory.Create(sp.GetRequiredService<AppSettings>()));
         services.AddSingleton(sp => TrackingFactory.Create(sp.GetRequiredService<AppSettings>()));
+        services.AddSingleton(sp => new WindowFilterModel(sp.GetRequiredService<AppSettings>().WindowFilter ?? WindowFilterOptions.Default));
         services.AddSingleton(sp => new RenderModels(
             sp.GetRequiredService<ZoomModel>(),
             sp.GetRequiredService<EffectsModel>(),
-            sp.GetRequiredService<TrackingModel>()));
+            sp.GetRequiredService<TrackingModel>(),
+            sp.GetRequiredService<WindowFilterModel>()));
         services.AddSingleton<SettingsService>();
         services.AddSingleton<ProfileService>();
 
@@ -54,6 +58,7 @@ internal static class EngineRegistration
         services.AddSingleton<IMouseWheelHook, Win32WheelHook>();
         services.AddSingleton<IInputActivitySource, Win32InputActivityHook>();
         services.AddSingleton<ITrackingSource, UiaTrackingSource>();
+        services.AddSingleton<IWindowFilterSource, Win32WindowFilterSource>();
 
         // Rendering
         services.AddSingleton<IZoomOutput, ZoomEngine>();

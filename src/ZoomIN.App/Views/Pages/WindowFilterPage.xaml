@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="ZoomIN.App.Views.Pages.WindowFilterPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:ZoomIN.App.Views.Controls"
+    xmlns:loc="using:ZoomIN.App.Localization"
+    xmlns:vm="using:ZoomIN.App.ViewModels">
+
+    <!-- Filter per window (M12, ADR-0020): reached from the colour filter page. -->
+    <ScrollViewer>
+        <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Style="{StaticResource CardStackStyle}">
+            <HyperlinkButton Click="OnBack" Content="{x:Bind loc:Text.Get('WinFilter.Back')}" />
+            <TextBlock Style="{StaticResource PageTitleStyle}" Text="{x:Bind loc:Text.Get('WinFilter.Title')}" />
+
+            <c:SettingCard Description="{x:Bind loc:Text.Get('WinFilter.On.Desc')}" Glyph="&#xE7F4;" Header="{x:Bind loc:Text.Get('WinFilter.On')}">
+                <ToggleSwitch IsOn="{x:Bind Vm.Enabled, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('WinFilter.Auto.Desc')}" Glyph="&#xE7B3;" Header="{x:Bind loc:Text.Get('WinFilter.Auto')}">
+                <ComboBox MinWidth="240" ItemsSource="{x:Bind Vm.FilterNames}" SelectedIndex="{x:Bind Vm.AutoFilterIndex, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('WinFilter.Sensitivity.Desc')}" Glyph="&#xE706;" Header="{x:Bind loc:Text.Get('WinFilter.Sensitivity')}">
+                <ComboBox MinWidth="240" ItemsSource="{x:Bind Vm.SensitivityNames}" SelectedIndex="{x:Bind Vm.SensitivityIndex, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard
+                Description="{x:Bind loc:Text.Get('WinFilter.Percent.Desc')}"
+                Glyph="&#xE9E9;"
+                Header="{x:Bind loc:Text.Get('WinFilter.Percent')}"
+                Visibility="{x:Bind Vm.IsCustom, Mode=OneWay}">
+                <c:ValueSlider Format="{}{0:0} %" Maximum="95" Minimum="20" Step="5" Value="{x:Bind Vm.Percent, Mode=TwoWay}" />
+            </c:SettingCard>
+
+            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('WinFilter.Rules')}" />
+            <TextBlock Text="{x:Bind loc:Text.Get('WinFilter.Rules.Empty')}" TextWrapping="Wrap" Visibility="{x:Bind Vm.NoRules, Mode=OneWay}" />
+            <ItemsControl IsTabStop="False" ItemsSource="{x:Bind Vm.Rules}">
+                <ItemsControl.ItemContainerTransitions>
+                    <TransitionCollection />
+                </ItemsControl.ItemContainerTransitions>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:WindowRuleRow">
+                        <c:SettingCard Margin="0,0,0,4" Description="{x:Bind Description}" Glyph="&#xE737;" Header="{x:Bind Name}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <ComboBox MinWidth="220" AutomationProperties.Name="{x:Bind Name}" ItemsSource="{x:Bind Choices}" SelectedIndex="{x:Bind ChoiceIndex, Mode=TwoWay}" />
+                                <Button AutomationProperties.Name="{x:Bind RemoveName}" Click="OnRemove" Content="{x:Bind loc:Text.Get('WinFilter.Remove')}" Tag="{x:Bind}" />
+                            </StackPanel>
+                        </c:SettingCard>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <c:SettingCard Description="{x:Bind loc:Text.Get('WinFilter.Add.Desc')}" Glyph="&#xE710;" Header="{x:Bind loc:Text.Get('WinFilter.Add')}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ComboBox
+                        MinWidth="260"
+                        AutomationProperties.Name="{x:Bind loc:Text.Get('WinFilter.Add')}"
+                        ItemsSource="{x:Bind Vm.AddableNames}"
+                        PlaceholderText="{x:Bind loc:Text.Get('WinFilter.Add.None')}"
+                        SelectedIndex="{x:Bind Vm.AddIndex, Mode=TwoWay}" />
+                    <Button Click="OnAdd" Content="{x:Bind loc:Text.Get('WinFilter.AddButton')}" IsEnabled="{x:Bind Vm.CanAdd, Mode=OneWay}" />
+                </StackPanel>
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('WinFilter.Reset.Desc')}" Glyph="&#xE777;" Header="{x:Bind loc:Text.Get('WinFilter.Reset')}">
+                <Button Content="{x:Bind loc:Text.Get('WinFilter.Reset')}" IsEnabled="{x:Bind Vm.HasRules, Mode=OneWay}">
+                    <Button.Flyout>
+                        <Flyout x:Name="ResetFlyout">
+                            <Button Click="OnResetConfirmed" Content="{x:Bind loc:Text.Get('WinFilter.ResetConfirm')}" Style="{StaticResource AccentButtonStyle}" />
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+            </c:SettingCard>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

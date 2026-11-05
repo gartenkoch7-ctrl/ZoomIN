@@ -1,5 +1,6 @@
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Tracking;
+using ZoomIN.Core.WindowFilters;
 using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.Rendering.RenderLoop;
@@ -8,4 +9,5 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// <param name="Zoom">Mode, levels, lens and dock.</param>
 /// <param name="Effects">Colour filter, smoothing, pointer style, locator.</param>
 /// <param name="Tracking">Keyboard focus and text caret.</param>
-public sealed record RenderModels(ZoomModel Zoom, EffectsModel Effects, TrackingModel Tracking);
+/// <param name="Windows">Filter per window: regions from the window tracker (ADR-0020).</param>
+public sealed record RenderModels(ZoomModel Zoom, EffectsModel Effects, TrackingModel Tracking, WindowFilterModel Windows);

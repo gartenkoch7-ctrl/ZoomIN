@@ -53,9 +53,12 @@ public sealed class RenderMetricsTests
         metrics.FrameMissed();
         metrics.Shown(12);
         metrics.Restarted("failure");
+        metrics.Active(2);
+        metrics.Paused(3);
 
         Assert.Equal(
-            ["zoomin.render.frame_interval", "zoomin.render.frames_missed", "zoomin.render.show_latency", "zoomin.render.pipeline_restarts"],
+            ["zoomin.render.frame_interval", "zoomin.render.frames_missed", "zoomin.render.show_latency", "zoomin.render.pipeline_restarts",
+                "zoomin.render.overlay_time", "zoomin.render.overlay_time"],
             seen.Select(s => s.Instrument));
         Assert.All(seen, s => Assert.Equal(Monitor, s.Monitor));
     }
@@ -66,6 +69,8 @@ public sealed class RenderMetricsTests
         {
             metrics.FramePresented(16.6 + (i % 3));
             metrics.FrameMissed();
+            metrics.Active(0.5);
+            metrics.Paused(1.5);
         }
     }
 

@@ -21,7 +21,7 @@ Jeder Meilenstein endet mit etwas, das man **starten und vorführen** kann.
 | M9 | [Setup & Updates](m9-setup-und-updates.md) | Barrierefreies Online-Setup mit UIAccess, Kanälen, Versionswahl und Ein-Klick-Updates | L | geplant – **vor** dem ersten Release |
 | M10 | [Sichere Bildschirme](m10-sichere-bildschirme.md) | Zoom auf Anmeldung, Sperre, Strg+Alt+Entf und UAC | L | Design freigegeben – in Arbeit (Spike) |
 | M11 | [Diagnose & Telemetrie](m11-diagnose-und-telemetrie.md) | OpenTelemetry lokal: ein Trace über alle Prozesse, Diagnose-Seite, Diagnosepaket | L | Design freigegeben – **vor** dem ersten Release |
-| M12 | [Farbfilter pro Fenster](m12-filter-pro-fenster.md) | Helle Fenster automatisch invertiert, dunkle bleiben dunkel; Regeln pro App + Fensterart | L | Design freigegeben – **vor** dem ersten Release, Spike zuerst |
+| M12 | [Farbfilter pro Fenster](m12-filter-pro-fenster.md) | Helle Fenster automatisch invertiert, dunkle bleiben dunkel; Regeln pro App + Fensterart | L | Code fertig (Branch `feat/m12-filter-pro-fenster`), Sichtprüfung offen – **vor** dem ersten Release |
 
 Größen: **S** ≈ wenige Tage · **M** ≈ 1–2 Wochen · **L** ≈ 2–4 Wochen (eine Person, Teilzeit-Schätzung, grob).
 

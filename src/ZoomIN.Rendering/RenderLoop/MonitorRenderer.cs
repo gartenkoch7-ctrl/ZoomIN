@@ -4,6 +4,7 @@ using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Tracking;
+using ZoomIN.Core.WindowFilters;
 using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.Rendering.RenderLoop;
@@ -20,6 +21,7 @@ internal sealed class MonitorRenderer : IDisposable
     private readonly ZoomModel _model;
     private readonly EffectsModel _effects;
     private readonly TrackingModel _tracking;
+    private readonly WindowFilterModel _windows;
     private readonly PointerServices _pointer;
     private readonly ILogger _log;
     private readonly Action _requestRebuild;
@@ -39,6 +41,7 @@ internal sealed class MonitorRenderer : IDisposable
         _model = models.Zoom;
         _effects = models.Effects;
         _tracking = models.Tracking;
+        _windows = models.Windows;
         _pointer = pointer;
         _log = log;
         _requestRebuild = requestRebuild;
@@ -111,7 +114,8 @@ internal sealed class MonitorRenderer : IDisposable
                 _log.PipelineFailed(ex, _deviceName);
                 _metrics.Restarted("failure");
                 SetStatus(ZoomStatus.Idle with { LastError = ex.Message });
-                var needed = _model.TargetFor(_deviceName) > ZoomLimits.Min || NeedsOverlayUnzoomed(_effects.CurrentFor(_deviceName));
+                var needed = _model.TargetFor(_deviceName) > ZoomLimits.Min || NeedsOverlayUnzoomed(_effects.CurrentFor(_deviceName))
+                    || _windows.Regions.Count > 0;
                 Sleep(needed ? RetryDelay : Timeout.InfiniteTimeSpan);
             }
         }
@@ -136,10 +140,13 @@ internal sealed class MonitorRenderer : IDisposable
             var effects = _effects.CurrentFor(_deviceName);
             animator.SetTarget(_model.TargetFor(_deviceName));
             var unzoomed = animator.IsSettled && animator.Current == ZoomLimits.Min;
+            var windows = _windows.Regions;
+            var windowsFiltered = session.FiltersWindows(windows, effects);
 
             // Filters work at 1× too (M5 decision); so do the pointer options (larger or coloured
             // pointer, crosshair, hiding while typing); the locator needs a few frames as well.
-            if (unzoomed && !NeedsOverlayUnzoomed(effects) && !session.LocatorActive && !LocatorRequested(effects))
+            // The filter per window pauses the overlay while no window here needs it (ADR-0020).
+            if (unzoomed && !NeedsOverlayUnzoomed(effects) && !windowsFiltered && !session.LocatorActive && !LocatorRequested(effects))
             {
                 if (session.IsVisible)
                 {
@@ -148,7 +155,10 @@ internal sealed class MonitorRenderer : IDisposable
                 }
 
                 // Not zoomed: sleep without capturing or rendering until the model changes.
+                var sleptAt = Stopwatch.GetTimestamp();
+                _metrics.Active(Stopwatch.GetElapsedTime(wokeAt, sleptAt).TotalSeconds);
                 Sleep(Timeout.InfiniteTimeSpan);
+                _metrics.Paused(Stopwatch.GetElapsedTime(sleptAt).TotalSeconds);
                 lastFrame = Stopwatch.GetTimestamp();
                 secondStart = lastFrame;
                 wokeAt = lastFrame;
@@ -165,7 +175,8 @@ internal sealed class MonitorRenderer : IDisposable
             // Unzoomed: the whole monitor, no lens or strip.
             var mode = unzoomed ? ZoomMode.Fullscreen : _model.Mode;
             var request = new FrameRequest(mode, animator.Current, _model.Lens, _model.Dock, effects,
-                _effects.LocateRequestedAt, _tracking.Snapshot, _tracking.Options, _effects.PointerHiddenByTyping);
+                _effects.LocateRequestedAt, _tracking.Snapshot, _tracking.Options, _effects.PointerHiddenByTyping,
+                windows, windowsFiltered);
             var wasVisible = session.IsVisible;
             if (session.RenderFrame(request))
             {

@@ -1,0 +1,45 @@
+namespace ZoomIN.App.Localization;
+
+/// <summary>German texts of the filter per window (M12, ADR-0020).</summary>
+internal static class TextsGermanWindowFilter
+{
+    public static IReadOnlyDictionary<string, string> All { get; } = new Dictionary<string, string>
+    {
+        ["WinFilter.Title"] = "Filter pro Fenster",
+        ["WinFilter.Card.Desc"] = "Helle Fenster automatisch invertieren, dunkle unverändert lassen – auch ohne Zoom. Hier legen Sie fest, welches Fenster welchen Filter bekommt.",
+        ["WinFilter.Open"] = "Einstellen",
+        ["WinFilter.Back"] = "Zurück zum Farbfilter",
+        ["WinFilter.On"] = "Helle Fenster automatisch filtern",
+        ["WinFilter.On.Desc"] = "Jedes Fenster wird beim Öffnen kurz geprüft. Ist es überwiegend hell, bekommt es den Automatik-Filter. Ein Fenster mit eigenem Filter bleibt vom Monitorfilter (Strg+Alt+C) ausgenommen, wird also nie doppelt invertiert. Fenstertitel werden nie gespeichert.",
+        ["WinFilter.Auto"] = "Automatik-Filter",
+        ["WinFilter.Auto.Desc"] = "Filter für Fenster, die als hell erkannt werden.",
+        ["WinFilter.Sensitivity"] = "Empfindlichkeit",
+        ["WinFilter.Sensitivity.Desc"] = "Wie leicht ein Fenster als hell gilt. Gilt für Fenster, die ab jetzt geöffnet werden.",
+        ["WinFilter.Low"] = "Niedrig – nur sehr helle Fenster",
+        ["WinFilter.Medium"] = "Mittel (empfohlen)",
+        ["WinFilter.High"] = "Hoch – auch teilweise helle Fenster",
+        ["WinFilter.Custom"] = "Benutzerdefiniert",
+        ["WinFilter.Percent"] = "Erweitert: heller Anteil ab",
+        ["WinFilter.Percent.Desc"] = "Ab diesem Anteil heller Fläche gilt ein Fenster als hell.",
+        ["WinFilter.Rules"] = "Eigene Einstellungen je App",
+        ["WinFilter.Rules.Empty"] = "Noch keine eigenen Einstellungen. Fügen Sie unten ein geöffnetes Fenster hinzu oder belegen Sie unter „Tastenkürzel“ das Kürzel „Filter für aktives Fenster an/aus“.",
+        ["WinFilter.Rule.Desc"] = "Fensterart: {0}",
+        ["WinFilter.Choice.Automatic"] = "Automatisch",
+        ["WinFilter.Choice.None"] = "Keiner (Originalfarben)",
+        ["WinFilter.Remove"] = "Entfernen",
+        ["WinFilter.RemoveFor"] = "Einstellung für {0} entfernen",
+        ["WinFilter.Add"] = "Geöffnetes Fenster hinzufügen",
+        ["WinFilter.Add.Desc"] = "Wählen Sie ein offenes Programm und legen Sie danach in der Liste seinen Filter fest.",
+        ["WinFilter.Add.None"] = "Keine weiteren Fenster geöffnet",
+        ["WinFilter.AddButton"] = "Hinzufügen",
+        ["WinFilter.Reset"] = "Alle zurücksetzen",
+        ["WinFilter.Reset.Desc"] = "Löscht alle eigenen Einstellungen. Foto-, Video- und Bild-Apps bleiben weiterhin ohne Filter, die Windows-Oberfläche wird nie automatisch gefiltert.",
+        ["WinFilter.ResetConfirm"] = "Ja, alle löschen",
+        ["WinFilter.Status.On"] = "{0}: {1} – gemerkt für diese Fensterart.",
+        ["WinFilter.Status.Off"] = "{0}: kein Filter – gemerkt für diese Fensterart.",
+        ["WinFilter.Status.Nothing"] = "Kein Fenster, auf das der Filter wirkt, oder „Filter pro Fenster“ ist aus.",
+        ["Act.WindowFilter"] = "Filter für aktives Fenster an/aus",
+        ["HotkeyNone"] = "Nicht belegt",
+        ["HotkeyClearHint"] = "Tastenkombination drücken … (Entf entfernt das Kürzel)",
+    };
+}

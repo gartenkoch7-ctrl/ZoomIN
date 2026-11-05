@@ -5,6 +5,7 @@ using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Updates;
+using ZoomIN.Core.WindowFilters;
 using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.Core.Settings;
@@ -58,6 +59,9 @@ public sealed record AppSettings
     public DateTimeOffset? TelemetryRaisedUntil { get; set; }
 
     public string TelemetryOtlpEndpoint { get; set; } = string.Empty;
+
+    /// <summary>Filter per window (ADR-0020): on/off, automatic filter, sensitivity and the user's rules per app + window class.</summary>
+    public WindowFilterOptions WindowFilter { get; set; } = WindowFilterOptions.Default;
 
     // --- Display (stored per profile, see ProfileFields) ---
 
@@ -208,6 +212,9 @@ public sealed record AppSettings
     public HotkeyGesture TrackingHotkey { get; set; } = HotkeyGesture.ToggleTracking;
 
     public HotkeyGesture ProfileHotkey { get; set; } = HotkeyGesture.NextProfile;
+
+    /// <summary>Filter for the active window on/off (ADR-0020); unassigned from the start.</summary>
+    public HotkeyGesture WindowFilterHotkey { get; set; }
 
     public HotkeyModifiers WheelModifiers { get; set; } = HotkeyModifiers.Control;
 }

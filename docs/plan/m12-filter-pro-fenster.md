@@ -29,55 +29,66 @@ Tag `v1.0.0`.
 
 ## Aufgaben
 ### 1 · Spike (Risiko zuerst)
-- [ ] Fensterbereiche pro Frame: sichtbare Top-Level-Fenster je Monitor in Z-Reihenfolge, Verdeckung
+- [x] Fensterbereiche pro Frame: sichtbare Top-Level-Fenster je Monitor in Z-Reihenfolge, Verdeckung
       herausgerechnet; Quelle (WinEvents `EVENT_OBJECT_LOCATIONCHANGE`/`SHOW`/`HIDE`/`REORDER` +
       Abfrage der Rechtecke) ohne Allokation im Render-Thread; Versatz beim Ziehen messen
-- [ ] Shader: Matrix je Bereich (Limit z. B. 16 Rechtecke im Constant Buffer); Verhalten bei mehr
+- [x] Shader: Matrix je Bereich (Limit z. B. 16 Rechtecke im Constant Buffer); Verhalten bei mehr
       Bereichen festlegen (z. B. kleinste zusammenfassen, Rest Monitorfilter)
-- [ ] Helligkeitsmessung auf der GPU: verkleinertes Bild je Fensterbereich, Anteil heller Pixel;
+- [x] Helligkeitsmessung (umgesetzt mit GDI statt GPU, ADR-0021): verkleinertes Bild je Fensterbereich, Anteil heller Pixel;
       Kosten pro Messung
-- [ ] Pause: Overlay zeichnet nicht, wenn kein Bereich gefiltert wird; Aufnahme nur für Prüfungen
-- [ ] Popups erkennen (Menü-, Tooltip-, Aufklappklassen, Besitzerfenster) und DPI/mehrere Monitore
+- [x] Pause: Overlay zeichnet nicht, wenn kein Bereich gefiltert wird; Aufnahme nur für Prüfungen
+- [x] Popups erkennen (Menü-, Tooltip-, Aufklappklassen, Besitzerfenster) und DPI/mehrere Monitore
 - [ ] Budget messen (1440p, Onboard-Grafik): CPU, Bildrate, Verzögerung
-- [ ] Ergebnis in `docs/kb/rendering-pipeline.md`; bei Fehlschlag Rücksprache (Plan B: ganzer Monitor
+- [x] Ergebnis in `docs/kb/rendering-pipeline.md`; bei Fehlschlag Rücksprache (Plan B: ganzer Monitor
       nach aktivem Fenster)
 
 ### 2 · Core-Logik
-- [ ] `WindowKind` (Programm + Fensterklasse), `WindowFilterRule` (Automatisch/Keiner/Filter),
+- [x] `WindowKind` (Programm + Fensterklasse), `WindowFilterRule` (Automatisch/Keiner/Filter),
       `WindowFilterRules` mit Ausnahmen ab Werk
-- [ ] `BrightnessClassifier`: Schwelle aus Empfindlichkeit/Prozent, 3 Messungen, 2 von 3, Abbruch
+- [x] `BrightnessVote` + `BrightnessMeter` (statt `BrightnessClassifier`): Schwelle aus Empfindlichkeit/Prozent, 3 Messungen, 2 von 3, Abbruch
       nach 2 s
-- [ ] `WindowFilterResolver`: je Fenster Nutzerwahl → Automatik → Monitorfilter; Herausrechnen bei
+- [x] `WindowFilterResolver`: je Fenster Nutzerwahl → Automatik → Monitorfilter; Herausrechnen bei
       invertiertem Monitor; Popups erben
-- [ ] Zustands-Snapshot für den Render-Thread (unveränderlich, atomarer Tausch, keine Allokation)
-- [ ] Unit-Tests für alle Regeln inkl. „nie doppelt invertiert“ und Benchmark `0 B`
+- [x] Zustands-Snapshot für den Render-Thread (unveränderlich, atomarer Tausch, keine Allokation)
+- [x] Unit-Tests für alle Regeln inkl. „nie doppelt invertiert“ und Benchmark `0 B`
 
 ### 3 · Platform & Rendering
-- [ ] Platform: Fensterquelle (Rechtecke, Z-Reihenfolge, Klasse, Programm, Besitzer, Popup-Art),
+- [x] Platform: Fensterquelle (Rechtecke, Z-Reihenfolge, Klasse, Programm, Besitzer, Popup-Art),
       Windows-Oberfläche erkennen
-- [ ] Rendering: Bereiche + Matrizen im Shader, GPU-Messung, Pause; `WDA_EXCLUDEFROMCAPTURE` bleibt
-- [ ] Telemetrie (ADR-0019): Einstufungen je Prozess (hell/dunkel/unklar), Dauer der Prüfung,
+- [x] Rendering: Bereiche + Matrizen im Shader, GPU-Messung, Pause; `WDA_EXCLUDEFROMCAPTURE` bleibt
+- [x] Telemetrie (ADR-0019): Einstufungen je Prozess (hell/dunkel/unklar), Dauer der Prüfung,
       Zahl der Bereiche, Pausenanteil – ohne Fenstertitel
 
 ### 4 · Einstellungen & Bedienung
-- [ ] Settings: Automatik an (ab Werk), Automatik-Filter, Empfindlichkeit/Prozent, Regeln je
+- [x] Settings: Automatik an (ab Werk), Automatik-Filter, Empfindlichkeit/Prozent, Regeln je
       App + Fensterart (JSON, Source Generator), Profile übernehmen sie
-- [ ] Farbfilter-Seite: Karte „Filter pro Fenster“ → Detailseite mit Liste (App, Fensterart, Wahl),
+- [x] Farbfilter-Seite: Karte „Filter pro Fenster“ → Detailseite mit Liste (App, Fensterart, Wahl),
       Ändern, Löschen, „Alle zurücksetzen“, Empfindlichkeit, „Erweitert“
-- [ ] Kürzel „Filter für aktives Fenster umschalten“ (ab Werk unbelegt), merkt die Wahl, kurze
+- [x] Kürzel „Filter für aktives Fenster umschalten“ (ab Werk unbelegt), merkt die Wahl, kurze
       Statusanzeige
-- [ ] Texte Deutsch/Englisch, vollständig per Tastatur und Bildschirmleser bedienbar
-- [ ] Sichere Bildschirme (M10): Verhalten festlegen (vermutlich Automatik aus)
+- [x] Texte Deutsch/Englisch, vollständig per Tastatur und Bildschirmleser bedienbar
+- [x] Sichere Bildschirme (M10): Verhalten festlegen (vermutlich Automatik aus)
 
 ## Akzeptanzkriterien
 - [ ] Helles und dunkles Fenster nebeneinander: nur das helle invertiert, ohne Zoom
 - [ ] Monitor invertiert: eigenständig invertiertes Fenster nicht doppelt invertiert (Test + Sicht)
 - [ ] Menü in invertierter App blitzt nicht weiß auf
 - [ ] Nutzerwahl per Kürzel bleibt nach Neustart für App + Fensterart erhalten
-- [ ] Medien-Apps und Windows-Oberfläche werden ab Werk nicht gefiltert
+- [x] Medien-Apps und Windows-Oberfläche werden ab Werk nicht gefiltert
 - [ ] Nur dunkle Fenster sichtbar → Overlay pausiert (keine Aufnahme, kein Zeichnen)
 - [ ] Budget eingehalten (≤ 3 % CPU, Monitor-Hz, ≤ 1 Frame, kein Versatz beim Verschieben)
-- [ ] Render-Loop-Benchmark `0 B`; Architekturtests grün; Telemetrie im Katalog
+- [x] Render-Loop-Benchmark `0 B`; Architekturtests grün; Telemetrie im Katalog
+
+### Stand 2026-11-06 (Code fertig, Sichtprüfung offen)
+Automatisch geprüft: WARP-Shadertests (nur das Fenster gefiltert, Verdeckung, nie doppelt
+invertiert, Zoom), Platform-Tests mit eigenen weißen/schwarzen Testfenstern (Einstufung nach
+≈ 0,6 s, Popup erbt, keine Neumessung, Ende-zu-Ende über WinEvents), Core-Regeln, Settings-Rundreise.
+Offen, weil nur ein Mensch es sehen kann (Overlay ist aus Screenshots ausgenommen) bzw. weil die
+installierte ZoomIN-Instanz nicht vom Agenten beendet wird:
+- Sicht: Word + Terminal nebeneinander, `Strg+Alt+C`, Menü blitzt nicht, kein Versatz beim Ziehen.
+- Kürzel in der echten App belegen, auslösen, Neustart → Wahl bleibt.
+- Pause in der echten App (nur dunkle Fenster) über `zoomin.render.overlay_time` prüfen.
+- Budget auf 1440p/Onboard-Grafik (CPU, Bildrate, Verzögerung).
 
 ## Offene Fragen / Risiken
 - Fensterbereiche ohne Versatz und ohne Allokation pro Frame – Kern des Spikes.

@@ -33,7 +33,7 @@ public sealed partial class HotkeysViewModel : ObservableObject
     {
         _recording = row;
         _context.Controller.SuspendHotkeys();
-        row.Gesture = Text.Get("HotkeyPress");
+        row.Gesture = Text.Get(row.Binding.Optional ? "HotkeyClearHint" : "HotkeyPress");
         Message = string.Empty;
     }
 
@@ -49,6 +49,13 @@ public sealed partial class HotkeysViewModel : ObservableObject
         if (virtualKey == 0x1B)
         {
             Finish(null);
+            return true;
+        }
+
+        // Del alone removes an optional shortcut (it stays unassigned).
+        if (virtualKey == 0x2E && modifiers == HotkeyModifiers.None && row.Binding.Optional)
+        {
+            Finish((row.Binding, default));
             return true;
         }
 
