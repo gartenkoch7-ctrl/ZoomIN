@@ -29,6 +29,19 @@ Erkenntnisse aus M0 (2026-10-30, .NET SDK 10.0.302).
 - Welche Version läuft, zeigt der Zeitstempel der `ZoomIN.dll`, nicht der `ZoomIN.exe`
   (der App-Host wird nur bei Änderungen neu kopiert).
 
+## WinUI-Sprachordner (2026-11-05)
+- WinUI bringt die Texte seiner eigenen Steuerelemente (Kontextmenüs, Namen für Bildschirmleser)
+  als `Microsoft.ui.xaml.dll.mui` in **86 Sprachordnern** (`af-ZA` … `zh-TW`) mit, ~2,6 MB.
+  `SatelliteResourceLanguages=de;en` filtert nur .NET-Ressourcen (`*.resources.dll`), nicht diese.
+- Self-contained fügt das Windows App SDK sie als `None`-Elemente mit `Link="fr-FR\…"` hinzu
+  (Target `AddMicrosoftWindowsAppSDKPayloadFilesFromComponents`). `Directory.Build.targets`
+  entfernt danach alle außer `de-*` und `en-*` → bleiben `de-DE`, `en-GB`, `en-us` (App und Setup,
+  in `bin/` und im veröffentlichten Paket).
+- In **einen** Sprachordner verschieben geht nicht: Windows lädt eine `.mui` nur aus einem
+  Kulturordner direkt neben ihrer DLL.
+- ZoomINs eigene Texte sind C# (`App/Localization/Texts*.cs`, `Setup/Localization`), keine `.resw`.
+  Kommt eine dritte Sprache dazu, hier das Präfix ergänzen.
+
 ## Solution
 - `.slnx` funktioniert mit dem .NET 10 SDK (CLI und CI) ohne Probleme.
 
