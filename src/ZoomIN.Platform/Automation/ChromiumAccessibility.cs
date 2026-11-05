@@ -1,8 +1,10 @@
+using System.Diagnostics.Metrics;
 using System.Runtime.InteropServices;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Accessibility;
 using Windows.Win32.UI.WindowsAndMessaging;
+using ZoomIN.Core.Diagnostics;
 
 namespace ZoomIN.Platform.Automation;
 
@@ -20,6 +22,9 @@ internal sealed unsafe class ChromiumAccessibility
 
     private static readonly Guid IAccessibleId = new("618736E0-3C3D-11CF-810C-00AA00389B71");
     private static readonly Guid IAccessible2Id = new("E89F726E-C4F4-4C19-BB19-B647D7FA8478");
+
+    private static readonly Counter<long> s_nudges = Telemetry.Meter.CreateCounter<long>(
+        "zoomin.tracking.chromium_nudges", "{window}", "Chromium content windows asked to switch on accessibility");
 
     private HWND _lastTouched;
 
@@ -45,6 +50,7 @@ internal sealed unsafe class ChromiumAccessibility
 
         _lastTouched = content;
         RequestIAccessible2(content);
+        s_nudges.Add(1);
         return true;
     }
 

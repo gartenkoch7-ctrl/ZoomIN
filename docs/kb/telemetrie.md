@@ -99,6 +99,10 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.render.frames_missed` | Frames | `zoomin.monitor` | Compositor hat keinen Frame rechtzeitig (100 ms) angefordert |
 | `zoomin.render.show_latency` | ms | `zoomin.monitor` | Aufwachen (Zoom/Filter an) bis erster sichtbarer Frame |
 | `zoomin.render.pipeline_restarts` | Neustarts | `zoomin.monitor`, `zoomin.reason` (`failure`, `display_changed`) | Pipeline neu aufgebaut |
+| `zoomin.tracking.read_duration` | ms | – | Eine Abfrage von Fokus und Caret; lange Werte = App antwortet langsam |
+| `zoomin.tracking.caret_sources` | Quellen | `process.name`, `zoomin.caret.source` (`system`, `msaa`, `uia`, `estimated`, `cell`) | Caret-Quelle zum ersten Mal in einem Prozess gesehen (dazu Log 2002) |
+| `zoomin.tracking.chromium_nudges` | Fenster | – | Chromium-Inhaltsfenster nach IAccessible2 gefragt |
+| `zoomin.tracking.anchor_switches` | Wechsel | `zoomin.anchor.source` (`mouse`, `focus`, `caret`) | Ansicht folgt jetzt Maus, Fokus oder Caret (Render-Thread, ohne Allokation) |
 
 ## Katalog: Logmeldungen
 | Id | Stufe | Meldung |
@@ -134,6 +138,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1209 | Info | Update available: {Version} |
 | 1301 | Debug | Hotkey {Gesture} registered |
 | 2001 | Fehler | UI Automation is unavailable; focus tracking is off |
+| 2002 | Info | Caret source in {Process}: {Source} |
 | 2101 | Warnung | MagInitialize failed: the system pointer stays visible while zoomed |
 | 2201 | Warnung | Hotkey {Gesture} is already in use by another application |
 | 2202 | Fehler | Hotkey handler failed |

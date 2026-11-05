@@ -49,6 +49,7 @@ public sealed unsafe class UiaTrackingSource : ITrackingSource
     private void Run(TrackingModel model)
     {
         using var reader = CreateReader();
+        var telemetry = new TrackingTelemetry(_log);
         var last = new FocusReading(null, null, CaretEstimated: false);
         PhysicalRect? seenCaret = null;
         long focusAt = 0;
@@ -56,7 +57,12 @@ public sealed unsafe class UiaTrackingSource : ITrackingSource
 
         while (!_stop.Wait(Interval))
         {
+            var readStart = Stopwatch.GetTimestamp();
             var next = reader?.Read() ?? new FocusReading(null, GuiThreadCaret.Read(out _), CaretEstimated: false);
+            if (reader is not null)
+            {
+                telemetry.Observe(reader.LastProcessId, reader.LastSource, Stopwatch.GetElapsedTime(readStart).TotalMilliseconds);
+            }
 
             // Same spot from another source (blinking system caret vs. line-high UIA range): keep
             // the shape that is shown, so the caret bar does not flicker (CaretMotion).
