@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using Windows.Win32;
 using Windows.Win32.System.Com;
 using Windows.Win32.UI.Accessibility;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Viewport;
 
@@ -18,11 +18,11 @@ public sealed unsafe class UiaTrackingSource : ITrackingSource
 {
     private static readonly TimeSpan Interval = TimeSpan.FromMilliseconds(33);
 
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly ManualResetEventSlim _stop = new();
     private Thread? _thread;
 
-    public UiaTrackingSource(ILog log)
+    public UiaTrackingSource(ILogger<UiaTrackingSource> log)
     {
         _log = log;
     }
@@ -97,7 +97,7 @@ public sealed unsafe class UiaTrackingSource : ITrackingSource
         }
         catch (COMException ex)
         {
-            _log.Error("UI Automation is unavailable; focus tracking is off.", ex);
+            _log.AutomationUnavailable(ex);
             return null;
         }
     }

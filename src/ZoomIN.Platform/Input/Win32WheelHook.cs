@@ -2,7 +2,7 @@ using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
 using Windows.Win32.UI.WindowsAndMessaging;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Hotkeys;
 
 namespace ZoomIN.Platform.Input;
@@ -19,13 +19,13 @@ public sealed unsafe class Win32WheelHook : IMouseWheelHook
     private static Win32WheelHook? s_active;
     private static readonly HOOKPROC s_proc = HookProc;
 
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private Thread? _thread;
     private uint _threadId;
     private HotkeyModifiers _modifiers;
     private Action<double>? _onNotches;
 
-    public Win32WheelHook(ILog log)
+    public Win32WheelHook(ILogger<Win32WheelHook> log)
     {
         _log = log;
     }
@@ -65,7 +65,7 @@ public sealed unsafe class Win32WheelHook : IMouseWheelHook
         using var hook = PInvoke.SetWindowsHookEx(WINDOWS_HOOK_ID.WH_MOUSE_LL, s_proc, module, 0);
         if (hook.IsInvalid)
         {
-            _log.Error("Installing the mouse wheel hook failed; Ctrl+wheel zoom is unavailable.");
+            _log.WheelHookUnavailable();
         }
 
         started.Set();
@@ -109,7 +109,7 @@ public sealed unsafe class Win32WheelHook : IMouseWheelHook
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             // An exception escaping a hook callback would crash the process.
-            _log.Error("Wheel zoom handler failed", ex);
+            _log.WheelHandlerFailed(ex);
         }
     }
 }

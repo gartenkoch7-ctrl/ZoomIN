@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.SecureDesktop;
 using ZoomIN.Platform.Updates;
@@ -15,7 +15,7 @@ internal static class ElevatedInstall
     public static InstallLayout Layout { get; } =
         new(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "ZoomIN"));
 
-    public static UpdateResult Run(UpdateCommand command, ILog log)
+    public static UpdateResult Run(UpdateCommand command, ILogger log)
     {
         // A running ZoomIN is a UIAccess process: only an elevated process may end it. Ending the
         // watchdog too keeps it from restarting the old version.
@@ -30,7 +30,7 @@ internal static class ElevatedInstall
                 }
                 catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
                 {
-                    log.Info($"[Setup] ZoomIN {process.Id} not ended: {ex.Message}");
+                    log.ProcessNotEnded(process.Id, ex.Message);
                 }
             }
         }
@@ -44,7 +44,7 @@ internal static class ElevatedInstall
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
             {
-                log.Error("[Setup] Registering the installation failed", ex);
+                log.RegistrationFailed(ex);
                 return UpdateResult.Failed;
             }
 

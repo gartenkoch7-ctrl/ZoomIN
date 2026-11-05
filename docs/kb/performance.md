@@ -33,6 +33,20 @@
 |---|---|---|---|---|---|
 | 2026-10-30 | RTX 3060 Ti | 1080p, 60 Hz | Vollbild 2× (M1) | 60,4 fps (171 Frames / 2,8 s) | p99 noch nicht gemessen; Start per Hotkey ≈ 215 ms (Pipeline-Aufbau) |
 | 2026-10-30 | RTX 3060 Ti | 1080p, 60 Hz | M2, Pipeline warm | Hotkey → Overlay sichtbar **2–16 ms**; Leerlauf 0,5 % eines Kerns | Ausblenden bis unsichtbar ≈ 390 ms (siehe unten) |
+| 2026-11-05 | Entwicklungsrechner | – | M11 Telemetrie-Start, Release, frischer Prozess, ohne ReadyToRun | Startpfad **~4 ms** Host, **~9 ms** inkl. erster Logzeile + Operation; ~100 ms Aufbau im Hintergrund | vorher (synchron) ~90 ms, kalter erster Lauf 255 ms – siehe unten |
+
+## Telemetrie-Start (M11)
+Gemessen mit einem Wegwerf-Programm, das `TelemetryHost` in einem frischen Prozess startet:
+- Synchron gebaut kosteten die Teile: Microsoft-`LoggerFactory` ~21 ms, OpenTelemetry-Logs
+  ~22 ms, Tracer ~18 ms, erste Logzeile ~9 ms (fast alles JIT und Assembly-Laden). Mit
+  ReadyToRun wäre es noch ~43 ms gewesen – über dem Budget von 20 ms (ADR-0019).
+- Lösung: eigene `HostLoggerFactory` statt Microsofts `LoggerFactory`, OpenTelemetry-Pipelines per
+  `Task.Run` im Hintergrund, bis dahin Logeinträge gepuffert (max. 500) und Abläufe über einen
+  .NET-eigenen `ActivityListener` (`EarlyActivities`) aufgefangen und danach geschrieben.
+- Folge: Ein sehr kurzlebiger Prozess wartet beim Beenden (`Dispose`) auf den Hintergrundaufbau
+  (~100 ms) – nur bei Hilfsprozessen spürbar, nie beim Start.
+- ReadyToRun für die App wäre eine eigene Entscheidung (größerer Download, schnellerer Start
+  insgesamt) – nicht Teil von M11.
 
 ## Allokationen (M2 gelöst)
 - `DesktopDuplicator.Update` ruft `AcquireNextFrame`, `ReleaseFrame` und `CopyResource` direkt

@@ -5,7 +5,7 @@ using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.Security;
 using Windows.Win32.System.Threading;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace ZoomIN.Platform.SecureDesktop;
 
@@ -20,7 +20,7 @@ internal static unsafe class SessionUserToken
 {
     private const int PrivilegeNotHeld = 1314;
 
-    public static SafeAccessTokenHandle? Open(uint session, ILog log)
+    public static SafeAccessTokenHandle? Open(uint session, ILogger log)
     {
         HANDLE raw;
         if (PInvoke.WTSQueryUserToken(session, &raw))
@@ -32,14 +32,20 @@ internal static unsafe class SessionUserToken
         if (error != PrivilegeNotHeld)
         {
             // ERROR_NO_TOKEN while nobody is signed in to the session (sign-in after boot).
-            log.Info($"Secure desktop: no signed-in user in session {session} (error {error})");
+            log.NoSignedInUser(session, error);
             return null;
         }
 
         var shell = FromShell(session);
-        log.Info(shell is null
-            ? $"Secure desktop: no user shell in session {session}"
-            : "Secure desktop: using the token of the user's shell");
+        if (shell is null)
+        {
+            log.NoUserShell(session);
+        }
+        else
+        {
+            log.UsingShellToken();
+        }
+
         return shell;
     }
 

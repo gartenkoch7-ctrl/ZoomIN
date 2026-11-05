@@ -25,7 +25,7 @@ namespace ZoomIN.App.Composition;
 /// </summary>
 internal static class EngineRegistration
 {
-    /// <summary>Expects ILog, ISettingsStore and IProfileStore to be registered by the caller.</summary>
+    /// <summary>Expects telemetry (AddTelemetry), ISettingsStore and IProfileStore to be registered by the caller.</summary>
     public static IServiceCollection AddEngine(this IServiceCollection services)
     {
         // Settings and models

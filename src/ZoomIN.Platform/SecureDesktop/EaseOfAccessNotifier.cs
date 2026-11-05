@@ -1,7 +1,7 @@
 using Microsoft.Win32;
 using Windows.Win32;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace ZoomIN.Platform.SecureDesktop;
 
@@ -22,12 +22,12 @@ public sealed class EaseOfAccessNotifier
     private readonly RegistryKey _user;
     private readonly Func<bool> _isRegistered;
     private readonly Action _sendWinU;
-    private readonly ILog _log;
+    private readonly ILogger _log;
 
     /// <param name="user">HKCU; tests pass a private key instead.</param>
     /// <param name="isRegistered">Only a registered AT may signal, else Win+U just opens Settings.</param>
     /// <param name="sendWinU">Injects Win+U; tests count the calls instead.</param>
-    public EaseOfAccessNotifier(RegistryKey user, Func<bool> isRegistered, Action sendWinU, ILog log)
+    public EaseOfAccessNotifier(RegistryKey user, Func<bool> isRegistered, Action sendWinU, ILogger log)
     {
         _user = user;
         _isRegistered = isRegistered;
@@ -35,7 +35,7 @@ public sealed class EaseOfAccessNotifier
         _log = log;
     }
 
-    public static EaseOfAccessNotifier Create(ILog log) =>
+    public static EaseOfAccessNotifier Create(ILogger log) =>
         new(Registry.CurrentUser, () => SecureDesktopRegistration.Default.IsRegistered, SendWinU, log);
 
     public void NotifyStarted() => Notify(Starting);
@@ -54,12 +54,12 @@ public sealed class EaseOfAccessNotifier
             using var key = _user.CreateSubKey(TempPath);
             key.SetValue(SecureDesktopRegistration.AtName, signal, RegistryValueKind.DWord);
             _sendWinU();
-            _log.Info($"Ease of Access notified ({(signal == Starting ? "starting" : "exiting")})");
+            _log.EaseOfAccessNotified(signal == Starting ? "starting" : "exiting");
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
         {
             // Without the signal only the lock screen stays unmagnified; never worth failing the app.
-            _log.Warn($"Ease of Access not notified ({ex.GetType().Name})");
+            _log.EaseOfAccessNotNotified(ex.GetType().Name);
         }
     }
 

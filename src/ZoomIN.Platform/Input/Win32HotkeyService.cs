@@ -3,7 +3,7 @@ using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
 using Windows.Win32.UI.WindowsAndMessaging;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Hotkeys;
 
 namespace ZoomIN.Platform.Input;
@@ -14,7 +14,7 @@ namespace ZoomIN.Platform.Input;
 /// </summary>
 public sealed class Win32HotkeyService : IHotkeyService
 {
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly Thread _thread;
     private readonly ManualResetEventSlim _queueReady = new();
     private readonly ConcurrentQueue<Registration> _pending = new();
@@ -23,7 +23,7 @@ public sealed class Win32HotkeyService : IHotkeyService
     private uint _threadId;
     private int _nextId = 1;
 
-    public Win32HotkeyService(ILog log)
+    public Win32HotkeyService(ILogger<Win32HotkeyService> log)
     {
         _log = log;
         _thread = new Thread(Run) { IsBackground = true, Name = "ZoomIN Hotkeys" };
@@ -113,7 +113,7 @@ public sealed class Win32HotkeyService : IHotkeyService
             }
             else
             {
-                _log.Warn($"Hotkey {registration.Gesture} is already in use by another application.");
+                _log.HotkeyInUse(registration.Gesture);
             }
 
             registration.Result.SetResult(ok);
@@ -129,7 +129,7 @@ public sealed class Win32HotkeyService : IHotkeyService
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             // A failing handler must not kill the hotkey thread.
-            _log.Error("Hotkey handler failed", ex);
+            _log.HotkeyHandlerFailed(ex);
         }
     }
 

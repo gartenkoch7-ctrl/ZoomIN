@@ -36,6 +36,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" />
+    <!-- Direct, so the [LoggerMessage] source generator runs here too (ADR-0019). -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
     <PackageReference Include="CommunityToolkit.Mvvm" />

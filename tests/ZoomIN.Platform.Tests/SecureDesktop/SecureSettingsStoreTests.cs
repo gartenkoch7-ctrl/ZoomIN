@@ -1,4 +1,4 @@
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Settings;
 using ZoomIN.Platform.SecureDesktop;
@@ -79,7 +79,7 @@ public sealed class SecureSettingsStoreTests : IDisposable
 
     public void Dispose() => Directory.Delete(_root, recursive: true);
 
-    private SecureSettingsStore Store(string? userFolder) => new(NullLog.Instance, SessionUser.ForFolder(userFolder), Machine);
+    private SecureSettingsStore Store(string? userFolder) => new(NullLogger.Instance, SessionUser.ForFolder(userFolder), Machine);
 
     private void WriteUser(string json)
     {

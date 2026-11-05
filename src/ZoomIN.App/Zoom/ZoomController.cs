@@ -1,5 +1,6 @@
 using ZoomIN.App.Pointer;
 using ZoomIN.App.Settings;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
@@ -27,7 +28,7 @@ public sealed class ZoomController : IDisposable
     private readonly IInputActivitySource _activity;
     private readonly IMonitorProvider _monitors;
     private readonly ICursorSource _cursor;
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly DockedStripSync _dockedStrip;
 
     public ZoomController(
@@ -41,7 +42,7 @@ public sealed class ZoomController : IDisposable
         IMonitorProvider monitors,
         ICursorSource cursor,
         IScreenReservation reservation,
-        ILog log)
+        ILogger<ZoomController> log)
     {
         _settings = settings;
         _profiles = profiles;
@@ -130,7 +131,7 @@ public sealed class ZoomController : IDisposable
         {
             if (_hotkeys.Register(gesture, action, repeat))
             {
-                _log.Info($"Hotkey {gesture} registered");
+                _log.HotkeyRegistered(gesture);
             }
             else
             {

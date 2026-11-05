@@ -1,4 +1,4 @@
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Settings;
 using ZoomIN.Platform.Settings;
@@ -12,7 +12,7 @@ public sealed class JsonProfileStoreTests : IDisposable
     [Fact]
     public void SaveLoad_RoundTrips_AndListsNames()
     {
-        var store = new JsonProfileStore(NullLog.Instance, _directory);
+        var store = new JsonProfileStore(NullLogger<JsonProfileStore>.Instance, _directory);
 
         store.Save("Büro", new AppSettings { ColorFilter = ColorFilter.Grayscale });
         store.Save("Abends", new AppSettings());
@@ -24,7 +24,7 @@ public sealed class JsonProfileStoreTests : IDisposable
     [Fact]
     public void InvalidNames_AreRejected()
     {
-        var store = new JsonProfileStore(NullLog.Instance, _directory);
+        var store = new JsonProfileStore(NullLogger<JsonProfileStore>.Instance, _directory);
 
         store.Save("../evil", new AppSettings());
 
@@ -35,7 +35,7 @@ public sealed class JsonProfileStoreTests : IDisposable
     [Fact]
     public void Rename_FailsWhenTargetExists()
     {
-        var store = new JsonProfileStore(NullLog.Instance, _directory);
+        var store = new JsonProfileStore(NullLogger<JsonProfileStore>.Instance, _directory);
         store.Save("A", new AppSettings());
         store.Save("B", new AppSettings());
 
@@ -47,7 +47,7 @@ public sealed class JsonProfileStoreTests : IDisposable
     [Fact]
     public void ExportImport_CreatesUniqueName()
     {
-        var store = new JsonProfileStore(NullLog.Instance, _directory);
+        var store = new JsonProfileStore(NullLogger<JsonProfileStore>.Instance, _directory);
         store.Save("Büro", new AppSettings { Contrast = 1.5 });
         var file = Path.Combine(_directory, "..", Guid.NewGuid().ToString("N") + "-Büro.json");
         var exportFile = Path.Combine(Path.GetDirectoryName(file)!, "Büro.json");
@@ -66,7 +66,7 @@ public sealed class JsonProfileStoreTests : IDisposable
         Directory.CreateDirectory(_directory);
         var file = Path.Combine(_directory, "broken.txt");
         File.WriteAllText(file, "no json");
-        var store = new JsonProfileStore(NullLog.Instance, Path.Combine(_directory, "profiles"));
+        var store = new JsonProfileStore(NullLogger<JsonProfileStore>.Instance, Path.Combine(_directory, "profiles"));
 
         Assert.Null(store.Import(file));
     }

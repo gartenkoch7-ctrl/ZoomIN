@@ -1,4 +1,4 @@
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Settings;
@@ -15,7 +15,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
     [Fact]
     public void Load_WithoutFile_ReturnsDefaults()
     {
-        var store = new JsonSettingsStore(NullLog.Instance, SettingsPath);
+        var store = new JsonSettingsStore(NullLogger<JsonSettingsStore>.Instance, SettingsPath);
 
         AssertEquivalent(new AppSettings(), store.Load());
     }
@@ -23,7 +23,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
     [Fact]
     public void SaveThenLoad_RoundTripsAllValues()
     {
-        var store = new JsonSettingsStore(NullLog.Instance, SettingsPath);
+        var store = new JsonSettingsStore(NullLogger<JsonSettingsStore>.Instance, SettingsPath);
         var settings = new AppSettings
         {
             LastZoomLevel = 3.5,
@@ -44,7 +44,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
     [Fact]
     public void Save_WritesReadableModifierNames()
     {
-        var store = new JsonSettingsStore(NullLog.Instance, SettingsPath);
+        var store = new JsonSettingsStore(NullLogger<JsonSettingsStore>.Instance, SettingsPath);
 
         store.Save(new AppSettings());
 
@@ -57,7 +57,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
     {
         Directory.CreateDirectory(_directory);
         File.WriteAllText(SettingsPath, "{ this is not json");
-        var store = new JsonSettingsStore(NullLog.Instance, SettingsPath);
+        var store = new JsonSettingsStore(NullLogger<JsonSettingsStore>.Instance, SettingsPath);
 
         var settings = store.Load();
 
@@ -71,7 +71,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
         // Settings file as written by M2: no PerMonitorZoom, no MonitorZoomLevels.
         Directory.CreateDirectory(_directory);
         File.WriteAllText(SettingsPath, """{ "SchemaVersion": 1, "LastZoomLevel": 3.0, "WheelModifiers": "Control" }""");
-        var store = new JsonSettingsStore(NullLog.Instance, SettingsPath);
+        var store = new JsonSettingsStore(NullLogger<JsonSettingsStore>.Instance, SettingsPath);
 
         var settings = store.Load();
 
@@ -87,7 +87,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
     {
         Directory.CreateDirectory(_directory);
         File.WriteAllText(SettingsPath, """{ "MonitorZoomLevels": null }""");
-        var store = new JsonSettingsStore(NullLog.Instance, SettingsPath);
+        var store = new JsonSettingsStore(NullLogger<JsonSettingsStore>.Instance, SettingsPath);
 
         Assert.Empty(store.Load().MonitorZoomLevels);
     }
@@ -95,7 +95,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
     [Fact]
     public void Save_LeavesNoTempFile()
     {
-        var store = new JsonSettingsStore(NullLog.Instance, SettingsPath);
+        var store = new JsonSettingsStore(NullLogger<JsonSettingsStore>.Instance, SettingsPath);
 
         store.Save(new AppSettings());
 

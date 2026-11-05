@@ -1,6 +1,6 @@
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Updates;
 
 namespace ZoomIN.Platform.Updates;
@@ -15,14 +15,14 @@ public sealed class HttpPackageDownloader : IPackageDownloader
     private const int BufferSize = 81920;
     private static readonly HttpClient s_http = CreateClient();
     private readonly HttpClient _http;
-    private readonly ILog _log;
+    private readonly ILogger _log;
 
-    public HttpPackageDownloader(ILog log)
+    public HttpPackageDownloader(ILogger<HttpPackageDownloader> log)
         : this(log, s_http)
     {
     }
 
-    internal HttpPackageDownloader(ILog log, HttpClient http)
+    internal HttpPackageDownloader(ILogger<HttpPackageDownloader> log, HttpClient http)
     {
         _log = log;
         _http = http;
@@ -62,7 +62,7 @@ public sealed class HttpPackageDownloader : IPackageDownloader
             if (!CryptographicOperations.FixedTimeEquals(actual, expected))
             {
                 File.Delete(partial);
-                _log.Info($"Package {name} rejected: checksum mismatch.");
+                _log.ChecksumMismatch(name);
                 return new PackageDownload(PackageCheck.ChecksumMismatch, null);
             }
 
@@ -72,7 +72,7 @@ public sealed class HttpPackageDownloader : IPackageDownloader
         catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or OperationCanceledException)
         {
             TryDelete(partial);
-            _log.Info($"Package {name} not downloaded: {ex.Message}");
+            _log.NotDownloaded(name, ex.Message);
             if (ex is OperationCanceledException && cancellationToken.IsCancellationRequested)
             {
                 throw;

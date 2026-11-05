@@ -26,6 +26,7 @@ Lade nur die Dateien, die deine Aufgabe betreffen. Index: [docs/kb/README.md](do
 | SuperNova-Analyse | [docs/kb/supernova-analyse.md](docs/kb/supernova-analyse.md) | du ein Verhalten nachbaust |
 | Testumgebung | [docs/kb/testumgebung.md](docs/kb/testumgebung.md) | du testest oder misst |
 | Build & Tooling | [docs/kb/build-und-tooling.md](docs/kb/build-und-tooling.md) | Build oder Tests nicht laufen |
+| **Telemetrie (Katalog)** | [docs/kb/telemetrie.md](docs/kb/telemetrie.md) | du ein Feature baust – jedes bringt Logs/Abläufe mit |
 | Architekturentscheidungen | [docs/adr/](docs/adr/) | du eine Entscheidung infrage stellst |
 | **Roadmap & Meilensteinpläne** | [docs/plan/README.md](docs/plan/README.md) | du eine Aufgabe beginnst – arbeite im aktuellen Meilenstein, hake erledigte Punkte ab |
 
@@ -78,6 +79,20 @@ ZoomIN.App ──► ZoomIN.Rendering ──► ZoomIN.Core
   (`PhysicalPoint` vs. `LogicalPoint`), nie nackte `int x, int y`.
 - Multi-Monitor ist Pflicht: Logik immer pro Monitor, nie „der Bildschirm“.
 - Mindestversion: Windows 10 2004 (Build 19041).
+
+### 2.5 Telemetrie (ADR-0019)
+- **Jedes Feature** bringt seine Telemetrie mit: Logs über `ILogger<T>` mit
+  `[LoggerMessage]`-Methoden (eine `*Log.cs` je Feature-Ordner, EventId im Bereich des Projekts),
+  Abläufe als `Telemetry.Source.StartActivity("zoomin.<feature>.<vorgang>")`, Messwerte über
+  `Telemetry.Meter`. Alles steht im Katalog [docs/kb/telemetrie.md](docs/kb/telemetrie.md).
+- **Keine Inhalte des Nutzers** in Logs oder Attributen: kein Fenstertitel, Elementname, Text,
+  kein voller Pfad (enthält den Benutzernamen) – nur Prozessname, Fensterklasse,
+  Steuerelementtyp, Rechtecke, Dateinamen eigener Dateien, technische Werte.
+- Im **Render-Loop** nur Metriken mit beim Start angelegten Instrumenten/Tags; keine Logs,
+  keine Activities pro Frame.
+- Vor einem harten Prozessende (`Environment.FailFast`) `Telemetry.FlushBeforeExit()` aufrufen.
+- Startet ZoomIN einen eigenen Prozess, gibt es den Ablauf mit `TraceParentArgument.Append` weiter.
+- Erzwungen durch `TelemetryConventionTests` und den Analyzer CA1848 (nur `[LoggerMessage]`).
 
 ---
 
@@ -154,6 +169,7 @@ git config core.hooksPath .githooks           # Pre-Commit-Hook aktivieren (einm
 - [ ] `check-file-length.ps1` grün (keine Datei > 300 Zeilen)
 - [ ] Schichtregeln eingehalten (Architekturtests grün)
 - [ ] Hot Path geändert? → Benchmark mit `0 B` Allokation
+- [ ] Telemetrie mitgeliefert (Logs/Abläufe/Messwerte nach 2.5) und im Katalog `docs/kb/telemetrie.md`
 - [ ] Neues Wissen in `docs/kb/`, neue Grundsatzentscheidung als ADR
 - [ ] Overlay-Fenster aus Bildschirmaufnahmen ausgeschlossen
 - [ ] Clean-Room-Regeln eingehalten

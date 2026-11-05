@@ -4,7 +4,7 @@ using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Shell;
 using Windows.Win32.UI.WindowsAndMessaging;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Lifecycle;
 
 namespace ZoomIN.Platform.Shell;
@@ -22,7 +22,7 @@ public sealed unsafe class Win32TrayIcon : ITrayIcon
     private static readonly WNDPROC s_wndProc = WndProc;
     private static Win32TrayIcon? s_instance;
 
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly Thread _thread;
     private readonly ManualResetEventSlim _ready = new();
     private TrayMenu _menu = new("ZoomIN", []);
@@ -30,7 +30,7 @@ public sealed unsafe class Win32TrayIcon : ITrayIcon
     private nint _icon;
     private bool _added;
 
-    public Win32TrayIcon(ILog log)
+    public Win32TrayIcon(ILogger<Win32TrayIcon> log)
     {
         _log = log;
         s_instance = this;
@@ -97,7 +97,7 @@ public sealed unsafe class Win32TrayIcon : ITrayIcon
         _added = PInvoke.Shell_NotifyIcon(_added ? NOTIFY_ICON_MESSAGE.NIM_MODIFY : NOTIFY_ICON_MESSAGE.NIM_ADD, data) || _added;
         if (!_added)
         {
-            _log.Warn("Adding the tray icon failed.");
+            _log.TrayIconFailed();
         }
     }
 
@@ -141,7 +141,7 @@ public sealed unsafe class Win32TrayIcon : ITrayIcon
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            _log.Error($"Tray command {command} failed", ex);
+            _log.TrayCommandFailed(ex, command);
         }
     }
 

@@ -4,7 +4,7 @@ using Microsoft.Win32.SafeHandles;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Shell;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.SecureDesktop;
 
 namespace ZoomIN.Platform.SecureDesktop;
@@ -36,7 +36,7 @@ public sealed unsafe class SessionUser : IDisposable
     public static SessionUser ForFolder(string? zoomFolder) => new(zoomFolder, null);
 
     /// <param name="log">Only error codes are logged, never paths or names (secure log, ADR-0016).</param>
-    public static SessionUser Open(ILog log)
+    public static SessionUser Open(ILogger log)
     {
         ArgumentNullException.ThrowIfNull(log);
         if (!SessionUserFolders.IsSystem)
@@ -46,7 +46,7 @@ public sealed unsafe class SessionUser : IDisposable
 
         if (!PInvoke.ProcessIdToSessionId((uint)Environment.ProcessId, out var session))
         {
-            log.Warn($"Secure desktop: session id unknown (error {Marshal.GetLastPInvokeError()})");
+            log.SessionUnknown(Marshal.GetLastPInvokeError());
             return None;
         }
 
@@ -60,7 +60,7 @@ public sealed unsafe class SessionUser : IDisposable
         {
             if (folder is not null)
             {
-                log.Info("Secure desktop: the user's AppData is not on a local fixed disk");
+                log.AppDataNotLocal();
             }
 
             token.Dispose();
@@ -97,14 +97,14 @@ public sealed unsafe class SessionUser : IDisposable
         }
     }
 
-    private static string? RoamingAppData(SafeAccessTokenHandle token, ILog log)
+    private static string? RoamingAppData(SafeAccessTokenHandle token, ILogger log)
     {
         PWSTR path;
         var folder = PInvoke.FOLDERID_RoamingAppData;
         var result = PInvoke.SHGetKnownFolderPath(&folder, KNOWN_FOLDER_FLAG.KF_FLAG_DEFAULT, (HANDLE)token.DangerousGetHandle(), &path);
         if (result.Failed)
         {
-            log.Warn($"Secure desktop: the user's AppData is unknown (0x{result.Value:X8})");
+            log.AppDataUnknown(result.Value);
             return null;
         }
 

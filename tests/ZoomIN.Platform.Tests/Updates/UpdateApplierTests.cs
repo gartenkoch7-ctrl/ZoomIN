@@ -1,6 +1,6 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Updates;
 
@@ -20,7 +20,7 @@ public sealed class UpdateApplierTests : IDisposable
     public UpdateApplierTests()
     {
         _layout = new InstallLayout(Directory.CreateDirectory(Path.Combine(_temp, "ZoomIN")).FullName);
-        _applier = new UpdateApplier(_verifier, NullLog.Instance);
+        _applier = new UpdateApplier(_verifier, NullLogger.Instance);
     }
 
     [Fact]

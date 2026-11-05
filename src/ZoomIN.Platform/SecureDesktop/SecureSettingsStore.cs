@@ -1,5 +1,5 @@
 using System.Text.Json;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Settings;
 using ZoomIN.Platform.Settings;
@@ -16,11 +16,11 @@ public sealed class SecureSettingsStore : ISettingsStore
 {
     private const string FileName = "settings.json";
 
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly SessionUser _user;
     private readonly string _copyFolder;
 
-    public SecureSettingsStore(ILog log, SessionUser user, string machineFolder)
+    public SecureSettingsStore(ILogger log, SessionUser user, string machineFolder)
     {
         _log = log;
         _user = user;
@@ -34,21 +34,21 @@ public sealed class SecureSettingsStore : ISettingsStore
         {
             if (_user.Read(() => Parse(Path.Combine(folder, FileName))) is { } user)
             {
-                _log.Info("Secure desktop: using the session user's settings");
+                _log.SettingsSource("the session user's");
                 KeepCopy(user);
                 return user;
             }
 
-            _log.Warn("Secure desktop: the session user's settings are missing, refused or invalid");
+            _log.UserSettingsUnusable();
         }
 
         if (Parse(Path.Combine(_copyFolder, FileName)) is { } copy)
         {
-            _log.Info("Secure desktop: using the kept settings copy");
+            _log.SettingsSource("the kept copy of the");
             return copy;
         }
 
-        _log.Info("Secure desktop: using default settings");
+        _log.SettingsSource("default");
         return new AppSettings();
     }
 
@@ -90,7 +90,7 @@ public sealed class SecureSettingsStore : ISettingsStore
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            _log.Warn($"Secure desktop: settings copy not written ({ex.GetType().Name})");
+            _log.CopyNotWritten(ex.GetType().Name);
         }
     }
 }

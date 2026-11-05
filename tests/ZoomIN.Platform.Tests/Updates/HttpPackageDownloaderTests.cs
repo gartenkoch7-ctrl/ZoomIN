@@ -1,7 +1,7 @@
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Updates;
 
@@ -63,7 +63,7 @@ public sealed class HttpPackageDownloaderTests : IDisposable
         var checksums = $"{Convert.ToHexStringLower(SHA256.HashData(s_package))}  {ReleaseAssets.SetupName}\n";
         using var http = new HttpClient(new FakeServer(checksums, s_package));
 
-        var result = await new HttpPackageDownloader(NullLog.Instance, http).DownloadSetupAsync(release, _directory, null, Token);
+        var result = await new HttpPackageDownloader(NullLogger<HttpPackageDownloader>.Instance, http).DownloadSetupAsync(release, _directory, null, Token);
 
         Assert.Equal(PackageCheck.Ok, result.Result);
         Assert.EndsWith(ReleaseAssets.SetupName, result.Path, StringComparison.Ordinal);
@@ -74,7 +74,7 @@ public sealed class HttpPackageDownloaderTests : IDisposable
     {
         using var http = new HttpClient(new FakeServer("", s_package));
 
-        var result = await new HttpPackageDownloader(NullLog.Instance, http).DownloadSetupAsync(s_release, _directory, null, Token);
+        var result = await new HttpPackageDownloader(NullLogger<HttpPackageDownloader>.Instance, http).DownloadSetupAsync(s_release, _directory, null, Token);
 
         Assert.Equal(PackageCheck.DownloadFailed, result.Result);
         Assert.False(Directory.Exists(_directory));
@@ -107,7 +107,7 @@ public sealed class HttpPackageDownloaderTests : IDisposable
         string checksums, byte[]? package, CancellationToken cancellationToken, IProgress<double>? progress = null)
     {
         using var http = new HttpClient(new FakeServer(checksums, package));
-        var downloader = new HttpPackageDownloader(NullLog.Instance, http);
+        var downloader = new HttpPackageDownloader(NullLogger<HttpPackageDownloader>.Instance, http);
         return await downloader.DownloadAsync(s_release, _directory, progress, cancellationToken);
     }
 

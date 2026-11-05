@@ -23,14 +23,14 @@ public sealed partial class SetupViewModel : ObservableObject
     private static readonly ColorFilter?[] s_filters =
         [null, ColorFilter.Inverted, ColorFilter.Grayscale, ColorFilter.YellowOnBlack, ColorFilter.BlackOnYellow, ColorFilter.WhiteOnBlue];
 
-    private readonly FileLog _log = new();
+    private readonly TelemetryHost _telemetry = Program.Telemetry!;
     private readonly GitHubReleaseFeed _feed;
     private IReadOnlyList<ReleaseInfo> _releases = [];
     private IReadOnlyList<ReleaseInfo> _offered = [];
 
     public SetupViewModel()
     {
-        _feed = new GitHubReleaseFeed(_log);
+        _feed = new GitHubReleaseFeed(_telemetry.Logger<GitHubReleaseFeed>());
         LanguageIndex = SetupText.IsGerman ? 0 : 1;
         InstallSteps.StatusChanged += text => Status = text;
     }
@@ -173,7 +173,7 @@ public sealed partial class SetupViewModel : ObservableObject
         Progress = 0;
         var choices = new SetupChoices((ReleaseChannel)ChannelIndex, Autostart, DesktopShortcut, CheckForUpdates, ZoomLevel, s_filters[FilterIndex], SecureDesktop);
         InstallSteps.Start(release.Version.ToString());
-        var result = await new SetupInstaller(_log).InstallAsync(
+        var result = await new SetupInstaller(_telemetry).InstallAsync(
             release, choices, InstallSteps.Checklist, new Progress<double>(value => Progress = value * 100), CancellationToken.None);
         IsBusy = false;
         if (result == UpdateResult.Installed)

@@ -1,4 +1,5 @@
 using Vortice.DXGI;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Zoom;
@@ -23,14 +24,14 @@ public sealed class ZoomEngine : IZoomOutput
     private readonly ZoomModel _model;
     private readonly EffectsModel _effects;
     private readonly PointerServices _pointer;
-    private readonly ILog _log;
+    private readonly ILogger<ZoomEngine> _log;
     private readonly Lock _gate = new();
     private MonitorRenderer[] _renderers = [];
     private int _rebuildPending;
     private bool _started;
     private bool _disposed;
 
-    public ZoomEngine(RenderModels models, PointerServices pointerServices, ILog log)
+    public ZoomEngine(RenderModels models, PointerServices pointerServices, ILogger<ZoomEngine> log)
     {
         _models = models;
         _model = models.Zoom;
@@ -122,7 +123,7 @@ public sealed class ZoomEngine : IZoomOutput
     {
         using var factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
         var names = MonitorOutput.AttachedDeviceNames(factory);
-        _log.Info($"Monitors: {string.Join(", ", names)}");
+        _log.Monitors(names);
 
         var renderers = names.Select(name => new MonitorRenderer(name, _models, _pointer, _log, RequestRebuild)).ToArray();
         foreach (var renderer in renderers)
@@ -144,7 +145,8 @@ public sealed class ZoomEngine : IZoomOutput
             {
                 // A thread stuck in the driver cannot be stopped, and its overlay may still cover
                 // the screen. End the process; the watchdog cleans up and restarts ZoomIN (ADR-0007).
-                _log.Error("A render thread does not stop; restarting ZoomIN via the watchdog.");
+                _log.RenderThreadStuck();
+                Telemetry.FlushBeforeExit();
                 Environment.FailFast("ZoomIN render thread hung");
             }
         }
@@ -156,7 +158,7 @@ public sealed class ZoomEngine : IZoomOutput
         {
             if (renderer.IsHung(HangLimit))
             {
-                _log.Error($"Render thread without progress for over {HangLimit.TotalSeconds:0} s; rebuilding the zoom pipeline.");
+                _log.RenderThreadHung(HangLimit.TotalSeconds);
                 RequestRebuild();
                 return;
             }

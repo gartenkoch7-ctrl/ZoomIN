@@ -1,4 +1,4 @@
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Updates;
 
 namespace ZoomIN.Platform.SecureDesktop;
@@ -10,22 +10,22 @@ namespace ZoomIN.Platform.SecureDesktop;
 public static class SecureDesktopInstall
 {
     /// <param name="choice">The setup's choice, or null for an update (keeps the user's preference, default on).</param>
-    public static void Apply(InstallLayout layout, bool? choice, ILog log)
+    public static void Apply(InstallLayout layout, bool? choice, ILogger log)
     {
         ArgumentNullException.ThrowIfNull(log);
         try
         {
             var on = SecureDesktopRegistration.Default.Apply(layout, choice);
-            log.Info($"[Install] Secure desktop support {(on ? "registered" : "off")}");
+            log.SupportChanged(on ? "registered" : "off");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
-            log.Error("[Install] Registering for the secure desktop failed", ex);
+            log.RegisterFailed(ex);
         }
     }
 
     /// <summary>Removes the registration, the kept choice and the files of the SYSTEM instance.</summary>
-    public static void Remove(ILog log)
+    public static void Remove(ILogger log)
     {
         ArgumentNullException.ThrowIfNull(log);
         try
@@ -39,7 +39,7 @@ public static class SecureDesktopInstall
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
-            log.Error("[Uninstall] Removing the secure desktop support failed", ex);
+            log.RemoveFailed(ex);
         }
     }
 }

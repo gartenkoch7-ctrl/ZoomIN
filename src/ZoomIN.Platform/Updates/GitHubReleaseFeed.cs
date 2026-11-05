@@ -1,6 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Updates;
 
 namespace ZoomIN.Platform.Updates;
@@ -12,9 +12,9 @@ namespace ZoomIN.Platform.Updates;
 public sealed class GitHubReleaseFeed : IReleaseFeed
 {
     private static readonly HttpClient s_http = CreateClient();
-    private readonly ILog _log;
+    private readonly ILogger _log;
 
-    public GitHubReleaseFeed(ILog log)
+    public GitHubReleaseFeed(ILogger<GitHubReleaseFeed> log)
     {
         _log = log;
     }
@@ -37,7 +37,7 @@ public sealed class GitHubReleaseFeed : IReleaseFeed
         }
         catch (Exception ex) when (ex is HttpRequestException or JsonException or TaskCanceledException)
         {
-            _log.Info($"Release list skipped: {ex.Message}");
+            _log.ReleaseListSkipped(ex.Message);
             return [];
         }
     }
