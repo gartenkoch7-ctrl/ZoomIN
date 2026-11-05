@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Settings;
 using ZoomIN.Platform.Settings;
@@ -16,6 +17,9 @@ public sealed class SecureSettingsStore : ISettingsStore
 {
     private const string FileName = "settings.json";
 
+    // Tag of zoomin.secure.settings: where the settings came from ("user", "copy", "default").
+    private const string SourceTag = "zoomin.secure.settings_source";
+
     private readonly ILogger _log;
     private readonly SessionUser _user;
     private readonly string _copyFolder;
@@ -29,12 +33,15 @@ public sealed class SecureSettingsStore : ISettingsStore
 
     public AppSettings Load()
     {
+        using var operation = Telemetry.Source.StartActivity("zoomin.secure.settings");
+
         // Read as the user, write the copy as SYSTEM: the copy lives in SYSTEM's own profile.
         if (_user.ZoomFolder is { } folder)
         {
             if (_user.Read(() => Parse(Path.Combine(folder, FileName))) is { } user)
             {
                 _log.SettingsSource("the session user's");
+                operation?.SetTag(SourceTag, "user");
                 KeepCopy(user);
                 return user;
             }
@@ -45,10 +52,12 @@ public sealed class SecureSettingsStore : ISettingsStore
         if (Parse(Path.Combine(_copyFolder, FileName)) is { } copy)
         {
             _log.SettingsSource("the kept copy of the");
+            operation?.SetTag(SourceTag, "copy");
             return copy;
         }
 
         _log.SettingsSource("default");
+        operation?.SetTag(SourceTag, "default");
         return new AppSettings();
     }
 

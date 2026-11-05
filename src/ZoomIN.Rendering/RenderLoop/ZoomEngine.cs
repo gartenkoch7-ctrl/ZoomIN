@@ -121,11 +121,13 @@ public sealed class ZoomEngine : IZoomOutput
 
     private void StartRenderers()
     {
+        using var operation = Telemetry.Source.StartActivity("zoomin.render.rebuild");
         using var factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
         var names = MonitorOutput.AttachedDeviceNames(factory);
         _log.Monitors(names);
 
         var renderers = names.Select(name => new MonitorRenderer(name, _models, _pointer, _log, RequestRebuild)).ToArray();
+        operation?.SetTag("zoomin.monitors", renderers.Length);
         foreach (var renderer in renderers)
         {
             renderer.Start();

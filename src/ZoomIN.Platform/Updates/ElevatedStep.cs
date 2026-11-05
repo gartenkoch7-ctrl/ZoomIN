@@ -19,6 +19,15 @@ public static class ElevatedStep
     {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(log);
+
+        // The elevated process continues this operation (--traceparent below).
+        using var operation = UpdateTelemetry.Start("zoomin.update.elevate", command.Version);
+        var result = RunElevated(executable, command, log);
+        return operation.Finish(result, UpdateTelemetry.Succeeded(result));
+    }
+
+    private static UpdateResult RunElevated(string executable, UpdateCommand command, ILogger log)
+    {
         try
         {
             // Through the shell with "runas": CreateProcess can neither elevate nor start the

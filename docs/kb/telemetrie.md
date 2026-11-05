@@ -86,9 +86,36 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.update.run`, `zoomin.elevated.run`, `zoomin.uninstall.run` | jeweilige Rolle | ganzer Lauf; Exit-Code ≠ 0 → Status Error |
 | `zoomin.setup.install` | setup | Installation im Assistenten (Tag `zoomin.version`) |
 | `zoomin.setup.apply` | setup | Installationsschritt mit Adminrechten |
+| `zoomin.render.pipeline_start` | app, secure | Aufbau von Gerät, Duplication und Overlay je Monitor (Tag `zoomin.monitor`; Fehler: Ausnahmetyp) |
+| `zoomin.render.rebuild` | app, secure | Neuaufbau aller Renderer, z. B. nach Anzeigeänderung (Tag `zoomin.monitors`) |
+| `zoomin.update.check` | app | Release-Liste holen (Tags `zoomin.update.channel`, `zoomin.update.releases`) |
+| `zoomin.update.install` | app | Update per Klick: Download, ggf. Sicherung, Installationsschritt (Tags `zoomin.version`, `zoomin.update.result`) |
+| `zoomin.update.download` | app, setup | Prüfsummenliste + Paket bzw. Setup (Tag `zoomin.package`, Ergebnis) |
+| `zoomin.update.backup` | app | Einstellungen sichern vor einem Downgrade |
+| `zoomin.update.elevate` | app, setup | Startet den Schritt mit Adminrechten; dessen `zoomin.update.run`/`zoomin.setup.apply` hängt darunter |
+| `zoomin.update.apply` | update, setup | Paket prüfen, entpacken, `current` umschalten (Ergebnis) |
+| `zoomin.update.verify` | update, setup | Signatur der neuen `ZoomIN.exe` (Ergebnis z. B. `UnexpectedPublisher`) |
+| `zoomin.update.restart` | app | Neustart nach dem Update; Kind von `zoomin.update.install`, darunter `zoomin.app.start` der neuen Version |
+| `zoomin.setup.launch` | app | Setup herunterladen, prüfen, starten (Ergebnis); das Setup setzt den Trace fort |
+| `zoomin.secure.settings` | secure | Woher die Einstellungen kommen (Tag `zoomin.secure.settings_source`: `user`, `copy`, `default`) |
+| `zoomin.settings.load` | app, setup | `settings.json` lesen (Tag `zoomin.settings.result`: `ok`, `missing`, `unreadable` → Error) |
+| `zoomin.settings.save` | app, setup | `settings.json` schreiben (Fehler: Ausnahmetyp) |
+| `zoomin.profile.switch` | app | Profilwechsel (ohne Profilnamen – die vergibt der Nutzer frei) |
 
 ## Katalog: Messwerte
-Noch keine (kommen in M11 Schritt 2: Frame-Zeit, verpasste Frames, Caret-Quellen …).
+Nur mit Export-Adresse und Stufe „Ausführlich“/„Benutzerdefiniert + Messwerte“. Im Render-Loop
+ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
+
+| Name | Einheit | Tags | Bedeutung |
+|---|---|---|---|
+| `zoomin.render.frame_interval` | ms | `zoomin.monitor` | Abstand zwischen zwei gezeigten Frames; Ausreißer = Ruckler |
+| `zoomin.render.frames_missed` | Frames | `zoomin.monitor` | Compositor hat keinen Frame rechtzeitig (100 ms) angefordert |
+| `zoomin.render.show_latency` | ms | `zoomin.monitor` | Aufwachen (Zoom/Filter an) bis erster sichtbarer Frame |
+| `zoomin.render.pipeline_restarts` | Neustarts | `zoomin.monitor`, `zoomin.reason` (`failure`, `display_changed`) | Pipeline neu aufgebaut |
+| `zoomin.tracking.read_duration` | ms | – | Eine Abfrage von Fokus und Caret; lange Werte = App antwortet langsam |
+| `zoomin.tracking.caret_sources` | Quellen | `process.name`, `zoomin.caret.source` (`system`, `msaa`, `uia`, `estimated`, `cell`) | Caret-Quelle zum ersten Mal in einem Prozess gesehen (dazu Log 2002) |
+| `zoomin.tracking.chromium_nudges` | Fenster | – | Chromium-Inhaltsfenster nach IAccessible2 gefragt |
+| `zoomin.tracking.anchor_switches` | Wechsel | `zoomin.anchor.source` (`mouse`, `focus`, `caret`) | Ansicht folgt jetzt Maus, Fokus oder Caret (Render-Thread, ohne Allokation) |
 
 ## Katalog: Logmeldungen
 | Id | Stufe | Meldung |
@@ -124,6 +151,7 @@ Noch keine (kommen in M11 Schritt 2: Frame-Zeit, verpasste Frames, Caret-Quellen
 | 1209 | Info | Update available: {Version} |
 | 1301 | Debug | Hotkey {Gesture} registered |
 | 2001 | Fehler | UI Automation is unavailable; focus tracking is off |
+| 2002 | Info | Caret source in {Process}: {Source} |
 | 2101 | Warnung | MagInitialize failed: the system pointer stays visible while zoomed |
 | 2201 | Warnung | Hotkey {Gesture} is already in use by another application |
 | 2202 | Fehler | Hotkey handler failed |

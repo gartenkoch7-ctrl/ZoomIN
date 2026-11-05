@@ -7,4 +7,7 @@ internal static partial class AutomationLog
 {
     [LoggerMessage(EventId = 2001, Level = LogLevel.Error, Message = "UI Automation is unavailable; focus tracking is off")]
     public static partial void AutomationUnavailable(this ILogger logger, Exception exception);
+
+    [LoggerMessage(EventId = 2002, Level = LogLevel.Information, Message = "Caret source in {Process}: {Source}")]
+    public static partial void CaretSourceSeen(this ILogger logger, string process, string source);
 }

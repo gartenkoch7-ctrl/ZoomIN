@@ -85,6 +85,7 @@ public sealed class AnchorController
         if (Source != AnchorSource.Mouse && input.MouseInside && Distance(input.Mouse, _mouseAtSwitch) > MouseReturnPixels)
         {
             Source = AnchorSource.Mouse;
+            AnchorMetrics.Switched(AnchorSource.Mouse);
             _gliding = true;
         }
     }
@@ -152,6 +153,11 @@ public sealed class AnchorController
         if (Source == AnchorSource.Mouse)
         {
             _mouseAtSwitch = _lastMouse;
+        }
+
+        if (Source != source)
+        {
+            AnchorMetrics.Switched(source);
         }
 
         Source = source;

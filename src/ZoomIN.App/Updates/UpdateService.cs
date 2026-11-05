@@ -25,6 +25,9 @@ public sealed class UpdateService
     private readonly InstallLayout? _layout;
     private AppVersion? _notified;
 
+    // The last installation: the restart that follows continues its trace (zoomin.update.restart).
+    private ActivityContext _installed;
+
     public UpdateService(
         IReleaseFeed feed, IPackageDownloader downloader, ISettingsBackup backup, SettingsService settings, ILogger<UpdateService> log)
     {
@@ -55,7 +58,9 @@ public sealed class UpdateService
 
     public async Task RefreshAsync(CancellationToken cancellationToken)
     {
+        using var operation = UpdateTelemetry.Start("zoomin.update.check")?.SetTag("zoomin.update.channel", Channel.ToString());
         Releases = await _feed.ReleasesAsync(ReleaseFeeds.GitHub, cancellationToken).ConfigureAwait(false);
+        operation?.SetTag("zoomin.update.releases", Releases.Count);
     }
 
     /// <summary>Checks 10 s after start and then daily, as long as the user allows it.</summary>
@@ -82,6 +87,14 @@ public sealed class UpdateService
     public async Task<UpdateResult> InstallAsync(ReleaseInfo release, IProgress<double>? progress, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(release);
+        using var operation = UpdateTelemetry.Start("zoomin.update.install", release.Version);
+        var result = await InstallPackageAsync(release, progress, cancellationToken).ConfigureAwait(false);
+        _installed = operation?.Context ?? default;
+        return operation.Finish(result, UpdateTelemetry.Succeeded(result));
+    }
+
+    private async Task<UpdateResult> InstallPackageAsync(ReleaseInfo release, IProgress<double>? progress, CancellationToken cancellationToken)
+    {
         if (_layout is null)
         {
             return UpdateResult.NotInstalled;
@@ -100,6 +113,7 @@ public sealed class UpdateService
         {
             if (ReleaseCatalog.Classify(CurrentVersion, release.Version) == UpdateKind.Downgrade)
             {
+                using var backup = UpdateTelemetry.Start("zoomin.update.backup", CurrentVersion);
                 _backup.Backup(CurrentVersion);
             }
 
@@ -120,6 +134,9 @@ public sealed class UpdateService
         {
             return;
         }
+
+        // A child of the installation, so the new version's start belongs to the same trace.
+        using var operation = Telemetry.Source.StartActivity("zoomin.update.restart", ActivityKind.Internal, _installed);
 
         // Through the shell: CreateProcess refuses UIAccess executables (ADR-0012).
         using var _ = Process.Start(new ProcessStartInfo(_layout.CurrentExecutable, TraceParentArgument.Append(RestartArguments.Format(Environment.ProcessId)))
