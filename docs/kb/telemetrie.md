@@ -97,6 +97,10 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.update.verify` | update, setup | Signatur der neuen `ZoomIN.exe` (Ergebnis z. B. `UnexpectedPublisher`) |
 | `zoomin.update.restart` | app | Neustart nach dem Update; Kind von `zoomin.update.install`, darunter `zoomin.app.start` der neuen Version |
 | `zoomin.setup.launch` | app | Setup herunterladen, prüfen, starten (Ergebnis); das Setup setzt den Trace fort |
+| `zoomin.secure.settings` | secure | Woher die Einstellungen kommen (Tag `zoomin.secure.settings_source`: `user`, `copy`, `default`) |
+| `zoomin.settings.load` | app, setup | `settings.json` lesen (Tag `zoomin.settings.result`: `ok`, `missing`, `unreadable` → Error) |
+| `zoomin.settings.save` | app, setup | `settings.json` schreiben (Fehler: Ausnahmetyp) |
+| `zoomin.profile.switch` | app | Profilwechsel (ohne Profilnamen – die vergibt der Nutzer frei) |
 
 ## Katalog: Messwerte
 Nur mit Export-Adresse und Stufe „Ausführlich“/„Benutzerdefiniert + Messwerte“. Im Render-Loop

@@ -62,16 +62,20 @@ antwortet. Auf „Diagnose“ → „Diagnosepaket erstellen“ → ZIP mit Logs
 - [ ] Einstellungsänderung zur Laufzeit an den Host weitergeben (kommt mit der Diagnose-Seite, Schritt 3)
 
 ### 2 · Abläufe und Metriken je Bereich (je ein eigener Commit)
-- [ ] **Start, Monitore, Pipeline:** Span App-Start → erstes Bild; Anzeigeänderung; Pipeline
-      starten/neu starten/Gerät verloren. Metriken pro Monitor: Frame-Zeit (Histogramm), verpasste
-      Frames, Neustarts. Benchmark `0 B` mit Listener
-- [ ] **Fokus & Caret:** Zähler je Prozess und Quelle (System/MSAA/UIA/geschätzt/keine), Dauer pro
-      Abfrage, Chromium-Anstoß, Ankerwechsel Maus/Fokus/Caret; Log bei Quellenwechsel je Prozess
-- [ ] **Setup & Updates:** ein Trace über Prüfen, Herunterladen, Signatur, Installieren,
-      Wiederherstellen; Fehler mit Schritt und Ursache
-- [ ] **Sichere Bildschirme & Profile:** Start bis erstes Bild, Desktopwechsel, Einstellungskopie;
-      Profilwechsel, Einstellungen laden/speichern
-- [ ] Katalog `docs/kb/telemetrie.md` je Bereich ergänzen
+- [x] **Start, Monitore, Pipeline:** `zoomin.render.pipeline_start`/`rebuild`; Messwerte je Monitor
+      Frame-Abstand, verpasste Frames, Zeit bis erstes Bild, Neustarts mit Grund. 0 B mit dem
+      OpenTelemetry-SDK als Zuhörer (`RenderMetricsTests`). „App-Start → erstes Bild“ ist beim
+      normalen Start ohne Zoom kein Ablauf; stattdessen `zoomin.render.show_latency` bei jedem Einschalten
+- [x] **Fokus & Caret:** Caret-Quelle je Prozess (Log 2002 einmal pro neuer Quelle – Notepad
+      wechselt im Blinktakt), Dauer je Abfrage, Chromium-Anstoß, Ankerwechsel (Render-Thread, 0 B)
+- [x] **Setup & Updates:** ein Trace Prüfen → Download → Sicherung → Adminschritt → Anwenden →
+      Signatur → Neustart; jeder Schritt mit Version und Ergebnis, Fehler markiert (`UpdateTelemetry`).
+      „Wiederherstellen“ ist Teil von `zoomin.update.apply` (Ergebnis + Status)
+- [x] **Sichere Bildschirme & Profile:** Herkunft der Einstellungen im sicheren Modus,
+      Einstellungen laden/speichern, Profilwechsel (ohne Profilnamen). Der Desktopwechsel ist ein
+      Neustart des sicheren Modus und damit `zoomin.secure.start`
+- [x] Katalog `docs/kb/telemetrie.md` je Bereich ergänzt
+- [ ] Sichttest: einmal „Ausführlich“ + lokaler Collector (Aspire Dashboard) und Update-Trace ansehen
 
 ### 3 · Diagnose-Seite und Diagnosepaket
 - [ ] Karte „Diagnose“ unter „Allgemein“: Stufen-Auswahl, bei „Benutzerdefiniert“ Schalter
