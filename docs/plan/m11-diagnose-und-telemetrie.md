@@ -54,8 +54,11 @@ antwortet. Auf „Diagnose“ → „Diagnosepaket erstellen“ → ZIP mit Logs
       im Hintergrund gebaut, Frühes wird gepuffert und nachgeschrieben (`EarlyActivities`,
       `ReplayContextProcessor`): **~4 ms Host-Start, ~9 ms inkl. erster Logzeile und Operation**
       ([performance.md](../kb/performance.md))
-- [ ] Sichttest mit echter App und sicherem Bildschirm (Startzeit-Abläufe `zoomin.app.start` /
-      `zoomin.secure.start` vorher/nachher); auf dem Entwicklungsrechner lief die installierte ZoomIN
+- [x] Test mit echter App 2026-11-05 (Release, warm): Overlay nach 419–437 ms mit M11 gegenüber
+      451–483 ms ohne – kein Nachteil; `zoomin.app.start` 309–312 ms; Watchdog bekommt
+      `--traceparent` mit der Trace-Id des App-Starts; 118 Logzeilen ohne Fehler und ohne
+      Benutzernamen; alte Tageslogs wie vorgesehen aufgeräumt
+- [ ] Sicherer Bildschirm (`zoomin.secure.start` auf Sperre/UAC) – braucht Test am Anmeldebildschirm
 - [ ] Einstellungsänderung zur Laufzeit an den Host weitergeben (kommt mit der Diagnose-Seite, Schritt 3)
 
 ### 2 · Abläufe und Metriken je Bereich (je ein eigener Commit)
