@@ -125,6 +125,21 @@ public sealed class AnchorControllerTests
         Assert.Equal(s_mouse, anchor);
     }
 
+    [Fact]
+    public void EstimatedCaret_GridCellIsPushedLikeACaret_NotCentredLikeAFocus()
+    {
+        var controller = Started();
+        var view = ModeGeometry.Compute(ZoomMode.Fullscreen, s_monitor, s_mouse, 4, LensSize.Default, DockLayout.Default).Source;
+        var cell = new PhysicalRect(view.Right - 20, view.Y + (view.Height / 2), 16, 8);
+        var tracking = new TrackingSnapshot(cell, Ticks(4.9), cell, Ticks(4.9), CaretEstimated: true);
+
+        var anchor = controller.Next(Input(5.0, s_mouse, tracking));
+
+        var moved = ModeGeometry.Compute(ZoomMode.Fullscreen, s_monitor, anchor, 4, LensSize.Default, DockLayout.Default).Source;
+        Assert.Equal(AnchorSource.Caret, controller.Source);
+        Assert.Equal(moved.Right - (moved.Width * s_instant.CaretMargin), cell.Right, 6); // on the margin
+    }
+
     private static AnchorController Started(TrackingOptions? options = null)
     {
         var controller = new AnchorController();

@@ -48,6 +48,21 @@ Ergebnisse in [eingabe-und-tracking.md](../kb/eingabe-und-tracking.md#kompatibil
 - [ ] Kompatibilitätsmatrix ≥ 80 % (Notepad, Edge, Word, VS Code, Teams, Terminal …)
 - [ ] Hängende App verursacht keinen Ruckler (Erkennung läuft getrennt – manuell bestätigen)
 
+## Nachtrag: Tracking-Kompatibilität (Grilling 2026-11-05)
+Entscheidungen: Chromium wird **gezielt pro Fenster** angestoßen (kein systemweites
+Screenreader-Flag). Zusätzliche Caret-Quellen: **MSAA-Caret**, **UIA-Textcursor** und als
+Notlösung das **Fokusrechteck** (Zelle/Edit, ohne Caret-Balken). Gebaut ohne vorherige Messung
+(Entscheidung Nutzer), deshalb steht die Prüfung als Aufgabe offen.
+- [x] `GuiThreadCaret`, `MsaaCaret`, `UiaTextCaret`, `ChromiumAccessibility`, `FocusReader`
+  (Kette und Details: [eingabe-und-tracking.md](../kb/eingabe-und-tracking.md#caret-kette-2026-11-05))
+- [x] `TrackingSnapshot.CaretEstimated`, `HighlightLayer` ohne Balken bei geschätztem Caret, Tests
+- [x] Messwerkzeug `tools/ZoomIN.TrackingProbe`
+- [ ] Probe-Lauf über die Matrix-Apps; Ergebnis in die Kompatibilitätsmatrix übernehmen
+
 ## Offene Fragen / Risiken
-- Chromium/Electron liefern UIA oft erst, wenn eine Hilfstechnologie erkannt wird.
-- Konsole/Terminal und Excel-Zellen haben oft keinen System-Caret.
+- Wirkt der IAccessible2-Anstoß bei aktuellen Chromium-/Electron-Versionen? (Probe mit und
+  ohne `--no-activate`.) Falls nicht: systemweites Flag als abschaltbare Option neu bewerten.
+- Notlösung (DataItem/Edit) könnte in Apps greifen, die ihren Caret doch melden, aber über keine
+  der drei Quellen – dann ohne Balken, sonst unschädlich.
+- UIA-Textabfragen laufen nur, wenn System- und MSAA-Caret fehlen; Kosten pro Poll messen,
+  falls der Tracking-Thread träge wird.

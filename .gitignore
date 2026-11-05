@@ -7,3 +7,6 @@ TestResults/
 BenchmarkDotNet.Artifacts/
 *.binlog
 artifacts/
+
+# Output of tools/ZoomIN.TrackingProbe
+tracking-probe-*.md
