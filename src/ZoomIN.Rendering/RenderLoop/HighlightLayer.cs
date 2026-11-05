@@ -37,7 +37,7 @@ internal sealed class HighlightLayer
                 CursorConstants.ForRect((float)(FrameWidth / r.Width), (float)(FrameWidth / r.Height), s_magenta));
         }
 
-        if (options.CaretMarker && tracking.Caret is { } caret && FrameMapping.Intersects(caret, frame.Source))
+        if (options.CaretMarker && !tracking.CaretEstimated && tracking.Caret is { } caret && FrameMapping.Intersects(caret, frame.Source))
         {
             var r = FrameMapping.Map(frame, caret);
             var width = Math.Max(MinCaretWidth, r.Width);

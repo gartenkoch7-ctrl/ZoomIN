@@ -94,6 +94,7 @@ public static class Text
     public static string TrackingMargin => Get(nameof(TrackingMargin));
     public static string TrackingFocusFrame => Get(nameof(TrackingFocusFrame));
     public static string TrackingCaretMarker => Get(nameof(TrackingCaretMarker));
+    public static string TrackingCenterMouse => Get(nameof(TrackingCenterMouse));
 
     // Hotkeys
     public static string HotkeysIntro => Get(nameof(HotkeysIntro));

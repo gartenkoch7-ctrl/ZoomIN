@@ -1,6 +1,6 @@
 # ADR-0003: Cursor-Fixpunkt im MVP, Input-Transform später
 
-- **Status:** Angenommen
+- **Status:** Angenommen; Punkt „Maus zentriert“ ersetzt durch [0018](0018-mauszeiger-zentriert-ohne-input-transform.md)
 - **Datum:** 2026-10-30
 
 ## Kontext

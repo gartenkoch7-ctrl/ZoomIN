@@ -41,6 +41,9 @@ IUIAutomationElement
 GetGUIThreadInfo
 GUITHREADINFO
 ClientToScreen
+GetWindowDpiAwarenessContext
+SetThreadDpiAwarenessContext
+LogicalToPhysicalPointForPerMonitorDPI
 
 // Shell/Win32TrayIcon
 Shell_NotifyIcon
@@ -129,3 +132,25 @@ INPUT
 
 // Lifecycle/Win32UiAccessProbe
 GetTokenInformation
+
+// Automation/UiaTextCaret, Automation/MsaaCaret, Automation/ChromiumAccessibility
+IUIAutomationTextPattern
+IUIAutomationTextPattern2
+IUIAutomationTextRange
+IUIAutomationTextRangeArray
+AccessibleObjectFromWindow
+IAccessible
+IServiceProvider
+CHILDID_SELF
+OBJECT_IDENTIFIER
+UIA_PATTERN_ID
+UIA_CONTROLTYPE_ID
+SafeArrayGetLBound
+SafeArrayGetUBound
+SafeArrayGetElement
+SafeArrayDestroy
+GetClassName
+FindWindowEx
+GetAncestor
+GetForegroundWindow
+GetWindowThreadProcessId

@@ -9,7 +9,8 @@ public sealed class AnchorControllerTests
 {
     private static readonly PhysicalRect s_monitor = new(0, 0, 1920, 1080);
     private static readonly PhysicalPoint s_mouse = new(300, 300);
-    private static readonly TrackingOptions s_instant = TrackingOptions.Default with { PanSeconds = 0 };
+    // Mouse as fixpoint (ADR-0003): the view starts exactly around s_mouse. Centring: MouseCenteringTests.
+    private static readonly TrackingOptions s_instant = TrackingOptions.Default with { PanSeconds = 0, CenterMouse = false };
 
     [Fact]
     public void WithoutKeyboardEvents_FollowsMouseExactly()
@@ -23,26 +24,17 @@ public sealed class AnchorControllerTests
     }
 
     [Fact]
-    public void FocusOutsideView_MovesAnchorToFocusCenter()
+    public void FocusNearTheMonitorEdge_ViewStopsAtTheEdge()
     {
         var controller = Started();
         var focus = new PhysicalRect(1700, 900, 100, 40);
 
         var anchor = controller.Next(Input(5.0, s_mouse, Focus(focus, 4.9)));
 
-        Assert.Equal(new PhysicalPoint(1750, 920), anchor);
+        var view = ModeGeometry.Compute(ZoomMode.Fullscreen, s_monitor, anchor, 4, LensSize.Default, DockLayout.Default).Source;
+        Assert.Equal(s_monitor.Right, view.Right, 6);
+        Assert.Equal(920, view.Y + (view.Height / 2), 6); // vertically there is room: centred
         Assert.Equal(AnchorSource.Focus, controller.Source);
-    }
-
-    [Fact]
-    public void FocusAlreadyVisible_DoesNotMove()
-    {
-        var controller = Started();
-        var focus = new PhysicalRect(310, 310, 50, 20); // next to the mouse: inside the 4× view
-
-        var anchor = controller.Next(Input(5.0, s_mouse, Focus(focus, 4.9)));
-
-        Assert.Equal(s_mouse, anchor);
     }
 
     [Fact]
@@ -97,8 +89,9 @@ public sealed class AnchorControllerTests
             later = controller.Next(Input(5.0 + (frame / 60.0), s_mouse, Focus(focus, 4.9), TrackingOptions.Default));
         }
 
-        Assert.True(first.X < 1750 && first.X > s_mouse.X, $"first frame should be on the way, got {first}");
-        Assert.Equal(1750, later.X, 0);
+        // Centring (1750, 920) stops at the corner: the fixpoint is the corner itself.
+        Assert.True(first.X < s_monitor.Right && first.X > s_mouse.X, $"first frame should be on the way, got {first}");
+        Assert.Equal(s_monitor.Right, later.X, 0);
     }
 
     [Fact]
@@ -130,6 +123,21 @@ public sealed class AnchorControllerTests
         var anchor = controller.Next(Input(5.0, new PhysicalPoint(2500, 300), mouseInside: false));
 
         Assert.Equal(s_mouse, anchor);
+    }
+
+    [Fact]
+    public void EstimatedCaret_GridCellIsPushedLikeACaret_NotCentredLikeAFocus()
+    {
+        var controller = Started();
+        var view = ModeGeometry.Compute(ZoomMode.Fullscreen, s_monitor, s_mouse, 4, LensSize.Default, DockLayout.Default).Source;
+        var cell = new PhysicalRect(view.Right - 20, view.Y + (view.Height / 2), 16, 8);
+        var tracking = new TrackingSnapshot(cell, Ticks(4.9), cell, Ticks(4.9), CaretEstimated: true);
+
+        var anchor = controller.Next(Input(5.0, s_mouse, tracking));
+
+        var moved = ModeGeometry.Compute(ZoomMode.Fullscreen, s_monitor, anchor, 4, LensSize.Default, DockLayout.Default).Source;
+        Assert.Equal(AnchorSource.Caret, controller.Source);
+        Assert.Equal(moved.Right - (moved.Width * s_instant.CaretMargin), cell.Right, 6); // on the margin
     }
 
     private static AnchorController Started(TrackingOptions? options = null)
