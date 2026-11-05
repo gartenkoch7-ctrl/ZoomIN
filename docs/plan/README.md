@@ -20,6 +20,7 @@ Jeder Meilenstein endet mit etwas, das man **starten und vorführen** kann.
 | UI | [Neugestaltung & Mauszeiger](ui-neugestaltung.md) | Windows-11-Kartenstil, Übersicht, eigene Mauszeiger-Seite | M | umgesetzt – Sichttest offen |
 | M9 | [Setup & Updates](m9-setup-und-updates.md) | Barrierefreies Online-Setup mit UIAccess, Kanälen, Versionswahl und Ein-Klick-Updates | L | geplant – **vor** dem ersten Release |
 | M10 | [Sichere Bildschirme](m10-sichere-bildschirme.md) | Zoom auf Anmeldung, Sperre, Strg+Alt+Entf und UAC | L | Design freigegeben – in Arbeit (Spike) |
+| M11 | [Diagnose & Telemetrie](m11-diagnose-und-telemetrie.md) | OpenTelemetry lokal: ein Trace über alle Prozesse, Diagnose-Seite, Diagnosepaket | L | Design freigegeben – **vor** dem ersten Release |
 | M12 | [Farbfilter pro Fenster](m12-filter-pro-fenster.md) | Helle Fenster automatisch invertiert, dunkle bleiben dunkel; Regeln pro App + Fensterart | L | Design freigegeben – **vor** dem ersten Release, Spike zuerst |
 
 Größen: **S** ≈ wenige Tage · **M** ≈ 1–2 Wochen · **L** ≈ 2–4 Wochen (eine Person, Teilzeit-Schätzung, grob).
@@ -32,6 +33,8 @@ M0 ─► M1 ─► M2 ─┬─► M3 ─┬─► M4 ─┐
                 └─────► M6 ─────┘
 ```
 - M9 baut auf M8 auf, der Tag `v1.0.0` wartet aber auf M9: 1.0 erscheint mit dem neuen Setup.
+- M11 fasst alle Bereiche an (Log-Umstellung) und kommt vor `v1.0.0`, damit die ersten
+  Fehlerberichte vollständig sind. Ab M11 bringt jedes neue Feature seine Telemetrie mit (ADR-0019).
 - M3 vor M4/M5: Modi und Filter werden sofort pro Monitor gebaut, nicht nachgerüstet.
 - M6 braucht nur M2 (Viewport-Logik) und kann parallel zu M3–M5 laufen.
 - M12 baut auf M5 (Filter-Matrizen) und M7 (Einstellungen) auf und kommt vor `v1.0.0`; der
