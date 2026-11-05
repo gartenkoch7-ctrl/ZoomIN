@@ -6,9 +6,33 @@ using Windows.Win32.UI.Accessibility;
 using ZoomIN.Core.Viewport;
 using ZoomIN.Platform.Automation;
 using ZoomIN.TrackingProbe;
+using ZoomIN.TrackingProbe.Auto;
 
 // Usage: ZoomIN.TrackingProbe [--no-activate]
 // Click into each application, tab around and type a few characters; press Enter here to finish.
+// ZoomIN.TrackingProbe --auto [--only Name]: starts the installed matrix apps itself and measures them (AutoRunner).
+if (args.Contains("--auto", StringComparer.OrdinalIgnoreCase))
+{
+    var work = Directory.CreateTempSubdirectory("ZoomIN-Probe-").FullName;
+    var only = args.SkipWhile(a => !a.Equals("--only", StringComparison.OrdinalIgnoreCase)).Skip(1).FirstOrDefault();
+    var markdown = AutoResult.ToMarkdown(AutoRunner.Run(work, only));
+    var autoReport = Path.Combine(Environment.CurrentDirectory, $"tracking-auto-{DateTime.Now:yyyyMMdd-HHmmss}.md");
+    File.WriteAllText(autoReport, markdown);
+    Console.WriteLine();
+    Console.WriteLine(markdown);
+    Console.WriteLine($"Gespeichert: {autoReport}");
+    try
+    {
+        Directory.Delete(work, recursive: true);
+    }
+    catch (IOException)
+    {
+        // A browser may still hold its profile for a moment; the temp folder is cleaned up by Windows.
+    }
+
+    return;
+}
+
 var activate = !args.Contains("--no-activate", StringComparer.OrdinalIgnoreCase);
 var automation = (IUIAutomation)new CUIAutomation();
 var chromium = new ChromiumAccessibility();

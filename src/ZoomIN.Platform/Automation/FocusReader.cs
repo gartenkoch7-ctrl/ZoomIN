@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Windows.Win32.UI.Accessibility;
+using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Viewport;
 
 namespace ZoomIN.Platform.Automation;
@@ -44,12 +45,12 @@ internal sealed class FocusReader : IDisposable
 
             return caret is null && focus is { } f && CanStandInForCaret(element, f)
                 ? new FocusReading(focus, f, CaretEstimated: true)
-                : new FocusReading(focus, caret, CaretEstimated: false);
+                : new FocusReading(focus, caret, IsCell(caret));
         }
         catch (Exception ex) when (ex is COMException or InvalidCastException)
         {
             // Focus in a window that does not answer (or just closed): only the caret this time.
-            return new FocusReading(null, caret, CaretEstimated: false);
+            return new FocusReading(null, caret, IsCell(caret));
         }
         finally
         {
@@ -69,6 +70,9 @@ internal sealed class FocusReader : IDisposable
             ? new PhysicalRect(r.left, r.top, r.right - r.left, r.bottom - r.top)
             : null;
     }
+
+    // Excel reports its active cell as the system caret: follow it, but do not draw it as a bar.
+    private static bool IsCell(PhysicalRect? caret) => caret is { } c && CaretMotion.IsCell(c);
 
     private static bool CanStandInForCaret(IUIAutomationElement element, PhysicalRect focus) =>
         focus.Width <= MaxEstimateWidth && focus.Height <= MaxEstimateHeight

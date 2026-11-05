@@ -85,11 +85,40 @@ gesetzt: Es ändert das Verhalten aller Apps und müsste nach einem Absturz zur�
 | Anwendung | Fokus | Caret | Quelle |
 |---|---|---|---|
 | WinForms/Win32-Textfelder | ✅ | ✅ | automatische Probe 2026-10-30 |
-| Notepad, Explorer, Einstellungen | ? | ? | offen – Sichttest |
-| Edge, Chrome, Firefox | ? | ? | offen |
-| Word, Outlook, Excel | ? | ? | offen |
-| VS Code, Teams, Discord | ? | ? | offen |
-| Windows Terminal | ? | ? | offen |
+| Notepad (Win 11, 11.2609) | ✅ | ✅ System + MSAA + UIA | `TrackingProbe --auto` 2026-11-05 (3 von 5 Läufen, sonst Notepad-Dialog) |
+| Konsole (conhost) | ✅ | ✅ System + UIA (Block 8×16) | `--auto` 2026-11-05 |
+| Windows Terminal | ✅ | ✅ **nur UIA** | `--auto` 2026-11-05 – ohne Caret-Kette kein Caret |
+| Chrome, Edge (Textfeld) | ✅ | ✅ MSAA + UIA, kein System-Caret | `--auto` 2026-11-05, ⚠️ NVDA lief |
+| Word | ✅ | ✅ System + UIA | `--auto` 2026-11-05 |
+| Excel | ✅ | ✅ System-Caret = ganze Zelle → als Zelle (ohne Balken) | `--auto` 2026-11-05 |
+| Explorer, Einstellungen, Outlook, Firefox | ? | ? | offen |
+| VS Code, Teams, Discord | ? | ? | nicht installiert bzw. nicht getestet |
+
+### Automatischer Lauf (`tools/ZoomIN.TrackingProbe --auto [--only Name]`)
+Startet jede installierte Matrix-App selbst mit einer Testdatei, in der die App von sich aus einen
+Caret zeigt (es wird nichts getippt). Gemessen werden je App: welche Quelle antwortet (vor und nach
+dem Chromium-Anstoß), die Abweichung zwischen den Quellen, ob der Caret im App-Fenster liegt und
+wie oft der echte Tracking-Thread in 3 s ohne Tippen „Caret bewegt“ meldet (muss 0 sein).
+Browser laufen mit eigenem `--user-data-dir`. Geschlossen werden nur Prozesse, die der Lauf
+selbst gestartet hat.
+- **Notepad ist ausgenommen.** Windows-11-Notepad stellt bei jedem Start die Sitzung mit den Tabs
+  des Nutzers wieder her; ein Testlauf arbeitet dann in dessen Dokumenten (Vorfall 2026-11-05).
+  Notepad nur von Hand testen.
+- Excel startet sein Arbeitsfenster in einem zweiten Prozess; gemessen wird deshalb das Fenster,
+  das vorn liegt, wenn es zu einem neu gestarteten Prozess mit dem richtigen Namen gehört.
+- Ein laufender Bildschirmleser (NVDA) schaltet die Barrierefreiheit von Chromium selbst ein. Der
+  Vergleich vorher/nachher sagt dann nichts über den Anstoß; der Bericht zeigt das Screenreader-Flag.
+
+### Blinkender Caret und Zellen-Caret (`Core/Tracking/CaretMotion`, 2026-11-05)
+- Notepad nimmt den System-Caret im Blinktakt weg. Die Kette fällt dann auf UIA zurück, und UIA
+  meldet die Zeilenhöhe (420,257 1×34) statt der Caret-Höhe (420,273 1×18), am selben Punkt.
+  Bisher galt jedes Wiederauftauchen als neue Caret-Bewegung: Ruhte die Maus 0,5 s, holte der
+  blinkende Caret die Ansicht zurück. Jetzt gilt ein Caret nur als bewegt, wenn sich linke Kante
+  oder Unterkante um mehr als 1 px ändern (`SamePlace`). Am selben Fleck bleibt die gezeigte Form
+  (kein flackernder Balken). Prüfung: 0 Fehlbewegungen in allen Apps.
+- Excel meldet die aktive Zelle als System-Caret (81×21). Ein Caret, der breiter als hoch ist
+  (`IsCell`), gilt als geschätzt: Die Ansicht folgt, ein Balken wird nicht gezeichnet. Block-Carets
+  der Konsole (8×16) sind schmaler und bleiben echte Carets.
 
 ## Zeiger-Auslöser (UI-Neugestaltung)
 `Platform/Input/Win32InputActivityHook` beobachtet mit eigenem `WH_MOUSE_LL` + `WH_KEYBOARD_LL`

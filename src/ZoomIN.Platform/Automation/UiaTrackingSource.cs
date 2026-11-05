@@ -50,12 +50,21 @@ public sealed unsafe class UiaTrackingSource : ITrackingSource
     {
         using var reader = CreateReader();
         var last = new FocusReading(null, null, CaretEstimated: false);
+        PhysicalRect? seenCaret = null;
         long focusAt = 0;
         long caretAt = 0;
 
         while (!_stop.Wait(Interval))
         {
             var next = reader?.Read() ?? new FocusReading(null, GuiThreadCaret.Read(out _), CaretEstimated: false);
+
+            // Same spot from another source (blinking system caret vs. line-high UIA range): keep
+            // the shape that is shown, so the caret bar does not flicker (CaretMotion).
+            if (next.Caret is { } c && last.Caret is { } shown && CaretMotion.SamePlace(c, shown))
+            {
+                next = next with { Caret = shown };
+            }
+
             if (next == last)
             {
                 continue;
@@ -67,11 +76,14 @@ public sealed unsafe class UiaTrackingSource : ITrackingSource
                 focusAt = now;
             }
 
-            if (next.Caret != last.Caret && next.Caret is not null)
+            // Only a caret that moved is news; one that reappears where it was (blinking) is not,
+            // or it would pull the view back from the mouse every blink.
+            if (next.Caret is { } moved && (seenCaret is not { } seen || !CaretMotion.SamePlace(moved, seen)))
             {
                 caretAt = now;
             }
 
+            seenCaret = next.Caret ?? seenCaret;
             last = next;
             model.Publish(new TrackingSnapshot(next.Focus, focusAt, next.Caret, caretAt, next.CaretEstimated));
         }
