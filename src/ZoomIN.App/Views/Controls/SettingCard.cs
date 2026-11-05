@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 
 namespace ZoomIN.App.Views.Controls;
 
@@ -77,6 +78,14 @@ public sealed partial class SettingCard : ContentControl
             DependencyObject other => other,
             _ => null,
         };
+        // A button says what it does ("Reset now"): it keeps that name, and the card title moves
+        // into the help text – named after the card, NVDA read only the title (found 2026-11-05).
+        if (control is ButtonBase button)
+        {
+            AutomationProperties.SetHelpText(button, string.IsNullOrEmpty(Description) ? Header : $"{Header}. {Description}");
+            return;
+        }
+
         if (control is not null)
         {
             if (string.IsNullOrEmpty(AutomationProperties.GetName(control)) || AutomationProperties.GetName(control) == _namedAs)

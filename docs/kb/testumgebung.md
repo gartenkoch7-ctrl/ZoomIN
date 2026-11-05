@@ -30,3 +30,11 @@ GitHub-Issue-Vorlage „Hardware-Bericht“.
 | 2026-10-30 | Grafiktreiber-Reset bei aktivem Zoom (automatisiert) | ✅ Neuaufbau, kein Prozess-Neustart |
 | 2026-10-30 | Auflösung 1920×1080 → 1280×720 → zurück (automatisiert, temporär) | ✅ je ein Neuaufbau, Zoom sichtbar |
 | 2026-10-30 | Watchdog: Kill → Neustart, 4. Absturz → Hinweis (automatisiert) | ✅ Neustart ~150 ms |
+
+## Programme, die ein Agent startet (2026-11-05)
+- Befehle eines Coding-Agents laufen in einer abgeschotteten Umgebung; alles, was er startet
+  (auch `ZoomIN.exe`), erbt sie. Was solche Prozesse unter `%LocalAppData%`/`%AppData%` schreiben,
+  sieht der normale Explorer offenbar nicht („Der Pfad ist nicht verfügbar“), Systemordner schon.
+  Datei-/Ordnerpfade aus solchen Läufen deshalb nicht als Fehlerbeleg nehmen.
+- Die installierte ZoomIN soll der Nutzer selbst starten (Startmenü), nicht der Agent: aus der
+  Umgebung gestartet hing eine Instanz beim Start ohne Tray-Symbol und Overlay.

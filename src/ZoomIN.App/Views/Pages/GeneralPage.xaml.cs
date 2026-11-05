@@ -13,9 +13,13 @@ public sealed partial class GeneralPage : Page
 
     public GeneralViewModel? Vm { get; private set; }
 
+    public DiagnosticsViewModel? Diag { get; private set; }
+
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        Vm = new GeneralViewModel((PageContext)e.Parameter);
+        var context = (PageContext)e.Parameter;
+        Vm = new GeneralViewModel(context);
+        Diag = new DiagnosticsViewModel(context.Settings);
         Bindings.Update();
     }
 }

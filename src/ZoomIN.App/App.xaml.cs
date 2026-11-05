@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
 using ZoomIN.App.Composition;
 using ZoomIN.App.Lifecycle;
+using ZoomIN.App.Settings;
 using ZoomIN.Core.Settings;
 using ZoomIN.Platform.SecureDesktop;
 
@@ -32,8 +33,11 @@ public partial class App : Application
         _services = ServiceRegistration.Build(telemetry);
         _log = _services.GetRequiredService<ILogger<App>>();
 
-        // The user's diagnostics level is known only once the settings are loaded (ADR-0019).
+        // The user's diagnostics level is known only once the settings are loaded (ADR-0019);
+        // changes on the diagnostics page take effect at once (Apply ignores unrelated changes).
         telemetry.Apply(_services.GetRequiredService<AppSettings>().Telemetry());
+        var settings = _services.GetRequiredService<SettingsService>();
+        settings.Changed += () => telemetry.Apply(settings.Current.Telemetry());
         WatchdogStarter.Start(_log);
 
         var shell = _services.GetRequiredService<AppShell>();

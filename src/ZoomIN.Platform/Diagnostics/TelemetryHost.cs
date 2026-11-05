@@ -48,13 +48,19 @@ public sealed class TelemetryHost : IDisposable
         Loggers = new HostLoggerFactory(_logs);
         _early = new EarlyActivities(() => _logs.Filter.Traces);
         _ready = Task.Run(() => Apply(TelemetryOptions.Default, waitUntilReady: false));
-        _timer = time.CreateTimer(_ => Apply(_chosen), null, Recheck, Recheck);
+        // Not the public Apply: its "nothing changed" shortcut would skip the fallback and clean-up.
+        _timer = time.CreateTimer(_ => Apply(_chosen, waitUntilReady: true), null, Recheck, Recheck);
     }
 
     public ILoggerFactory Loggers { get; }
 
     /// <summary>Log and operations folder of this process (diagnostics package).</summary>
     public string Folder => _files.Folder;
+
+    public TelemetryRole Role => _role;
+
+    /// <summary>The kept log and operations files, oldest first (diagnostics package).</summary>
+    public IReadOnlyList<string> KeptFiles() => _files.KeptFiles();
 
     public static TelemetryHost Start(TelemetryRole role, string? traceParent = null) =>
         new(role, traceParent, TelemetryFiles.DefaultFolder, TimeProvider.System);
@@ -72,8 +78,19 @@ public sealed class TelemetryHost : IDisposable
     public Activity? StartOperation(string name) =>
         Telemetry.Source.StartActivity(name, ActivityKind.Internal, _parent)?.SetTag(Telemetry.RoleAttribute, _roleName);
 
-    /// <summary>Switches to <paramref name="options"/> (as stored); applies the seven-day fallback.</summary>
-    public void Apply(TelemetryOptions options) => Apply(options, waitUntilReady: true);
+    /// <summary>
+    /// Switches to <paramref name="options"/> (as stored); applies the seven-day fallback. Returns
+    /// at once if nothing changed – the app calls this on every settings change, zoom included.
+    /// </summary>
+    public void Apply(TelemetryOptions options)
+    {
+        if (options == Volatile.Read(ref _chosen))
+        {
+            return;
+        }
+
+        Apply(options, waitUntilReady: true);
+    }
 
     /// <summary>Writes everything buffered, e.g. before the process ends after a crash.</summary>
     public void Flush(TimeSpan timeout)
