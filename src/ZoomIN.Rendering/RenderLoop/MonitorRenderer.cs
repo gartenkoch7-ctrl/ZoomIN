@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
+using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Tracking;
@@ -22,6 +23,7 @@ internal sealed class MonitorRenderer : IDisposable
     private readonly PointerServices _pointer;
     private readonly ILogger _log;
     private readonly Action _requestRebuild;
+    private readonly RenderMetrics _metrics;
     private readonly AutoResetEvent _wake = new(false);
     private readonly Thread _thread;
     private readonly Lock _statusGate = new();
@@ -40,6 +42,7 @@ internal sealed class MonitorRenderer : IDisposable
         _pointer = pointer;
         _log = log;
         _requestRebuild = requestRebuild;
+        _metrics = new RenderMetrics(deviceName);
         _thread = new Thread(Run) { IsBackground = true, Name = "ZoomIN Render " + deviceName, Priority = ThreadPriority.Highest };
     }
 
@@ -90,7 +93,7 @@ internal sealed class MonitorRenderer : IDisposable
         {
             try
             {
-                using var session = new RenderSession(_pointer, _deviceName);
+                using var session = StartSession();
                 _log.PipelineReady(_deviceName);
                 SetStatus(ZoomStatus.Idle with { IsCaptureExcluded = true });
                 RunSession(session);
@@ -99,12 +102,14 @@ internal sealed class MonitorRenderer : IDisposable
             {
                 // The monitor set may have changed: the engine rebuilds all renderers.
                 _log.DisplayChanged(_deviceName, ex.Message);
+                _metrics.Restarted("display_changed");
                 _requestRebuild();
                 return;
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
                 _log.PipelineFailed(ex, _deviceName);
+                _metrics.Restarted("failure");
                 SetStatus(ZoomStatus.Idle with { LastError = ex.Message });
                 var needed = _model.TargetFor(_deviceName) > ZoomLimits.Min || NeedsOverlayUnzoomed(_effects.CurrentFor(_deviceName));
                 Sleep(needed ? RetryDelay : Timeout.InfiniteTimeSpan);
@@ -118,6 +123,11 @@ internal sealed class MonitorRenderer : IDisposable
         var frames = 0;
         var lastFrame = Stopwatch.GetTimestamp();
         var secondStart = lastFrame;
+
+        // Measurements (RenderMetrics): when the thread woke up without a visible overlay, and
+        // when the last frame was presented (0 = none since waking).
+        var wokeAt = lastFrame;
+        var lastPresented = 0L;
 
         while (!_stopRequested)
         {
@@ -141,6 +151,8 @@ internal sealed class MonitorRenderer : IDisposable
                 Sleep(Timeout.InfiniteTimeSpan);
                 lastFrame = Stopwatch.GetTimestamp();
                 secondStart = lastFrame;
+                wokeAt = lastFrame;
+                lastPresented = 0;
                 frames = 0;
                 continue;
             }
@@ -154,9 +166,25 @@ internal sealed class MonitorRenderer : IDisposable
             var mode = unzoomed ? ZoomMode.Fullscreen : _model.Mode;
             var request = new FrameRequest(mode, animator.Current, _model.Lens, _model.Dock, effects,
                 _effects.LocateRequestedAt, _tracking.Snapshot, _tracking.Options, _effects.PointerHiddenByTyping);
+            var wasVisible = session.IsVisible;
             if (session.RenderFrame(request))
             {
                 frames++;
+                var presented = Stopwatch.GetTimestamp();
+                if (lastPresented != 0)
+                {
+                    _metrics.FramePresented(Stopwatch.GetElapsedTime(lastPresented, presented).TotalMilliseconds);
+                }
+
+                lastPresented = presented;
+                if (!wasVisible && session.IsVisible)
+                {
+                    _metrics.Shown(Stopwatch.GetElapsedTime(wokeAt, presented).TotalMilliseconds);
+                }
+            }
+            else
+            {
+                _metrics.FrameMissed();
             }
 
             // Status is published once per second; the per-frame path stays lock-free.
@@ -166,6 +194,22 @@ internal sealed class MonitorRenderer : IDisposable
                 frames = 0;
                 secondStart = Stopwatch.GetTimestamp();
             }
+        }
+    }
+
+    /// <summary>Builds device, duplication and overlay as the operation "zoomin.render.pipeline_start".</summary>
+    private RenderSession StartSession()
+    {
+        using var operation = Telemetry.Source.StartActivity("zoomin.render.pipeline_start")?.SetTag(RenderMetrics.MonitorTag, _deviceName);
+        try
+        {
+            return new RenderSession(_pointer, _deviceName);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // The type, not the message: driver messages may name paths.
+            operation?.SetStatus(ActivityStatusCode.Error, ex.GetType().Name);
+            throw;
         }
     }
 

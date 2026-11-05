@@ -86,9 +86,19 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.update.run`, `zoomin.elevated.run`, `zoomin.uninstall.run` | jeweilige Rolle | ganzer Lauf; Exit-Code ≠ 0 → Status Error |
 | `zoomin.setup.install` | setup | Installation im Assistenten (Tag `zoomin.version`) |
 | `zoomin.setup.apply` | setup | Installationsschritt mit Adminrechten |
+| `zoomin.render.pipeline_start` | app, secure | Aufbau von Gerät, Duplication und Overlay je Monitor (Tag `zoomin.monitor`; Fehler: Ausnahmetyp) |
+| `zoomin.render.rebuild` | app, secure | Neuaufbau aller Renderer, z. B. nach Anzeigeänderung (Tag `zoomin.monitors`) |
 
 ## Katalog: Messwerte
-Noch keine (kommen in M11 Schritt 2: Frame-Zeit, verpasste Frames, Caret-Quellen …).
+Nur mit Export-Adresse und Stufe „Ausführlich“/„Benutzerdefiniert + Messwerte“. Im Render-Loop
+ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
+
+| Name | Einheit | Tags | Bedeutung |
+|---|---|---|---|
+| `zoomin.render.frame_interval` | ms | `zoomin.monitor` | Abstand zwischen zwei gezeigten Frames; Ausreißer = Ruckler |
+| `zoomin.render.frames_missed` | Frames | `zoomin.monitor` | Compositor hat keinen Frame rechtzeitig (100 ms) angefordert |
+| `zoomin.render.show_latency` | ms | `zoomin.monitor` | Aufwachen (Zoom/Filter an) bis erster sichtbarer Frame |
+| `zoomin.render.pipeline_restarts` | Neustarts | `zoomin.monitor`, `zoomin.reason` (`failure`, `display_changed`) | Pipeline neu aufgebaut |
 
 ## Katalog: Logmeldungen
 | Id | Stufe | Meldung |
