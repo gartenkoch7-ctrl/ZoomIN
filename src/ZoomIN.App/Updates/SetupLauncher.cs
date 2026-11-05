@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Updates;
+using ZoomIN.Platform.Updates;
 
 namespace ZoomIN.App.Updates;
 
@@ -29,6 +30,14 @@ public sealed class SetupLauncher
     }
 
     public async Task<SetupLaunch> LaunchAsync(IProgress<double>? progress, CancellationToken cancellationToken)
+    {
+        // The setup started here continues this operation (--traceparent).
+        using var operation = UpdateTelemetry.Start("zoomin.setup.launch");
+        var launch = await LaunchSetupAsync(progress, cancellationToken).ConfigureAwait(false);
+        return operation.Finish(launch, launch == SetupLaunch.Started);
+    }
+
+    private async Task<SetupLaunch> LaunchSetupAsync(IProgress<double>? progress, CancellationToken cancellationToken)
     {
         try
         {

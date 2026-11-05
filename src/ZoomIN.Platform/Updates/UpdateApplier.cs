@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
+using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Updates;
 
 namespace ZoomIN.Platform.Updates;
@@ -25,6 +26,13 @@ public sealed class UpdateApplier
     {
         ArgumentNullException.ThrowIfNull(layout);
         ArgumentNullException.ThrowIfNull(command);
+        using var operation = UpdateTelemetry.Start("zoomin.update.apply", command.Version);
+        var result = ApplyPackage(layout, command);
+        return operation.Finish(result, UpdateTelemetry.Succeeded(result));
+    }
+
+    private UpdateResult ApplyPackage(InstallLayout layout, UpdateCommand command)
+    {
         var previous = ActiveVersion(layout);
         if (previous == command.Version)
         {
@@ -47,7 +55,7 @@ public sealed class UpdateApplier
             }
 
             ZipFile.ExtractToDirectory(package, staging);
-            if (_verifier.Verify(Path.Combine(staging, InstallLayout.ExecutableName)) != PackageCheck.Ok)
+            if (Verify(Path.Combine(staging, InstallLayout.ExecutableName)) != PackageCheck.Ok)
             {
                 return result = UpdateResult.SignatureRejected;
             }
@@ -82,6 +90,13 @@ public sealed class UpdateApplier
         return target is not null && InstallLayout.TryParseFolder(Path.GetFileName(Path.TrimEndingDirectorySeparator(target)), out var version)
             ? version
             : null;
+    }
+
+    private PackageCheck Verify(string executable)
+    {
+        using var operation = Telemetry.Source.StartActivity("zoomin.update.verify");
+        var check = _verifier.Verify(executable);
+        return operation.Finish(check, check == PackageCheck.Ok);
     }
 
     private static bool HashMatches(string path, string expectedHex)

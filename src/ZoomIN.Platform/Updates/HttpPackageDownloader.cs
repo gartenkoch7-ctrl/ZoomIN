@@ -47,6 +47,15 @@ public sealed class HttpPackageDownloader : IPackageDownloader
     private async Task<PackageDownload> DownloadAssetAsync(
         ReleaseInfo release, string name, Uri url, string directory, IProgress<double>? progress, CancellationToken cancellationToken)
     {
+        using var operation = UpdateTelemetry.Start("zoomin.update.download", release.Version)?.SetTag("zoomin.package", name);
+        var download = await DownloadAndCheckAsync(release, name, url, directory, progress, cancellationToken).ConfigureAwait(false);
+        operation.Finish(download.Result, download.Result == PackageCheck.Ok);
+        return download;
+    }
+
+    private async Task<PackageDownload> DownloadAndCheckAsync(
+        ReleaseInfo release, string name, Uri url, string directory, IProgress<double>? progress, CancellationToken cancellationToken)
+    {
         var target = Path.Combine(directory, name);
         var partial = target + ".partial";
         try
