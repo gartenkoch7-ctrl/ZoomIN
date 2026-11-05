@@ -23,6 +23,40 @@
             <c:SettingCard Description="{x:Bind loc:Text.Get('GeneralSecureDesktop.Desc')}" Glyph="&#xE72E;" Header="{x:Bind loc:Text.Get('GeneralSecureDesktop')}">
                 <ToggleSwitch IsEnabled="{x:Bind Vm.SecureDesktopAvailable}" IsOn="{x:Bind Vm.SecureDesktop, Mode=TwoWay}" />
             </c:SettingCard>
+
+            <!-- Diagnostics (M11, ADR-0019) -->
+            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('Diag.Group')}" />
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Diag.Level.Desc')}" Glyph="&#xE9D9;" Header="{x:Bind loc:Text.Get('Diag.Level')}">
+                <ComboBox MinWidth="220" ItemsSource="{x:Bind Diag.Levels}" SelectedIndex="{x:Bind Diag.LevelIndex, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Diag.Logs.Desc')}" Glyph="&#xE8A5;" Header="{x:Bind loc:Text.Get('Diag.Logs')}" Visibility="{x:Bind Diag.IsCustom, Mode=OneWay}">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <ComboBox MinWidth="180" AutomationProperties.Name="{x:Bind loc:Text.Get('Diag.Logs')}" IsEnabled="{x:Bind Diag.Logs, Mode=OneWay}" ItemsSource="{x:Bind Diag.LogLevels}" SelectedIndex="{x:Bind Diag.LogLevelIndex, Mode=TwoWay}" />
+                    <ToggleSwitch IsOn="{x:Bind Diag.Logs, Mode=TwoWay}" />
+                </StackPanel>
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Diag.Traces.Desc')}" Glyph="&#xE81C;" Header="{x:Bind loc:Text.Get('Diag.Traces')}" Visibility="{x:Bind Diag.IsCustom, Mode=OneWay}">
+                <ToggleSwitch IsOn="{x:Bind Diag.Traces, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Diag.Metrics.Desc')}" Glyph="&#xE9D2;" Header="{x:Bind loc:Text.Get('Diag.Metrics')}" Visibility="{x:Bind Diag.IsCustom, Mode=OneWay}">
+                <ToggleSwitch IsOn="{x:Bind Diag.Metrics, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Diag.Retention.Desc')}" Glyph="&#xE81C;" Header="{x:Bind loc:Text.Get('Diag.Retention')}">
+                <ComboBox MinWidth="140" ItemsSource="{x:Bind Diag.RetentionChoices}" SelectedIndex="{x:Bind Diag.RetentionIndex, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind Diag.RaisedText, Mode=OneWay}" Glyph="&#xE823;" Header="{x:Bind loc:Text.Get('Diag.Raised')}" Visibility="{x:Bind Diag.IsRaised, Mode=OneWay}">
+                <Button Click="{x:Bind Diag.ResetRaised}" Content="{x:Bind loc:Text.Get('Diag.Reset')}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Diag.Export.Desc')}" Glyph="&#xE898;" Header="{x:Bind loc:Text.Get('Diag.Export')}">
+                <TextBox MinWidth="260" AutomationProperties.Name="{x:Bind loc:Text.Get('Diag.Export')}" PlaceholderText="{x:Bind loc:Text.Get('Diag.Export.Placeholder')}" Text="{x:Bind Diag.Endpoint, Mode=TwoWay}" />
+            </c:SettingCard>
+            <InfoBar IsClosable="False" IsOpen="{x:Bind Diag.HasEndpointWarning, Mode=OneWay}" Message="{x:Bind Diag.EndpointWarning, Mode=OneWay}" Severity="Warning" />
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Diag.Package.Desc')}" Glyph="&#xE8B7;" Header="{x:Bind loc:Text.Get('Diag.Package')}">
+                <StackPanel HorizontalAlignment="Right" Spacing="4">
+                    <Button HorizontalAlignment="Right" Click="{x:Bind Diag.CreatePackage}" Content="{x:Bind loc:Text.Get('Diag.Create')}" IsEnabled="{x:Bind Diag.CanCreatePackage, Mode=OneWay}" />
+                    <TextBlock MaxWidth="320" HorizontalAlignment="Right" AutomationProperties.LiveSetting="Polite" Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind Diag.PackageStatus, Mode=OneWay}" TextWrapping="Wrap" />
+                </StackPanel>
+            </c:SettingCard>
         </StackPanel>
     </ScrollViewer>
 </Page>

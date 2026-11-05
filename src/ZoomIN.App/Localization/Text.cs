@@ -9,8 +9,8 @@ namespace ZoomIN.App.Localization;
 /// </summary>
 public static class Text
 {
-    private static readonly IReadOnlyDictionary<string, string> s_german = Merge(TextsGerman.All, TextsGermanCards.All, TextsGermanUpdates.All);
-    private static readonly IReadOnlyDictionary<string, string> s_english = Merge(TextsEnglish.All, TextsEnglishCards.All, TextsEnglishUpdates.All);
+    private static readonly IReadOnlyDictionary<string, string> s_german = Merge(TextsGerman.All, TextsGermanCards.All, TextsGermanUpdates.All, TextsGermanDiagnostics.All);
+    private static readonly IReadOnlyDictionary<string, string> s_english = Merge(TextsEnglish.All, TextsEnglishCards.All, TextsEnglishUpdates.All, TextsEnglishDiagnostics.All);
     private static IReadOnlyDictionary<string, string> s_current = s_english;
 
     public static event Action? LanguageChanged;

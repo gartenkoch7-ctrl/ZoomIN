@@ -1,0 +1,44 @@
+namespace ZoomIN.App.Localization;
+
+/// <summary>English texts of the diagnostics section (M11, ADR-0019).</summary>
+internal static class TextsEnglishDiagnostics
+{
+    public static IReadOnlyDictionary<string, string> All { get; } = new Dictionary<string, string>
+    {
+        ["Diag.Group"] = "Diagnostics",
+        ["Diag.Level"] = "Recording",
+        ["Diag.Level.Desc"] = "What ZoomIN records about itself so problems can be found. Errors and crashes are always recorded, window titles, text and file paths never. Everything stays on this PC.",
+        ["Diag.ErrorsOnly"] = "Errors only",
+        ["Diag.Normal"] = "Normal (recommended)",
+        ["Diag.Verbose"] = "Detailed",
+        ["Diag.Custom"] = "Custom",
+        ["Diag.Logs"] = "Messages",
+        ["Diag.Logs.Desc"] = "Warnings, notes and details from the chosen level on. Errors are always in the log.",
+        ["Diag.FromError"] = "Errors",
+        ["Diag.FromWarning"] = "Warnings and up",
+        ["Diag.FromInfo"] = "Notes and up",
+        ["Diag.FromDebug"] = "Everything (details)",
+        ["Diag.Traces"] = "Operations",
+        ["Diag.Traces.Desc"] = "Duration and result of operations such as start, update or a monitor change.",
+        ["Diag.Metrics"] = "Measurements",
+        ["Diag.Metrics.Desc"] = "Frame rate, missed frames, focus tracking time. Only with an export address.",
+        ["Diag.Retention"] = "Keep for",
+        ["Diag.Retention.Desc"] = "How long logs stay on this PC. More than one day lasts for seven days.",
+        ["Diag.Day"] = "1 day",
+        ["Diag.Days"] = "{0} days",
+        ["Diag.Raised"] = "Raised recording",
+        ["Diag.Raised.Desc"] = "Until {0}. Then back to \"Normal\" and 1 day.",
+        ["Diag.Reset"] = "Reset now",
+        ["Diag.Export"] = "Export to a collector",
+        ["Diag.Export.Desc"] = "OTLP address, for example http://localhost:4317 for a dashboard on this PC. Empty: nothing leaves this PC.",
+        ["Diag.Export.Placeholder"] = "Empty: no export",
+        ["Diag.Export.Remote"] = "This address is not on this PC: logs and operations are sent over the network.",
+        ["Diag.Export.Invalid"] = "Not a valid address. It starts with http:// or https://.",
+        ["Diag.Package"] = "Diagnostics package",
+        ["Diag.Package.Desc"] = "Packs the kept logs and operations into a ZIP file for a bug report. Without settings, window titles or text.",
+        ["Diag.Create"] = "Create",
+        ["Diag.Creating"] = "Creating …",
+        ["Diag.Created"] = "Saved: {0}",
+        ["Diag.CreateFailed"] = "The package could not be created.",
+    };
+}

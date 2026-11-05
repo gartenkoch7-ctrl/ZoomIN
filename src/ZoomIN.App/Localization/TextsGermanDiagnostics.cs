@@ -1,0 +1,44 @@
+namespace ZoomIN.App.Localization;
+
+/// <summary>German texts of the diagnostics section (M11, ADR-0019).</summary>
+internal static class TextsGermanDiagnostics
+{
+    public static IReadOnlyDictionary<string, string> All { get; } = new Dictionary<string, string>
+    {
+        ["Diag.Group"] = "Diagnose",
+        ["Diag.Level"] = "Aufzeichnung",
+        ["Diag.Level.Desc"] = "Was ZoomIN über sich selbst festhält, damit Fehler gefunden werden können. Fehler und Abstürze werden immer aufgezeichnet, Fenstertitel, Texte und Dateipfade nie. Alles bleibt auf diesem PC.",
+        ["Diag.ErrorsOnly"] = "Nur Fehler",
+        ["Diag.Normal"] = "Normal (empfohlen)",
+        ["Diag.Verbose"] = "Ausführlich",
+        ["Diag.Custom"] = "Benutzerdefiniert",
+        ["Diag.Logs"] = "Meldungen",
+        ["Diag.Logs.Desc"] = "Warnungen, Hinweise und Details ab der gewählten Stufe. Fehler stehen immer im Protokoll.",
+        ["Diag.FromError"] = "Ab Fehler",
+        ["Diag.FromWarning"] = "Ab Warnung",
+        ["Diag.FromInfo"] = "Ab Hinweis",
+        ["Diag.FromDebug"] = "Alles (Details)",
+        ["Diag.Traces"] = "Abläufe",
+        ["Diag.Traces.Desc"] = "Dauer und Ergebnis von Vorgängen wie Start, Update oder Monitorwechsel.",
+        ["Diag.Metrics"] = "Messwerte",
+        ["Diag.Metrics.Desc"] = "Bildrate, verpasste Bilder, Dauer der Fokusverfolgung. Nur mit einer Export-Adresse.",
+        ["Diag.Retention"] = "Aufbewahrung",
+        ["Diag.Retention.Desc"] = "So lange bleiben Protokolle auf diesem PC. Mehr als ein Tag gilt sieben Tage lang.",
+        ["Diag.Day"] = "1 Tag",
+        ["Diag.Days"] = "{0} Tage",
+        ["Diag.Raised"] = "Erhöhte Aufzeichnung",
+        ["Diag.Raised.Desc"] = "Gilt bis {0}. Danach wieder „Normal“ und 1 Tag.",
+        ["Diag.Reset"] = "Jetzt zurücksetzen",
+        ["Diag.Export"] = "Export an einen Collector",
+        ["Diag.Export.Desc"] = "OTLP-Adresse, zum Beispiel http://localhost:4317 für ein Dashboard auf diesem PC. Leer: nichts verlässt diesen PC.",
+        ["Diag.Export.Placeholder"] = "Leer: kein Export",
+        ["Diag.Export.Remote"] = "Diese Adresse liegt nicht auf diesem PC: Protokolle und Abläufe werden über das Netzwerk gesendet.",
+        ["Diag.Export.Invalid"] = "Keine gültige Adresse. Sie beginnt mit http:// oder https://.",
+        ["Diag.Package"] = "Diagnosepaket",
+        ["Diag.Package.Desc"] = "Packt die aufbewahrten Protokolle und Abläufe in eine ZIP-Datei für einen Fehlerbericht. Ohne Einstellungen, Fenstertitel oder Texte.",
+        ["Diag.Create"] = "Erstellen",
+        ["Diag.Creating"] = "Wird erstellt …",
+        ["Diag.Created"] = "Gespeichert: {0}",
+        ["Diag.CreateFailed"] = "Das Paket konnte nicht erstellt werden.",
+    };
+}

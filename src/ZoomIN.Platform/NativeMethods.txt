@@ -154,3 +154,8 @@ FindWindowEx
 GetAncestor
 GetForegroundWindow
 GetWindowThreadProcessId
+
+// Shell/FileReveal
+SHParseDisplayName
+SHOpenFolderAndSelectItems
+ILFree

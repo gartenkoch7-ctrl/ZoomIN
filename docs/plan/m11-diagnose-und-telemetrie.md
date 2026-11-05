@@ -78,12 +78,21 @@ antwortet. Auf „Diagnose“ → „Diagnosepaket erstellen“ → ZIP mit Logs
 - [ ] Sichttest: einmal „Ausführlich“ + lokaler Collector (Aspire Dashboard) und Update-Trace ansehen
 
 ### 3 · Diagnose-Seite und Diagnosepaket
-- [ ] Karte „Diagnose“ unter „Allgemein“: Stufen-Auswahl, bei „Benutzerdefiniert“ Schalter
-      Logs/Abläufe/Metriken + Log-Stufe, Hinweis „Fehler werden immer aufgezeichnet“,
-      Aufbewahrung 1–7 Tage, „Erhöht bis …“, OTLP-Adresse mit Warnhinweis außerhalb des PCs
-- [ ] Knopf „Diagnosepaket erstellen“: ZIP aus Logs und Abläufen der aufbewahrten Tage plus
-      Versions-/Systeminfo; Ordner öffnen
-- [ ] Texte Deutsch/Englisch, vollständig per Tastatur und Bildschirmleser bedienbar
+- [x] Abschnitt „Diagnose“ unter „Allgemein“ (`DiagnosticsViewModel`): Stufe, bei „Benutzerdefiniert“
+      Meldungen + Stufe / Abläufe / Messwerte, Hinweis „Fehler immer, Inhalte nie“, Aufbewahrung
+      1–7 Tage, Karte „Erhöht bis …“ mit „Jetzt zurücksetzen“, Export-Adresse mit Warnhinweis
+      außerhalb des PCs bzw. bei ungültiger Adresse (`TelemetryEndpoint`). Wirkt sofort
+      (`SettingsService.Changed` → `TelemetryHost.Apply`, das unveränderte Optionen überspringt)
+- [x] „Diagnosepaket erstellen“ (`DiagnosticsPackage`): ZIP der aufbewahrten Dateien + Info
+      (Version, Windows, Stufe, „Export-Adresse gesetzt“ ohne Adresse), die letzten 3 bleiben;
+      Explorer markiert die Datei über `SHOpenFolderAndSelectItems` (`FileReveal`)
+- [x] Texte Deutsch/Englisch (35 Schlüssel), Bildschirmleser-Namen per UIA geprüft. Dabei
+      behoben: Knöpfe in `SettingCard` hießen wie der Kartentitel statt nach ihrer Aktion
+      (betraf auch Farbfilter/Mauszeiger „Zurücksetzen“, Info „Log-Ordner öffnen“, Suchhilfe-Test)
+- [x] Sichttest 2026-11-05 (Entwicklungsversion): Karten, Umschalten, Warnhinweis, Zurücksetzen,
+      Paket. Explorer konnte den Paketordner in der Testumgebung nicht öffnen (abgeschottete
+      Umgebung des Agents, Systemordner gingen) – auf einem normalen Start erneut prüfen
+- [ ] Mit Bildschirmleser (NVDA) einmal komplett durchgehen
 
 ## Akzeptanzkriterien
 - [ ] Ohne eingetragene Adresse verlässt kein Byte den PC (Netzwerkmitschnitt beim Start/Update)
