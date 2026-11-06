@@ -116,6 +116,49 @@ public sealed class TitleBarTests
     }
 
     [Fact]
+    public void WithOneSlotLeft_TheWindowGetsIt_NotItsTitleBar()
+    {
+        // 1 + 31 × 2 = 63 regions, then one slot for the next window.
+        var windows = Enumerable.Range(0, 40)
+            .Select(i => Window(WindowBrightness.Light, i == 0 ? WindowBrightness.Light : WindowBrightness.Dark)
+                with { Handle = i + 1, Bounds = new PhysicalRect(i * 10, 0, 900, 700) })
+            .ToList();
+
+        var regions = WindowLayout.Build(windows, WindowFilterOptions.Default);
+
+        Assert.Equal(WindowRegions.Max, regions.Count);
+        Assert.Equal(700, regions.Rects[WindowRegions.Max - 1].Height);
+        Assert.Equal(s_inverted, regions.Palette[WindowRegions.Max - 1]);
+        Assert.Equal(1 + 78 - WindowRegions.Max, regions.Dropped);
+    }
+
+    [Fact]
+    public void FixedFilter_StillLooksAtTheTitleBar()
+    {
+        // Also after the shortcut: the window is not measured, but without its title bar a dark
+        // one would be inverted with it after a restart.
+        var options = WindowFilterOptions.Default.WithRule(WindowFilterRule.For(s_settings, WindowFilterChoice.Filter));
+
+        Assert.False(WindowFilterResolver.NeedsMeasurement(s_settings, WindowRole.Normal, options));
+        Assert.True(TitleBarResolver.NeedsMeasurement(s_settings, WindowRole.Normal, options));
+        Assert.False(TitleBarResolver.NeedsMeasurement(s_settings, WindowRole.Popup, options));
+        Assert.False(TitleBarResolver.NeedsMeasurement(s_settings, WindowRole.Normal, options with { Enabled = false }));
+        Assert.False(TitleBarResolver.NeedsMeasurement(s_terminal, WindowRole.Normal, options));
+    }
+
+    [Fact]
+    public void FixedFilter_WithMeasuredDarkTitleBar_KeepsItDark()
+    {
+        var options = WindowFilterOptions.Default.WithRule(WindowFilterRule.For(s_settings, WindowFilterChoice.Filter));
+
+        var regions = WindowLayout.Build([Window(WindowBrightness.Dark, WindowBrightness.Dark)], options);
+
+        Assert.Equal(2, regions.Count);
+        Assert.Equal(WindowPalette.Monitor, regions.Palette[0]);
+        Assert.Equal(s_inverted, regions.Palette[1]);
+    }
+
+    [Fact]
     public void Area_IsTheTopStripOfTheFrame()
     {
         Assert.Equal(new PhysicalRect(100, 50, 900, 32), TitleBarResolver.Area(s_bounds, TitleBar));

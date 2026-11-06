@@ -1,7 +1,7 @@
-using System.Drawing;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.Graphics.Dwm;
+using Windows.Win32.UI.WindowsAndMessaging;
 using ZoomIN.Core.Viewport;
 
 namespace ZoomIN.Platform.WindowFilters;
@@ -17,10 +17,13 @@ internal static unsafe class TitleBarReader
     // (e.g. a tiny window), and the whole window is measured as before.
     private const int MaxShareDivisor = 3;
 
+    // STATE_SYSTEM_INVISIBLE in TITLEBARINFO.rgstate[0]: the window has no title bar.
+    private const uint StateSystemInvisible = 0x8000;
+
     /// <summary>Title bar height in physical pixels from the top of <paramref name="bounds"/>; 0 if none was found.</summary>
     public static int HeightOf(HWND hwnd, PhysicalRect bounds)
     {
-        var bottom = CaptionButtonsBottom(hwnd) ?? ClientTop(hwnd);
+        var bottom = CaptionButtonsBottom(hwnd) ?? SystemTitleBarBottom(hwnd);
         if (bottom is not { } y)
         {
             return 0;
@@ -43,10 +46,17 @@ internal static unsafe class TitleBarReader
         return window.top + buttons.bottom;
     }
 
-    // Classic windows: the system title bar ends where the client area begins.
-    private static double? ClientTop(HWND hwnd)
+    // Classic windows: the system title bar itself. Not the top of the client area – a menu bar
+    // lies in between and would be counted (and left unfiltered) as part of the title bar.
+    private static double? SystemTitleBarBottom(HWND hwnd)
     {
-        var origin = new Point(0, 0);
-        return PInvoke.ClientToScreen(hwnd, ref origin) ? origin.Y : null;
+        var info = new TITLEBARINFO { cbSize = (uint)sizeof(TITLEBARINFO) };
+        if (!PInvoke.GetTitleBarInfo(hwnd, ref info) || (info.rgstate[0] & StateSystemInvisible) != 0
+            || info.rcTitleBar.bottom <= info.rcTitleBar.top)
+        {
+            return null;
+        }
+
+        return info.rcTitleBar.bottom;
     }
 }

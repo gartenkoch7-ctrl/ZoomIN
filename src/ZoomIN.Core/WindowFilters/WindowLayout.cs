@@ -71,28 +71,28 @@ public static class WindowLayout
         var taken = Math.Min(needed, WindowRegions.Max);
         var rects = new PhysicalRect[taken];
         var indexes = new byte[taken];
-        for (int i = 0, n = 0; i < count && n < taken; i++)
+        var n = 0;
+        for (var i = 0; i < count && n < taken; i++)
         {
             if (!keep[i])
             {
                 continue;
             }
 
-            if (HasOwnTitleBar(titleBars, i))
+            // A title bar strip alone would only show the monitor filter, which is the fallback
+            // anyway: with one slot left, the window itself is worth more.
+            if (HasOwnTitleBar(titleBars, i) && n + 2 <= taken)
             {
                 rects[n] = TitleBarResolver.Area(frontToBack[i]);
                 indexes[n++] = titleBars![i];
-                if (n == taken)
-                {
-                    break;
-                }
             }
 
             rects[n] = frontToBack[i].Bounds;
             indexes[n++] = palette[i];
         }
 
-        return new WindowRegions(rects, indexes, needed - taken);
+        // Always full: a title bar is only skipped for the very last slot, which its window takes.
+        return new WindowRegions(rects, indexes, needed - n);
     }
 
     /// <summary>Palette index per window; popups take their owner's, or the app window's below them.</summary>

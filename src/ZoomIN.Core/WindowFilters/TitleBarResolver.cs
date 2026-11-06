@@ -43,6 +43,15 @@ public static class TitleBarResolver
         };
     }
 
+    /// <summary>
+    /// A window with a fixed filter of the user (also from the shortcut) needs no look for itself,
+    /// but its title bar does: without one, "automatic" would invert a dark title bar after a
+    /// restart. Looked at whatever the title bar choice is, so changing it later works at once.
+    /// </summary>
+    public static bool NeedsMeasurement(WindowKind kind, WindowRole role, WindowFilterOptions options) =>
+        options.Enabled && role == WindowRole.Normal
+        && WindowFilterResolver.ChoiceFor(kind, role, options, out _) == WindowFilterChoice.Filter;
+
     /// <summary>The user's title bar choice for app + window class; automatic without a rule.</summary>
     public static WindowTitleBarChoice ChoiceFor(WindowKind kind, WindowFilterOptions options) =>
         options.RuleFor(kind)?.TitleBar ?? WindowTitleBarChoice.Automatic;

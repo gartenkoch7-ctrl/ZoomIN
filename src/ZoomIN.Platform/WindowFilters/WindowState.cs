@@ -1,4 +1,5 @@
 using Windows.Win32.Foundation;
+using ZoomIN.Core.Viewport;
 using ZoomIN.Core.WindowFilters;
 
 namespace ZoomIN.Platform.WindowFilters;
@@ -6,8 +7,9 @@ namespace ZoomIN.Platform.WindowFilters;
 /// <summary>What the tracker knows about one window, from its first appearance until it closes.</summary>
 internal sealed class WindowState(WindowKind kind, WindowRole role, bool ignored)
 {
-    private double _titleBarWidth = -1;
-    private double _titleBarHeightOf = -1;
+    private double _readWidth = -1;
+    private double _readHeight = -1;
+    private bool _hasCaption;
 
     public WindowKind Kind { get; } = kind;
 
@@ -42,16 +44,34 @@ internal sealed class WindowState(WindowKind kind, WindowRole role, bool ignored
     /// </summary>
     public int TitleBarHeightOf(in RawWindow raw)
     {
-        if (!raw.HasCaption || Role != WindowRole.Normal)
+        _hasCaption = raw.HasCaption && Role == WindowRole.Normal;
+        if (!_hasCaption)
         {
+            // Forget the size, so a caption added later is read even at the same size.
+            _readWidth = -1;
+            TitleBarHeight = 0;
             return 0;
         }
 
-        if (raw.Bounds.Width != _titleBarWidth || raw.Bounds.Height != _titleBarHeightOf)
+        if (raw.Bounds.Width != _readWidth || raw.Bounds.Height != _readHeight)
         {
-            _titleBarWidth = raw.Bounds.Width;
-            _titleBarHeightOf = raw.Bounds.Height;
+            _readWidth = raw.Bounds.Width;
+            _readHeight = raw.Bounds.Height;
             TitleBarHeight = TitleBarReader.HeightOf((HWND)raw.Handle, raw.Bounds);
+        }
+
+        return TitleBarHeight;
+    }
+
+    /// <summary>
+    /// Reads the title bar height again right before a look: when a window is shown, DWM may not
+    /// know its caption buttons yet, and a reading of 0 would otherwise stick until it is resized.
+    /// </summary>
+    public int TitleBarHeightForLook(nint handle, PhysicalRect bounds)
+    {
+        if (_hasCaption)
+        {
+            TitleBarHeight = TitleBarReader.HeightOf((HWND)handle, bounds);
         }
 
         return TitleBarHeight;

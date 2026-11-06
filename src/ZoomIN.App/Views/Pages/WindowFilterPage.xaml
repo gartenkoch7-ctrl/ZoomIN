@@ -50,6 +50,7 @@
                                     MinWidth="220"
                                     AutomationProperties.Name="{x:Bind TitleBarName}"
                                     Header="{x:Bind loc:Text.Get('WinFilter.TitleBar')}"
+                                    IsEnabled="{x:Bind TitleBarEnabled, Mode=OneWay}"
                                     ItemsSource="{x:Bind TitleBarChoices}"
                                     SelectedIndex="{x:Bind TitleBarIndex, Mode=TwoWay}" />
                                 <Button

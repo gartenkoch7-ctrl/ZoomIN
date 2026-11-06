@@ -41,6 +41,8 @@ IUIAutomationElement
 GetGUIThreadInfo
 GUITHREADINFO
 ClientToScreen
+GetTitleBarInfo
+TITLEBARINFO
 GetWindowDpiAwarenessContext
 SetThreadDpiAwarenessContext
 LogicalToPhysicalPointForPerMonitorDPI

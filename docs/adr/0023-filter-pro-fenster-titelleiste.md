@@ -13,9 +13,11 @@ Titelleiste wird hell und blendet). Entscheidung des Nutzers 2026-11-06: „Eige
 
 ## Entscheidung
 1. **Höhe der Titelleiste** (`TitleBarReader`): Unterkante der DWM-Titelleistenknöpfe
-   (`DWMWA_CAPTION_BUTTON_BOUNDS`, findet auch Titelleisten im Client-Bereich), sonst Oberkante des
-   Client-Bereichs (`ClientToScreen`). Nur normale Fenster mit `WS_CAPTION`; mehr als ⅓ der
-   Fensterhöhe gilt als Fehlmessung (0). Neu gelesen nur bei geänderter Fenstergröße.
+   (`DWMWA_CAPTION_BUTTON_BOUNDS`, findet auch Titelleisten im Client-Bereich), sonst Unterkante der
+   System-Titelleiste (`GetTitleBarInfo`; nicht die Oberkante des Client-Bereichs, sonst zählte eine
+   Menüleiste mit). Nur normale Fenster mit `WS_CAPTION`; mehr als ⅓ der Fensterhöhe gilt als
+   Fehlmessung (0). Neu gelesen bei geänderter Fenstergröße und vor jedem Blick (beim Zeigen kennt
+   DWM die Knöpfe evtl. noch nicht).
 2. **Ein Blick, zwei Ergebnisse:** das Fenster wird wie bisher mit **einem** `StretchBlt` kopiert, aber
    in 64×256 statt 64×64 Pixel, damit die Titelleiste (~30 px) mehrere eigene Zeilen behält
    (`BrightnessMeter.IsLightApart`; eine von der Kante geschnittene Zeile zählt zu keinem Teil). Ein
@@ -35,8 +37,9 @@ Titelleiste wird hell und blendet). Entscheidung des Nutzers 2026-11-06: „Eige
 ## Konsequenzen
 - ✅ Eine dunkle Titelleiste macht eine helle Seite nicht mehr „dunkel“ und blendet nicht nach dem Invertieren.
 - ✅ Settings bleiben kompatibel: ohne `TitleBar` im JSON gilt „Automatisch“.
-- ⚠️ Fenster mit festem Filter des Nutzers werden nicht gemessen; ihre Titelleiste folgt dem Fenster,
-  außer „Nie filtern“ ist gewählt.
+- ✅ Fenster mit festem Filter des Nutzers (auch per Kürzel) werden trotzdem angeschaut – nur wegen
+  der Titelleiste, die Seite entscheidet die Regel. Sonst würde eine dunkle Titelleiste nach einem
+  Neustart wieder mitinvertiert.
 - ⚠️ Apps mit eigener Titelleiste ohne DWM-Knöpfe (z. B. manche Electron-Apps ohne `WS_CAPTION`)
   haben keine erkannte Titelleiste – dann hilft nur die Einstellung von Hand für das ganze Fenster.
 - ⚠️ Sichtprüfung durch einen Menschen nötig (Overlay nicht in Screenshots).

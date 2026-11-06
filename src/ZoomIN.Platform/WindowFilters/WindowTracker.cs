@@ -66,7 +66,8 @@ internal sealed class WindowTracker : IDisposable
             }
 
             if (!state.Measuring && state.Brightness == WindowBrightness.Pending
-                && WindowFilterResolver.NeedsMeasurement(state.Kind, state.Role, options))
+                && (WindowFilterResolver.NeedsMeasurement(state.Kind, state.Role, options)
+                    || (raw.HasCaption && TitleBarResolver.NeedsMeasurement(state.Kind, state.Role, options))))
             {
                 state.StartLooks(started);
             }
@@ -123,7 +124,8 @@ internal sealed class WindowTracker : IDisposable
                 // Only the part on some monitor is copied; outside, GDI would deliver black. The
                 // title bar is counted apart, so a dark one does not make a light page dark.
                 var area = all is { } bounds ? RectMath.Intersection(window.Bounds, bounds) : window.Bounds;
-                var titleBarBottom = window.TitleBarHeight > 0 ? window.Bounds.Y + window.TitleBarHeight : double.NegativeInfinity;
+                var titleBarHeight = state.TitleBarHeightForLook(window.Handle, window.Bounds);
+                var titleBarBottom = titleBarHeight > 0 ? window.Bounds.Y + titleBarHeight : double.NegativeInfinity;
                 due.Add(new LookRequest(window.Handle, area, [.. _above], monitors, threshold, titleBarBottom));
             }
 

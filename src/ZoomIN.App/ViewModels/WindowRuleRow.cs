@@ -68,8 +68,12 @@ public sealed partial class WindowRuleRow : ObservableObject
     public static IReadOnlyList<string> AllTitleBarChoices() =>
         [.. Enum.GetValues<WindowTitleBarChoice>().Select(c => Text.Get("WinFilter.TitleBar." + c))];
 
+    /// <summary>With "None" the title bar keeps its original colours too, so its choice has no effect.</summary>
+    public bool TitleBarEnabled => ChoiceIndex != 1;
+
     partial void OnChoiceIndexChanged(int value)
     {
+        OnPropertyChanged(nameof(TitleBarEnabled));
         if (!_loading && value >= 0)
         {
             _changed(this);
