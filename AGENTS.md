@@ -186,3 +186,19 @@ git config core.hooksPath .githooks           # Pre-Commit-Hook aktivieren (einm
    (Build, Tests und `check-file-length.ps1` vorher grün, siehe Abschnitt 8).
 4. **Push** auf den eigenen Feature-Branch ist danach ohne Rückfrage erlaubt.
 5. **Mergen** (in `develop`, `main` oder per PR) nur mit ausdrücklicher Genehmigung des Nutzers.
+
+---
+
+## 10. Selbstständig arbeiten
+
+- **Probleme so weit wie möglich selbst lösen:** reproduzieren, Daten beschaffen (Logs, Traces,
+  Debug-Schnappschuss, Settings), Ursache finden, beheben, testen, prüfen – ohne den Nutzer für
+  Zwischenschritte zu brauchen. Nachfragen nur bei echten Entscheidungen (Produkt, Datenschutz,
+  Grundsatzfragen), nicht für Arbeit, die ein Agent selbst erledigen kann.
+- **Werkzeuge nutzen:** Dateien des installierten ZoomIN (AppData) über das Terminal-Panel in
+  `TestResults/` kopieren; Oberflächen per Computer-Use bedienen, wenn der Nutzer es erlaubt hat.
+- **Adminrechte:** Braucht ein Schritt Administratorrechte (Installation, `Program Files`,
+  Signatur, Dienste), zeigt der Agent den Schritt mit Begründung an, der Nutzer bestätigt ihn
+  (UAC-Abfrage). Nicht darum herumarbeiten und nicht ohne Bestätigung erhöhen.
+- **Was ein Mensch sehen muss** (das Overlay ist aus Aufnahmen ausgenommen): erst den
+  Debug-Schnappschuss nutzen; nur wenn das nicht reicht, den Nutzer um eine Sichtprüfung bitten.

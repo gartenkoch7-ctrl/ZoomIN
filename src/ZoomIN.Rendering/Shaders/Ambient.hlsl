@@ -26,10 +26,6 @@ SamplerState LinearSampler : register(s0);
 #define LIGHT_LOW 0.55
 #define LIGHT_HIGH 0.75
 
-// Share of light samples from which a spot is inverted at all, and fully. Text on a white page
-// keeps a high share; a dark bar with light text a low one.
-#define SHARE_LOW 0.45
-#define SHARE_HIGH 0.75
 
 // Photos: colourful (mean chroma) and detailed (spread of the colours). Grey text on white has
 // spread but no chroma; a flat coloured button has chroma but no spread.
@@ -53,12 +49,15 @@ VertexOutput VSMain(uint id : SV_VertexID)
     return output;
 }
 
-float PSMain(VertexOutput input) : SV_Target
+// x = inversion weight, y = luma of the background there (Magnify.hlsl uses it to keep edges sharp).
+float2 PSMain(VertexOutput input) : SV_Target
 {
     // SV_Position is the texel centre (x + 0.5); scaled, the taps land on pixel corners.
     float2 centre = input.Position.xy * Block;
 
     float light = 0;
+    float lightLuma = 0;
+    float darkLuma = 0;
     float3 sum = 0;
     float sumSquares = 0;
     float chroma = 0;
@@ -70,7 +69,11 @@ float PSMain(VertexOutput input) : SV_Target
         {
             float2 at = centre + (float2(x, y) - (TAPS - 1) * 0.5) * STEP;
             float3 c = Desktop.SampleLevel(LinearSampler, at / TextureSize, 0).rgb;
-            light += smoothstep(LIGHT_LOW, LIGHT_HIGH, dot(c, Luma));
+            float l = dot(c, Luma);
+            float isLight = smoothstep(LIGHT_LOW, LIGHT_HIGH, l);
+            light += isLight;
+            lightLuma += isLight * l;
+            darkLuma += (1 - isLight) * l;
             sum += c;
             sumSquares += dot(c, c);
             chroma += max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
@@ -80,18 +83,29 @@ float PSMain(VertexOutput input) : SV_Target
     const float n = TAPS * TAPS;
     float3 mean = sum / n;
     float detail = sqrt(max(sumSquares / n - dot(mean, mean), 0) / 3);
-    float weight = smoothstep(SHARE_LOW, SHARE_HIGH, light / n);
+
+    // One decision for weight and background: the majority of the samples. Text on a white page keeps
+    // a light majority, a dark bar with light text a dark one. A texel on an edge thus decides for
+    // the side it mostly covers; Magnify.hlsl gives each pixel the texel whose background matches,
+    // so edges stay sharp. A soft share band here left half-inverted grey seams at every edge.
+    bool lightBackground = light >= n * 0.5;
+    float weight = lightBackground ? 1 : 0;
+
+    // Luma of that background: the mean of the majority (light or dark samples), not of everything –
+    // text barely moves it, and a texel on an edge reports the side it decides for.
+    float background = lightBackground ? lightLuma / max(light, 1e-3) : darkLuma / max(n - light, 1e-3);
     if (ProtectPhotos != 0)
     {
         weight *= 1 - smoothstep(CHROMA_LOW, CHROMA_HIGH, chroma / n) * smoothstep(DETAIL_LOW, DETAIL_HIGH, detail);
     }
 
     // After a pause the old texture is stale or never written (may even hold NaN): not read at all.
+    float2 now = float2(weight, background);
     if (Alpha >= 1)
     {
-        return weight;
+        return now;
     }
 
-    float previous = Previous.Load(int3(input.Position.xy, 0)).r;
-    return lerp(previous, weight, Alpha);
+    float2 previous = Previous.Load(int3(input.Position.xy, 0)).rg;
+    return lerp(previous, now, Alpha);
 }

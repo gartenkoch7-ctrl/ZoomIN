@@ -101,6 +101,49 @@ float3 SampleDesktop(float2 uv)
         : Desktop.SampleLevel(PointSampler, uv, 0).rgb;
 }
 
+// How close a pixel's luma must be to a texel's background luma to follow that texel (edge sharpness).
+#define EDGE_SIGMA 0.12
+
+// Desktop pixels per weight texel; must match AmbientPass.Block (checked by a test).
+#define WEIGHT_BLOCK 16.0
+
+// Smart inversion weight at uv, edge-aware (joint bilateral upsampling): of the four nearest weight
+// texels, each counts by its bilinear share AND by how much its background luma matches this pixel. At an
+// edge between a light page and a dark bar, a light pixel follows the light texel and a dark one
+// the dark texel, so no half-inverted grey seam appears there (plain bilinear gave one, 16–32 px wide).
+float SmartWeight(float2 uv, float pixelLuma)
+{
+    uint width, height;
+    Weights.GetDimensions(width, height);
+    float2 size = float2(width, height);
+
+    // Texel i covers desktop pixels [i·BLOCK, (i+1)·BLOCK). Not uv · size: the texture has
+    // ceil(width / BLOCK) texels, so that would drift up to a whole texel across the monitor.
+    float2 texel = uv * TextureSize / WEIGHT_BLOCK - 0.5;
+    int2 base = (int2)floor(texel);
+    float2 f = texel - base;
+
+    float sum = 0;
+    float norm = 0;
+    float plain = 0;
+    [unroll]
+    for (int i = 0; i < 4; i++)
+    {
+        int2 offset = int2(i & 1, i >> 1);
+        int2 at = clamp(base + offset, int2(0, 0), (int2)size - 1);
+        float2 entry = Weights.Load(int3(at, 0)).rg;
+        float share = (offset.x ? f.x : 1 - f.x) * (offset.y ? f.y : 1 - f.y);
+        float distance = (pixelLuma - entry.y) / EDGE_SIGMA;
+        float similar = share * exp(-0.5 * distance * distance);
+        sum += similar * entry.x;
+        norm += similar;
+        plain += share * entry.x;
+    }
+
+    // A pixel unlike all four (e.g. a lone bright dot): the plain bilinear weight.
+    return saturate(norm > 1e-4 ? sum / norm : plain);
+}
+
 float3 Apply(float4 row0, float4 row1, float4 row2, float3 c)
 {
     return saturate(float3(
@@ -143,7 +186,7 @@ float4 PSMain(VertexOutput input) : SV_Target
     if (smart)
     {
         // The rows are the inverted part; light surroundings get it, dark ones keep the original.
-        float weight = saturate(Weights.SampleLevel(LinearSampler, uv, 0).r);
+        float weight = SmartWeight(uv, dot(c, float3(0.2126, 0.7152, 0.0722)));
         uint original = ORIGINAL_ENTRY * 3;
         float3 plain = Apply(Palette[original], Palette[original + 1], Palette[original + 2], c);
         filtered = lerp(plain, filtered, weight);

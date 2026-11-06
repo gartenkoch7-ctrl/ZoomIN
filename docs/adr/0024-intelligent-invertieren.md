@@ -39,6 +39,15 @@ Farbmatrix je Bereich an und kennt keine Helligkeit der Umgebung.
 Schwelle, Umgebungsgröße, Foto-Kriterium und Glättung legt der Spike fest. Sie werden hier
 nachgetragen und sind keine Einstellungen.
 
+## Nachtrag Spike (2026-11-06)
+- Kachel 16 px, Umfeld 32 px, Probe hell ab Luma 0,55–0,75, Glättung τ = 50 ms.
+- Statt einer weichen Schwelle entscheidet jede Kachel **binär** nach Mehrheit und speichert die
+  Luma ihres Hintergrunds. Magnify skaliert **kantenerhaltend** hoch: bilinear × Ähnlichkeit von
+  Pixel- und Hintergrund-Luma, σ = 0,12. Die weiche Schwelle gab an jeder Kante einen grauen Saum
+  (Fehler beim Hovern in der Systemsteuerung). Weich bleibt nur die zeitliche Glättung.
+- Foto: Chroma 0,10–0,25 × Farbstreuung 0,06–0,15.
+- GPU auf der RTX 3060 Ti bei 1440p: +0,064 ms pro Frame.
+
 ## Konsequenzen
 - ✅ Gemischte Fenster und der ganze Monitor sehen sauber aus; das gilt auch, wenn sich der Inhalt
   ändert (Navigieren, Scrollen).

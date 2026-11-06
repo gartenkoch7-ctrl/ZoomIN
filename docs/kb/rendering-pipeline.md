@@ -86,14 +86,33 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   sichtbare Wirkung – das Overlay ist aus Screenshots ausgenommen; Sichtprüfung durch Menschen.
 
 ## Intelligentes Invertieren (M13, ADR-0024)
-- **Zwei Durchgänge:** `Ambient.hlsl` (`AmbientPass`) schreibt je 16 × 16 Desktop-Pixel ein Gewicht
-  0–1 in eine `R16_FLOAT`-Textur (1440p → 160 × 90). `Magnify.hlsl` liest sie bilinear in
-  **Desktop-UV** und mischt zwischen „Original“ (Palette 1, nur Kontrast/Helligkeit) und
+- **Zwei Durchgänge:** `Ambient.hlsl` (`AmbientPass`) schreibt je 16 × 16 Desktop-Pixel Gewicht und
+  Hintergrund-Luma in eine `R16G16_FLOAT`-Textur (1440p → 160 × 90). `Magnify.hlsl` liest sie
+  kantenerhaltend (siehe „Kanten scharf“) in **Desktop-UV** und mischt zwischen „Original“ (Palette 1, nur Kontrast/Helligkeit) und
   „Invertiert, Farbton erhalten“. In Desktop-UV gemessen, damit beim Zoomen nichts umkippt.
 - **Entscheidung je Texel:** 4 × 4 Proben im Abstand von 8 px, jede genau zwischen vier Pixeln
-  (bilinear = ihr Mittel) → Umfeld 32 × 32 px, Nachbar-Texel überlappen. Gewicht =
-  `smoothstep(0,45; 0,75; Anteil heller Proben)`, eine Probe zählt hell ab Luma 0,55–0,75. Text auf
-  Weiß behält einen hohen Anteil, eine dunkle Leiste mit hellem Text einen niedrigen.
+  (bilinear = ihr Mittel) → Umfeld 32 × 32 px, Nachbar-Texel überlappen. Eine Probe zählt hell ab Luma 0,55–0,75; die
+  Mehrheit entscheidet (siehe „Kanten scharf“). Text auf Weiß behält eine helle Mehrheit, eine
+  dunkle Leiste mit hellem Text eine dunkle.
+- **Kanten scharf (Fix 2026-11-06, Hover-Fehler in der Systemsteuerung):** Bilinear gelesene
+  Gewichte gaben an jeder Hell/Dunkel-Kante einen 16–32 px breiten, halb invertierten grauen Saum
+  (sichtbar z. B. am Hover-Kasten und am Rand dunkler Fenster). Jetzt: (1) Jede Kachel entscheidet
+  **binär** nach Mehrheit (Gewicht 1 = heller Hintergrund, 0 = dunkler) und speichert die Luma
+  ihres **Hintergrunds** (Mittel der Mehrheit, nicht aller Proben) – `R16G16_FLOAT`. (2) Magnify
+  nimmt je Pixel die vier Nachbarkacheln, gewichtet bilinear **und** nach Ähnlichkeit zwischen
+  Pixel-Luma und Hintergrund-Luma (σ = 0,12, gemeinsame bilaterale Hochskalierung). Ein heller
+  Pixel an der Kante folgt der hellen Kachel, ein dunkler der dunklen – Übergang 1–2 px statt
+  16–32. Weich bleibt nur noch die Zeit (Glättung 50 ms).
+- **Kachel-Zuordnung:** Pixel → Kachel über `uv · TextureSize / 16`, nicht `uv · Kachelzahl` –
+  die Textur hat `ceil(Breite / 16)` Kacheln, das driftete bis zu einer Kachel über den Monitor
+  (bei 1121 px: dunkle Pixel neben einer Kante wurden invertiert). `WEIGHT_BLOCK` im Shader =
+  `AmbientPass.Block` (Test).
+- **Offline-Wiedergabe für Agenten:** Original per Screenshot (Overlay fehlt darin ohnehin) →
+  PowerShell/WPF nach rohem BGRA (`int Breite, int Höhe, Pixel`) → `ZOOMIN_OFFLINE_INPUT=<datei>
+  dotnet test --project tests/ZoomIN.Rendering.Tests --filter-method "*OfflineRenderTests*"` →
+  `<datei>-result.png` und `-weights.png` daneben. So lässt sich der Filter ohne den Nutzer prüfen
+  (die ZoomIN-Oberfläche nimmt wegen UIAccess keine Klicks von Agenten an). Bilder nur in
+  `TestResults/` (gitignored), nie ins Repo.
 - **Foto-Schutz:** Gewicht × (1 − bunt × Streuung). Bunt = mittlere Chroma (max − min), 0,10–0,25;
   Streuung = Standardabweichung der **Farben** (nicht der Luma), 0,06–0,15. Grauer Text auf Weiß
   streut, ist aber nicht bunt; eine einfarbige Schaltfläche ist bunt, streut aber nicht.

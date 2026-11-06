@@ -19,11 +19,11 @@ internal static class TextureReader
             rgba[at + 3] = 255;
         });
 
-    /// <summary>The R16_FLOAT smart inversion weights as grey: black = original, white = inverted.</summary>
+    /// <summary>The smart inversion weights (R16G16_FLOAT, x = weight) as grey: black = original, white = inverted.</summary>
     public static SnapshotImage ReadWeights(ID3D11Device device, ID3D11DeviceContext context, ID3D11Resource resource) =>
-        Read(device, context, resource, Format.R16_Float, static (row, x, rgba, at) =>
+        Read(device, context, resource, Format.R16G16_Float, static (row, x, rgba, at) =>
         {
-            var weight = (float)BitConverter.ToHalf(row.Slice(x * 2, 2));
+            var weight = (float)BitConverter.ToHalf(row.Slice(x * 4, 2));
             var grey = (byte)Math.Clamp(weight * 255f + 0.5f, 0f, 255f);
             rgba[at] = grey;
             rgba[at + 1] = grey;

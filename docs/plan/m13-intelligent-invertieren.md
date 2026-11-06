@@ -96,6 +96,14 @@ dem Tag `v1.0.0`.
 - Anlass: In der Einstellungen-App wird eine dunkle Fläche unter der Titelleiste trotz
   „intelligent“ weiß – Ursache noch offen, wird mit dem Schnappschuss untersucht.
 
+### Fix Hover-Saum 2026-11-06
+- Fehler (Nutzer): Beim Hovern über Links in der Systemsteuerung wurde es grau und verschwommen.
+  Ursache: bilinear gelesene Gewichte → halb invertierter Saum (16–32 px) an jeder Kante, dazu eine
+  Kachel-Zuordnung, die über den Monitor driftete. Gelöst ohne den Nutzer: Original per Screenshot,
+  Offline-Wiedergabe der echten Shader (`OfflineRenderTests`), binäre Kachel-Entscheidung mit
+  Hintergrund-Luma + kantenerhaltende Hochskalierung → Übergang 1–2 px (KB rendering-pipeline).
+- Risiko: Kacheln kippen hart (nur zeitlich geglättet) – beim Scrollen über Mischflächen prüfen.
+
 ## Akzeptanzkriterien
 - [x] Systemsteuerung (dunkles Design): helle Fläche dunkel, dunkle Leisten bleiben dunkel – geprüft
       2026-11-06 vom Nutzer an der Einstellungen-App (dev.113.m13, Automatik-Filter intelligent)

@@ -15,9 +15,9 @@ internal sealed class AmbientPass : IDisposable
     /// <summary>Desktop pixels per weight texel; the footprint of one decision is twice that.</summary>
     public const int Block = 16;
 
-    // R16_FLOAT is a render target and filterable from feature level 10_0, and keeps the small
-    // per-frame steps of the time smoothing that 8 bits would round away.
-    private const Format WeightFormat = Format.R16_Float;
+    // Weight and mean luma per texel. R16G16_FLOAT is a render target from feature level 10_0 and
+    // keeps the small per-frame steps of the time smoothing that 8 bits would round away.
+    private const Format WeightFormat = Format.R16G16_Float;
 
     private readonly ID3D11Texture2D[] _textures = new ID3D11Texture2D[2];
     private readonly ID3D11RenderTargetView[] _targets = new ID3D11RenderTargetView[2];

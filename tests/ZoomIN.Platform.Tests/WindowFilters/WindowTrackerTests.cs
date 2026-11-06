@@ -66,7 +66,17 @@ public sealed class WindowTrackerTests
         Assert.Equal(WindowPalette.Monitor, PaletteOf(tracker, black.Handle));
         var regions = model.Regions;
         Assert.Contains(s_whiteBounds, regions.Rects.ToArray());
-        Assert.DoesNotContain(s_blackBounds, regions.Rects.ToArray());
+
+        // The black window may still be a region – as a cover over a light window of the desktop
+        // behind it, which depends on what is open – but then only with the monitor filter.
+        var rects = regions.Rects.ToArray();
+        for (var i = 0; i < rects.Length; i++)
+        {
+            if (rects[i] == s_blackBounds)
+            {
+                Assert.Equal(WindowPalette.Monitor, regions.Palette[i]);
+            }
+        }
     }
 
     [Fact]

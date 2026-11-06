@@ -88,6 +88,36 @@ public sealed class SmartInvertTests
     }
 
     [Fact]
+    public void EdgeBetweenLightAndDark_StaysSharp_WithoutGreySeam()
+    {
+        // White page left, dark window right; the edge at x = 71 is not on a 16 px texel border.
+        const int edge = 71;
+        var pixels = Render((x, _) => x < edge ? s_white : s_bar, s_smartMonitor);
+
+        for (var x = 0; x < Size; x++)
+        {
+            var luma = Luma(pixels.At(x, 64));
+            if (x < edge - 1)
+            {
+                Assert.True(luma < 20, $"x={x}: white must be fully inverted, got luma {luma}");
+            }
+            else if (x > edge)
+            {
+                Assert.True(Math.Abs(luma - Luma(s_bar)) < 10, $"x={x}: dark must stay as it is, got luma {luma}");
+            }
+        }
+    }
+
+    [Fact]
+    public void ShaderBlock_MatchesAmbientPass()
+    {
+        var source = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..",
+            "src", "ZoomIN.Rendering", "Shaders", "Magnify.hlsl"));
+
+        Assert.Contains($"#define WEIGHT_BLOCK {AmbientPass.Block}.0", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Monitor_NotSmart_NeedsNoWeights()
     {
         var pixels = Render(BarOverPage, DisplayEffects.Default);
