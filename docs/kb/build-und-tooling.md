@@ -78,6 +78,8 @@ powershell -ExecutionPolicy Bypass -File scripts/install-uiaccess.ps1  # als Adm
 - `install-uiaccess.ps1` kopiert nach `C:\Program Files\ZoomIN\app-<version>`, setzt den Link
   `current` (ADR-0015), legt einen Startmenü-Eintrag an und startet ZoomIN über Explorer, also
   **nicht** erhöht. `-Remove` deinstalliert. Eine alte flache Installation wird ersetzt.
+  `-NoStart` lässt ZoomIN beendet, der Nutzer startet es übers Startmenü. Das ist Pflicht, wenn ein
+  Agent installiert: Von dort gestartete Prozesse erben dessen Sandbox und hängen beim Start.
 - Danach nicht parallel `dotnet run` testen: ZoomIN läuft nur einmal (`SingleInstance`).
 - Eine laufende UIAccess-Instanz lässt sich als normaler Benutzer **nicht** per `Stop-Process`
   beenden („Zugriff verweigert“) – über das Tray beenden oder mit Admin-Rechten.

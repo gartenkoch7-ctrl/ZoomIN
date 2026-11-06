@@ -23,7 +23,10 @@ param(
     [string]$Destination = (Join-Path $env:ProgramFiles 'ZoomIN'),
     # Defaults to the product version stamped into ZoomIN.exe by publish.ps1 -Version.
     [string]$Version,
-    [switch]$Remove
+    [switch]$Remove,
+    # Leave ZoomIN stopped; the user starts it from the Start menu. For installs run by tools
+    # whose child processes would inherit their sandbox.
+    [switch]$NoStart
 )
 
 $ErrorActionPreference = 'Stop'
@@ -94,6 +97,11 @@ $link.TargetPath = $exe
 $link.WorkingDirectory = $current
 $link.Save()
 Write-Host "Start menu entry: $shortcut"
+
+if ($NoStart) {
+    Write-Host 'ZoomIN not started: start it from the Start menu.' -ForegroundColor Yellow
+    exit 0
+}
 
 # Started through Explorer so ZoomIN runs as the signed-in user, not elevated like this script.
 Start-Process explorer.exe -ArgumentList "`"$exe`""
