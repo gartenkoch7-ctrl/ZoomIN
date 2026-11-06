@@ -102,6 +102,7 @@ dem Tag `v1.0.0`.
   Kachel-Zuordnung, die über den Monitor driftete. Gelöst ohne den Nutzer: Original per Screenshot,
   Offline-Wiedergabe der echten Shader (`OfflineRenderTests`), binäre Kachel-Entscheidung mit
   Hintergrund-Luma + kantenerhaltende Hochskalierung → Übergang 1–2 px (KB rendering-pipeline).
+- Vom Nutzer bestätigt 2026-11-06 (dev.115.m13): Hover in der Systemsteuerung sauber.
 - Risiko: Kacheln kippen hart (nur zeitlich geglättet) – beim Scrollen über Mischflächen prüfen.
 
 ## Akzeptanzkriterien
