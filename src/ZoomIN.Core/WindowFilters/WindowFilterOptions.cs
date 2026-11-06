@@ -75,7 +75,8 @@ public sealed record WindowFilterOptions
         foreach (var rule in Rules ?? [])
         {
             if (rule is null || !IsName(rule.Process) || !IsName(rule.WindowClass)
-                || !Enum.IsDefined(rule.Choice) || !Enum.IsDefined(rule.Filter) || !seen.Add(rule.Kind)
+                || !Enum.IsDefined(rule.Choice) || !Enum.IsDefined(rule.Filter)
+                || !Enum.IsDefined(rule.TitleBar) || !seen.Add(rule.Kind)
                 || rules.Count >= MaxRules)
             {
                 continue;

@@ -108,6 +108,13 @@ installierte ZoomIN-Instanz nicht vom Agenten beendet wird:
   keine Regeln für `unknown` und unaufgelöste Store-Rahmen; Kürzel auf Popup → Besitzer.
 - Offen für die Sichtprüfung zusätzlich: Lupe und Angedockt mit invertiertem Fenster.
 
+### Titelleiste 2026-11-06 ([ADR-0023](../adr/0023-filter-pro-fenster-titelleiste.md))
+- [x] Dunkle Titelleiste (dunkles Windows-Design) zählt nicht mehr bei hell/dunkel und wird nicht mit
+      der Seite invertiert: eigene Einstufung im selben Blick, eigener Bereich mit Monitorfilter.
+- [x] Detailseite: Spalte „Titelleiste“ je App + Fensterart (Automatisch · Wie das Fenster · Nie filtern).
+- [ ] Sichtprüfung: Einstellungen/Explorer im dunklen Design mit heller Seite → Seite invertiert,
+      Titelleiste bleibt dunkel; „Nie filtern“/„Wie das Fenster“ wirken sofort.
+
 ## Offene Fragen / Risiken
 - Fensterbereiche ohne Versatz und ohne Allokation pro Frame – Kern des Spikes.
 - Limit der Bereiche im Shader; viele kleine Fenster.

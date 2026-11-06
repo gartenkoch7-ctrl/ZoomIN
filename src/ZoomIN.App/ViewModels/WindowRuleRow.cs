@@ -5,19 +5,21 @@ using ZoomIN.Core.WindowFilters;
 
 namespace ZoomIN.App.ViewModels;
 
-/// <summary>One own setting on the filter per window page: app + window class and its choice.</summary>
+/// <summary>One own setting on the filter per window page: app + window class, its choice and its title bar.</summary>
 public sealed partial class WindowRuleRow : ObservableObject
 {
     private readonly Action<WindowRuleRow> _changed;
     private readonly bool _loading;
 
-    public WindowRuleRow(WindowFilterRule rule, IReadOnlyList<string> choices, Action<WindowRuleRow> changed)
+    public WindowRuleRow(WindowFilterRule rule, IReadOnlyList<string> choices, IReadOnlyList<string> titleBarChoices, Action<WindowRuleRow> changed)
     {
         _loading = true;
         Kind = rule.Kind;
         Choices = choices;
+        TitleBarChoices = titleBarChoices;
         _changed = changed;
         ChoiceIndex = IndexOf(rule);
+        TitleBarIndex = (int)rule.TitleBar;
         _loading = false;
     }
 
@@ -29,18 +31,30 @@ public sealed partial class WindowRuleRow : ObservableObject
 
     public string RemoveName => Text.Format("WinFilter.RemoveFor", Kind.Process);
 
+    public string TitleBarName => Text.Format("WinFilter.TitleBarFor", Kind.Process);
+
     /// <summary>Automatic, None, then every filter in enum order.</summary>
     public IReadOnlyList<string> Choices { get; }
+
+    /// <summary>One entry per <see cref="WindowTitleBarChoice"/>, in enum order.</summary>
+    public IReadOnlyList<string> TitleBarChoices { get; }
 
     [ObservableProperty]
     public partial int ChoiceIndex { get; set; }
 
-    public WindowFilterRule ToRule() => ChoiceIndex switch
+    [ObservableProperty]
+    public partial int TitleBarIndex { get; set; }
+
+    public WindowFilterRule ToRule()
     {
-        <= 0 => WindowFilterRule.For(Kind, WindowFilterChoice.Automatic),
-        1 => WindowFilterRule.For(Kind, WindowFilterChoice.None),
-        _ => WindowFilterRule.For(Kind, WindowFilterChoice.Filter, (ColorFilter)(ChoiceIndex - 2)),
-    };
+        var rule = ChoiceIndex switch
+        {
+            <= 0 => WindowFilterRule.For(Kind, WindowFilterChoice.Automatic),
+            1 => WindowFilterRule.For(Kind, WindowFilterChoice.None),
+            _ => WindowFilterRule.For(Kind, WindowFilterChoice.Filter, (ColorFilter)(ChoiceIndex - 2)),
+        };
+        return rule with { TitleBar = TitleBarIndex > 0 ? (WindowTitleBarChoice)TitleBarIndex : WindowTitleBarChoice.Automatic };
+    }
 
     /// <summary>The choice list as the rows show it.</summary>
     public static IReadOnlyList<string> AllChoices() =>
@@ -50,7 +64,19 @@ public sealed partial class WindowRuleRow : ObservableObject
         .. Enum.GetValues<ColorFilter>().Select(f => Text.Get("Filter." + f)),
     ];
 
+    /// <summary>The title bar choices as the rows show them.</summary>
+    public static IReadOnlyList<string> AllTitleBarChoices() =>
+        [.. Enum.GetValues<WindowTitleBarChoice>().Select(c => Text.Get("WinFilter.TitleBar." + c))];
+
     partial void OnChoiceIndexChanged(int value)
+    {
+        if (!_loading && value >= 0)
+        {
+            _changed(this);
+        }
+    }
+
+    partial void OnTitleBarIndexChanged(int value)
     {
         if (!_loading && value >= 0)
         {

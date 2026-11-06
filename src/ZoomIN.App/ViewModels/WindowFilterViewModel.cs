@@ -15,6 +15,7 @@ public sealed partial class WindowFilterViewModel : ObservableObject
 {
     private readonly PageContext _context;
     private readonly IReadOnlyList<string> _choices = WindowRuleRow.AllChoices();
+    private readonly IReadOnlyList<string> _titleBarChoices = WindowRuleRow.AllTitleBarChoices();
     private List<WindowKind> _addable = [];
     private bool _loading = true;
 
@@ -141,7 +142,7 @@ public sealed partial class WindowFilterViewModel : ObservableObject
         Rules.Clear();
         foreach (var rule in Model.Options.Rules)
         {
-            Rules.Add(new WindowRuleRow(rule, _choices, OnRuleChanged));
+            Rules.Add(new WindowRuleRow(rule, _choices, _titleBarChoices, OnRuleChanged));
         }
 
         HasRules = Rules.Count > 0;

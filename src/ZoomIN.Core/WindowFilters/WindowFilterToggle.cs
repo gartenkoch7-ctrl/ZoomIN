@@ -13,8 +13,11 @@ public static class WindowFilterToggle
     public static WindowFilterRule Next(WindowKind kind, byte palette, bool monitorFiltered, WindowFilterOptions options)
     {
         var looksFiltered = WindowPalette.IsOwnFilter(palette) || (palette == WindowPalette.Monitor && monitorFiltered);
-        return looksFiltered
+        var rule = looksFiltered
             ? WindowFilterRule.For(kind, WindowFilterChoice.None)
             : WindowFilterRule.For(kind, WindowFilterChoice.Filter, options.AutoFilter);
+
+        // The shortcut changes the window's filter only; a title bar choice made on the page stays.
+        return rule with { TitleBar = TitleBarResolver.ChoiceFor(kind, options) };
     }
 }

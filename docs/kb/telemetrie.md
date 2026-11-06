@@ -119,8 +119,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.tracking.chromium_nudges` | Fenster | – | Chromium-Inhaltsfenster nach IAccessible2 gefragt |
 | `zoomin.tracking.anchor_switches` | Wechsel | `zoomin.anchor.source` (`mouse`, `focus`, `caret`) | Ansicht folgt jetzt Maus, Fokus oder Caret (Render-Thread, ohne Allokation) |
 | `zoomin.render.overlay_time` | s | `zoomin.monitor`, `zoomin.state` (`active`, `paused`) | Zeit, in der der Render-Thread arbeitet bzw. schläft – ergibt den Pausenanteil des Filters pro Fenster |
-| `zoomin.windowfilter.classifications` | Fenster | `process.name`, `zoomin.result` (`light`, `dark`, `unknown`) | Fenster beim Öffnen eingestuft (dazu Log 2701) |
-| `zoomin.windowfilter.look_duration` | ms | – | Ein Blick auf ein Fenster (GDI-Kopie 64×64 und Zählen) |
+| `zoomin.windowfilter.classifications` | Fenster | `process.name`, `zoomin.result` (`light`, `dark`, `unknown`), `zoomin.caption` (Titelleiste: `light`, `dark`, `unknown`, `none`) | Fenster beim Öffnen eingestuft (dazu Log 2701) |
+| `zoomin.windowfilter.look_duration` | ms | – | Ein Blick auf ein Fenster (GDI-Kopie 64×256 und Zählen) |
 | `zoomin.windowfilter.update_duration` | ms | – | Fenster auflisten und Bereiche bauen nach einer Fensteränderung |
 | `zoomin.windowfilter.regions` | Bereiche | – | Bereiche, die der Shader nach einer Änderung bekommt (höchstens 64) |
 | `zoomin.windowfilter.regions_dropped` | Fenster | – | Fenster über dem Limit von 64 Bereichen, die den Monitorfilter zeigen (je Aktualisierung; dazu Log 2705) |
@@ -200,7 +200,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2607 | Fehler | Installing {Version} failed |
 | 2608 | Info | Update: {Item} kept for now, still in use |
 | 2700 | Info | Filter per window watches windows ({Hooks} event hooks) |
-| 2701 | Debug | Window of {Process} measured as {Result} in {DurationMs} ms after {Looks} looks |
+| 2701 | Debug | Window of {Process} measured as {Result} in {DurationMs} ms after {Looks} looks, caption bar {Caption} |
 | 2702 | Warnung | Window events unavailable; the filter per window only follows shortcuts and settings |
 | 2703 | Fehler | Updating the window regions failed |
 | 2704 | Warnung | No bitmap for brightness looks; windows stay unmeasured |

@@ -72,14 +72,16 @@ internal sealed class WindowTracker : IDisposable
             }
 
             pending |= state.Measuring;
-            _tracked.Add(new TrackedWindow(raw.Handle, raw.Bounds, state.Kind, state.Role, state.Brightness, raw.Owner, (int)raw.ProcessId));
+            _tracked.Add(new TrackedWindow(
+                raw.Handle, raw.Bounds, state.Kind, state.Role, state.Brightness, raw.Owner, (int)raw.ProcessId,
+                state.TitleBarHeightOf(raw), state.TitleBarBrightness));
         }
 
         _states.EndListing(_raw.Count);
         HasPendingLooks = pending;
 
         var palette = WindowLayout.Resolve(_tracked, options);
-        var regions = WindowLayout.Build(_tracked, palette);
+        var regions = WindowLayout.Build(_tracked, palette, TitleBarResolver.Resolve(_tracked, palette, options));
         _model.Publish(regions);
         Volatile.Write(ref _snapshot, new TrackerSnapshot([.. _tracked], palette));
         _telemetry.Updated(Stopwatch.GetElapsedTime(started).TotalMilliseconds, regions);
@@ -89,10 +91,10 @@ internal sealed class WindowTracker : IDisposable
     public bool Look()
     {
         CollectDueLooks(_due);
-        var results = new (nint Handle, bool? IsLight)[_due.Count];
+        var results = new LookResult[_due.Count];
         for (var i = 0; i < _due.Count; i++)
         {
-            results[i] = (_due[i].Handle, _due[i].Take(_sampler));
+            results[i] = _due[i].Take(_sampler);
         }
 
         return Apply(results);
@@ -118,9 +120,11 @@ internal sealed class WindowTracker : IDisposable
             if (_states.TryGet(window.Handle, out var state) && state.Measuring
                 && Stopwatch.GetElapsedTime(state.StartedAt, now) >= state.Vote.NextLookAt)
             {
-                // Only the part on some monitor is copied; outside, GDI would deliver black.
+                // Only the part on some monitor is copied; outside, GDI would deliver black. The
+                // title bar is counted apart, so a dark one does not make a light page dark.
                 var area = all is { } bounds ? RectMath.Intersection(window.Bounds, bounds) : window.Bounds;
-                due.Add(new LookRequest(window.Handle, area, [.. _above], monitors, threshold));
+                var titleBarBottom = window.TitleBarHeight > 0 ? window.Bounds.Y + window.TitleBarHeight : double.NegativeInfinity;
+                due.Add(new LookRequest(window.Handle, area, [.. _above], monitors, threshold, titleBarBottom));
             }
 
             _above.Add(window.Bounds);
@@ -133,13 +137,17 @@ internal sealed class WindowTracker : IDisposable
     /// Counts the results of looks and decides what is due, also windows past the deadline (with
     /// or without results). True if a window was decided (then call <see cref="Update"/>).
     /// </summary>
-    public bool Apply(ReadOnlySpan<(nint Handle, bool? IsLight)> results)
+    public bool Apply(ReadOnlySpan<LookResult> results)
     {
-        foreach (var (handle, isLight) in results)
+        foreach (var (handle, isLight, titleBarIsLight) in results)
         {
             if (_states.TryGet(handle, out var state) && state.Measuring)
             {
                 state.Vote = state.Vote.Add(isLight);
+                if (titleBarIsLight is not null)
+                {
+                    state.TitleBarVote = state.TitleBarVote.Add(titleBarIsLight);
+                }
             }
         }
 
@@ -180,7 +188,7 @@ internal sealed class WindowTracker : IDisposable
         }
 
         state.Finish(result);
-        _telemetry.Classified(state.Kind.Process, result, elapsed, state.Vote.Looks);
+        _telemetry.Classified(state.Kind.Process, result, elapsed, state.Vote.Looks, state.TitleBarBrightness, state.TitleBarHeight > 0);
         return true;
     }
 

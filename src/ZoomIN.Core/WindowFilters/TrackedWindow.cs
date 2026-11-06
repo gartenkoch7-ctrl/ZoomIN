@@ -10,5 +10,8 @@ namespace ZoomIN.Core.WindowFilters;
 /// <param name="Brightness">Result of the measurement when it opened.</param>
 /// <param name="Owner">Owner window handle (GW_OWNER), 0 if none.</param>
 /// <param name="ProcessId">Process of the window, to find the app window of a popup without owner.</param>
+/// <param name="TitleBarHeight">Height of the title bar strip at the top of <paramref name="Bounds"/> in pixels, 0 if none.</param>
+/// <param name="TitleBarBrightness">The title bar measured on its own, in the same looks as the window.</param>
 public readonly record struct TrackedWindow(
-    nint Handle, PhysicalRect Bounds, WindowKind Kind, WindowRole Role, WindowBrightness Brightness, nint Owner, int ProcessId);
+    nint Handle, PhysicalRect Bounds, WindowKind Kind, WindowRole Role, WindowBrightness Brightness, nint Owner, int ProcessId,
+    int TitleBarHeight = 0, WindowBrightness TitleBarBrightness = WindowBrightness.Pending);

@@ -7,7 +7,7 @@ using ZoomIN.Core.Viewport;
 namespace ZoomIN.Platform.WindowFilters;
 
 /// <summary>A visible top-level window with what can be read cheaply on every change.</summary>
-internal readonly record struct RawWindow(nint Handle, PhysicalRect Bounds, uint ProcessId, nint Owner, bool PopupStyle, bool ToolWindow);
+internal readonly record struct RawWindow(nint Handle, PhysicalRect Bounds, uint ProcessId, nint Owner, bool PopupStyle, bool ToolWindow, bool HasCaption = false);
 
 /// <summary>
 /// Lists the visible top-level windows front to back (EnumWindows goes in Z order). Only cheap
@@ -90,8 +90,9 @@ internal static unsafe class WindowEnumerator
         uint processId;
         _ = PInvoke.GetWindowThreadProcessId(hwnd, &processId);
         var owner = PInvoke.GetWindow(hwnd, GET_WINDOW_CMD.GW_OWNER);
-        var popup = style.HasFlag(WINDOW_STYLE.WS_POPUP) && (style & WINDOW_STYLE.WS_CAPTION) != WINDOW_STYLE.WS_CAPTION;
-        window = new RawWindow(hwnd, bounds, processId, owner, popup, exStyle.HasFlag(WINDOW_EX_STYLE.WS_EX_TOOLWINDOW));
+        var caption = (style & WINDOW_STYLE.WS_CAPTION) == WINDOW_STYLE.WS_CAPTION;
+        var popup = style.HasFlag(WINDOW_STYLE.WS_POPUP) && !caption;
+        window = new RawWindow(hwnd, bounds, processId, owner, popup, exStyle.HasFlag(WINDOW_EX_STYLE.WS_EX_TOOLWINDOW), caption);
         return true;
     }
 

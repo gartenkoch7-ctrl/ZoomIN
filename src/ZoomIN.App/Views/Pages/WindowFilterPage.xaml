@@ -40,8 +40,24 @@
                     <DataTemplate x:DataType="vm:WindowRuleRow">
                         <c:SettingCard Margin="0,0,0,4" Description="{x:Bind Description}" Glyph="&#xE737;" Header="{x:Bind Name}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <ComboBox MinWidth="220" AutomationProperties.Name="{x:Bind Name}" ItemsSource="{x:Bind Choices}" SelectedIndex="{x:Bind ChoiceIndex, Mode=TwoWay}" />
-                                <Button AutomationProperties.Name="{x:Bind RemoveName}" Click="OnRemove" Content="{x:Bind loc:Text.Get('WinFilter.Remove')}" Tag="{x:Bind}" />
+                                <ComboBox
+                                    MinWidth="220"
+                                    AutomationProperties.Name="{x:Bind Name}"
+                                    Header="{x:Bind loc:Text.Get('WinFilter.Filter')}"
+                                    ItemsSource="{x:Bind Choices}"
+                                    SelectedIndex="{x:Bind ChoiceIndex, Mode=TwoWay}" />
+                                <ComboBox
+                                    MinWidth="220"
+                                    AutomationProperties.Name="{x:Bind TitleBarName}"
+                                    Header="{x:Bind loc:Text.Get('WinFilter.TitleBar')}"
+                                    ItemsSource="{x:Bind TitleBarChoices}"
+                                    SelectedIndex="{x:Bind TitleBarIndex, Mode=TwoWay}" />
+                                <Button
+                                    VerticalAlignment="Bottom"
+                                    AutomationProperties.Name="{x:Bind RemoveName}"
+                                    Click="OnRemove"
+                                    Content="{x:Bind loc:Text.Get('WinFilter.Remove')}"
+                                    Tag="{x:Bind}" />
                             </StackPanel>
                         </c:SettingCard>
                     </DataTemplate>

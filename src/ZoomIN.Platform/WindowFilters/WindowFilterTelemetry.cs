@@ -29,12 +29,14 @@ internal sealed class WindowFilterTelemetry(ILogger log)
 
     private bool _dropping;
 
-    public void Classified(string process, WindowBrightness result, TimeSpan duration, int looks)
+    public void Classified(string process, WindowBrightness result, TimeSpan duration, int looks, WindowBrightness titleBar, bool hasTitleBar)
     {
         var name = ResultName(result);
         var milliseconds = Math.Round(duration.TotalMilliseconds);
-        log.WindowClassified(process, name, milliseconds, looks);
-        s_classifications.Add(1, new KeyValuePair<string, object?>("process.name", process), new KeyValuePair<string, object?>("zoomin.result", name));
+        var titleBarName = hasTitleBar ? ResultName(titleBar) : "none";
+        log.WindowClassified(process, name, milliseconds, looks, titleBarName);
+        s_classifications.Add(1, new KeyValuePair<string, object?>("process.name", process), new KeyValuePair<string, object?>("zoomin.result", name),
+            new KeyValuePair<string, object?>("zoomin.caption", titleBarName));
     }
 
     public static void Looked(double milliseconds) => s_lookDuration.Record(milliseconds);

@@ -15,7 +15,7 @@ internal sealed class LookWorker : IDisposable
     private readonly AutoResetEvent _wake = new(false);
     private readonly Lock _gate = new();
     private LookRequest[]? _batch;
-    private (nint Handle, bool? IsLight)[] _results = [];
+    private LookResult[] _results = [];
     private volatile bool _stop;
 
     public LookWorker(ILogger log, Action onDone)
@@ -56,7 +56,7 @@ internal sealed class LookWorker : IDisposable
     }
 
     /// <summary>The results of the finished batch (empty if none); the worker is free again.</summary>
-    public (nint Handle, bool? IsLight)[] TakeResults()
+    public LookResult[] TakeResults()
     {
         lock (_gate)
         {
@@ -101,10 +101,10 @@ internal sealed class LookWorker : IDisposable
                 continue;
             }
 
-            var results = new (nint, bool?)[batch.Length];
+            var results = new LookResult[batch.Length];
             for (var i = 0; i < batch.Length; i++)
             {
-                results[i] = (batch[i].Handle, batch[i].Take(sampler));
+                results[i] = batch[i].Take(sampler);
             }
 
             lock (_gate)

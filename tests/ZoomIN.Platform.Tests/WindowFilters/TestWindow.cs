@@ -21,9 +21,9 @@ internal sealed unsafe class TestWindow : IDisposable
     private readonly ManualResetEventSlim _ready = new();
     private HWND _hwnd;
 
-    private TestWindow(bool white, PhysicalRect bounds, nint owner)
+    private TestWindow(bool white, PhysicalRect bounds, nint owner, WINDOW_STYLE style = WINDOW_STYLE.WS_POPUP)
     {
-        _thread = new Thread(() => Run(white, bounds, (HWND)owner)) { IsBackground = true, Name = "Test window" };
+        _thread = new Thread(() => Run(white, bounds, (HWND)owner, style)) { IsBackground = true, Name = "Test window" };
         _thread.Start();
         _ready.Wait(TimeSpan.FromSeconds(5));
     }
@@ -33,6 +33,9 @@ internal sealed unsafe class TestWindow : IDisposable
     public static TestWindow White(PhysicalRect bounds, nint owner = 0) => new(true, bounds, owner);
 
     public static TestWindow Black(PhysicalRect bounds, nint owner = 0) => new(false, bounds, owner);
+
+    /// <summary>A white window with a normal system title bar (WS_OVERLAPPEDWINDOW).</summary>
+    public static TestWindow WhiteWithTitleBar(PhysicalRect bounds) => new(true, bounds, 0, WINDOW_STYLE.WS_OVERLAPPEDWINDOW);
 
     public void Hide() => PInvoke.ShowWindow(_hwnd, SHOW_WINDOW_CMD.SW_HIDE);
 
@@ -45,7 +48,7 @@ internal sealed unsafe class TestWindow : IDisposable
         _ready.Dispose();
     }
 
-    private void Run(bool white, PhysicalRect bounds, HWND owner)
+    private void Run(bool white, PhysicalRect bounds, HWND owner, WINDOW_STYLE style)
     {
         var className = white ? WhiteClass : BlackClass;
         var module = PInvoke.GetModuleHandle((string?)null);
@@ -67,7 +70,7 @@ internal sealed unsafe class TestWindow : IDisposable
         _hwnd = PInvoke.CreateWindowEx(
             WINDOW_EX_STYLE.WS_EX_TOPMOST | WINDOW_EX_STYLE.WS_EX_NOACTIVATE,
             className, "ZoomIN test window",
-            WINDOW_STYLE.WS_POPUP | WINDOW_STYLE.WS_VISIBLE,
+            style | WINDOW_STYLE.WS_VISIBLE,
             (int)bounds.X, (int)bounds.Y, (int)bounds.Width, (int)bounds.Height,
             owner, null, module, null);
         PInvoke.UpdateWindow(_hwnd);

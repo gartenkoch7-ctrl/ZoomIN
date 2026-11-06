@@ -14,21 +14,25 @@ namespace ZoomIN.Platform.WindowFilters;
 /// <param name="Above">Windows above it at the time of the request.</param>
 /// <param name="Monitors">Monitor bounds.</param>
 /// <param name="Threshold">Light share in % from which the window counts as light.</param>
-internal readonly record struct LookRequest(nint Handle, PhysicalRect Area, PhysicalRect[] Above, PhysicalRect[] Monitors, int Threshold)
+/// <param name="TitleBarBottom">Desktop y where its title bar ends; at or above the top of <paramref name="Area"/> (default: −∞) if none – 0 is a real y on monitors above the main one.</param>
+internal readonly record struct LookRequest(
+    nint Handle, PhysicalRect Area, PhysicalRect[] Above, PhysicalRect[] Monitors, int Threshold, double TitleBarBottom = double.NegativeInfinity)
 {
-    /// <summary>Copies the area and counts; null if it could not be seen.</summary>
-    public bool? Take(ScreenSampler? sampler)
+    /// <summary>Copies the area once and counts page and title bar apart; null where nothing could be seen.</summary>
+    public LookResult Take(ScreenSampler? sampler)
     {
         if (sampler is null)
         {
-            return null;
+            return new LookResult(Handle, null);
         }
 
         var started = Stopwatch.GetTimestamp();
-        bool? result = null;
+        var result = new LookResult(Handle, null);
         if (!RectMath.IsEmpty(Area) && sampler.Capture(Area))
         {
-            result = BrightnessMeter.IsLight(sampler.Pixels, ScreenSampler.Size, ScreenSampler.Size, Area, Above, Monitors, Threshold);
+            var (page, titleBar) = BrightnessMeter.IsLightApart(
+                sampler.Pixels, ScreenSampler.Size, ScreenSampler.Rows, Area, TitleBarBottom, Above, Monitors, Threshold);
+            result = new LookResult(Handle, page, titleBar);
         }
 
         WindowFilterTelemetry.Looked(Stopwatch.GetElapsedTime(started).TotalMilliseconds);

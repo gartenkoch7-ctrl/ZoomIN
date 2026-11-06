@@ -8,8 +8,8 @@ internal static partial class WindowFilterLog
     [LoggerMessage(EventId = 2700, Level = LogLevel.Information, Message = "Filter per window watches windows ({Hooks} event hooks)")]
     public static partial void WindowFilterStarted(this ILogger logger, int hooks);
 
-    [LoggerMessage(EventId = 2701, Level = LogLevel.Debug, Message = "Window of {Process} measured as {Result} in {DurationMs} ms after {Looks} looks")]
-    public static partial void WindowClassified(this ILogger logger, string process, string result, double durationMs, int looks);
+    [LoggerMessage(EventId = 2701, Level = LogLevel.Debug, Message = "Window of {Process} measured as {Result} in {DurationMs} ms after {Looks} looks, caption bar {Caption}")]
+    public static partial void WindowClassified(this ILogger logger, string process, string result, double durationMs, int looks, string caption);
 
     [LoggerMessage(EventId = 2702, Level = LogLevel.Warning, Message = "Window events unavailable; the filter per window only follows shortcuts and settings")]
     public static partial void WindowHooksFailed(this ILogger logger);

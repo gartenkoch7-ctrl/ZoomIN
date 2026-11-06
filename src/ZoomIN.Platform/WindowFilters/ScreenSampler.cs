@@ -13,8 +13,15 @@ namespace ZoomIN.Platform.WindowFilters;
 /// </summary>
 internal sealed unsafe class ScreenSampler : IDisposable
 {
-    /// <summary>Width and height of the shrunk picture; 4096 pixels are plenty for a share.</summary>
+    /// <summary>Width of the shrunk picture; 64 columns are plenty for a share.</summary>
     public const int Size = 64;
+
+    /// <summary>
+    /// Rows of the shrunk picture. More rows than columns, so the title bar (~30 px) keeps several
+    /// rows of its own and is counted apart from the page in the same copy (ADR-0023): every copy
+    /// waits for a DWM frame, a second one per look would double the time.
+    /// </summary>
+    public const int Rows = 256;
 
     private readonly HDC _memory;
     private readonly HBITMAP _bitmap;
@@ -27,7 +34,7 @@ internal sealed unsafe class ScreenSampler : IDisposable
         {
             biSize = (uint)sizeof(BITMAPINFOHEADER),
             biWidth = Size,
-            biHeight = -Size, // top-down rows
+            biHeight = -Rows, // top-down rows
             biPlanes = 1,
             biBitCount = 32,
             biCompression = 0, // BI_RGB
@@ -52,7 +59,7 @@ internal sealed unsafe class ScreenSampler : IDisposable
     }
 
     /// <summary>The shrunk picture of the last <see cref="Capture"/>, 0xAARRGGBB, rows top-down.</summary>
-    public ReadOnlySpan<uint> Pixels => new(_bits, Size * Size);
+    public ReadOnlySpan<uint> Pixels => new(_bits, Size * Rows);
 
     /// <summary>Copies <paramref name="area"/> of the desktop; false if GDI refused (e.g. secure desktop shown).</summary>
     public bool Capture(PhysicalRect area)
@@ -66,7 +73,7 @@ internal sealed unsafe class ScreenSampler : IDisposable
         try
         {
             return PInvoke.StretchBlt(
-                _memory, 0, 0, Size, Size, screen,
+                _memory, 0, 0, Size, Rows, screen,
                 (int)area.X, (int)area.Y, (int)area.Width, (int)area.Height, ROP_CODE.SRCCOPY);
         }
         finally

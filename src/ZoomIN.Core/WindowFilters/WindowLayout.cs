@@ -13,11 +13,24 @@ public static class WindowLayout
     // Above this many windows the keep flags go to the heap; there are rarely more than 50.
     private const int StackLimit = 256;
 
-    public static WindowRegions Build(IReadOnlyList<TrackedWindow> frontToBack, WindowFilterOptions options) =>
-        options.Enabled ? Build(frontToBack, Resolve(frontToBack, options)) : WindowRegions.Empty;
+    public static WindowRegions Build(IReadOnlyList<TrackedWindow> frontToBack, WindowFilterOptions options)
+    {
+        if (!options.Enabled)
+        {
+            return WindowRegions.Empty;
+        }
 
-    /// <summary>Builds the regions from palette indexes already resolved with <see cref="Resolve"/>.</summary>
-    public static WindowRegions Build(IReadOnlyList<TrackedWindow> frontToBack, byte[] palette)
+        var palette = Resolve(frontToBack, options);
+        return Build(frontToBack, palette, TitleBarResolver.Resolve(frontToBack, palette, options));
+    }
+
+    /// <summary>
+    /// Builds the regions from palette indexes already resolved with <see cref="Resolve"/> and,
+    /// optionally, title bar palettes from <see cref="TitleBarResolver.Resolve(IReadOnlyList{TrackedWindow}, byte[], WindowFilterOptions)"/>:
+    /// a title bar that looks different gets its own rectangle right before its window's, so the
+    /// shader (first rectangle wins) shows it instead of the window there.
+    /// </summary>
+    public static WindowRegions Build(IReadOnlyList<TrackedWindow> frontToBack, byte[] palette, byte[]? titleBars = null)
     {
         var count = frontToBack.Count;
         Span<bool> keep = count <= StackLimit ? stackalloc bool[count] : new bool[count];
@@ -49,19 +62,37 @@ public static class WindowLayout
         }
 
         // The front-most windows win: what is dropped behind them falls back to the monitor filter.
-        var taken = Math.Min(kept, WindowRegions.Max);
+        var needed = kept;
+        for (var i = 0; i < count; i++)
+        {
+            needed += keep[i] && HasOwnTitleBar(titleBars, i) ? 1 : 0;
+        }
+
+        var taken = Math.Min(needed, WindowRegions.Max);
         var rects = new PhysicalRect[taken];
         var indexes = new byte[taken];
         for (int i = 0, n = 0; i < count && n < taken; i++)
         {
-            if (keep[i])
+            if (!keep[i])
             {
-                rects[n] = frontToBack[i].Bounds;
-                indexes[n++] = palette[i];
+                continue;
             }
+
+            if (HasOwnTitleBar(titleBars, i))
+            {
+                rects[n] = TitleBarResolver.Area(frontToBack[i]);
+                indexes[n++] = titleBars![i];
+                if (n == taken)
+                {
+                    break;
+                }
+            }
+
+            rects[n] = frontToBack[i].Bounds;
+            indexes[n++] = palette[i];
         }
 
-        return new WindowRegions(rects, indexes, kept - taken);
+        return new WindowRegions(rects, indexes, needed - taken);
     }
 
     /// <summary>Palette index per window; popups take their owner's, or the app window's below them.</summary>
@@ -103,6 +134,9 @@ public static class WindowLayout
 
         return WindowPalette.Monitor;
     }
+
+    private static bool HasOwnTitleBar(byte[]? titleBars, int index) =>
+        titleBars is not null && titleBars[index] != TitleBarResolver.Same;
 
     private static bool IsCoveredFromAbove(IReadOnlyList<TrackedWindow> frontToBack, int index)
     {

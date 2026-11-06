@@ -165,7 +165,7 @@ public sealed class Win32WindowFilterSource : IWindowFilterSource
         }
     }
 
-    private static void Decide(WindowTracker tracker, ReadOnlySpan<(nint Handle, bool? IsLight)> results)
+    private static void Decide(WindowTracker tracker, ReadOnlySpan<LookResult> results)
     {
         if (tracker.Apply(results))
         {

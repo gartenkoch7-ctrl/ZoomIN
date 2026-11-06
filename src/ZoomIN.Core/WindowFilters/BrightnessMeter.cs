@@ -60,6 +60,46 @@ public static class BrightnessMeter
         return light * 100 >= thresholdPercent * visible;
     }
 
+    /// <summary>
+    /// Like <see cref="IsLight"/>, but the rows above <paramref name="titleBarBottom"/> (the title
+    /// bar) are counted on their own (ADR-0023): only the page below decides light or dark, so a
+    /// dark title bar (dark Windows theme) does not make a light page dark. A row cut by the edge
+    /// belongs to neither part.
+    /// </summary>
+    /// <param name="titleBarBottom">Desktop y where the title bar ends; at or above the top of <paramref name="captured"/> = none.</param>
+    /// <returns>The page and the title bar (null if not visible enough or none).</returns>
+    public static (bool? Page, bool? TitleBar) IsLightApart(
+        ReadOnlySpan<uint> pixels, int width, int height, PhysicalRect captured, double titleBarBottom,
+        ReadOnlySpan<PhysicalRect> above, ReadOnlySpan<PhysicalRect> monitors, int thresholdPercent)
+    {
+        if (width <= 0 || height <= 0 || pixels.Length < width * height || RectMath.IsEmpty(captured))
+        {
+            return (null, null);
+        }
+
+        var rowHeight = captured.Height / height;
+        var split = Math.Min((titleBarBottom - captured.Y) / rowHeight, height);
+        if (!(split >= 1))
+        {
+            // No title bar (also -∞ or NaN), or less than one row of it: the whole frame counts.
+            return (IsLight(pixels, width, height, captured, above, monitors, thresholdPercent), null);
+        }
+
+        var titleRows = (int)Math.Floor(split);
+        var pageStart = (int)Math.Ceiling(split);
+
+        var titleArea = new PhysicalRect(captured.X, captured.Y, captured.Width, titleRows * rowHeight);
+        var titleBar = IsLight(pixels[..(titleRows * width)], width, titleRows, titleArea, above, monitors, thresholdPercent);
+        if (pageStart >= height)
+        {
+            return (null, titleBar);
+        }
+
+        var pageArea = new PhysicalRect(captured.X, captured.Y + (pageStart * rowHeight), captured.Width, (height - pageStart) * rowHeight);
+        var page = IsLight(pixels[(pageStart * width)..(height * width)], width, height - pageStart, pageArea, above, monitors, thresholdPercent);
+        return (page, titleBar);
+    }
+
     /// <summary>Rec. 709 luma of a 0xAARRGGBB pixel, 0–255.</summary>
     public static int Luma(uint pixel)
     {
