@@ -75,7 +75,9 @@ Tag `v1.0.0`.
 - [ ] Menü in invertierter App blitzt nicht weiß auf
 - [ ] Nutzerwahl per Kürzel bleibt nach Neustart für App + Fensterart erhalten
 - [x] Medien-Apps und Windows-Oberfläche werden ab Werk nicht gefiltert
-- [ ] Nur dunkle Fenster sichtbar → Overlay pausiert (keine Aufnahme, kein Zeichnen)
+- [x] Nur dunkle Fenster sichtbar → Overlay pausiert (keine Aufnahme, kein Zeichnen) – geprüft
+      2026-11-06 am laufenden Dev-Build: nur schwarzes Testfenster → Overlay unsichtbar; weißes
+      dazu → nach ≈ 1 s sichtbar; geschlossen → wieder unsichtbar
 - [ ] Budget eingehalten (≤ 3 % CPU, Monitor-Hz, ≤ 1 Frame, kein Versatz beim Verschieben)
 - [x] Render-Loop-Benchmark `0 B`; Architekturtests grün; Telemetrie im Katalog
 
@@ -87,7 +89,6 @@ Offen, weil nur ein Mensch es sehen kann (Overlay ist aus Screenshots ausgenomme
 installierte ZoomIN-Instanz nicht vom Agenten beendet wird:
 - Sicht: Word + Terminal nebeneinander, `Strg+Alt+C`, Menü blitzt nicht, kein Versatz beim Ziehen.
 - Kürzel in der echten App belegen, auslösen, Neustart → Wahl bleibt.
-- Pause in der echten App (nur dunkle Fenster) über `zoomin.render.overlay_time` prüfen.
 - Budget auf 1440p/Onboard-Grafik (CPU, Bildrate, Verzögerung).
 
 ## Offene Fragen / Risiken

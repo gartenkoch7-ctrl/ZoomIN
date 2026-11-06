@@ -38,3 +38,12 @@ GitHub-Issue-Vorlage „Hardware-Bericht“.
   Datei-/Ordnerpfade aus solchen Läufen deshalb nicht als Fehlerbeleg nehmen.
 - Die installierte ZoomIN soll der Nutzer selbst starten (Startmenü), nicht der Agent: aus der
   Umgebung gestartet hing eine Instanz beim Start ohne Tray-Symbol und Overlay.
+
+## Overlay von außen prüfen (2026-11-06)
+- Das Overlay ist aus Screenshots ausgenommen, sein Fenster lässt sich aber abfragen: Klasse
+  `ZoomIN.Overlay` per `FindWindow` suchen, `IsWindowVisible` sagt, ob es zeichnet oder pausiert.
+- So lässt sich der Filter pro Fenster an einer laufenden App prüfen, ohne Nutzer-Apps anzufassen:
+  eigene weiße/schwarze Testfenster (`TestWindow` aus den Platform-Tests) öffnen und schließen.
+  Ergebnis am Dev-Build: nur schwarz → unsichtbar, weiß dazu → nach ≈ 1 s sichtbar, zu → unsichtbar.
+- Ob die Pixel wirklich invertiert sind, kann so nicht gesehen werden – das decken die WARP-Shadertests ab.
+- Der Dev-Build startet über das Terminal-Panel des Nutzers (außerhalb der Agent-Sandbox).
