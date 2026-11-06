@@ -147,6 +147,36 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   `ZOOMIN_GPU_TIMING=1 dotnet test --project tests/ZoomIN.Rendering.Tests --filter-method "*SmartInvertGpuTimeTests*"`,
   das Ergebnis steht in `%TEMP%\zoomin-gpu-timing.txt`.
 
+### Papier, Fotos und Scrollen (selbstständiger Test 2026-11-06)
+- **Zwei Schritte je Frame:** `Ambient.hlsl` entscheidet je Kachel roh (RGBA16F: Papier,
+  Hintergrund-Luma, Foto, „hell ohne Papier“), `PhotoFill.hlsl` entscheidet mit den Nachbarn und
+  glättet über die Zeit (R16G16F, wie Magnify sie liest).
+- **Papier statt Mehrheit:** Heller Hintergrund heißt helle Mehrheit **und** ≥ 6/16 Proben innerhalb
+  0,04 unter der hellsten Probe (ein einheitlicher Papierton). Gemessen auf echten Aufnahmen: Text,
+  Seiten, fette Überschriften, Systemsteuerung 8–13/16; Schnee in einem Foto 1–3/16 (auch wo 12/16
+  hell sind); ein Symbol 4/16. Eine reine Mehrheitsschwelle trennte das nicht: 50 % kehrte Schnee
+  in Fotos um (schwarze Flecken), 60 % ließ fette Überschriften zerfallen. Der „Glattanteil“ um
+  den Mittelwert taugte ebenfalls nicht (Fließtext 1/16 wie Schnee).
+- **Hell ohne Papier** (dichter Text, Rahmenlinie, Symbol – oder Foto): Seite, wenn auf einer
+  Seite Papier liegt und gegenüber Papier oder eine dunkle Fläche (bis 32 px), sonst original.
+  Am Fotorand liegt gegenüber Foto → bleibt original.
+- **Foto:** Mehrheit eines 64-px-Umfelds bunt; helle Kacheln zusätzlich mit Farbstreuung. Dunkle
+  bunte Flächen (blauer Himmel) zählen ohne Streuung – dunkle UI ist grau, kein Himmel. Kacheln mit
+  Papier sind **nie** Foto (sonst blieb die Seite neben einem bunten Balken weiß). Foto-Kacheln
+  melden die Luma ihres Inhalts ohne Papier. Löcher: Kacheln ohne Papier mit Foto auf zwei
+  gegenüberliegenden Seiten (bis 64 px) und Papier-Kacheln mit Foto auf ≥ 3 Seiten (ausgebranntes
+  Weiß; eine Seite darf grauer Fels sein) bleiben original.
+- **Zeitliche Glättung nur bei ähnlichem Hintergrund:** Springt die Hintergrund-Luma einer Kachel
+  um > 0,25 (Inhalt hat sich bewegt), gilt die neue Entscheidung sofort. Scroll-Test
+  (`OfflineScrollTests`, Inhalt wandert je 60-Hz-Frame): vorher bis 7,4 % (12 px/Frame) bzw. 2,1 %
+  (4 px/Frame) abweichende Pixel durch nachgezogene graue Geister, jetzt ≤ 1,0 % bzw. 0,8 %.
+- **Werkzeuge:** `ZOOMIN_OFFLINE_PROTECT=0` (Schutz aus), `ZOOMIN_OFFLINE_ZOOM=3` (Mitte
+  vergrößert), `ZOOMIN_OFFLINE_SCROLL=<px>` (Scroll-Test mit Bericht), dazu `-decisions.png`
+  (rot = Papier, grün = Foto, blau = hell ohne Papier). Mit diesen Karten wurden alle Fälle hier
+  gefunden – erst messen, dann Regeln ändern.
+- **Grenze:** Testbilder sind JPEG-Screenshots (Rauschen); das Overlay sieht exakte Pixel. Videos
+  wurden nicht eigens aufgenommen (Standbild verhält sich wie ein Foto).
+
 ## Debug-Schnappschuss (M13)
 - Das Overlay ist aus jeder Aufnahme ausgenommen; auch Screenshots von Agenten zeigen nur das
   Original. Für die Sichtprüfung gibt es deshalb in „Allgemein → Diagnose“ den Knopf

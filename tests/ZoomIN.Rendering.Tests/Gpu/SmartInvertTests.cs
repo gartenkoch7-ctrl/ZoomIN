@@ -34,18 +34,21 @@ public sealed class SmartInvertTests
     [Fact]
     public void Photo_StaysOriginal()
     {
-        // Colourful, detailed light content: bright stripes of different hues.
         var pixels = Render(Photo, s_smartMonitor);
 
         Assert.Equal(Photo(64, 64), pixels.At(64, 64));
+        Assert.Equal(Photo(20, 100), pixels.At(20, 100));
     }
 
     [Fact]
-    public void Photo_IsInverted_WhenNotProtected()
+    public void BurntOutWhiteInsideAPhoto_StaysOriginal()
     {
-        var pixels = Render(Photo, s_smartMonitor with { ProtectPhotos = false });
+        // Pure white 40 × 40 in the middle of a photo: paper on its own, a hole in the photo by its surroundings.
+        static Bgra Image(int x, int y) => x is >= 44 and < 84 && y is >= 44 and < 84 ? s_white : Photo(x, y);
 
-        Assert.NotEqual(Photo(64, 64), pixels.At(64, 64));
+        var pixels = Render(Image, s_smartMonitor);
+
+        Assert.True(Luma(pixels.At(64, 64)) > 240, $"the white area must stay white, got {Luma(pixels.At(64, 64))}");
     }
 
     [Fact]
@@ -60,31 +63,46 @@ public sealed class SmartInvertTests
     }
 
     [Fact]
-    public void Smoothing_ChangesFadeInOverFrames()
+    public void Smoothing_BorderlineChangeFadesInOverFrames()
+    {
+        // Mid grey just below and just above "light": a similar background that flips – smoothed.
+        var (halfway, settled) = Fade(new Bgra(150, 150, 150, 255), new Bgra(182, 182, 182, 255));
+
+        Assert.InRange(halfway, 140, 172); // a quarter inverted: only a bit darker than 182
+        Assert.True(settled < 90, $"after 20 frames the grey is inverted ({settled})");
+    }
+
+    [Fact]
+    public void Smoothing_ClearChangeCountsAtOnce()
+    {
+        // Dark content replaced by a white page (scrolling, a window moved): no grey ghost.
+        var (first, _) = Fade(s_bar, s_white);
+
+        Assert.True(first < 10, $"the white page is inverted in the first frame ({first})");
+    }
+
+    private static (int First, int Settled) Fade(Bgra before, Bgra after)
     {
         using var gpu = GpuDevice.CreateWarp();
-        using var dark = TestImage.Create(gpu.Device, Size, (_, _) => s_bar);
-        using var light = TestImage.Create(gpu.Device, Size, (_, _) => s_white);
+        using var old = TestImage.Create(gpu.Device, Size, (_, _) => before);
+        using var next = TestImage.Create(gpu.Device, Size, (_, _) => after);
         using var target = RenderTarget.Create(gpu.Device, Size);
         using var pass = new MagnifyPass(gpu.Device);
         using var ambient = new AmbientPass(gpu.Device, Size, Size);
         Upload(gpu, pass, s_smartMonitor, WindowRegions.Empty);
 
-        ambient.Update(gpu.Context, dark.View, 1, protectPhotos: true);
-        ambient.Update(gpu.Context, light.View, 0.25f, protectPhotos: true);
-        Draw(gpu, pass, light, target, ambient);
-        var halfway = Luma(target.ReadBack(gpu.Device, gpu.Context).At(64, 64));
+        ambient.Update(gpu.Context, old.View, 1, protectPhotos: true);
+        ambient.Update(gpu.Context, next.View, 0.25f, protectPhotos: true);
+        Draw(gpu, pass, next, target, ambient);
+        var first = Luma(target.ReadBack(gpu.Device, gpu.Context).At(64, 64));
 
         for (var i = 0; i < 20; i++)
         {
-            ambient.Update(gpu.Context, light.View, 0.25f, protectPhotos: true);
+            ambient.Update(gpu.Context, next.View, 0.25f, protectPhotos: true);
         }
 
-        Draw(gpu, pass, light, target, ambient);
-        var settled = Luma(target.ReadBack(gpu.Device, gpu.Context).At(64, 64));
-
-        Assert.InRange(halfway, 150, 220); // a quarter inverted: white only a bit darker
-        Assert.True(settled < 10, $"after 20 frames the white page is inverted ({settled})");
+        Draw(gpu, pass, next, target, ambient);
+        return (first, Luma(target.ReadBack(gpu.Device, gpu.Context).At(64, 64)));
     }
 
     [Fact]
@@ -155,14 +173,17 @@ public sealed class SmartInvertTests
             ? (y % 16 is 7 or 8 && x % 4 < 2 ? s_white : s_bar)
             : (y % 8 is 0 or 1 && x % 16 < 12 ? s_black : s_white);
 
-    // Light, saturated patches of changing hue, 8 px each. Shifted by 2 px so the samples of the
-    // ambient pass (2 × 2 means every 8 px) fall inside a patch instead of averaging four hues.
-    private static Bgra Photo(int x, int y) => ((((x + 2) / 8) + ((y + 2) / 8)) % 3) switch
+    // Photo-like: smooth colour gradients plus fine noise, no flat area anywhere (like a real photo).
+    private static Bgra Photo(int x, int y)
     {
-        0 => new Bgra(80, 230, 255, 255),
-        1 => new Bgra(255, 200, 90, 255),
-        _ => new Bgra(140, 255, 160, 255),
-    };
+        var noise = ((x * 7919) ^ (y * 104729)) % 21 - 10;
+        static byte Clamp(double v) => (byte)Math.Clamp(v, 0, 255);
+        return new Bgra(
+            Clamp(150 + (70 * Math.Cos(x * 0.11)) + noise),
+            Clamp(170 + (60 * Math.Sin(y * 0.17)) + noise),
+            Clamp(180 + (75 * Math.Sin((x * 0.21) + (y * 0.13))) + noise),
+            255);
+    }
 
     private static int Luma(Bgra c) => (int)((0.2126 * c.R) + (0.7152 * c.G) + (0.0722 * c.B));
 

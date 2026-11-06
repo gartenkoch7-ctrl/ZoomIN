@@ -114,11 +114,20 @@ dem Tag `v1.0.0`.
 - Vom Nutzer bestätigt 2026-11-06 (dev.116.m13): Hover und Tooltip in der Systemsteuerung sauber.
 - Budget-Hinweis: +0,083 ms auf der RTX, Hochrechnung Onboard ≈ 0,8 ms – nah am Budget.
 
+### Selbstständiger Test 2026-11-06
+- Foto, Schutz an/aus, Zoom 3×, Scrollen 4/12 px pro Frame und beide Systemsteuerungs-Aufnahmen
+  offline mit den echten Shadern geprüft. Gefunden und behoben: schwarze Flecken im Schnee eines
+  Fotos, weiße Reste in dichtem Text und am Hover-Kasten, weißer Streifen an einem bunten Balken,
+  graue Geister beim Scrollen. Regeln und Messwerte in KB rendering-pipeline („Papier, Fotos und
+  Scrollen“).
+
 ## Akzeptanzkriterien
 - [x] Systemsteuerung (dunkles Design): helle Fläche dunkel, dunkle Leisten bleiben dunkel – geprüft
       2026-11-06 vom Nutzer an der Einstellungen-App (dev.113.m13, Automatik-Filter intelligent)
-- [ ] Foto im Browser bleibt original; ein Video läuft ohne Negativ-Look
-- [ ] Scrollen einer Seite mit hellen und dunklen Teilen: kein Flackern, kein Springen
+- [x] Foto im Browser bleibt original – selbstständig geprüft 2026-11-06 (Wikipedia „Matterhorn“,
+      Offline-Wiedergabe der echten Shader); Video nicht eigens aufgenommen (Standbild = Foto)
+- [x] Scrollen einer Seite mit hellen und dunklen Teilen: kein Flackern, kein Springen – Scroll-Test
+      offline: ≤ 1,0 % abweichende Pixel bei 12 px/Frame (vorher 7,4 % durch Nachziehen)
 - [ ] Monitorfilter, Lupe und Angedockt verhalten sich gleich; Zoomen kippt keine Fläche
 - [ ] Budget: ≤ 1 ms extra GPU (hochgerechnet; Onboard-Messung, sobald Gerät da); Monitor-Hz gehalten
 - [ ] Rückfall greift und ist in Log und Diagnose sichtbar

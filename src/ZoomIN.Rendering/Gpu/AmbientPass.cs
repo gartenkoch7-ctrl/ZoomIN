@@ -6,9 +6,10 @@ namespace ZoomIN.Rendering.Gpu;
 
 /// <summary>
 /// Smart inversion (ADR-0024): a small texture with one inversion weight per
-/// <see cref="Block"/> × <see cref="Block"/> desktop pixels, kept over frames for the time
-/// smoothing (two textures, the new one blended from the old). Sized once per monitor;
-/// <see cref="Update"/> runs every frame and must not allocate (AGENTS.md 2.3).
+/// <see cref="Block"/> × <see cref="Block"/> desktop pixels. Two steps: Ambient.hlsl decides each
+/// texel (light background, its luma, photo), PhotoFill.hlsl fills holes in photos and blends with
+/// the previous weights for the time smoothing (two textures, the new one blended from the old).
+/// Sized once per monitor; <see cref="Update"/> runs every frame and must not allocate (AGENTS.md 2.3).
 /// </summary>
 internal sealed class AmbientPass : IDisposable
 {
@@ -19,11 +20,18 @@ internal sealed class AmbientPass : IDisposable
     // keeps the small per-frame steps of the time smoothing that 8 bits would round away.
     private const Format WeightFormat = Format.R16G16_Float;
 
+    // Step 1 output: light background, its luma, photo. Read by step 2 only.
+    private const Format RawFormat = Format.R16G16B16A16_Float;
+
     private readonly ID3D11Texture2D[] _textures = new ID3D11Texture2D[2];
     private readonly ID3D11RenderTargetView[] _targets = new ID3D11RenderTargetView[2];
     private readonly ID3D11ShaderResourceView[] _views = new ID3D11ShaderResourceView[2];
+    private readonly ID3D11Texture2D _raw;
+    private readonly ID3D11RenderTargetView _rawTarget;
+    private readonly ID3D11ShaderResourceView _rawView;
     private readonly ID3D11VertexShader _vertexShader;
     private readonly ID3D11PixelShader _pixelShader;
+    private readonly ID3D11PixelShader _fillShader;
     private readonly ID3D11SamplerState _sampler;
     private readonly ID3D11Buffer _constants;
     private readonly float _desktopWidth;
@@ -45,8 +53,14 @@ internal sealed class AmbientPass : IDisposable
             _views[i] = device.CreateShaderResourceView(_textures[i]);
         }
 
+        _raw = device.CreateTexture2D(new Texture2DDescription(
+            RawFormat, (uint)Width, (uint)Height, arraySize: 1, mipLevels: 1,
+            bindFlags: BindFlags.RenderTarget | BindFlags.ShaderResource));
+        _rawTarget = device.CreateRenderTargetView(_raw);
+        _rawView = device.CreateShaderResourceView(_raw);
         _vertexShader = device.CreateVertexShader(ShaderSource.Compile("Ambient.hlsl", "VSMain", "vs_4_0").Span);
         _pixelShader = device.CreatePixelShader(ShaderSource.Compile("Ambient.hlsl", "PSMain", "ps_4_0").Span);
+        _fillShader = device.CreatePixelShader(ShaderSource.Compile("PhotoFill.hlsl", "PSMain", "ps_4_0").Span);
         _sampler = device.CreateSamplerState(SamplerDescription.LinearClamp);
         _constants = device.CreateBuffer(new BufferDescription(AmbientConstants.SizeInBytes, BindFlags.ConstantBuffer, ResourceUsage.Default));
     }
@@ -54,6 +68,9 @@ internal sealed class AmbientPass : IDisposable
     public int Width { get; }
 
     public int Height { get; }
+
+    /// <summary>Step 1 output of the last <see cref="Update"/> (paper, background, photo, light without paper); for tests and tools.</summary>
+    internal ID3D11ShaderResourceView RawDecisions => _rawView;
 
     /// <summary>The weights of the last <see cref="Update"/>, for Magnify.hlsl (t1).</summary>
     public ID3D11ShaderResourceView Weights => _views[_latest];
@@ -68,19 +85,27 @@ internal sealed class AmbientPass : IDisposable
         var constants = new AmbientConstants(_desktopWidth, _desktopHeight, alpha, protectPhotos, Block);
         context.UpdateSubresource(constants, _constants);
 
-        // The texture written now was read by the last frame's magnify pass; unbind it first.
+        // Step 1: decide each texel. The textures written here were read by the last frame; unbind first.
+        context.PSUnsetShaderResource(0);
         context.PSUnsetShaderResource(1);
-        context.OMSetRenderTargets(_targets[next]);
+        context.OMSetRenderTargets(_rawTarget);
         context.RSSetViewport(0, 0, Width, Height);
         context.IASetInputLayout(null);
         context.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
         context.VSSetShader(_vertexShader);
         context.PSSetShader(_pixelShader);
         context.PSSetShaderResource(0, desktop);
-        context.PSSetShaderResource(1, _views[_latest]);
         context.PSSetSampler(0, _sampler);
         context.PSSetConstantBuffer(0, _constants);
         context.Draw(3, 0);
+
+        // Step 2: fill holes in photos and blend with the previous weights.
+        context.OMSetRenderTargets(_targets[next]);
+        context.PSSetShader(_fillShader);
+        context.PSSetShaderResource(0, _rawView);
+        context.PSSetShaderResource(1, _views[_latest]);
+        context.Draw(3, 0);
+        context.PSUnsetShaderResource(0);
         context.PSUnsetShaderResource(1);
         _latest = next;
     }
@@ -89,7 +114,11 @@ internal sealed class AmbientPass : IDisposable
     {
         _constants.Dispose();
         _sampler.Dispose();
+        _fillShader.Dispose();
         _pixelShader.Dispose();
+        _rawView.Dispose();
+        _rawTarget.Dispose();
+        _raw.Dispose();
         _vertexShader.Dispose();
         for (var i = 0; i < 2; i++)
         {
