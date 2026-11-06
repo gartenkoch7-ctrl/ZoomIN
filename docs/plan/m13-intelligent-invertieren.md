@@ -79,8 +79,12 @@ dem Tag `v1.0.0`.
   nur im Fensterbereich, Glättung über Frames; 0 B im Render-Loop.
 - GPU auf RTX 3060 Ti, 1440p: **+0,046 ms** pro Frame (Hochrechnung Onboard ≈ 0,5 ms).
 - Werte (Schwellen, Umfeld 32 px, Glättung 50 ms) vorläufig; Abstimmung nach der Sichtprüfung.
-- Noch offen: Schalter „Fotos schützen“ in Settings/UI (heute fest an), Migration Automatik-Filter,
-  Rückfall bei Budget, Telemetrie, Diagnose.
+- Migration erledigt (2026-11-06): Automatik-Filter ab Werk „intelligent“; alter Werkswert
+  „Invertiert“ wird einmalig umgestellt (`AutoFilterRevision`, fehlt in alten Settings = 0). Wer
+  danach selbst „Invertiert“ wählt, behält es. Anlass: Einstellungen-App wurde mit dem alten
+  Automatik-Filter klassisch invertiert – der intelligente Filter kam gar nicht zum Zug.
+- Noch offen: Schalter „Fotos schützen“ in Settings/UI (heute fest an), Rückfall bei Budget,
+  Diagnose-Anzeige.
 
 ### Debug-Schnappschuss 2026-11-06 (Entscheidung des Nutzers)
 - [x] Knopf „Schnappschuss in 5 s“ auf der Diagnose-Seite: Original, Ergebnis, Gewichte und

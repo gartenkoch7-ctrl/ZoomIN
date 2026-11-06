@@ -38,7 +38,7 @@ public sealed class WindowFilterResolverTests
         Assert.Equal(WindowPalette.Original, Resolve(new WindowKind("gimp-2.10.exe", "gdkWindowToplevel"), WindowBrightness.Light, WindowFilterOptions.Default));
 
         var automatic = WindowFilterOptions.Default.WithRule(WindowFilterRule.For(s_vlc, WindowFilterChoice.Automatic));
-        Assert.Equal(WindowPalette.For(ColorFilter.Inverted), Resolve(s_vlc, WindowBrightness.Light, automatic));
+        Assert.Equal(WindowPalette.Smart, Resolve(s_vlc, WindowBrightness.Light, automatic));
     }
 
     [Fact]

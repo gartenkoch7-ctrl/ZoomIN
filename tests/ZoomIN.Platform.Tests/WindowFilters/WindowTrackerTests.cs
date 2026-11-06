@@ -17,7 +17,8 @@ public sealed class WindowTrackerTests
 {
     private static readonly PhysicalRect s_whiteBounds = new(200, 200, 300, 300);
     private static readonly PhysicalRect s_blackBounds = new(600, 200, 300, 300);
-    private static readonly byte s_inverted = WindowPalette.For(ColorFilter.Inverted);
+    // The factory automatic filter (smart inversion since ADR-0024).
+    private static readonly byte s_inverted = WindowPalette.For(WindowFilterOptions.Default.AutoFilter);
 
     [Fact]
     public void Enumerator_ListsTheTestWindows_FrontToBack_WithTheirBounds()

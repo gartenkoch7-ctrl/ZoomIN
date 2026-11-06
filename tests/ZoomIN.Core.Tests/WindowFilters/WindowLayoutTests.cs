@@ -10,7 +10,8 @@ public sealed class WindowLayoutTests
     private static readonly PhysicalRect s_monitor = new(0, 0, 1920, 1080);
     private static readonly WindowKind s_word = new("winword.exe", "OpusApp");
     private static readonly WindowKind s_terminal = new("windowsterminal.exe", "CASCADIA_HOSTING_WINDOW_CLASS");
-    private static readonly byte s_inverted = WindowPalette.For(ColorFilter.Inverted);
+    // The factory automatic filter (smart inversion since ADR-0024).
+    private static readonly byte s_auto = WindowPalette.For(WindowFilterOptions.Default.AutoFilter);
 
     [Fact]
     public void OnlyDarkWindows_GiveNoRegions()
@@ -32,7 +33,7 @@ public sealed class WindowLayoutTests
 
         Assert.Equal(1, regions.Count);
         Assert.Equal(new PhysicalRect(0, 0, 900, 1000), regions.Rects[0]);
-        Assert.Equal(s_inverted, regions.Palette[0]);
+        Assert.Equal(s_auto, regions.Palette[0]);
     }
 
     [Fact]
@@ -47,7 +48,7 @@ public sealed class WindowLayoutTests
 
         Assert.Equal(2, regions.Count);
         Assert.Equal(WindowPalette.Monitor, regions.Palette[0]);
-        Assert.Equal(s_inverted, regions.Palette[1]);
+        Assert.Equal(s_auto, regions.Palette[1]);
     }
 
     [Fact]
@@ -73,7 +74,7 @@ public sealed class WindowLayoutTests
             ],
             WindowFilterOptions.Default);
 
-        Assert.Equal(s_inverted, regions.Palette[0]);
+        Assert.Equal(s_auto, regions.Palette[0]);
     }
 
     [Fact]
@@ -87,7 +88,7 @@ public sealed class WindowLayoutTests
             ],
             WindowFilterOptions.Default);
 
-        Assert.Equal(s_inverted, regions.Palette[0]);
+        Assert.Equal(s_auto, regions.Palette[0]);
     }
 
     [Fact]
@@ -145,12 +146,12 @@ public sealed class WindowLayoutTests
     {
         var regions = WindowLayout.Build([Window(1, 0, 0, 900, 1000, s_word, WindowBrightness.Light)], WindowFilterOptions.Default);
         var plain = DisplayEffects.Default;
-        var invertedMonitor = new DisplayEffects(new FilterSettings(true, ColorFilter.Inverted, 1, 0), Smoothing.Text, PointerStyle.Default);
+        var smartMonitor = new DisplayEffects(new FilterSettings(true, ColorFilter.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default);
         var yellowMonitor = new DisplayEffects(new FilterSettings(true, ColorFilter.YellowOnBlack, 1, 0), Smoothing.Text, PointerStyle.Default);
 
         Assert.True(regions.ChangesMonitor(s_monitor, plain));
         Assert.False(regions.ChangesMonitor(new PhysicalRect(1920, 0, 1920, 1080), plain));
-        Assert.False(regions.ChangesMonitor(s_monitor, invertedMonitor));
+        Assert.False(regions.ChangesMonitor(s_monitor, smartMonitor));
         Assert.True(regions.ChangesMonitor(s_monitor, yellowMonitor));
     }
 

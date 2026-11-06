@@ -12,13 +12,22 @@ public sealed record WindowFilterOptions
     public const int MinPercent = 20;
     public const int MaxPercent = 95;
 
-    public static WindowFilterOptions Default { get; } = new();
+    /// <summary>
+    /// Revision of the factory value of <see cref="AutoFilter"/>. 1 = smart inversion (ADR-0024).
+    /// Settings written before have 0 (missing in the JSON), so the old factory value can be told apart.
+    /// </summary>
+    public const int CurrentAutoFilterRevision = 1;
+
+    public static WindowFilterOptions Default { get; } = new() { AutoFilterRevision = CurrentAutoFilterRevision };
 
     /// <summary>On from the start (decision), also without zoom.</summary>
     public bool Enabled { get; set; } = true;
 
-    /// <summary>Filter for windows measured as light.</summary>
-    public ColorFilter AutoFilter { get; set; } = ColorFilter.Inverted;
+    /// <summary>Filter for windows measured as light; from the factory the smart inversion (ADR-0024).</summary>
+    public ColorFilter AutoFilter { get; set; } = ColorFilter.InvertedSmart;
+
+    /// <summary>Which factory value <see cref="AutoFilter"/> was last checked against; 0 in older settings.</summary>
+    public int AutoFilterRevision { get; set; }
 
     public WindowFilterSensitivity Sensitivity { get; set; } = WindowFilterSensitivity.Medium;
 
@@ -67,7 +76,11 @@ public sealed record WindowFilterOptions
     public WindowFilterOptions WithoutRule(WindowKind kind) =>
         this with { Rules = Rules.Where(r => !r.Kind.Equals(kind)).ToList() };
 
-    /// <summary>Drops broken entries (empty names, unknown values, duplicates) and bounds the numbers.</summary>
+    /// <summary>
+    /// Drops broken entries (empty names, unknown values, duplicates) and bounds the numbers. Moves
+    /// the old factory value "Inverted" to the smart inversion once (ADR-0024, decision 7); a user
+    /// who picks "Inverted" afterwards keeps it, because the revision is stored with it.
+    /// </summary>
     public WindowFilterOptions Normalized()
     {
         var seen = new HashSet<WindowKind>();
@@ -85,9 +98,13 @@ public sealed record WindowFilterOptions
             rules.Add(rule);
         }
 
+        var autoFilter = !Enum.IsDefined(AutoFilter) ? ColorFilter.InvertedSmart
+            : AutoFilterRevision < CurrentAutoFilterRevision && AutoFilter == ColorFilter.Inverted ? ColorFilter.InvertedSmart
+            : AutoFilter;
         return this with
         {
-            AutoFilter = Enum.IsDefined(AutoFilter) ? AutoFilter : ColorFilter.Inverted,
+            AutoFilter = autoFilter,
+            AutoFilterRevision = CurrentAutoFilterRevision,
             Sensitivity = Enum.IsDefined(Sensitivity) ? Sensitivity : WindowFilterSensitivity.Medium,
             CustomPercent = Math.Clamp(CustomPercent, MinPercent, MaxPercent),
             Rules = rules,

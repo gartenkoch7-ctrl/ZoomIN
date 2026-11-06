@@ -8,12 +8,13 @@ public sealed class WindowFilterOptionsTests
     private static readonly WindowKind s_word = new("WINWORD.EXE", "OpusApp");
 
     [Fact]
-    public void Defaults_AreOn_Inverted_Medium()
+    public void Defaults_AreOn_Smart_Medium()
     {
         var options = WindowFilterOptions.Default;
 
         Assert.True(options.Enabled);
-        Assert.Equal(ColorFilter.Inverted, options.AutoFilter);
+        Assert.Equal(ColorFilter.InvertedSmart, options.AutoFilter);
+        Assert.Equal(WindowFilterOptions.CurrentAutoFilterRevision, options.AutoFilterRevision);
         Assert.Equal(60, options.ThresholdPercent);
         Assert.Empty(options.Rules);
     }
@@ -92,7 +93,7 @@ public sealed class WindowFilterOptionsTests
             ],
         }.Normalized();
 
-        Assert.Equal(ColorFilter.Inverted, options.AutoFilter);
+        Assert.Equal(ColorFilter.InvertedSmart, options.AutoFilter);
         Assert.Equal(WindowFilterSensitivity.Medium, options.Sensitivity);
         Assert.Equal(WindowFilterOptions.MaxPercent, options.CustomPercent);
         Assert.Equal(WindowFilterChoice.None, Assert.Single(options.Rules).Choice);

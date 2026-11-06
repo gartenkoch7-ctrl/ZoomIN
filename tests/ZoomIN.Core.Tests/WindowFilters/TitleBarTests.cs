@@ -11,6 +11,7 @@ public sealed class TitleBarTests
     private static readonly WindowKind s_settings = new("systemsettings.exe", "Windows.UI.Core.CoreWindow");
     private static readonly WindowKind s_terminal = new("windowsterminal.exe", "CASCADIA_HOSTING_WINDOW_CLASS");
     private static readonly byte s_inverted = WindowPalette.For(ColorFilter.Inverted);
+    private static readonly byte s_auto = WindowPalette.For(WindowFilterOptions.Default.AutoFilter);
     private static readonly PhysicalRect s_bounds = new(100, 50, 900, 700);
 
     [Fact]
@@ -22,7 +23,7 @@ public sealed class TitleBarTests
         Assert.Equal(new PhysicalRect(100, 50, 900, TitleBar), regions.Rects[0]);
         Assert.Equal(WindowPalette.Monitor, regions.Palette[0]);
         Assert.Equal(s_bounds, regions.Rects[1]);
-        Assert.Equal(s_inverted, regions.Palette[1]);
+        Assert.Equal(s_auto, regions.Palette[1]);
     }
 
     [Theory]
@@ -128,7 +129,7 @@ public sealed class TitleBarTests
 
         Assert.Equal(WindowRegions.Max, regions.Count);
         Assert.Equal(700, regions.Rects[WindowRegions.Max - 1].Height);
-        Assert.Equal(s_inverted, regions.Palette[WindowRegions.Max - 1]);
+        Assert.Equal(s_auto, regions.Palette[WindowRegions.Max - 1]);
         Assert.Equal(1 + 78 - WindowRegions.Max, regions.Dropped);
     }
 
