@@ -102,6 +102,7 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.settings.save` | app, setup | `settings.json` schreiben (Fehler: Ausnahmetyp) |
 | `zoomin.profile.switch` | app | Profilwechsel (ohne Profilnamen – die vergibt der Nutzer frei) |
 | `zoomin.diagnostics.package` | app | Diagnosepaket erstellen (Tag `zoomin.diagnostics.files`) |
+| `zoomin.debug.snapshot` | app | Debug-Schnappschuss eines Monitors schreiben (Tag `zoomin.monitor`; Fehler: Ausnahmetyp) |
 | `zoomin.windowfilter.toggle` | app | Kürzel „Filter für aktives Fenster“ (Tags `process.name`, `zoomin.choice`: `None`, `Filter`) |
 
 ## Katalog: Messwerte
@@ -212,6 +213,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 3004 | Info | Monitors: {Monitors} |
 | 3005 | Kritisch | A render thread does not stop; restarting ZoomIN via the watchdog |
 | 3006 | Fehler | Render thread without progress for over {Seconds} s; rebuilding the zoom pipeline |
+| 3050 | Info | Debug snapshot of {Monitor} saved to {Folder} (nur der Ordnername) |
+| 3051 | Warnung | Debug snapshot of {Monitor} failed |
 | 4001 | Warnung | Cannot watch process {ProcessId}: {Reason} |
 | 4002 | Fehler | ZoomIN ended unexpectedly (exit code 0x{ExitCode:X8}) |
 | 4003 | Warnung | Restarting ZoomIN |

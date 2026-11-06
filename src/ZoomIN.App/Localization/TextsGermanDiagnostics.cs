@@ -40,5 +40,11 @@ internal static class TextsGermanDiagnostics
         ["Diag.Creating"] = "Wird erstellt …",
         ["Diag.Created"] = "Gespeichert: {0}",
         ["Diag.CreateFailed"] = "Das Paket konnte nicht erstellt werden.",
+        ["Snapshot.Title"] = "Debug-Schnappschuss",
+        ["Snapshot.Desc"] = "Speichert nach 5 Sekunden, was ZoomIN auf jedem Monitor zeichnet: Original, Ergebnis und die Gewichte des intelligenten Invertierens, dazu eine Textdatei. Enthält Bildschirminhalt, bleibt nur auf diesem PC und kommt nie ins Diagnosepaket.",
+        ["Snapshot.Take"] = "Schnappschuss in 5 s",
+        ["Snapshot.Countdown"] = "Schnappschuss in {0} s – Fenster jetzt nach vorn holen",
+        ["Snapshot.Saved"] = "Gespeichert für {0} Monitor(e): {1}",
+        ["Snapshot.Nothing"] = "Kein Bild: ZoomIN zeichnet gerade nichts (kein Filter und kein Zoom aktiv).",
     };
 }

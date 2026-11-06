@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using ZoomIN.App.Settings;
 using ZoomIN.App.Zoom;
+using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
@@ -40,7 +41,8 @@ internal static class EngineRegistration
             sp.GetRequiredService<ZoomModel>(),
             sp.GetRequiredService<EffectsModel>(),
             sp.GetRequiredService<TrackingModel>(),
-            sp.GetRequiredService<WindowFilterModel>()));
+            sp.GetRequiredService<WindowFilterModel>(),
+            new DebugSnapshots()));
         services.AddSingleton<SettingsService>();
         services.AddSingleton<ProfileService>();
 

@@ -115,6 +115,21 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   `ZOOMIN_GPU_TIMING=1 dotnet test --project tests/ZoomIN.Rendering.Tests --filter-method "*SmartInvertGpuTimeTests*"`,
   das Ergebnis steht in `%TEMP%\zoomin-gpu-timing.txt`.
 
+## Debug-Schnappschuss (M13)
+- Das Overlay ist aus jeder Aufnahme ausgenommen; auch Screenshots von Agenten zeigen nur das
+  Original. Für die Sichtprüfung gibt es deshalb in „Allgemein → Diagnose“ den Knopf
+  „Schnappschuss in 5 s“: Jeder Renderer, der gerade zeichnet, liest **vor `Present`** die
+  Desktop-Kopie, den Back Buffer (Ergebnis inkl. Zeiger) und die Gewichte des intelligenten
+  Invertierens zurück und schreibt nach `%LOCALAPPDATA%\ZoomIN\debug\snapshot-<Zeit>\`:
+  `DISPLAYn-original.png`, `-result.png`, `-weights.png` (weiß = invertiert), `-info.txt`
+  (Modus, Zoom, Filter, Fensterbereiche mit Palette – keine Titel).
+- Ein pausierter Renderer (nichts gefiltert, kein Zoom) antwortet nicht; die Seite meldet dann
+  „ZoomIN zeichnet gerade nichts“. Der Ordner kommt nie ins Diagnosepaket (Bildschirminhalt).
+- Ohne neue Anforderung kostet `SnapshotTaker` je Frame nur einen Vergleich (0 B, Test). Achtung:
+  Ein Lambda für `Task.Run` in derselben Methode ließ C# die Closure **bei jedem Aufruf** anlegen
+  (32 B/Frame) – der teure Teil steht deshalb in einer eigenen Methode.
+- PNG ohne Bibliothek: `PngWriter` (RGBA8, Filter 0, ein zlib-IDAT, CRC-32).
+
 ## Shader-Regeln
 - HLSL-Dateien in `ZoomIN.Rendering/Shaders/`, als Embedded Resource eingebettet und beim
   Start mit dem in Windows enthaltenen D3DCompiler übersetzt (Entscheidung M1: kein SDK-Tool

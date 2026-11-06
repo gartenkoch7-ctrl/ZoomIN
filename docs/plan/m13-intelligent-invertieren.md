@@ -82,6 +82,13 @@ dem Tag `v1.0.0`.
 - Noch offen: Schalter „Fotos schützen“ in Settings/UI (heute fest an), Migration Automatik-Filter,
   Rückfall bei Budget, Telemetrie, Diagnose.
 
+### Debug-Schnappschuss 2026-11-06 (Entscheidung des Nutzers)
+- [x] Knopf „Schnappschuss in 5 s“ auf der Diagnose-Seite: Original, Ergebnis, Gewichte und
+      Info je Monitor als Dateien, damit die KI das gefilterte Bild auswerten kann (das Overlay
+      fehlt in jeder Bildschirmaufnahme). Nur auf Knopfdruck, nur lokal, nie im Diagnosepaket.
+- Anlass: In der Einstellungen-App wird eine dunkle Fläche unter der Titelleiste trotz
+  „intelligent“ weiß – Ursache noch offen, wird mit dem Schnappschuss untersucht.
+
 ## Akzeptanzkriterien
 - [ ] Systemsteuerung (dunkles Design): helle Fläche dunkel, dunkle Leisten bleiben dunkel
 - [ ] Foto im Browser bleibt original; ein Video läuft ohne Negativ-Look

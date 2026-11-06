@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Vortice.Direct3D11;
 using Vortice.DXGI;
 using Vortice.Mathematics;
 using ZoomIN.Core.Filters;
@@ -9,6 +10,7 @@ using ZoomIN.Core.WindowFilters;
 using ZoomIN.Rendering.Capture;
 using ZoomIN.Rendering.Gpu;
 using ZoomIN.Rendering.Overlay;
+using ZoomIN.Rendering.Snapshots;
 
 namespace ZoomIN.Rendering.RenderLoop;
 
@@ -34,6 +36,7 @@ internal sealed class RenderSession : IDisposable
     private readonly CursorLayer _cursorLayer;
     private readonly HighlightLayer _highlights;
     private readonly SmartInvertLayer _smart;
+    private readonly SnapshotTaker _snapshots;
     private readonly AnchorController _anchors = new();
     private readonly int _displayGeneration;
     private PhysicalPoint _lastCursor;
@@ -45,9 +48,10 @@ internal sealed class RenderSession : IDisposable
     private WindowRegions? _uploadedWindows;
     private DisplayEffects? _uploadedEffects;
 
-    public RenderSession(PointerServices pointer, string deviceName)
+    public RenderSession(PointerServices pointer, string deviceName, SnapshotTaker snapshots)
     {
         _pointer = pointer;
+        _snapshots = snapshots;
 
         // Taken before enumerating outputs so a change during construction is not missed.
         _displayGeneration = OverlayWindow.DisplayChangeCount;
@@ -139,19 +143,22 @@ internal sealed class RenderSession : IDisposable
             request.Mode, request.Zoom, request.Lens, request.Dock, request.Tracking, request.TrackingOptions));
 
         var frame = ModeGeometry.Compute(request.Mode, _monitor.Bounds, anchor, request.Zoom, request.Lens, request.Dock);
+        ID3D11ShaderResourceView? weights = null;
         if (request.OverlayOnly)
         {
             _gpu.Context.ClearRenderTargetView(_swapchain.RenderTarget, s_transparent);
         }
         else
         {
-            Draw(frame, request.Effects, request.Windows, request.WindowsFiltered);
+            weights = Draw(frame, request.Effects, request.Windows, request.WindowsFiltered);
         }
 
         _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions);
         LocatorActive = _cursorInside && _cursorLayer.Draw(
             _gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Mode, request.Zoom, _lastCursor,
             request.Effects, request.LocateRequestedAt, request.PointerHidden);
+        _snapshots.TakeIfRequested(_gpu.Device, _gpu.Context, request.OverlayOnly ? null : _duplicator.ShaderResource,
+            _swapchain.RenderTarget, weights, _monitor.Bounds, frame.Source, request);
         _swapchain.Present();
 
         // Show the window only after the first frame so it never flashes empty.
@@ -174,7 +181,8 @@ internal sealed class RenderSession : IDisposable
         _owned.Clear();
     }
 
-    private void Draw(in ModeFrame frame, DisplayEffects effects, WindowRegions windows, bool windowsFiltered)
+    /// <returns>The smart inversion weights used, or null.</returns>
+    private ID3D11ShaderResourceView? Draw(in ModeFrame frame, DisplayEffects effects, WindowRegions windows, bool windowsFiltered)
     {
         var monitor = _monitor.Bounds;
 
@@ -195,7 +203,7 @@ internal sealed class RenderSession : IDisposable
         {
             _pass.Draw(_gpu.Context, _duplicator.ShaderResource, _swapchain.RenderTarget, _swapchain.Width, _swapchain.Height,
                 MagnifyConstants.Fullscreen(frame.Source, monitor, matrix, effects.Smoothing, smart), weights);
-            return;
+            return weights;
         }
 
         // Lens/docked: outside the target the monitor looks as it does at 1× (colour filter and
@@ -223,6 +231,7 @@ internal sealed class RenderSession : IDisposable
             (float)viewport.Height,
             constants,
             weights);
+        return weights;
     }
 
     private static PhysicalRect Expand(PhysicalRect rect, double by, PhysicalRect within)

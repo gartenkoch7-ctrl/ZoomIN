@@ -15,11 +15,14 @@ public sealed partial class GeneralPage : Page
 
     public DiagnosticsViewModel? Diag { get; private set; }
 
+    public DebugSnapshotViewModel? Snapshot { get; private set; }
+
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         var context = (PageContext)e.Parameter;
         Vm = new GeneralViewModel(context);
         Diag = new DiagnosticsViewModel(context.Settings);
+        Snapshot = new DebugSnapshotViewModel(context.Settings.Models.Snapshots);
         Bindings.Update();
     }
 }
