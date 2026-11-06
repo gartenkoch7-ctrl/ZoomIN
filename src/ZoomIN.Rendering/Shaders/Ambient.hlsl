@@ -27,8 +27,12 @@ SamplerState LinearSampler : register(s0);
 #define LIGHT_HIGH 0.75
 
 
-// Photos: colourful (mean chroma) and detailed (spread of the colours). Grey text on white has
-// spread but no chroma; a flat coloured button has chroma but no spread.
+// Photos: most of a 64 × 64 surrounding colourful (a sample counts from its chroma) and detailed
+// (spread of the colours). Larger than the 32 px of the light/dark decision on purpose: icons
+// (up to ~48 px) and coloured link text are no photos – protecting them left grey halos around
+// every icon on a white page. Grey text has no chroma; a flat coloured area has no spread.
+#define PHOTO_STEP 16.0
+#define PHOTO_SHARE 0.5
 #define CHROMA_LOW 0.10
 #define CHROMA_HIGH 0.25
 #define DETAIL_LOW 0.06
@@ -50,6 +54,36 @@ VertexOutput VSMain(uint id : SV_VertexID)
 }
 
 // x = inversion weight, y = luma of the background there (Magnify.hlsl uses it to keep edges sharp).
+// True if most of the 64 × 64 surrounding of centre is colourful and detailed; luma = its mean luma.
+bool IsPhoto(float2 centre, out float luma)
+{
+    float colourful = 0;
+    float3 sum = 0;
+    float sumSquares = 0;
+    luma = 0;
+    [unroll]
+    for (int y = 0; y < TAPS; y++)
+    {
+        [unroll]
+        for (int x = 0; x < TAPS; x++)
+        {
+            float2 at = centre + (float2(x, y) - (TAPS - 1) * 0.5) * PHOTO_STEP;
+            float3 c = Desktop.SampleLevel(LinearSampler, at / TextureSize, 0).rgb;
+            float chroma = max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
+            colourful += smoothstep(CHROMA_LOW, CHROMA_HIGH, chroma);
+            sum += c;
+            sumSquares += dot(c, c);
+            luma += dot(c, Luma);
+        }
+    }
+
+    const float n = TAPS * TAPS;
+    float3 mean = sum / n;
+    float spread = sqrt(max(sumSquares / n - dot(mean, mean), 0) / 3);
+    luma /= n;
+    return colourful >= n * PHOTO_SHARE && smoothstep(DETAIL_LOW, DETAIL_HIGH, spread) >= 0.5;
+}
+
 float2 PSMain(VertexOutput input) : SV_Target
 {
     // SV_Position is the texel centre (x + 0.5); scaled, the taps land on pixel corners.
@@ -58,9 +92,6 @@ float2 PSMain(VertexOutput input) : SV_Target
     float light = 0;
     float lightLuma = 0;
     float darkLuma = 0;
-    float3 sum = 0;
-    float sumSquares = 0;
-    float chroma = 0;
     [unroll]
     for (int y = 0; y < TAPS; y++)
     {
@@ -74,15 +105,10 @@ float2 PSMain(VertexOutput input) : SV_Target
             light += isLight;
             lightLuma += isLight * l;
             darkLuma += (1 - isLight) * l;
-            sum += c;
-            sumSquares += dot(c, c);
-            chroma += max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
         }
     }
 
     const float n = TAPS * TAPS;
-    float3 mean = sum / n;
-    float detail = sqrt(max(sumSquares / n - dot(mean, mean), 0) / 3);
 
     // One decision for weight and background: the majority of the samples. Text on a white page keeps
     // a light majority, a dark bar with light text a dark one. A texel on an edge thus decides for
@@ -94,9 +120,18 @@ float2 PSMain(VertexOutput input) : SV_Target
     // Luma of that background: the mean of the majority (light or dark samples), not of everything –
     // text barely moves it, and a texel on an edge reports the side it decides for.
     float background = lightBackground ? lightLuma / max(light, 1e-3) : darkLuma / max(n - light, 1e-3);
-    if (ProtectPhotos != 0)
+
+    // Photos stay original – a decision as well, not a blend (a half-protected texel gives a grey
+    // halo). Its background is the luma of the photo, so its pixels follow it in Magnify.hlsl.
+    // Only light texels can be inverted, so only they need the (wider, costlier) photo test.
+    if (ProtectPhotos != 0 && lightBackground)
     {
-        weight *= 1 - smoothstep(CHROMA_LOW, CHROMA_HIGH, chroma / n) * smoothstep(DETAIL_LOW, DETAIL_HIGH, detail);
+        float photoLuma;
+        if (IsPhoto(centre, photoLuma))
+        {
+            weight = 0;
+            background = photoLuma;
+        }
     }
 
     // After a pause the old texture is stale or never written (may even hold NaN): not read at all.

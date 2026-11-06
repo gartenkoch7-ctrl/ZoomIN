@@ -105,6 +105,14 @@ dem Tag `v1.0.0`.
 - Vom Nutzer bestätigt 2026-11-06 (dev.115.m13): Hover in der Systemsteuerung sauber.
 - Risiko: Kacheln kippen hart (nur zeitlich geglättet) – beim Scrollen über Mischflächen prüfen.
 
+### Fix graue Höfe um Symbole 2026-11-06
+- Fehler (Nutzer): Hover auf Link-Kästen in der Systemsteuerung „leicht grau“, Tooltip „komisch
+  grau“. Selbst nachgestellt und offline wiedergegeben: halb als Foto geschützte Kacheln um bunte
+  Symbole und blauen Linktext gaben graue Höfe. Foto-Test jetzt über 64 px und als Entscheidung.
+- Tooltip konnte nicht nachgestellt werden (Windows zeigt bei simulierter Maus keinen); WARP-Test
+  „dunkler Tooltip bleibt dunkel“ grün. Falls er noch grau ist: Schnappschuss mit Tooltip.
+- Budget-Hinweis: +0,083 ms auf der RTX, Hochrechnung Onboard ≈ 0,8 ms – nah am Budget.
+
 ## Akzeptanzkriterien
 - [x] Systemsteuerung (dunkles Design): helle Fläche dunkel, dunkle Leisten bleiben dunkel – geprüft
       2026-11-06 vom Nutzer an der Einstellungen-App (dev.113.m13, Automatik-Filter intelligent)

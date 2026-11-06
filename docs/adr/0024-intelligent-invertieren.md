@@ -45,8 +45,9 @@ nachgetragen und sind keine Einstellungen.
   Luma ihres Hintergrunds. Magnify skaliert **kantenerhaltend** hoch: bilinear × Ähnlichkeit von
   Pixel- und Hintergrund-Luma, σ = 0,12. Die weiche Schwelle gab an jeder Kante einen grauen Saum
   (Fehler beim Hovern in der Systemsteuerung). Weich bleibt nur die zeitliche Glättung.
-- Foto: Chroma 0,10–0,25 × Farbstreuung 0,06–0,15.
-- GPU auf der RTX 3060 Ti bei 1440p: +0,064 ms pro Frame.
+- Foto: Mehrheit eines 64-px-Umfelds bunt (Chroma 0,10–0,25) und Farbstreuung 0,06–0,15; Symbole
+  und farbiger Text sind damit keine Fotos (sonst graue Höfe).
+- GPU auf der RTX 3060 Ti bei 1440p: +0,083 ms pro Frame.
 
 ## Konsequenzen
 - ✅ Gemischte Fenster und der ganze Monitor sehen sauber aus; das gilt auch, wenn sich der Inhalt

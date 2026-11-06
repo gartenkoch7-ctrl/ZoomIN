@@ -113,10 +113,14 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   `<datei>-result.png` und `-weights.png` daneben. So lässt sich der Filter ohne den Nutzer prüfen
   (die ZoomIN-Oberfläche nimmt wegen UIAccess keine Klicks von Agenten an). Bilder nur in
   `TestResults/` (gitignored), nie ins Repo.
-- **Foto-Schutz:** Gewicht × (1 − bunt × Streuung). Bunt = mittlere Chroma (max − min), 0,10–0,25;
-  Streuung = Standardabweichung der **Farben** (nicht der Luma), 0,06–0,15. Grauer Text auf Weiß
-  streut, ist aber nicht bunt; eine einfarbige Schaltfläche ist bunt, streut aber nicht.
-  Erst getestet mit Luma-Streuung: Gleich helle, bunte Flächen fielen durch.
+- **Foto-Schutz (überarbeitet 2026-11-06):** eigener Test über ein **64 × 64**-Umfeld (4 × 4 Proben
+  im Abstand von 16 px): Foto, wenn mindestens die Hälfte der Proben bunt ist (Chroma 0,10–0,25)
+  und die Farben streuen (0,06–0,15). Dann Gewicht 0 und Hintergrund = mittlere Luma dieses
+  Umfelds. Nur für Kacheln mit hellem Hintergrund (dunkle werden ohnehin nicht invertiert).
+  Vorher wurde die mittlere Farbigkeit über 32 px gemessen und weich gemischt: Symbole (≤ 48 px)
+  und blauer Linktext galten halb als Foto, das gab **graue Höfe** um jedes Symbol, auffällig
+  beim Hovern in der Systemsteuerung. Symbole werden jetzt wie alles andere farbtonerhaltend
+  invertiert.
 - **Grenze des Foto-Schutzes:** Farbdetails unter ~4 px (feines Rauschen, kleine Muster) mittelt
   die 2 × 2-Probe zu Grau, das gilt dann nicht als Foto. Fotos mit Flächen ≥ 8 px werden erkannt
   (Test). Ein WARP-Testmuster mit 4-px-Kacheln genau auf dem Probenraster fiel deshalb durch.

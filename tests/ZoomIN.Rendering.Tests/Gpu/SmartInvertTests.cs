@@ -109,6 +109,31 @@ public sealed class SmartInvertTests
     }
 
     [Fact]
+    public void DarkTooltip_OnALightPage_StaysDark()
+    {
+        // Dark Windows theme: a 24 px high dark tooltip with light text over a white page.
+        static Bgra Image(int x, int y) =>
+            x is >= 20 and < 110 && y is >= 50 and < 74
+                ? (y is 60 or 61 && x % 5 < 3 ? s_white : s_bar)
+                : s_white;
+
+        var pixels = Render(Image, s_smartMonitor);
+
+        Assert.True(Luma(pixels.At(64, 54)) < 60, $"tooltip must stay dark, got {Luma(pixels.At(64, 54))}");
+        Assert.True(Luma(pixels.At(64, 100)) < 20, "the page around it is inverted");
+    }
+
+    [Fact]
+    public void DenseBoldText_OnWhite_IsStillInverted()
+    {
+        // Bold 3 px strokes every 6 px both ways: far more ink than normal text.
+        var pixels = Render((x, y) => x % 6 < 3 && y % 8 < 4 ? s_black : s_white, s_smartMonitor);
+
+        Assert.True(Luma(pixels.At(64, 66)) < 20, $"white between strokes must be inverted, got {Luma(pixels.At(64, 66))}");
+        Assert.True(Luma(pixels.At(61, 64)) > 200, $"strokes must turn light, got {Luma(pixels.At(61, 64))}");
+    }
+
+    [Fact]
     public void ShaderBlock_MatchesAmbientPass()
     {
         var source = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..",
