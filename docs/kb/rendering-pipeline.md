@@ -174,8 +174,22 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   vergrößert), `ZOOMIN_OFFLINE_SCROLL=<px>` (Scroll-Test mit Bericht), dazu `-decisions.png`
   (rot = Papier, grün = Foto, blau = hell ohne Papier). Mit diesen Karten wurden alle Fälle hier
   gefunden – erst messen, dann Regeln ändern.
-- **Grenze:** Testbilder sind JPEG-Screenshots (Rauschen); das Overlay sieht exakte Pixel. Videos
-  wurden nicht eigens aufgenommen (Standbild verhält sich wie ein Foto).
+- **Exakte Pixel (verlustfrei):** `scripts/capture-offline.ps1` im Terminal-Panel (Nutzersitzung; die
+  Agenten-Sandbox kann den Bildschirm nicht kopieren) schreibt `TestResults/offline/<name>.raw`.
+  Nur Bereiche aufnehmen, die kein fremdes Fenster überdeckt (Computer-Use-Maske beachten). JPEG
+  war zu gnädig: mit exakten Pixeln ist ausgebrannter Schnee **Papier** (6/16) – gelöst durch
+  „Papier-Insel“: eine Papier-Kachel mit < 2 direkten hellen Nachbarn (ohne Foto) ist keine Seite.
+  Hell ohne Papier ist Seite bei Papier in zwei Richtungen (z. B. links und oben, Symbol darunter).
+- **Video (`OfflineVideoTests`, `ZOOMIN_OFFLINE_VIDEO=x,y,b,h`, `ZOOMIN_OFFLINE_PAN`):** Fotobereich
+  bekommt je Frame neues Rauschen (±8) und schwenkt optional. Ohne Hysterese flackerte ausgebrannter
+  Schnee an der Papier-Grenze (still: 1,6 % falsch, 1,3 % Kippen je Frame). **Hysterese** in
+  `PhotoFill.hlsl`: War die Kachel original **und** liegt derselbe Inhalt dort (Inhalts-Luma ±0,1),
+  braucht sie für „Seite“ Papier ≥ 8/16, ≥ 3 Seiten-Nachbarn und Papier in zwei Richtungen; war sie
+  Seite bei gleicher Papierfarbe, bleibt sie es bis < 4/16. Ergebnis still: **0,31 % / 0,03 %**.
+  Mit Schwenk 4,6 % (Schnee am Bildrand, dazu die Umbruch-Naht der Simulation). Scrollen danach
+  ≤ 1,9 % Abweichung vom gedächtnislosen Vergleich – sichtbar nur kleine Flecken.
+- **Onboard-Grafik:** Der Entwicklungsrechner (i7-12700KF) hat keine – „F“ = ohne iGPU. Budget
+  weiter nur hochgerechnet (+0,094 ms RTX ≈ 0,9 ms Onboard); echtes Gerät nötig.
 
 ## Debug-Schnappschuss (M13)
 - Das Overlay ist aus jeder Aufnahme ausgenommen; auch Screenshots von Agenten zeigen nur das

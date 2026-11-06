@@ -92,9 +92,6 @@ bool IsPhoto(float2 centre, bool lightTexel, out float luma)
     return colourful >= n * PHOTO_SHARE && (!lightTexel || smoothstep(DETAIL_LOW, DETAIL_HIGH, spread) >= 0.5);
 }
 
-// x = light background on paper (1) or not (0), y = luma of that background (Magnify.hlsl keeps
-// edges sharp with it), z = looks like a photo (1), w = light but without paper (1: text crowded
-// enough, an icon, a frame line – or a photo; PhotoFill.hlsl tells them apart by their neighbours).
 float4 PSMain(VertexOutput input) : SV_Target
 {
     // SV_Position is the texel centre (x + 0.5); scaled, the taps land on pixel corners.
@@ -134,36 +131,32 @@ float4 PSMain(VertexOutput input) : SV_Target
         otherLuma += isPaper ? 0 : samples[i];
     }
 
-    // One decision for weight and background: the majority of the samples. Text on a white page keeps
-    // a light majority, a dark bar with light text a dark one. A texel on an edge thus decides for
-    // the side it mostly covers; Magnify.hlsl gives each pixel the texel whose background matches,
-    // so edges stay sharp. A soft share band here left half-inverted grey seams at every edge.
+    // Light majority: text on a white page keeps one, a dark bar with light text does not. Whether
+    // it is paper (page) is decided in PhotoFill.hlsl from the share of paper samples, with
+    // hysteresis against flicker (video noise moved burnt-out snow across one fixed threshold).
     bool lightMajority = light >= n * LIGHT_MAJORITY;
-    bool lightBackground = lightMajority && onPaper >= n * PAPER_SHARE;
-    float weight = lightBackground ? 1 : 0;
 
-    // Luma of that background – what Magnify.hlsl matches pixels against: the paper tone; for light
-    // without paper (photo, icon) the luma of that content, so its pixels follow this texel and the
-    // paper around it the paper texels; otherwise the mean of the dark samples.
-    float background = lightBackground ? paperLuma / onPaper
-        : lightMajority ? otherLuma / max(n - onPaper, 1)
-        : darkLuma / max(n - light, 1e-3);
+    // Paper tone, and the luma of everything else (text strokes, an icon, photo content): what
+    // Magnify.hlsl matches pixels against, depending on PhotoFill.hlsl's decision.
+    float paperTone = paperLuma / onPaper;
+    float content = onPaper < n ? otherLuma / (n - onPaper) : paperTone;
+    float dark = darkLuma / max(n - light, 1e-3);
 
-    // Photos stay original – a decision as well, not a blend (a half-protected texel gives a grey
-    // halo). Its background is the luma of the photo, so its pixels follow it in Magnify.hlsl.
-    // Dark texels are tested too: PhotoFill.hlsl needs them to see that a white patch (snow, sky)
-    // lies inside a photo.
+    // Photos stay original. Dark texels are tested too: PhotoFill.hlsl needs them to see that a
+    // white patch (snow, sky) lies inside a photo. A texel with paper is never photo: the inside of
+    // photos has none (measured), but the 64 px test also sees a coloured bar next to the page.
     float photo = 0;
     float photoLuma;
-    // A texel with paper is page, never photo: the inside of photos has none (measured), but the
-    // 64 px photo test also sees a coloured bar or photo next to the page and would keep it white.
-    if (ProtectPhotos != 0 && !lightBackground && IsPhoto(centre, lightMajority, photoLuma))
+    bool paperLike = lightMajority && onPaper >= n * PAPER_SHARE;
+    if (ProtectPhotos != 0 && !paperLike && IsPhoto(centre, lightMajority, photoLuma))
     {
         photo = 1;
-        // The content, not the page around it: otherwise the paper next to a photo (or a coloured
-        // bar) would follow this texel and stay white.
-        background = !lightMajority ? background : onPaper < n ? otherLuma / (n - onPaper) : photoLuma;
+        content = lightMajority ? content : dark;
     }
 
-    return float4(weight, background, photo, lightMajority && !lightBackground ? 1 : 0);
+    // x = share of paper samples if light (at least 0.01, so x > 0 marks light), 0 if dark;
+    // y = paper tone if light, dark luma otherwise; z = photo; w = content luma if light, else y.
+    return lightMajority
+        ? float4(max(onPaper / n, 0.01), paperTone, photo, content)
+        : float4(0, dark, photo, dark);
 }

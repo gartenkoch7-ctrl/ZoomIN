@@ -51,7 +51,9 @@ nachgetragen und sind keine Einstellungen.
   Papier ist Seite nur zwischen Papier und Papier/Dunkel, sonst original (Fotos, Symbole im Foto).
   Ein Nachbarschafts-Durchgang (`PhotoFill.hlsl`) füllt Löcher in Fotos. Zeitliche Glättung nur bei
   ähnlichem Hintergrund (Sprung > 0,25 gilt sofort; sonst graue Geister beim Scrollen).
-- GPU auf der RTX 3060 Ti bei 1440p: +0,081 ms pro Frame (Umgebung zwei Schritte 0,071 ms).
+- Hysterese gegen Flackern (Video): Entscheidungen kippen nur bei klarer Evidenz, solange derselbe
+  Inhalt dort liegt; Papier-Inseln (ausgebranntes Weiß in Fotos) sind keine Seite.
+- GPU auf der RTX 3060 Ti bei 1440p: +0,094 ms pro Frame (Umgebung zwei Schritte 0,071 ms).
 
 ## Konsequenzen
 - ✅ Gemischte Fenster und der ganze Monitor sehen sauber aus; das gilt auch, wenn sich der Inhalt

@@ -1,13 +1,14 @@
 // Smart inversion (ADR-0024), step 2 of 2, on the texel grid of Ambient.hlsl. Decides what a texel
-// alone cannot, from its neighbours, then smooths over time:
-// 1. Light without paper (Ambient.hlsl w = 1): crowded text, a frame line or an icon lies on a
-//    page: on one side paper, on the opposite side paper or a dark area (a thin light strip along a
-//    dark window), within PAPER_REACH – then it is page and is inverted. Snow or clouds in a photo
-//    have photo around them (at the photo edge: paper on one side, photo on the other) and stay.
-// 2. Holes in photos: a photo is found by its colours, so a white or grey patch in it is no photo
-//    on its own. A texel with photo texels on two opposite sides within PHOTO_REACH is protected.
-//    The page next to a photo has it on one side only and stays inverted.
-// 3. Blends with the previous weights over time, so a spot that changes fades instead of jumping.
+// alone cannot, from its neighbours and the last frame, then smooths over time:
+// 1. Paper (page) by the share of paper samples, with hysteresis: original texels need PAPER_GAIN to
+//    become page, page texels stay page down to PAPER_KEEP. A single threshold flickered in video
+//    (noise moved burnt-out snow across it every frame).
+// 2. Light without paper: crowded text, a frame line or an icon lies on a page – paper in two
+//    directions, or paper on one side and a dark area opposite (a thin light strip along a dark
+//    window), within PAPER_REACH – and is inverted. Snow in a photo has photo around it and stays.
+// 3. Photos and their holes stay original: photo texels; texels without paper between photo on two
+//    opposite sides; paper with photo on three sides or an island of paper (burnt-out white).
+// 4. Blends with the previous weights while the background stays alike.
 // Output: x = inversion weight, y = background luma (as Magnify.hlsl reads it).
 
 cbuffer AmbientConstants : register(b0)
@@ -19,16 +20,23 @@ cbuffer AmbientConstants : register(b0)
     float3 Padding;
 };
 
-Texture2D Raw : register(t0);       // Ambient.hlsl: x = paper, y = background luma, z = photo, w = light without paper
+Texture2D Raw : register(t0);       // Ambient.hlsl: x = paper share (> 0: light), y = paper tone/dark luma, z = photo, w = content luma
 Texture2D Previous : register(t1);  // last output of this pass
+
+// Paper share for neighbours, to become page and to stay page (of 16 samples: 6, 8, 4).
+#define PAPER_SHARE 0.375
+#define PAPER_GAIN 0.5
+#define PAPER_KEEP 0.25
 
 // Texels searched in each direction: 2 × 16 px for paper (a text line or an icon), 4 × 16 px for
 // photos (the size of the photo test itself).
 #define PAPER_REACH 2
 #define PHOTO_REACH 4
 
-// Change of background luma from which a texel shows other content (no smoothing).
+// Change of background luma from which a texel shows other content (no smoothing), and up to
+// which an original texel still shows the same content (for the hysteresis).
 #define BACKGROUND_JUMP 0.25
+#define SAME_CONTENT 0.1
 
 struct VertexOutput
 {
@@ -43,48 +51,72 @@ VertexOutput VSMain(uint id : SV_VertexID)
     return output;
 }
 
-// The first texel towards direction (within reach) whose channel is set; found = false if none.
-float4 Towards(int2 at, int2 direction, int2 size, int reach, int channel, out bool found)
+bool IsLight(float4 texel) { return texel.x > 0; }
+bool IsPaper(float4 texel) { return texel.x >= PAPER_SHARE; }
+bool IsPhoto(float4 texel) { return ProtectPhotos != 0 && texel.z > 0.5; }
+
+// A photo texel towards direction within reach.
+bool PhotoTowards(int2 at, int2 direction, int2 size, int reach)
 {
-    found = false;
     for (int step = 1; step <= reach; step++)
     {
         int2 p = at + direction * step;
         if (any(p < 0) || any(p >= size))
         {
-            break;
+            return false;
         }
 
-        float4 texel = Raw.Load(int3(p, 0));
-        if (texel[channel] > 0.5)
+        if (IsPhoto(Raw.Load(int3(p, 0))))
         {
-            found = true;
-            return texel;
+            return true;
         }
     }
 
-    return 0;
+    return false;
 }
 
-// Photo texels in at least three of the four directions within PHOTO_REACH: paper there is a
-// burnt-out white area inside a photo (sky, snow), not page. Three, not four: one side may be grey
-// rock. The page along a coloured bar or between two icons has photo on two sides at most.
-bool Surrounded(int2 at, int2 size)
+int PhotoSides(int2 at, int2 size, out bool opposite)
 {
-    bool left, right, up, down;
-    Towards(at, int2(-1, 0), size, PHOTO_REACH, 2, left);
-    Towards(at, int2(1, 0), size, PHOTO_REACH, 2, right);
-    Towards(at, int2(0, -1), size, PHOTO_REACH, 2, up);
-    Towards(at, int2(0, 1), size, PHOTO_REACH, 2, down);
-    return (left ? 1 : 0) + (right ? 1 : 0) + (up ? 1 : 0) + (down ? 1 : 0) >= 3;
+    bool left = PhotoTowards(at, int2(-1, 0), size, PHOTO_REACH);
+    bool right = PhotoTowards(at, int2(1, 0), size, PHOTO_REACH);
+    bool up = PhotoTowards(at, int2(0, -1), size, PHOTO_REACH);
+    bool down = PhotoTowards(at, int2(0, 1), size, PHOTO_REACH);
+    opposite = (left && right) || (up && down);
+    return (left ? 1 : 0) + (right ? 1 : 0) + (up ? 1 : 0) + (down ? 1 : 0);
+}
+
+// Paper inside a photo (photo on three sides; one may be grey rock): photo for its neighbours.
+bool InPhoto(int2 at, int2 size)
+{
+    bool opposite;
+    return ProtectPhotos != 0 && PhotoSides(at, size, opposite) >= 3;
+}
+
+// Direct neighbours that are light and not photo (page paper is connected, snow islands are not).
+int PageNeighbours(int2 at, int2 size)
+{
+    int count = 0;
+    int2 directions[4] = { int2(-1, 0), int2(1, 0), int2(0, -1), int2(0, 1) };
+    [unroll]
+    for (int i = 0; i < 4; i++)
+    {
+        int2 p = at + directions[i];
+        if (all(p >= 0) && all(p < size))
+        {
+            float4 texel = Raw.Load(int3(p, 0));
+            count += IsLight(texel) && !IsPhoto(texel) ? 1 : 0;
+        }
+    }
+
+    return count;
 }
 
 // What lies towards direction, skipping light texels without paper: 1 = paper, 2 = photo, 3 = dark,
 // 0 = nothing within reach (more light without paper, or the edge).
-int Beyond(int2 at, int2 direction, int2 size, int reach, out float luma)
+int Beyond(int2 at, int2 direction, int2 size, out float luma)
 {
     luma = 0;
-    for (int step = 1; step <= reach; step++)
+    for (int step = 1; step <= PAPER_REACH; step++)
     {
         int2 p = at + direction * step;
         if (any(p < 0) || any(p >= size))
@@ -94,18 +126,17 @@ int Beyond(int2 at, int2 direction, int2 size, int reach, out float luma)
 
         float4 texel = Raw.Load(int3(p, 0));
         luma = texel.y;
-        if (texel.z > 0.5)
+        if (IsPhoto(texel))
         {
             return 2;
         }
 
-        if (texel.x > 0.5)
+        if (IsPaper(texel))
         {
-            // Paper inside a photo is photo for its neighbours, not page.
-            return ProtectPhotos != 0 && Surrounded(p, size) ? 2 : 1;
+            return InPhoto(p, size) ? 2 : 1;
         }
 
-        if (texel.w < 0.5)
+        if (!IsLight(texel))
         {
             return 3;
         }
@@ -114,29 +145,19 @@ int Beyond(int2 at, int2 direction, int2 size, int reach, out float luma)
     return 0;
 }
 
-// Paper on one side and paper or dark on the opposite side; luma = the paper found.
-bool OnPage(int2 at, int2 size, out float luma)
+// Paper in two directions, or (unless strict) paper on one side and a dark area opposite; luma =
+// the paper found.
+bool OnPage(int2 at, int2 size, bool strict, out float luma)
 {
     float l, r, u, d;
-    int left = Beyond(at, int2(-1, 0), size, PAPER_REACH, l);
-    int right = Beyond(at, int2(1, 0), size, PAPER_REACH, r);
-    int up = Beyond(at, int2(0, -1), size, PAPER_REACH, u);
-    int down = Beyond(at, int2(0, 1), size, PAPER_REACH, d);
+    int left = Beyond(at, int2(-1, 0), size, l);
+    int right = Beyond(at, int2(1, 0), size, r);
+    int up = Beyond(at, int2(0, -1), size, u);
+    int down = Beyond(at, int2(0, 1), size, d);
     luma = left == 1 ? l : right == 1 ? r : up == 1 ? u : d;
-    return (left == 1 && (right == 1 || right == 3)) || (right == 1 && left == 3)
-        || (up == 1 && (down == 1 || down == 3)) || (down == 1 && up == 3);
-}
-
-// Set texels on two opposite sides; luma = mean background luma of the pair found.
-bool Enclosed(int2 at, int2 size, int reach, int channel, out float luma)
-{
-    bool left, right, up, down;
-    float4 l = Towards(at, int2(-1, 0), size, reach, channel, left);
-    float4 r = Towards(at, int2(1, 0), size, reach, channel, right);
-    float4 u = Towards(at, int2(0, -1), size, reach, channel, up);
-    float4 d = Towards(at, int2(0, 1), size, reach, channel, down);
-    luma = left && right ? (l.y + r.y) * 0.5 : (u.y + d.y) * 0.5;
-    return (left && right) || (up && down);
+    int paperSides = (left == 1 ? 1 : 0) + (right == 1 ? 1 : 0) + (up == 1 ? 1 : 0) + (down == 1 ? 1 : 0);
+    return paperSides >= 2
+        || (!strict && ((left == 1 && right == 3) || (right == 1 && left == 3) || (up == 1 && down == 3) || (down == 1 && up == 3)));
 }
 
 float2 PSMain(VertexOutput input) : SV_Target
@@ -147,33 +168,43 @@ float2 PSMain(VertexOutput input) : SV_Target
     int2 size = int2(width, height);
 
     float4 raw = Raw.Load(int3(at, 0));
-    float2 now = float2(raw.x, raw.y);
+    bool memory = Alpha < 1;
+    float2 previous = memory ? Previous.Load(int3(at, 0)).rg : float2(0, 0);
+
+    // Hysteresis only with a last frame (after a pause the old texture is stale, maybe NaN): what
+    // was original needs clear evidence to become page, what was page stays page longer. Without it
+    // video noise flipped borderline spots (burnt-out snow) every frame – a grey, flickering patch.
+    // Only while the same content lies there (its luma as remembered): after scrolling the new
+    // content decides freely, or a page could keep a white spot from the content before.
+    bool wasOriginal = memory && previous.x < 0.5 && abs(raw.w - previous.y) < SAME_CONTENT;
+    bool wasPage = memory && previous.x > 0.5 && abs(raw.y - previous.y) < SAME_CONTENT;
+    float threshold = wasOriginal ? PAPER_GAIN : wasPage ? PAPER_KEEP : PAPER_SHARE;
+    bool paper = IsLight(raw) && raw.x >= threshold;
+
+    float2 now;
     float luma;
-    bool photo = ProtectPhotos != 0 && raw.z > 0.5;
-    if (photo)
+    bool opposite;
+    if (IsPhoto(raw))
     {
-        // A photo itself (Ambient.hlsl z, only set with protection on) stays original.
-        now.x = 0;
+        now = float2(0, raw.w);
     }
-    else if (raw.w > 0.5 && OnPage(at, size, luma))
+    else if (paper)
     {
-        // On a page: inverted, matched against the paper around it.
+        // Paper with photo on three sides, or an island of paper: burnt-out white inside a photo.
+        bool inPhoto = ProtectPhotos != 0 && (InPhoto(at, size) || PageNeighbours(at, size) < (wasOriginal ? 3 : 2));
+        now = float2(inPhoto ? 0 : 1, raw.y);
+    }
+    else if (IsLight(raw) && OnPage(at, size, wasOriginal, luma))
+    {
         now = float2(1, luma);
     }
-    else if (ProtectPhotos != 0 && raw.x < 0.5 && Enclosed(at, size, PHOTO_REACH, 2, luma))
+    else
     {
-        // Texels without paper: snow or clouds in a photo never have it (measured), while the
-        // page between two coloured icons or along a coloured bar does and stays inverted.
-        now.x = 0;
-    }
-    else if (ProtectPhotos != 0 && raw.x > 0.5 && Surrounded(at, size))
-    {
-        // Paper with photo on all four sides: a burnt-out white area (sky, snow) inside a photo.
-        now.x = 0;
+        // Light without page around it (photo content, also between photo texels), or dark.
+        now = float2(0, raw.w);
     }
 
-    // After a pause the old texture is stale or never written (may even hold NaN): not read at all.
-    if (Alpha >= 1)
+    if (!memory)
     {
         return now;
     }
@@ -181,6 +212,5 @@ float2 PSMain(VertexOutput input) : SV_Target
     // Smoothed only while the background stays alike (a borderline spot that would flicker). When
     // it changes clearly – content moved in, e.g. while scrolling – the new decision counts at once;
     // smoothing then let dark and light areas drag grey ghosts behind them (scroll test: 7 % of pixels).
-    float2 previous = Previous.Load(int3(at, 0)).rg;
     return abs(now.y - previous.y) > BACKGROUND_JUMP ? now : lerp(previous, now, Alpha);
 }

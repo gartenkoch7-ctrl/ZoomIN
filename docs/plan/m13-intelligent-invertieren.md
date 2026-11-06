@@ -121,15 +121,24 @@ dem Tag `v1.0.0`.
   graue Geister beim Scrollen. Regeln und Messwerte in KB rendering-pipeline („Papier, Fotos und
   Scrollen“).
 
+### Prüfung der offenen Punkte 2026-11-06
+- Exakte Pixel: `scripts/capture-offline.ps1` (verlustfrei, Terminal). Fand schwarze Flecken im
+  ausgebrannten Schnee (JPEG hatte sie verdeckt) und einen hellen Fleck im Hover-Kasten – behoben
+  (Papier-Insel, Papier in zwei Richtungen). Systemsteuerung und Fotoseite danach sauber.
+- Video: Flackern an der Papier-Grenze – behoben mit Hysterese bei gleichem Inhalt.
+- Onboard-Grafik: auf diesem Rechner nicht vorhanden (CPU ohne iGPU).
+
 ## Akzeptanzkriterien
 - [x] Systemsteuerung (dunkles Design): helle Fläche dunkel, dunkle Leisten bleiben dunkel – geprüft
       2026-11-06 vom Nutzer an der Einstellungen-App (dev.113.m13, Automatik-Filter intelligent)
-- [x] Foto im Browser bleibt original – selbstständig geprüft 2026-11-06 (Wikipedia „Matterhorn“,
-      Offline-Wiedergabe der echten Shader); Video nicht eigens aufgenommen (Standbild = Foto)
+- [x] Foto im Browser bleibt original; ein Video läuft ohne Negativ-Look – selbstständig geprüft
+      2026-11-06 mit verlustfreier Aufnahme (Wikipedia „Matterhorn“) und Video-Simulation (Rauschen je
+      Frame): still 0,31 % falsch, 0,03 % Flackern; mit Schwenk 4,6 % am Bildrand
 - [x] Scrollen einer Seite mit hellen und dunklen Teilen: kein Flackern, kein Springen – Scroll-Test
       offline: ≤ 1,0 % abweichende Pixel bei 12 px/Frame (vorher 7,4 % durch Nachziehen)
 - [ ] Monitorfilter, Lupe und Angedockt verhalten sich gleich; Zoomen kippt keine Fläche
-- [ ] Budget: ≤ 1 ms extra GPU (hochgerechnet; Onboard-Messung, sobald Gerät da); Monitor-Hz gehalten
+- [ ] Budget: ≤ 1 ms extra GPU (hochgerechnet ≈ 0,9 ms; der Entwicklungsrechner i7-12700KF hat keine
+      Onboard-Grafik – Messung braucht ein anderes Gerät); Monitor-Hz gehalten
 - [ ] Rückfall greift und ist in Log und Diagnose sichtbar
 - [ ] Render-Loop-Benchmark `0 B`; Architekturtests grün; Telemetrie im Katalog
 
