@@ -122,4 +122,6 @@ installierte ZoomIN-Instanz nicht vom Agenten beendet wird:
 - Vollbild-Anwendungen nicht ausgenommen: Spiele/Präsentationen in nicht gelisteten Apps.
 - Einstufung nur beim Öffnen: spätere Hell/Dunkel-Wechsel und Ladezeiten > 2 s bleiben falsch.
 - Chromium/Electron: eine Fensterklasse für alle Fenster → eine Regel für die ganze App.
+- Gemischte Fenster (z. B. Systemsteuerung: dunkle Leiste unter der Titelleiste) werden ganz
+  invertiert → gelöst in [M13](m13-intelligent-invertieren.md) (ADR-0024).
 - 1.0 verschiebt sich um M9 + M11 + M12.

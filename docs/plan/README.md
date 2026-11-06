@@ -22,6 +22,7 @@ Jeder Meilenstein endet mit etwas, das man **starten und vorführen** kann.
 | M10 | [Sichere Bildschirme](m10-sichere-bildschirme.md) | Zoom auf Anmeldung, Sperre, Strg+Alt+Entf und UAC | L | Design freigegeben – in Arbeit (Spike) |
 | M11 | [Diagnose & Telemetrie](m11-diagnose-und-telemetrie.md) | OpenTelemetry lokal: ein Trace über alle Prozesse, Diagnose-Seite, Diagnosepaket | L | Design freigegeben – **vor** dem ersten Release |
 | M12 | [Farbfilter pro Fenster](m12-filter-pro-fenster.md) | Helle Fenster automatisch invertiert, dunkle bleiben dunkel; Regeln pro App + Fensterart | L | Code fertig (Branch `feat/m12-filter-pro-fenster`), Sichtprüfung offen – **vor** dem ersten Release |
+| M13 | [Intelligentes Invertieren](m13-intelligent-invertieren.md) | Nur helle Flächen invertiert, dunkle Leisten bleiben dunkel, Fotos original – live, ohne Flackern | L | Design freigegeben (ADR-0024), Spike offen – **vor** dem ersten Release |
 
 Größen: **S** ≈ wenige Tage · **M** ≈ 1–2 Wochen · **L** ≈ 2–4 Wochen (eine Person, Teilzeit-Schätzung, grob).
 
@@ -39,6 +40,8 @@ M0 ─► M1 ─► M2 ─┬─► M3 ─┬─► M4 ─┐
 - M6 braucht nur M2 (Viewport-Logik) und kann parallel zu M3–M5 laufen.
 - M12 baut auf M5 (Filter-Matrizen) und M7 (Einstellungen) auf und kommt vor `v1.0.0`; der
   Spike (Fensterbereiche pro Frame, GPU-Messung, 3-%-Budget) entscheidet über die Umsetzung.
+- M13 baut auf M12 (Palette, Bereiche) auf und kommt vor `v1.0.0`; der Spike (Umgebungsbild,
+  Glättung, GPU-Zeit ≤ 1 ms Onboard) entscheidet über die Werte.
 - M7 setzt alle Features voraus, weil es deren Einstellungen bündelt.
   Einfache Einstellungen (Hotkeys, Zoomstufe) werden vorher per JSON-Datei gepflegt.
 

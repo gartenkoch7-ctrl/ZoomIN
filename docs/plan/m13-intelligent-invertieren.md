@@ -1,0 +1,90 @@
+# M13 – Intelligentes Invertieren
+
+**Ziel:** Ein neuer Filter „Invertiert (intelligent)“ invertiert nur helle Flächen. Dunkle Leisten
+und Bereiche bleiben dunkel, Fotos und Videos bleiben original – live in jedem Frame, mit weichem
+Übergang und ohne Flackern.
+**Demo:** Systemsteuerung im dunklen Windows-Design: Die helle Inhaltsfläche wird dunkel, die dunkle
+Navigations- und Adressleiste darunter bleibt dunkel. Ein Foto im Browser bleibt in seinen
+Originalfarben. Beim Scrollen springt nichts. Dasselbe gilt mit `Strg+Alt+C` auf dem ganzen Monitor
+sowie in Lupe und Angedockt.
+**Voraussetzungen:** M5 (Filter-Matrizen), M12 (Filter pro Fenster, Palette, ADR-0023). Pflicht vor
+dem Tag `v1.0.0`.
+→ [ADR-0024](../adr/0024-intelligent-invertieren.md)
+
+## Entscheidungen (Grilling 2026-11-06)
+| Thema | Entscheidung |
+|---|---|
+| Geltungsbereich | überall, wo dieser Filter gewählt ist: Filter pro Fenster, Monitorfilter (`Strg+Alt+C`), Lupe, Angedockt |
+| Bedienung | eigener Filter „Invertiert (intelligent)“ / „Inverted (smart)“; das klassische „Invertiert“ bleibt |
+| Prinzip | je Bildstelle entscheidet die Helligkeit der Umgebung, live in jedem Frame, mit weichem Übergang |
+| Fotos/Videos | nicht automatisch invertiert: eine bunte, detailreiche Umgebung gilt als Foto und bleibt original |
+| Farben | wo invertiert wird, bleibt der Farbton erhalten (wie „Invertiert, Farbton erhalten“) |
+| Flackern | breiter weicher Bereich statt harter Schwelle, dazu zeitliche Glättung (~150 ms) |
+| Fenster-Einstufung | bleibt (ADR-0020): sie entscheidet, welche Fenster gefiltert werden; innerhalb wirkt intelligent |
+| Titelleiste | ADR-0023 bleibt als Ergänzung (Messung, Spalte, „Nie filtern“) |
+| Zoom | Umgebung gemessen am Desktop-Bild (Quelle), nicht am vergrößerten Bild – nichts kippt beim Zoomen |
+| Einstellungen | nur „Fotos und Videos nicht invertieren“ unter „Erweitert“ (ab Werk an); Schwelle, Umgebung, Glättung fest |
+| Ab Werk | Automatik-Filter wird „intelligent“, wenn er noch auf dem alten Werkswert „Invertiert“ steht; Monitorfilter und App-Regeln bleiben |
+| Budget | ≤ 1 ms zusätzliche GPU-Zeit pro Frame bei 1440p auf Onboard-Grafik; sonst Rückfall auf „Invertiert, Farbton erhalten“ (Log + Diagnose) |
+| Messung | GPU-Zeitstempel auf der RTX 3060 Ti, hochgerechnet auf Onboard-Grafik; echte Onboard-Messung offen, bis ein Gerät da ist |
+| Planung | eigener Meilenstein, Pflicht vor `v1.0.0` |
+
+## Aufgaben
+### 1 · Spike (Risiko zuerst)
+- [ ] Umgebungsbild: verkleinerte Kopie des Desktop-Bilds (je Monitor, z. B. 1/16 bis 1/32) mit
+      Helligkeit und einem Maß für Farbigkeit/Detailreichtum; nur neu bei geändertem Desktop.
+      Heute hat die Kopie keine Mip-Stufen und ist kein Render-Target (`DesktopDuplicator`) →
+      eigener Verkleinerungs-Durchgang, Feature-Level 10_0 muss reichen
+- [ ] Gedächtnis-Textur für die zeitliche Glättung (~150 ms), unabhängig von der Bildrate
+- [ ] Shader: Entscheidung je Pixel aus dem Umgebungsbild (bilinear gelesen, weiche Schwelle),
+      Foto-Schutz, Farbton erhalten; nur für Bereiche, deren Palette-Eintrag „intelligent“ ist
+- [ ] Werte abstimmen: Umgebungsgröße, Schwelle und Breite des Übergangs, Foto-Kriterium, Glättung –
+      an Systemsteuerung, Explorer, Browser mit Fotos, Word, Video (Sichtprüfung durch den Nutzer)
+- [ ] GPU-Zeit messen (Zeitstempel-Abfragen) auf der RTX bei 1080p, hochrechnen auf 1440p
+      Onboard-Grafik; Grenze für den Rückfall festlegen
+- [ ] Ergebnis in `docs/kb/rendering-pipeline.md` und `docs/kb/performance.md`; bei Fehlschlag
+      Rücksprache (Plan B: Kachel-Entscheidung ohne Glättung, oder nur Fenster-/Monitorebene)
+
+### 2 · Core
+- [ ] `ColorFilter.InvertedSmart` (am Ende des Enums) und Name/Texte; Palette wächst um einen
+      Eintrag (`PALETTE_SIZE` im Shader und `WindowConstants` mitziehen)
+- [ ] „Intelligent“ ist keine Matrix: Palette-Eintrag mit Kennzeichen „adaptiv“ + Matrix für
+      „Farbton erhalten“, Kontrast/Helligkeit weiter für alles
+- [ ] Settings: Schalter „Fotos und Videos nicht invertieren“ (ab Werk an); Migration des
+      Automatik-Filters (nur alter Werkswert „Invertiert“ → „intelligent“)
+- [ ] Unit-Tests (Palette, Migration, Settings-Rundreise) und Benchmark `0 B`
+
+### 3 · Rendering
+- [ ] Verkleinerungs-Durchgang und Gedächtnis-Textur je Monitor, beim Start/Resize angelegt,
+      keine Allokation im Render-Loop; nur aktiv, wenn ein Bereich oder der Monitor „intelligent“ nutzt
+- [ ] Vollbild-Zoom, Lupe und Angedockt: Umgebung in Quell-Koordinaten (Desktop), auch im
+      1×-Durchgang außerhalb der Lupe
+- [ ] Rückfall auf „Farbton erhalten“, wenn eine GPU-Funktion fehlt oder das Budget gerissen wird
+- [ ] `WDA_EXCLUDEFROMCAPTURE` bleibt; WARP-Shadertests (dunkle Leiste bleibt, helle Fläche
+      invertiert, Foto bleibt, weicher Übergang, Glättung über Frames)
+
+### 4 · Telemetrie (ADR-0019)
+- [ ] Messwert: GPU-Zeit des Verkleinerungs-Durchgangs und des Shaders (Instrumente beim Start)
+- [ ] Log: Rückfall auf „Farbton erhalten“ mit Grund (GPU-Funktion/Budget), einmal je Sitzung
+- [ ] Katalog `docs/kb/telemetrie.md`, Diagnose-Seite zeigt „intelligent aktiv / Rückfall“
+
+### 5 · Einstellungen & Bedienung
+- [ ] Filterlisten (Farbfilter-Seite, Automatik-Filter, Regeln je App) zeigen „Invertiert (intelligent)“
+- [ ] „Erweitert“: „Fotos und Videos nicht invertieren“; Texte Deutsch/Englisch, Tastatur, Bildschirmleser
+
+## Akzeptanzkriterien
+- [ ] Systemsteuerung (dunkles Design): helle Fläche dunkel, dunkle Leisten bleiben dunkel
+- [ ] Foto im Browser bleibt original; ein Video läuft ohne Negativ-Look
+- [ ] Scrollen einer Seite mit hellen und dunklen Teilen: kein Flackern, kein Springen
+- [ ] Monitorfilter, Lupe und Angedockt verhalten sich gleich; Zoomen kippt keine Fläche
+- [ ] Budget: ≤ 1 ms extra GPU (hochgerechnet; Onboard-Messung, sobald Gerät da); Monitor-Hz gehalten
+- [ ] Rückfall greift und ist in Log und Diagnose sichtbar
+- [ ] Render-Loop-Benchmark `0 B`; Architekturtests grün; Telemetrie im Katalog
+
+## Offene Fragen / Risiken
+- Saum an Kanten zwischen hell und dunkel (Breite = Umgebungsgröße); bei hohem Zoom sichtbar breiter.
+- Foto-Erkennung: helle, blasse Fotos werden evtl. invertiert; bunte Bedienflächen evtl. nicht.
+- Text auf mittlerem Grau (z. B. Schaltflächen) liegt im Übergang und verliert Kontrast.
+- Zeitliche Glättung zieht bei schnellem Inhaltswechsel kurz nach.
+- Kein Onboard-Gerät zum Messen; Hochrechnung kann daneben liegen.
+- 1.0 verschiebt sich um M13.
