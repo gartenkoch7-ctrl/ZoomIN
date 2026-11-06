@@ -111,6 +111,7 @@ dem Tag `v1.0.0`.
   Symbole und blauen Linktext gaben graue Höfe. Foto-Test jetzt über 64 px und als Entscheidung.
 - Tooltip konnte nicht nachgestellt werden (Windows zeigt bei simulierter Maus keinen); WARP-Test
   „dunkler Tooltip bleibt dunkel“ grün. Falls er noch grau ist: Schnappschuss mit Tooltip.
+- Vom Nutzer bestätigt 2026-11-06 (dev.116.m13): Hover und Tooltip in der Systemsteuerung sauber.
 - Budget-Hinweis: +0,083 ms auf der RTX, Hochrechnung Onboard ≈ 0,8 ms – nah am Budget.
 
 ## Akzeptanzkriterien
