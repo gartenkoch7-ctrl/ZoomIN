@@ -22,4 +22,7 @@ internal static partial class RenderLog
 
     [LoggerMessage(EventId = 3006, Level = LogLevel.Error, Message = "Render thread without progress for over {Seconds} s; rebuilding the zoom pipeline")]
     public static partial void RenderThreadHung(this ILogger logger, double seconds);
+
+    [LoggerMessage(EventId = 3007, Level = LogLevel.Warning, Message = "Smart inversion on {Monitor} falls back to keep hue: {Reason} ({Milliseconds} ms)")]
+    public static partial void SmartInvertFallback(this ILogger logger, string monitor, string reason, double milliseconds);
 }

@@ -111,6 +111,15 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   Monitor mit „Farbton erhalten“ als „gleich“ gelten und das Overlay pausieren.
 - **Reihenfolge in Listen:** `ColorFilters.DisplayOrder` (intelligent direkt nach Invertiert). Das
   Enum bleibt unverändert, weil gespeicherte Einstellungen und Paletten-Indizes daran hängen.
+- **Rückfall (ADR-0024 Nr. 6):** `SmartInvertLayer.Create` legt Umgebungs-Durchgang und
+  `GpuStopwatch` an; scheitert das (SharpGen-Fehler) → sofort Rückfall `gpu_feature`. Sonst misst
+  `GpuStopwatch` den Umgebungs-Durchgang mit drei Sätzen Zeitstempel-Abfragen, gelesen mit
+  `DoNotFlush` ein paar Frames später (nie warten). Mittel über 120 Frames > 1 ms → Rückfall
+  `budget`. Danach lädt `DesktopLayer` die Palette mit `SmartEntry = NoEntry` hoch und setzt
+  kein `MonitorSmart`: Intelligente Bereiche zeigen ihre Matrix, also „Farbton erhalten“. Gemessen
+  wird nur der Umgebungs-Durchgang (der Zusatz im Magnify-Shader ist auf der RTX ~0,015 ms).
+  Rückfälle stehen in `SmartInvertHealth` und auf der Diagnose-Seite; nach einem Neuaufbau der
+  Pipeline wird neu gemessen.
 - **GPU-Zeit:** siehe `performance.md` (Messprotokoll); Messung mit
   `ZOOMIN_GPU_TIMING=1 dotnet test --project tests/ZoomIN.Rendering.Tests --filter-method "*SmartInvertGpuTimeTests*"`,
   das Ergebnis steht in `%TEMP%\zoomin-gpu-timing.txt`.

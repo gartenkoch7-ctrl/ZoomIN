@@ -3,6 +3,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ZoomIN.App.Localization;
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Filters;
 using ZoomIN.Platform.Shell;
 
 namespace ZoomIN.App.ViewModels;
@@ -12,7 +13,7 @@ namespace ZoomIN.App.ViewModels;
 /// window to the front – every monitor saves original, result and smart inversion weights to
 /// %LocalAppData%\ZoomIN\debug. Contains screen content, so only ever on this button.
 /// </summary>
-public sealed partial class DebugSnapshotViewModel(DebugSnapshots snapshots) : ObservableObject
+public sealed partial class DebugSnapshotViewModel(DebugSnapshots snapshots, SmartInvertHealth smartInvert) : ObservableObject
 {
     private const int CountdownSeconds = 5;
 
@@ -22,6 +23,9 @@ public sealed partial class DebugSnapshotViewModel(DebugSnapshots snapshots) : O
     /// <summary>Root folder of all debug snapshots.</summary>
     public static string Folder { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ZoomIN", "debug");
+
+    /// <summary>Whether the smart inversion runs, or why a monitor fell back to "keep hue" (ADR-0024).</summary>
+    public string SmartInvertStatus { get; } = Describe(smartInvert.Fallbacks);
 
     [ObservableProperty]
     public partial string Status { get; set; } = string.Empty;
@@ -69,4 +73,14 @@ public sealed partial class DebugSnapshotViewModel(DebugSnapshots snapshots) : O
             CanTake = true;
         }
     }
+
+    private static string Describe(IReadOnlyList<SmartInvertFallback> fallbacks) =>
+        fallbacks.Count == 0
+            ? Text.Get("SmartInvert.Active")
+            : string.Join(" ", fallbacks.Select(f => f.Reason == "budget"
+                ? Text.Format("SmartInvert.Budget", MonitorLabel(f.Monitor), f.Milliseconds.ToString("0.0", CultureInfo.CurrentCulture))
+                : Text.Format("SmartInvert.Feature", MonitorLabel(f.Monitor))));
+
+    // "\\.\DISPLAY2" -> "DISPLAY2"
+    private static string MonitorLabel(string device) => device.TrimStart('\\', '.');
 }

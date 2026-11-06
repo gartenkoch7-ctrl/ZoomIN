@@ -1,0 +1,81 @@
+using Vortice.Direct3D11;
+using Vortice.Mathematics;
+using ZoomIN.Core.Filters;
+using ZoomIN.Core.Modes;
+using ZoomIN.Core.Viewport;
+using ZoomIN.Core.WindowFilters;
+using ZoomIN.Rendering.Gpu;
+
+namespace ZoomIN.Rendering.RenderLoop;
+
+/// <summary>
+/// Draws the captured desktop of one monitor with zoom, colour filter, filter per window and smart
+/// inversion into the overlay. <see cref="Draw"/> runs every frame and must not allocate (AGENTS.md 2.3).
+/// </summary>
+internal sealed class DesktopLayer(MagnifyPass pass, SmartInvertLayer smart)
+{
+    // Frame around lens and docked view, in physical pixels.
+    private const double FrameThickness = 4;
+    private static readonly Color4 s_transparent = new(0, 0, 0, 0);
+
+    // Window regions as last uploaded; compared by reference, both are immutable snapshots.
+    private WindowConstants _windowConstants;
+    private WindowRegions? _uploadedWindows;
+    private DisplayEffects? _uploadedEffects;
+    private bool _uploadedSmart;
+
+    /// <returns>The smart inversion weights used, or null.</returns>
+    public ID3D11ShaderResourceView? Draw(
+        ID3D11DeviceContext context, ID3D11ShaderResourceView desktop, ID3D11RenderTargetView target, int width, int height,
+        PhysicalRect monitor, in ModeFrame frame, DisplayEffects effects, WindowRegions windows, bool windowsFiltered)
+    {
+        // After a fall-back the smart entries show their matrix, "keep hue" (ADR-0024 decision 6).
+        var smartActive = smart.Active;
+
+        // Only when windows, filters or the fall-back changed: while nothing moves the upload is skipped.
+        if (!ReferenceEquals(windows, _uploadedWindows) || !ReferenceEquals(effects, _uploadedEffects) || smartActive != _uploadedSmart)
+        {
+            WindowConstants.Fill(ref _windowConstants, windows, monitor, effects, smartActive);
+            pass.UpdateWindows(context, _windowConstants);
+            _uploadedWindows = windows;
+            _uploadedEffects = effects;
+            _uploadedSmart = smartActive;
+        }
+
+        var matrix = effects.Matrix;
+        var weights = smart.Prepare(context, desktop, effects.IsSmart || windows.UsesSmart(monitor), effects.ProtectPhotos);
+        var monitorSmart = effects.IsSmart && weights is not null;
+        if (!frame.HasFrame)
+        {
+            pass.Draw(context, desktop, target, width, height,
+                MagnifyConstants.Fullscreen(frame.Source, monitor, matrix, effects.Smoothing, monitorSmart), weights);
+            return weights;
+        }
+
+        // Lens/docked: outside the target the monitor looks as it does at 1× (colour filter and
+        // filter per window go on), so nothing turns white when the lens comes on. With nothing to
+        // filter it stays transparent. Click-through either way (window style).
+        if (effects.Filter.ChangesColors || windowsFiltered)
+        {
+            pass.Draw(context, desktop, target, width, height,
+                MagnifyConstants.Fullscreen(monitor, monitor, matrix, effects.Smoothing, monitorSmart), weights);
+        }
+        else
+        {
+            context.ClearRenderTargetView(target, s_transparent);
+        }
+
+        var viewport = Expand(frame.Target, FrameThickness, monitor);
+        var constants = MagnifyConstants.WithFrame(frame.Source, monitor, frame.Target, viewport, FrameColor.Default, matrix, effects.Smoothing, monitorSmart);
+        pass.Draw(context, desktop, target, (float)(viewport.X - monitor.X), (float)(viewport.Y - monitor.Y),
+            (float)viewport.Width, (float)viewport.Height, constants, weights);
+        return weights;
+    }
+
+    private static PhysicalRect Expand(PhysicalRect rect, double by, PhysicalRect within)
+    {
+        var x = Math.Max(rect.X - by, within.X);
+        var y = Math.Max(rect.Y - by, within.Y);
+        return new PhysicalRect(x, y, Math.Min(rect.Right + by, within.Right) - x, Math.Min(rect.Bottom + by, within.Bottom) - y);
+    }
+}

@@ -44,6 +44,8 @@ internal static class TextsEnglishCards
         ["FilterBrightness"] = "Brightness",
         ["FilterBrightness.Desc"] = "0 % = unchanged",
         ["FilterReset"] = "Reset contrast and brightness",
+        ["FilterProtectPhotos"] = "Do not invert photos and videos",
+        ["FilterProtectPhotos.Desc"] = "Applies to \"Inverted (smart)\": colourful, detailed areas keep their original colours.",
 
         ["PointerPreview.Desc"] = "Preview: left without zoom, right at 3× zoom.",
         ["PointerTestLocator"] = "Test locator",

@@ -23,7 +23,7 @@ internal sealed class MonitorRenderer : IDisposable
     private readonly EffectsModel _effects;
     private readonly TrackingModel _tracking;
     private readonly WindowFilterModel _windows;
-    private readonly DebugSnapshots _snapshots;
+    private readonly RenderModels _models;
     private readonly PointerServices _pointer;
     private readonly ILogger _log;
     private readonly Action _requestRebuild;
@@ -44,7 +44,7 @@ internal sealed class MonitorRenderer : IDisposable
         _effects = models.Effects;
         _tracking = models.Tracking;
         _windows = models.Windows;
-        _snapshots = models.Snapshots;
+        _models = models;
         _pointer = pointer;
         _log = log;
         _requestRebuild = requestRebuild;
@@ -217,7 +217,7 @@ internal sealed class MonitorRenderer : IDisposable
         using var operation = Telemetry.Source.StartActivity("zoomin.render.pipeline_start")?.SetTag(RenderMetrics.MonitorTag, _deviceName);
         try
         {
-            return new RenderSession(_pointer, _deviceName, new SnapshotTaker(_snapshots, _deviceName, _log));
+            return new RenderSession(_pointer, _deviceName, new SnapshotTaker(_models.Snapshots, _deviceName, _log), _models.SmartInvert, _log);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {

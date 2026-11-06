@@ -119,6 +119,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.tracking.caret_sources` | Quellen | `process.name`, `zoomin.caret.source` (`system`, `msaa`, `uia`, `estimated`, `cell`) | Caret-Quelle zum ersten Mal in einem Prozess gesehen (dazu Log 2002) |
 | `zoomin.tracking.chromium_nudges` | Fenster | – | Chromium-Inhaltsfenster nach IAccessible2 gefragt |
 | `zoomin.tracking.anchor_switches` | Wechsel | `zoomin.anchor.source` (`mouse`, `focus`, `caret`) | Ansicht folgt jetzt Maus, Fokus oder Caret (Render-Thread, ohne Allokation) |
+| `zoomin.render.smart_invert_gpu_time` | ms | `zoomin.monitor` | Mittlere GPU-Zeit des Umgebungs-Durchgangs über 120 Frames (Zeitstempel-Abfragen, nicht blockierend); > 1 ms → Rückfall (Log 3007) |
 | `zoomin.render.smart_invert_frames` | Frames | `zoomin.monitor` | Frames mit intelligentem Invertieren (Umgebungs-Durchgang, ADR-0024); im Verhältnis zu `frame_interval`-Zählungen der Anteil |
 | `zoomin.render.overlay_time` | s | `zoomin.monitor`, `zoomin.state` (`active`, `paused`) | Zeit, in der der Render-Thread arbeitet bzw. schläft – ergibt den Pausenanteil des Filters pro Fenster |
 | `zoomin.windowfilter.classifications` | Fenster | `process.name`, `zoomin.result` (`light`, `dark`, `unknown`), `zoomin.caption` (Titelleiste: `light`, `dark`, `unknown`, `none`) | Fenster beim Öffnen eingestuft (dazu Log 2701) |
@@ -213,6 +214,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 3004 | Info | Monitors: {Monitors} |
 | 3005 | Kritisch | A render thread does not stop; restarting ZoomIN via the watchdog |
 | 3006 | Fehler | Render thread without progress for over {Seconds} s; rebuilding the zoom pipeline |
+| 3007 | Warnung | Smart inversion on {Monitor} falls back to keep hue: {Reason} ({Milliseconds} ms) – `gpu_feature` oder `budget`, einmal je Pipeline |
 | 3050 | Info | Debug snapshot of {Monitor} saved to {Folder} (nur der Ordnername) |
 | 3051 | Warnung | Debug snapshot of {Monitor} failed |
 | 4001 | Warnung | Cannot watch process {ProcessId}: {Reason} |

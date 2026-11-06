@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
 using Vortice.Mathematics;
@@ -20,8 +21,6 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// </summary>
 internal sealed class RenderSession : IDisposable
 {
-    // Frame around lens and docked view, in physical pixels.
-    private const double FrameThickness = 4;
     private static readonly Color4 s_transparent = new(0, 0, 0, 0);
 
     // Owned resources in creation order; disposed in reverse.
@@ -32,10 +31,9 @@ internal sealed class RenderSession : IDisposable
     private readonly DesktopDuplicator _duplicator;
     private readonly OverlayWindow _overlay;
     private readonly CompositionSwapchain _swapchain;
-    private readonly MagnifyPass _pass;
     private readonly CursorLayer _cursorLayer;
     private readonly HighlightLayer _highlights;
-    private readonly SmartInvertLayer _smart;
+    private readonly DesktopLayer _desktop;
     private readonly SnapshotTaker _snapshots;
     private readonly AnchorController _anchors = new();
     private readonly int _displayGeneration;
@@ -43,12 +41,7 @@ internal sealed class RenderSession : IDisposable
     private bool _cursorInside;
     private bool _shown;
 
-    // Window regions as last uploaded; compared by reference, both are immutable snapshots.
-    private WindowConstants _windowConstants;
-    private WindowRegions? _uploadedWindows;
-    private DisplayEffects? _uploadedEffects;
-
-    public RenderSession(PointerServices pointer, string deviceName, SnapshotTaker snapshots)
+    public RenderSession(PointerServices pointer, string deviceName, SnapshotTaker snapshots, SmartInvertHealth health, ILogger log)
     {
         _pointer = pointer;
         _snapshots = snapshots;
@@ -64,11 +57,12 @@ internal sealed class RenderSession : IDisposable
             _duplicator = Own(new DesktopDuplicator(_gpu, _monitor));
             _overlay = Own(new OverlayWindow(_monitor.Bounds));
             _swapchain = Own(new CompositionSwapchain(_gpu, factory, _overlay.Handle, _monitor.Width, _monitor.Height));
-            _pass = Own(new MagnifyPass(_gpu.Device));
+            var pass = Own(new MagnifyPass(_gpu.Device));
             var cursorPass = Own(new CursorPass(_gpu.Device));
             _cursorLayer = new CursorLayer(cursorPass, pointer.Shapes, pointer.SystemCursor);
             _highlights = new HighlightLayer(cursorPass);
-            _smart = new SmartInvertLayer(Own(new AmbientPass(_gpu.Device, _monitor.Width, _monitor.Height)), deviceName);
+            var smart = Own(SmartInvertLayer.Create(_gpu.Device, _monitor.Width, _monitor.Height, deviceName, health, log));
+            _desktop = new DesktopLayer(pass, smart);
         }
         catch
         {
@@ -150,7 +144,8 @@ internal sealed class RenderSession : IDisposable
         }
         else
         {
-            weights = Draw(frame, request.Effects, request.Windows, request.WindowsFiltered);
+            weights = _desktop.Draw(_gpu.Context, _duplicator.ShaderResource, _swapchain.RenderTarget, _swapchain.Width, _swapchain.Height,
+                _monitor.Bounds, frame, request.Effects, request.Windows, request.WindowsFiltered);
         }
 
         _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions);
@@ -179,66 +174,6 @@ internal sealed class RenderSession : IDisposable
         }
 
         _owned.Clear();
-    }
-
-    /// <returns>The smart inversion weights used, or null.</returns>
-    private ID3D11ShaderResourceView? Draw(in ModeFrame frame, DisplayEffects effects, WindowRegions windows, bool windowsFiltered)
-    {
-        var monitor = _monitor.Bounds;
-
-        // Only when windows or filters changed: while nothing moves the upload is skipped.
-        if (!ReferenceEquals(windows, _uploadedWindows) || !ReferenceEquals(effects, _uploadedEffects))
-        {
-            WindowConstants.Fill(ref _windowConstants, windows, monitor, effects);
-            _pass.UpdateWindows(_gpu.Context, _windowConstants);
-            _uploadedWindows = windows;
-            _uploadedEffects = effects;
-        }
-
-        var matrix = effects.Matrix;
-        var smart = effects.IsSmart;
-        var weights = _smart.Prepare(
-            _gpu.Context, _duplicator.ShaderResource, smart || windows.UsesSmart(monitor), effects.ProtectPhotos);
-        if (!frame.HasFrame)
-        {
-            _pass.Draw(_gpu.Context, _duplicator.ShaderResource, _swapchain.RenderTarget, _swapchain.Width, _swapchain.Height,
-                MagnifyConstants.Fullscreen(frame.Source, monitor, matrix, effects.Smoothing, smart), weights);
-            return weights;
-        }
-
-        // Lens/docked: outside the target the monitor looks as it does at 1× (colour filter and
-        // filter per window go on), so nothing turns white when the lens comes on. With nothing to
-        // filter it stays transparent. Click-through either way (window style).
-        if (effects.Filter.ChangesColors || windowsFiltered)
-        {
-            _pass.Draw(_gpu.Context, _duplicator.ShaderResource, _swapchain.RenderTarget, _swapchain.Width, _swapchain.Height,
-                MagnifyConstants.Fullscreen(monitor, monitor, matrix, effects.Smoothing, smart), weights);
-        }
-        else
-        {
-            _gpu.Context.ClearRenderTargetView(_swapchain.RenderTarget, s_transparent);
-        }
-
-        var viewport = Expand(frame.Target, FrameThickness, monitor);
-        var constants = MagnifyConstants.WithFrame(frame.Source, monitor, frame.Target, viewport, FrameColor.Default, matrix, effects.Smoothing, smart);
-        _pass.Draw(
-            _gpu.Context,
-            _duplicator.ShaderResource,
-            _swapchain.RenderTarget,
-            (float)(viewport.X - monitor.X),
-            (float)(viewport.Y - monitor.Y),
-            (float)viewport.Width,
-            (float)viewport.Height,
-            constants,
-            weights);
-        return weights;
-    }
-
-    private static PhysicalRect Expand(PhysicalRect rect, double by, PhysicalRect within)
-    {
-        var x = Math.Max(rect.X - by, within.X);
-        var y = Math.Max(rect.Y - by, within.Y);
-        return new PhysicalRect(x, y, Math.Min(rect.Right + by, within.Right) - x, Math.Min(rect.Bottom + by, within.Bottom) - y);
     }
 
     private T Own<T>(T resource)

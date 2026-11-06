@@ -50,7 +50,7 @@ dem Tag `v1.0.0`.
       Eintrag (`PALETTE_SIZE` im Shader und `WindowConstants` mitziehen)
 - [x] „Intelligent“ ist keine Matrix: Palette-Eintrag mit Kennzeichen „adaptiv“ + Matrix für
       „Farbton erhalten“, Kontrast/Helligkeit weiter für alles
-- [ ] Settings: Schalter „Fotos und Videos nicht invertieren“ (ab Werk an); Migration des
+- [x] Settings: Schalter „Fotos und Videos nicht invertieren“ (ab Werk an); Migration des
       Automatik-Filters (nur alter Werkswert „Invertiert“ → „intelligent“)
 - [ ] Unit-Tests (Palette, Migration, Settings-Rundreise) und Benchmark `0 B`
 
@@ -59,18 +59,19 @@ dem Tag `v1.0.0`.
       keine Allokation im Render-Loop; nur aktiv, wenn ein Bereich oder der Monitor „intelligent“ nutzt
 - [x] Vollbild-Zoom, Lupe und Angedockt: Umgebung in Quell-Koordinaten (Desktop), auch im
       1×-Durchgang außerhalb der Lupe
-- [ ] Rückfall auf „Farbton erhalten“, wenn eine GPU-Funktion fehlt oder das Budget gerissen wird
+- [x] Rückfall auf „Farbton erhalten“, wenn eine GPU-Funktion fehlt oder das Budget gerissen wird
 - [ ] `WDA_EXCLUDEFROMCAPTURE` bleibt; WARP-Shadertests (dunkle Leiste bleibt, helle Fläche
       invertiert, Foto bleibt, weicher Übergang, Glättung über Frames)
 
 ### 4 · Telemetrie (ADR-0019)
-- [ ] Messwert: GPU-Zeit des Verkleinerungs-Durchgangs und des Shaders (Instrumente beim Start)
-- [ ] Log: Rückfall auf „Farbton erhalten“ mit Grund (GPU-Funktion/Budget), einmal je Sitzung
-- [ ] Katalog `docs/kb/telemetrie.md`, Diagnose-Seite zeigt „intelligent aktiv / Rückfall“
+- [x] Messwert: GPU-Zeit des Verkleinerungs-Durchgangs und des Shaders (Instrumente beim Start)
+- [x] Log: Rückfall auf „Farbton erhalten“ mit Grund (GPU-Funktion/Budget), einmal je Sitzung
+- [x] Katalog `docs/kb/telemetrie.md`, Diagnose-Seite zeigt „intelligent aktiv / Rückfall“
 
 ### 5 · Einstellungen & Bedienung
 - [x] Filterlisten (Farbfilter-Seite, Automatik-Filter, Regeln je App) zeigen „Invertiert (intelligent)“
-- [ ] „Erweitert“: „Fotos und Videos nicht invertieren“; Texte Deutsch/Englisch, Tastatur, Bildschirmleser
+- [x] „Fotos und Videos nicht invertieren“ auf der Farbfilter-Seite unter „Anpassen“; Texte Deutsch/Englisch,
+      Tastatur, Bildschirmleser (ToggleSwitch mit Kartenüberschrift)
 
 ### Stand Spike 2026-11-06 (Branch `feat/m13-intelligent-invertieren`)
 - Läuft im Dev-Build: Filter „Invertiert (intelligent)“ wählbar für Monitor, Automatik-Filter und
@@ -83,8 +84,10 @@ dem Tag `v1.0.0`.
   „Invertiert“ wird einmalig umgestellt (`AutoFilterRevision`, fehlt in alten Settings = 0). Wer
   danach selbst „Invertiert“ wählt, behält es. Anlass: Einstellungen-App wurde mit dem alten
   Automatik-Filter klassisch invertiert – der intelligente Filter kam gar nicht zum Zug.
-- Noch offen: Schalter „Fotos schützen“ in Settings/UI (heute fest an), Rückfall bei Budget,
-  Diagnose-Anzeige.
+- Erledigt 2026-11-06: Schalter „Fotos schützen“ (Settings + Farbfilter-Seite), Rückfall bei
+  GPU-Funktion/Budget (`SmartInvertLayer`, `GpuStopwatch`), Status auf der Diagnose-Seite.
+- Noch offen: Sichtprüfungen (Foto, Video, Scrollen, Lupe/Zoom, Rand an Fenstergrenzen), Werte
+  feinabstimmen, Budget-Messung auf echter Onboard-Grafik.
 
 ### Debug-Schnappschuss 2026-11-06 (Entscheidung des Nutzers)
 - [x] Knopf „Schnappschuss in 5 s“ auf der Diagnose-Seite: Original, Ergebnis, Gewichte und

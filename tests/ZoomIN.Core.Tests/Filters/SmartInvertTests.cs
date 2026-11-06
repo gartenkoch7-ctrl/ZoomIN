@@ -63,6 +63,18 @@ public sealed class SmartInvertTests
         Assert.Equal(ColorFilter.InvertedSmart, model.Current.Filter.Filter);
     }
 
+    [Fact]
+    public void ProtectPhotos_IsOnFromTheStart_AndCanBeSwitchedOff()
+    {
+        var model = new EffectsModel(DisplayEffects.Default);
+        Assert.True(model.Current.ProtectPhotos);
+
+        model.SetProtectPhotos(false);
+
+        Assert.False(model.Current.ProtectPhotos);
+        Assert.False(model.CurrentFor("m").ProtectPhotos);
+    }
+
     private static WindowRegions Regions(byte palette) => new([new PhysicalRect(100, 100, 400, 300)], [palette]);
 
     private static DisplayEffects Monitor(ColorFilter filter) =>

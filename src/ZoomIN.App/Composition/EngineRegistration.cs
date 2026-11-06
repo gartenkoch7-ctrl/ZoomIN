@@ -42,7 +42,8 @@ internal static class EngineRegistration
             sp.GetRequiredService<EffectsModel>(),
             sp.GetRequiredService<TrackingModel>(),
             sp.GetRequiredService<WindowFilterModel>(),
-            new DebugSnapshots()));
+            new DebugSnapshots(),
+            new SmartInvertHealth()));
         services.AddSingleton<SettingsService>();
         services.AddSingleton<ProfileService>();
 

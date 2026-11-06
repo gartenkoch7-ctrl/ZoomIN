@@ -119,6 +119,9 @@ public sealed record AppSettings
 
     public Smoothing Smoothing { get; set; } = Smoothing.Text;
 
+    /// <summary>Smart inversion leaves photos and videos original (ADR-0024); on from the start.</summary>
+    public bool ProtectPhotos { get; set; } = true;
+
     // --- Pointer (pointer page); colours are "#RRGGBB" ---
 
     /// <summary>The magnified pointer grows with the zoom up to this factor.</summary>

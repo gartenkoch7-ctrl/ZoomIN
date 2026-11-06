@@ -38,6 +38,9 @@
             <c:SettingCard Description="{x:Bind loc:Text.Get('FilterBrightness.Desc')}" Glyph="&#xE706;" Header="{x:Bind loc:Text.Get('FilterBrightness')}">
                 <c:ValueSlider Format="{}{0:+0;-0;0} %" Maximum="50" Minimum="-50" Step="5" Value="{x:Bind Vm.Brightness, Mode=TwoWay}" />
             </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('FilterProtectPhotos.Desc')}" Glyph="&#xEB9F;" Header="{x:Bind loc:Text.Get('FilterProtectPhotos')}">
+                <ToggleSwitch IsOn="{x:Bind Vm.ProtectPhotos, Mode=TwoWay}" />
+            </c:SettingCard>
             <c:SettingCard Glyph="&#xE777;" Header="{x:Bind loc:Text.Get('FilterReset')}">
                 <Button Click="OnReset" Content="{x:Bind loc:Text.Get('Reset')}" />
             </c:SettingCard>

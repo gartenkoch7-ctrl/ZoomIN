@@ -57,6 +57,7 @@
                     <TextBlock MaxWidth="320" HorizontalAlignment="Right" AutomationProperties.LiveSetting="Polite" Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind Diag.PackageStatus, Mode=OneWay}" TextWrapping="Wrap" />
                 </StackPanel>
             </c:SettingCard>
+            <c:SettingCard Description="{x:Bind Snapshot.SmartInvertStatus}" Glyph="&#xE790;" Header="{x:Bind loc:Text.Get('SmartInvert.Title')}" />
             <c:SettingCard Description="{x:Bind loc:Text.Get('Snapshot.Desc')}" Glyph="&#xE722;" Header="{x:Bind loc:Text.Get('Snapshot.Title')}">
                 <StackPanel HorizontalAlignment="Right" Spacing="4">
                     <Button HorizontalAlignment="Right" Click="{x:Bind Snapshot.Take}" Content="{x:Bind loc:Text.Get('Snapshot.Take')}" IsEnabled="{x:Bind Snapshot.CanTake, Mode=OneWay}" />

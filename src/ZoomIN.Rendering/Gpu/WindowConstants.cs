@@ -15,6 +15,9 @@ namespace ZoomIN.Rendering.Gpu;
 internal struct WindowConstants
 {
     public const int PaletteRows = 3 * 10;
+
+    /// <summary>A palette entry no region has; used as <see cref="SmartEntry"/> after a fall-back.</summary>
+    public const uint NoEntry = uint.MaxValue;
     public static readonly int SizeInBytes = Unsafe.SizeOf<WindowConstants>();
 
     public uint RegionCount;
@@ -28,7 +31,8 @@ internal struct WindowConstants
     /// Writes <paramref name="regions"/> in the UV space of <paramref name="monitor"/> and the
     /// palette of <paramref name="effects"/>. Regions off this monitor are skipped.
     /// </summary>
-    public static void Fill(ref WindowConstants target, WindowRegions regions, PhysicalRect monitor, DisplayEffects effects)
+    /// <param name="smartActive">False after a fall-back: no entry is smart, so smart regions show their matrix ("keep hue").</param>
+    public static void Fill(ref WindowConstants target, WindowRegions regions, PhysicalRect monitor, DisplayEffects effects, bool smartActive = true)
     {
         var count = 0;
         var rects = regions.Rects;
@@ -51,7 +55,7 @@ internal struct WindowConstants
         }
 
         target.RegionCount = (uint)count;
-        target.SmartEntry = WindowPalette.Smart;
+        target.SmartEntry = smartActive ? WindowPalette.Smart : NoEntry;
         var matrices = effects.WindowMatrices;
         for (var i = 0; i < matrices.Length && (i * 3) + 2 < PaletteRows; i++)
         {

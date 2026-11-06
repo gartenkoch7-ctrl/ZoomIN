@@ -26,6 +26,7 @@ public sealed partial class FilterViewModel : ObservableObject
         PerMonitor = effects.PerMonitorFilter;
         Contrast = Math.Round(effects.Filter.Contrast * 100);
         Brightness = Math.Round(effects.Filter.Brightness * 100);
+        ProtectPhotos = effects.ProtectPhotos;
 
         // Starts on the monitor the user is working on: that is the one they most likely want to change.
         var underMouse = _monitorIds.IndexOf(controller.MonitorUnderMouse());
@@ -56,6 +57,10 @@ public sealed partial class FilterViewModel : ObservableObject
     [ObservableProperty]
     public partial double Brightness { get; set; }
 
+    /// <summary>Smart inversion leaves photos and videos original (ADR-0024).</summary>
+    [ObservableProperty]
+    public partial bool ProtectPhotos { get; set; }
+
     private string? SelectedMonitor => PerMonitor && MonitorIndex > 0 ? _monitorIds[MonitorIndex - 1] : null;
 
     public void Reset()
@@ -82,6 +87,14 @@ public sealed partial class FilterViewModel : ObservableObject
     partial void OnContrastChanged(double value) => ApplyAdjustment();
 
     partial void OnBrightnessChanged(double value) => ApplyAdjustment();
+
+    partial void OnProtectPhotosChanged(bool value)
+    {
+        if (!_loading)
+        {
+            _context.Controller.Effects.SetProtectPhotos(value);
+        }
+    }
 
     // "\\.\DISPLAY2" → "Monitor 2", the number Windows shows under Settings › Display.
     private static string MonitorName(string id)

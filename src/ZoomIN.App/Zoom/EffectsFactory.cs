@@ -16,6 +16,7 @@ internal static class EffectsFactory
     {
         PerMonitorFilter = settings.PerMonitorFilter,
         MonitorFilters = settings.MonitorFilters,
+        ProtectPhotos = settings.ProtectPhotos,
     };
 
     public static AppSettings Apply(AppSettings settings, EffectsModel model)
@@ -31,6 +32,7 @@ internal static class EffectsFactory
             Contrast = effects.Filter.Contrast,
             Brightness = effects.Filter.Brightness,
             Smoothing = effects.Smoothing,
+            ProtectPhotos = effects.ProtectPhotos,
             CursorMaxScale = p.MaxScale,
             CursorUnzoomedScale = p.UnzoomedScale,
             CursorOverrideWindows = p.OverrideWindows,

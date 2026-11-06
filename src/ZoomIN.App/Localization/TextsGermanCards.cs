@@ -44,6 +44,8 @@ internal static class TextsGermanCards
         ["FilterBrightness"] = "Helligkeit",
         ["FilterBrightness.Desc"] = "0 % = unverändert",
         ["FilterReset"] = "Kontrast und Helligkeit zurücksetzen",
+        ["FilterProtectPhotos"] = "Fotos und Videos nicht invertieren",
+        ["FilterProtectPhotos.Desc"] = "Gilt für „Invertiert (intelligent)“: Bunte, detailreiche Flächen bleiben in ihren Originalfarben.",
 
         ["PointerPreview.Desc"] = "Vorschau: links ohne Zoom, rechts bei 3-fachem Zoom.",
         ["PointerTestLocator"] = "Suchhilfe testen",

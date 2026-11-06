@@ -12,4 +12,6 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// <param name="Tracking">Keyboard focus and text caret.</param>
 /// <param name="Windows">Filter per window: regions from the window tracker (ADR-0020).</param>
 /// <param name="Snapshots">Debug snapshots requested on the diagnostics page.</param>
-public sealed record RenderModels(ZoomModel Zoom, EffectsModel Effects, TrackingModel Tracking, WindowFilterModel Windows, DebugSnapshots Snapshots);
+/// <param name="SmartInvert">Fall-backs of the smart inversion, for the diagnostics page.</param>
+public sealed record RenderModels(
+    ZoomModel Zoom, EffectsModel Effects, TrackingModel Tracking, WindowFilterModel Windows, DebugSnapshots Snapshots, SmartInvertHealth SmartInvert);

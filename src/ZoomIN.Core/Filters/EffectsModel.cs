@@ -49,6 +49,9 @@ public sealed class EffectsModel
 
     public void SetSmoothing(Smoothing smoothing) => Update(e => e with { Smoothing = smoothing });
 
+    /// <summary>Smart inversion: photos and videos stay original (ADR-0024).</summary>
+    public void SetProtectPhotos(bool protect) => Update(e => e with { ProtectPhotos = protect });
+
     /// <summary>Shared filter, contrast and brightness.</summary>
     public void SetFilter(FilterSettings filter) => Update(e => e with { Filter = filter.Normalized() });
 
