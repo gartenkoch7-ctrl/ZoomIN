@@ -143,7 +143,7 @@ internal sealed class RenderSession : IDisposable
         }
         else
         {
-            Draw(frame, request.Effects, request.Windows);
+            Draw(frame, request.Effects, request.Windows, request.WindowsFiltered);
         }
 
         _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions);
@@ -172,7 +172,7 @@ internal sealed class RenderSession : IDisposable
         _owned.Clear();
     }
 
-    private void Draw(in ModeFrame frame, DisplayEffects effects, WindowRegions windows)
+    private void Draw(in ModeFrame frame, DisplayEffects effects, WindowRegions windows, bool windowsFiltered)
     {
         var monitor = _monitor.Bounds;
 
@@ -193,8 +193,19 @@ internal sealed class RenderSession : IDisposable
             return;
         }
 
-        // Lens/docked: everything outside the target stays transparent (and click-through).
-        _gpu.Context.ClearRenderTargetView(_swapchain.RenderTarget, s_transparent);
+        // Lens/docked: outside the target the monitor looks as it does at 1× (colour filter and
+        // filter per window go on), so nothing turns white when the lens comes on. With nothing to
+        // filter it stays transparent. Click-through either way (window style).
+        if (effects.Filter.ChangesColors || windowsFiltered)
+        {
+            _pass.Draw(_gpu.Context, _duplicator.ShaderResource, _swapchain.RenderTarget, _swapchain.Width, _swapchain.Height,
+                MagnifyConstants.Fullscreen(monitor, monitor, matrix, effects.Smoothing));
+        }
+        else
+        {
+            _gpu.Context.ClearRenderTargetView(_swapchain.RenderTarget, s_transparent);
+        }
+
         var viewport = Expand(frame.Target, FrameThickness, monitor);
         var constants = MagnifyConstants.WithFrame(frame.Source, monitor, frame.Target, viewport, FrameColor.Default, matrix, effects.Smoothing);
         _pass.Draw(

@@ -91,6 +91,23 @@ installierte ZoomIN-Instanz nicht vom Agenten beendet wird:
 - Kürzel in der echten App belegen, auslösen, Neustart → Wahl bleibt.
 - Budget auf 1440p/Onboard-Grafik (CPU, Bildrate, Verzögerung).
 
+### Messung 2026-11-06 (Dev-Build, 1080p, 20 logische Kerne, eigene Testfenster)
+- CPU der App: 0,00–0,05 % aller Kerne – ohne helles Fenster, mit hellem Fenster und beim
+  ständigen Verschieben (Overlay sichtbar). Budget 3 % klar eingehalten; Bildrate nicht gemessen.
+- Fenster verschoben → neuer Bereich im Modell: Median 1,3 ms, max. 61 ms (40 Schritte).
+- Popup erzeugt → geerbter Bereich: Median 12,8 ms, max. 57 ms → bei 60 Hz 1–4 Frames ungefiltert
+  möglich (Risiko für „Menü blitzt nicht“).
+- Code-Review: Lupe/Angedockt verliert den Fensterfilter außerhalb der Lupe; Store-Apps können als
+  `applicationframehost.exe` eingestuft bleiben; > 32 Bereiche fallen still auf den Monitorfilter.
+
+### Nachbesserung 2026-11-06 ([ADR-0022](../adr/0022-filter-pro-fenster-nachbesserung.md))
+- Ursache der späten Popups: GDI-Blicke (je ≈ 17 ms) blockierten den Tracker-Thread → eigener
+  Blick-Thread. Danach Popup gezeigt → Bereich: Median 3,3 ms, 90 % < 4,5 ms (auch während Blicken).
+- Lupe/Angedockt: außen wie bei 1× (Monitor- und Fensterfilter), Entscheidung des Nutzers.
+- Bis 64 Bereiche, Rest gezählt (`regions_dropped`, Log 2705); Store-Rahmen werden nachgefragt;
+  keine Regeln für `unknown` und unaufgelöste Store-Rahmen; Kürzel auf Popup → Besitzer.
+- Offen für die Sichtprüfung zusätzlich: Lupe und Angedockt mit invertiertem Fenster.
+
 ## Offene Fragen / Risiken
 - Fensterbereiche ohne Versatz und ohne Allokation pro Frame – Kern des Spikes.
 - Limit der Bereiche im Shader; viele kleine Fenster.

@@ -1,6 +1,6 @@
 # ADR-0021: Filter pro Fenster – Umsetzung (Ergänzung zu ADR-0020)
 
-- **Status:** Angenommen
+- **Status:** Angenommen, Nr. 1 und 2 teilweise ersetzt durch [ADR-0022](0022-filter-pro-fenster-nachbesserung.md)
 - **Datum:** 2026-11-06
 - **Ergänzt:** [ADR-0020](0020-filter-pro-fenster.md) (bleibt gültig; hier stehen die Punkte, die der
   Spike festgelegt oder anders gelöst hat)

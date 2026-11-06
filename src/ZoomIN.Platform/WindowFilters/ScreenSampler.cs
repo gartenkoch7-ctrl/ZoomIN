@@ -47,7 +47,7 @@ internal sealed unsafe class ScreenSampler : IDisposable
         _previous = PInvoke.SelectObject(_memory, _bitmap);
 
         // HALFTONE averages the pixels it drops, so text on a white page still counts as light.
-        _ = PInvoke.SetStretchBltMode(_memory, STRETCH_BLT_MODE.HALFTONE);
+        _ = PInvoke.SetStretchBltMode(_memory, STRETCH_BLT_MODE.COLORONCOLOR);
         PInvoke.SetBrushOrgEx(_memory, 0, 0, null);
     }
 

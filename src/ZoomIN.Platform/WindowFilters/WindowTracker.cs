@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using Windows.Win32;
-using Windows.Win32.Foundation;
 using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Viewport;
 using ZoomIN.Core.WindowFilters;
@@ -21,12 +19,12 @@ internal sealed class WindowTracker : IDisposable
     private readonly IMonitorProvider _monitors;
     private readonly WindowFilterTelemetry _telemetry;
     private readonly ScreenSampler? _sampler;
-    private readonly WindowNames _names = new();
-    private readonly Dictionary<nint, WindowState> _states = [];
+    private readonly WindowStates _states = new();
     private readonly List<RawWindow> _raw = [];
     private readonly List<TrackedWindow> _tracked = [];
     private readonly List<PhysicalRect> _above = [];
     private readonly List<PhysicalRect> _monitorBounds = [];
+    private readonly List<LookRequest> _due = [];
     private TrackerSnapshot _snapshot = TrackerSnapshot.Empty;
 
     public WindowTracker(WindowFilterModel model, IMonitorProvider monitors, WindowFilterTelemetry telemetry, ScreenSampler? sampler)
@@ -58,11 +56,10 @@ internal sealed class WindowTracker : IDisposable
 
         WindowEnumerator.Collect(_raw);
         _tracked.Clear();
-        var processes = new HashSet<uint>();
         var pending = false;
         foreach (var raw in _raw)
         {
-            var state = StateOf(raw);
+            var state = _states.Of(raw);
             if (state.Ignored)
             {
                 continue;
@@ -75,24 +72,36 @@ internal sealed class WindowTracker : IDisposable
             }
 
             pending |= state.Measuring;
-            processes.Add(raw.ProcessId);
             _tracked.Add(new TrackedWindow(raw.Handle, raw.Bounds, state.Kind, state.Role, state.Brightness, raw.Owner, (int)raw.ProcessId));
         }
 
-        ForgetClosedWindows();
-        _names.KeepOnly(processes);
+        _states.EndListing(_raw.Count);
         HasPendingLooks = pending;
 
         var palette = WindowLayout.Resolve(_tracked, options);
         var regions = WindowLayout.Build(_tracked, palette);
         _model.Publish(regions);
         Volatile.Write(ref _snapshot, new TrackerSnapshot([.. _tracked], palette));
-        WindowFilterTelemetry.Updated(Stopwatch.GetElapsedTime(started).TotalMilliseconds, regions.Count);
+        _telemetry.Updated(Stopwatch.GetElapsedTime(started).TotalMilliseconds, regions);
     }
 
-    /// <summary>Takes the looks that are due; true if a window was decided (then call <see cref="Update"/>).</summary>
+    /// <summary>Takes the due looks right here (tests, or no look thread); true if a window was decided.</summary>
     public bool Look()
     {
+        CollectDueLooks(_due);
+        var results = new (nint Handle, bool? IsLight)[_due.Count];
+        for (var i = 0; i < _due.Count; i++)
+        {
+            results[i] = (_due[i].Handle, _due[i].Take(_sampler));
+        }
+
+        return Apply(results);
+    }
+
+    /// <summary>Fills <paramref name="due"/> with the looks that are due now; true if there are any.</summary>
+    public bool CollectDueLooks(List<LookRequest> due)
+    {
+        due.Clear();
         if (!HasPendingLooks)
         {
             return false;
@@ -100,60 +109,67 @@ internal sealed class WindowTracker : IDisposable
 
         var now = Stopwatch.GetTimestamp();
         var threshold = _model.Options.ThresholdPercent;
-        var decided = false;
         CollectMonitors();
+        var monitors = _monitorBounds.ToArray();
+        var all = Union(monitors);
         _above.Clear();
         foreach (var window in _tracked)
         {
-            if (_states.TryGetValue(window.Handle, out var state) && state.Measuring)
+            if (_states.TryGet(window.Handle, out var state) && state.Measuring
+                && Stopwatch.GetElapsedTime(state.StartedAt, now) >= state.Vote.NextLookAt)
             {
-                var elapsed = Stopwatch.GetElapsedTime(state.StartedAt, now);
-                if (elapsed >= state.Vote.NextLookAt)
-                {
-                    state.Vote = state.Vote.Add(LookAt(window.Bounds, threshold));
-                }
-
-                decided |= Decide(state, elapsed);
+                // Only the part on some monitor is copied; outside, GDI would deliver black.
+                var area = all is { } bounds ? RectMath.Intersection(window.Bounds, bounds) : window.Bounds;
+                due.Add(new LookRequest(window.Handle, area, [.. _above], monitors, threshold));
             }
 
             _above.Add(window.Bounds);
         }
 
+        return due.Count > 0;
+    }
+
+    /// <summary>
+    /// Counts the results of looks and decides what is due, also windows past the deadline (with
+    /// or without results). True if a window was decided (then call <see cref="Update"/>).
+    /// </summary>
+    public bool Apply(ReadOnlySpan<(nint Handle, bool? IsLight)> results)
+    {
+        foreach (var (handle, isLight) in results)
+        {
+            if (_states.TryGet(handle, out var state) && state.Measuring)
+            {
+                state.Vote = state.Vote.Add(isLight);
+            }
+        }
+
         // Windows that disappeared while being measured end at the deadline without more looks.
-        foreach (var state in _states.Values)
+        var now = Stopwatch.GetTimestamp();
+        var decided = false;
+        var pending = false;
+        foreach (var state in _states.All)
         {
             if (state.Measuring)
             {
                 decided |= Decide(state, Stopwatch.GetElapsedTime(state.StartedAt, now));
+                pending |= state.Measuring;
             }
         }
 
-        HasPendingLooks = _states.Values.Any(s => s.Measuring);
+        HasPendingLooks = pending;
         return decided;
     }
 
     /// <summary>A window came to the front: if it could not be measured before, it gets another round.</summary>
     public void ForegroundChanged(nint handle)
     {
-        if (_states.TryGetValue(handle, out var state) && state.Brightness == WindowBrightness.Unknown && state.Rounds < MaxRounds)
+        if (_states.TryGet(handle, out var state) && state.Brightness == WindowBrightness.Unknown && state.Rounds < MaxRounds)
         {
             state.Brightness = WindowBrightness.Pending;
         }
     }
 
     public void Dispose() => _sampler?.Dispose();
-
-    private WindowState StateOf(in RawWindow raw)
-    {
-        if (!_states.TryGetValue(raw.Handle, out var state))
-        {
-            var kind = _names.KindOf(raw.Handle, raw.ProcessId);
-            state = new WindowState(kind, WindowClasses.RoleOf(kind, raw.PopupStyle, raw.Owner != 0, raw.ToolWindow), WindowClasses.IsIgnored(kind.WindowClass));
-            _states[raw.Handle] = state;
-        }
-
-        return state;
-    }
 
     private bool Decide(WindowState state, TimeSpan elapsed)
     {
@@ -168,39 +184,17 @@ internal sealed class WindowTracker : IDisposable
         return true;
     }
 
-    private bool? LookAt(PhysicalRect bounds, int threshold)
+    // The box around all monitors; null without monitors (then nothing is clipped).
+    private static PhysicalRect? Union(PhysicalRect[] monitors)
     {
-        if (_sampler is null)
+        if (monitors.Length == 0)
         {
             return null;
         }
 
-        var started = Stopwatch.GetTimestamp();
-        var area = ClipToMonitors(bounds);
-        bool? result = null;
-        if (!RectMath.IsEmpty(area) && _sampler.Capture(area))
-        {
-            result = BrightnessMeter.IsLight(
-                _sampler.Pixels, ScreenSampler.Size, ScreenSampler.Size, area,
-                _above.ToArray(), _monitorBounds.ToArray(), threshold);
-        }
-
-        WindowFilterTelemetry.Looked(Stopwatch.GetElapsedTime(started).TotalMilliseconds);
-        return result;
-    }
-
-    // Only the part on some monitor is copied; outside, GDI would deliver black.
-    private PhysicalRect ClipToMonitors(PhysicalRect bounds)
-    {
-        if (_monitorBounds.Count == 0)
-        {
-            return bounds;
-        }
-
-        var left = _monitorBounds.Min(m => m.X);
-        var top = _monitorBounds.Min(m => m.Y);
-        var all = new PhysicalRect(left, top, _monitorBounds.Max(m => m.Right) - left, _monitorBounds.Max(m => m.Bottom) - top);
-        return RectMath.Intersection(bounds, all);
+        var left = monitors.Min(m => m.X);
+        var top = monitors.Min(m => m.Y);
+        return new PhysicalRect(left, top, monitors.Max(m => m.Right) - left, monitors.Max(m => m.Bottom) - top);
     }
 
     private void CollectMonitors()
@@ -212,20 +206,6 @@ internal sealed class WindowTracker : IDisposable
             {
                 _monitorBounds.Add(bounds);
             }
-        }
-    }
-
-    // Hidden windows keep their state (no new looks when shown again); closed ones are dropped.
-    private void ForgetClosedWindows()
-    {
-        if (_states.Count <= _raw.Count)
-        {
-            return;
-        }
-
-        foreach (var handle in _states.Keys.Where(h => !PInvoke.IsWindow((HWND)h)).ToList())
-        {
-            _states.Remove(handle);
         }
     }
 }

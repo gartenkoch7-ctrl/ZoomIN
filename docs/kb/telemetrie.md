@@ -122,7 +122,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.windowfilter.classifications` | Fenster | `process.name`, `zoomin.result` (`light`, `dark`, `unknown`) | Fenster beim Öffnen eingestuft (dazu Log 2701) |
 | `zoomin.windowfilter.look_duration` | ms | – | Ein Blick auf ein Fenster (GDI-Kopie 64×64 und Zählen) |
 | `zoomin.windowfilter.update_duration` | ms | – | Fenster auflisten und Bereiche bauen nach einer Fensteränderung |
-| `zoomin.windowfilter.regions` | Bereiche | – | Bereiche, die der Shader nach einer Änderung bekommt (höchstens 32) |
+| `zoomin.windowfilter.regions` | Bereiche | – | Bereiche, die der Shader nach einer Änderung bekommt (höchstens 64) |
+| `zoomin.windowfilter.regions_dropped` | Fenster | – | Fenster über dem Limit von 64 Bereichen, die den Monitorfilter zeigen (je Aktualisierung; dazu Log 2705) |
 
 ## Katalog: Logmeldungen
 | Id | Stufe | Meldung |
@@ -203,6 +204,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2702 | Warnung | Window events unavailable; the filter per window only follows shortcuts and settings |
 | 2703 | Fehler | Updating the window regions failed |
 | 2704 | Warnung | No bitmap for brightness looks; windows stay unmeasured |
+| 2705 | Info | {Dropped} windows over the limit of {Max} regions show the monitor filter |
 | 3001 | Info | Zoom pipeline ready for {Monitor} |
 | 3002 | Info | Display changed on {Monitor}: {Reason} |
 | 3003 | Fehler | Zoom pipeline for {Monitor} failed |

@@ -27,6 +27,9 @@
 - **In-App-Overlay** (Debug-Build): Frame-Zeit, verpasste Frames, Duplication-Latenz.
 - **PresentMon** / GPUView für echte Ende-zu-Ende-Messungen.
 - Messergebnisse mit Hardware hier eintragen.
+- Liegen Kopien des Repos unter `.claude/worktrees/`, bricht BenchmarkDotNet ab („more than one
+  matching project file“). Dann mit `--inProcess` starten:
+  `dotnet run -c Release --project tests/ZoomIN.Benchmarks -- --filter "*WindowRegions*" --inProcess --memory`.
 
 ## Messprotokoll
 | Datum | Hardware | Monitor | Modus | Ergebnis | Hinweis |
@@ -34,6 +37,7 @@
 | 2026-10-30 | RTX 3060 Ti | 1080p, 60 Hz | Vollbild 2× (M1) | 60,4 fps (171 Frames / 2,8 s) | p99 noch nicht gemessen; Start per Hotkey ≈ 215 ms (Pipeline-Aufbau) |
 | 2026-10-30 | RTX 3060 Ti | 1080p, 60 Hz | M2, Pipeline warm | Hotkey → Overlay sichtbar **2–16 ms**; Leerlauf 0,5 % eines Kerns | Ausblenden bis unsichtbar ≈ 390 ms (siehe unten) |
 | 2026-11-05 | Entwicklungsrechner | – | M11 Telemetrie-Start, Release, frischer Prozess, ohne ReadyToRun | Startpfad **~4 ms** Host, **~9 ms** inkl. erster Logzeile + Operation; ~100 ms Aufbau im Hintergrund | vorher (synchron) ~90 ms, kalter erster Lauf 255 ms – siehe unten |
+| 2026-11-06 | RTX 3060 Ti, 20 Threads | 1080p, 60 Hz | M12 Filter pro Fenster, Dev-Build | CPU 0,00–0,05 % aller Kerne (helles Fenster, auch beim Verschieben); Popup → Bereich Median 3,3 ms, 90 % < 4,5 ms; `WindowRegionsCheck` 64 Bereiche 65 ns, 0 B | Bildrate nicht gemessen; vor dem Blick-Thread Popup bis 75 ms (ADR-0022) |
 
 ## Telemetrie-Start (M11)
 Gemessen mit einem Wegwerf-Programm, das `TelemetryHost` in einem frischen Prozess startet:

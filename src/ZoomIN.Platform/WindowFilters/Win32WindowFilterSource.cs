@@ -11,12 +11,13 @@ namespace ZoomIN.Platform.WindowFilters;
 /// <summary>
 /// Thread of the filter per window (ADR-0020). Out-of-context WinEvents (show, hide, move,
 /// Z order, foreground, cloak) arrive as messages on this thread; each burst ends in one update,
-/// because the update request is posted behind the events already queued. A timer drives the
-/// looks at new windows and runs only while one is due.
+/// because the update request is posted behind the events already queued. A timer hands the due
+/// looks at new windows to the <see cref="LookWorker"/> and runs only while one is due.
 /// </summary>
 public sealed class Win32WindowFilterSource : IWindowFilterSource
 {
     private const uint UpdateMessage = PInvoke.WM_APP + 1;
+    private const uint LooksDoneMessage = PInvoke.WM_APP + 2;
     private const uint LookInterval = 50;
 
     // Event ranges: foreground; move/size; minimize; destroy–reorder; location; cloak/uncloak.
@@ -38,6 +39,7 @@ public sealed class Win32WindowFilterSource : IWindowFilterSource
     private WindowFilterModel? _model;
     private WindowTracker? _tracker;
     private uint _threadId;
+    private readonly List<LookRequest> _due = [];
     private nuint _timer;
     private bool _updatePosted;
 
@@ -89,7 +91,10 @@ public sealed class Win32WindowFilterSource : IWindowFilterSource
     {
         _threadId = PInvoke.GetCurrentThreadId();
         PInvoke.PeekMessage(out _, HWND.Null, 0, 0, PEEK_MESSAGE_REMOVE_TYPE.PM_NOREMOVE);
-        using var tracker = new WindowTracker(_model!, _monitors, new WindowFilterTelemetry(_log), CreateSampler());
+        // Looks run on their own thread, so this one only lists windows and never waits for DWM.
+        using var tracker = new WindowTracker(_model!, _monitors, new WindowFilterTelemetry(_log), null);
+        var threadId = _threadId;
+        using var looks = new LookWorker(_log, () => PInvoke.PostThreadMessage(threadId, LooksDoneMessage, default, default));
         _tracker = tracker;
         s_current = this;
         Hook();
@@ -105,14 +110,22 @@ public sealed class Win32WindowFilterSource : IWindowFilterSource
                 Safely(tracker.Update);
                 UpdateTimer();
             }
+            else if (msg.message == LooksDoneMessage)
+            {
+                Safely(() => Decide(tracker, looks.TakeResults()));
+                UpdateTimer();
+            }
             else if (msg.message == PInvoke.WM_TIMER && msg.wParam.Value == _timer)
             {
                 Safely(() =>
                 {
-                    if (tracker.Look())
+                    if (!looks.Busy && tracker.CollectDueLooks(_due))
                     {
-                        tracker.Update();
+                        looks.TryStart(_due);
                     }
+
+                    // Deadlines pass without results too (window gone or covered).
+                    Decide(tracker, []);
                 });
                 UpdateTimer();
             }
@@ -149,6 +162,14 @@ public sealed class Win32WindowFilterSource : IWindowFilterSource
         else
         {
             _log.WindowFilterStarted(_hooks.Count);
+        }
+    }
+
+    private static void Decide(WindowTracker tracker, ReadOnlySpan<(nint Handle, bool? IsLight)> results)
+    {
+        if (tracker.Apply(results))
+        {
+            tracker.Update();
         }
     }
 
@@ -197,19 +218,6 @@ public sealed class Win32WindowFilterSource : IWindowFilterSource
         {
             PInvoke.KillTimer(HWND.Null, _timer);
             _timer = 0;
-        }
-    }
-
-    private ScreenSampler? CreateSampler()
-    {
-        try
-        {
-            return new ScreenSampler();
-        }
-        catch (InvalidOperationException ex)
-        {
-            _log.WindowSamplerFailed(ex);
-            return null;
         }
     }
 

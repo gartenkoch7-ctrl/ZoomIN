@@ -9,6 +9,21 @@ namespace ZoomIN.Core.WindowFilters;
 /// <param name="WindowClass">Win32 window class, e.g. "OpusApp".</param>
 public readonly record struct WindowKind(string Process, string WindowClass)
 {
+    /// <summary>Process name when the program file cannot be read (protected or gone).</summary>
+    public const string UnknownProcess = "unknown";
+
+    /// <summary>
+    /// A user choice can be remembered for it. Not for unreadable programs (one name for many
+    /// apps) and not for the store app frame before its app is known (one frame for all store apps).
+    /// </summary>
+    public bool CanHaveRule =>
+        !string.Equals(Process, UnknownProcess, StringComparison.OrdinalIgnoreCase) && !IsStoreFrame;
+
+    /// <summary>The frame of a store app whose app window was not found yet (ApplicationFrameHost).</summary>
+    public bool IsStoreFrame =>
+        string.Equals(Process, "applicationframehost.exe", StringComparison.OrdinalIgnoreCase)
+        && string.Equals(WindowClass, "ApplicationFrameWindow", StringComparison.OrdinalIgnoreCase);
+
     public bool Equals(WindowKind other) =>
         string.Equals(Process, other.Process, StringComparison.OrdinalIgnoreCase)
         && string.Equals(WindowClass, other.WindowClass, StringComparison.OrdinalIgnoreCase);

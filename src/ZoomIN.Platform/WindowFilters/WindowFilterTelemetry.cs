@@ -24,6 +24,11 @@ internal sealed class WindowFilterTelemetry(ILogger log)
     private static readonly Histogram<long> s_regions = Telemetry.Meter.CreateHistogram<long>(
         "zoomin.windowfilter.regions", "{region}", "Regions handed to the shader after a change");
 
+    private static readonly Counter<long> s_dropped = Telemetry.Meter.CreateCounter<long>(
+        "zoomin.windowfilter.regions_dropped", "{window}", "Windows left to the monitor filter because the region limit was reached, per update");
+
+    private bool _dropping;
+
     public void Classified(string process, WindowBrightness result, TimeSpan duration, int looks)
     {
         var name = ResultName(result);
@@ -34,10 +39,24 @@ internal sealed class WindowFilterTelemetry(ILogger log)
 
     public static void Looked(double milliseconds) => s_lookDuration.Record(milliseconds);
 
-    public static void Updated(double milliseconds, int regions)
+    public void Updated(double milliseconds, WindowRegions regions)
     {
         s_updateDuration.Record(milliseconds);
-        s_regions.Record(regions);
+        s_regions.Record(regions.Count);
+        if (regions.Dropped > 0)
+        {
+            s_dropped.Add(regions.Dropped);
+        }
+
+        // Logged when the limit is first hit, not on every update while it lasts (dragging).
+        if ((regions.Dropped > 0) != _dropping)
+        {
+            _dropping = regions.Dropped > 0;
+            if (_dropping)
+            {
+                log.WindowRegionsDropped(regions.Dropped, WindowRegions.Max);
+            }
+        }
     }
 
     private static string ResultName(WindowBrightness result) => result switch

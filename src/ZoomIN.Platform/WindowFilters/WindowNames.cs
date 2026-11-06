@@ -38,9 +38,13 @@ internal sealed unsafe class WindowNames
     /// <summary>Forgets processes that have no windows left, so reused ids get a fresh name.</summary>
     public void KeepOnly(HashSet<uint> processIds)
     {
-        foreach (var id in _processes.Keys.Where(id => !processIds.Contains(id)).ToList())
+        // Removing while enumerating is allowed for Dictionary since .NET Core 3.0; no copy per update.
+        foreach (var id in _processes.Keys)
         {
-            _processes.Remove(id);
+            if (!processIds.Contains(id))
+            {
+                _processes.Remove(id);
+            }
         }
     }
 
@@ -73,7 +77,7 @@ internal sealed unsafe class WindowNames
         var process = PInvoke.OpenProcess(PROCESS_ACCESS_RIGHTS.PROCESS_QUERY_LIMITED_INFORMATION, false, processId);
         if (process == HANDLE.Null)
         {
-            return "unknown";
+            return WindowKind.UnknownProcess;
         }
 
         try
@@ -84,7 +88,7 @@ internal sealed unsafe class WindowNames
                 var size = (uint)buffer.Length;
                 if (!PInvoke.QueryFullProcessImageName(process, PROCESS_NAME_FORMAT.PROCESS_NAME_WIN32, chars, &size))
                 {
-                    return "unknown";
+                    return WindowKind.UnknownProcess;
                 }
 
                 return Path.GetFileName(new string(chars, 0, (int)size)).ToLowerInvariant();

@@ -29,7 +29,7 @@ internal sealed class MagnifyPass : IDisposable
         _windows = device.CreateBuffer(in none, new BufferDescription((uint)WindowConstants.SizeInBytes, BindFlags.ConstantBuffer, ResourceUsage.Default));
     }
 
-    /// <summary>New window regions or palette; call only when they changed (1.5 KB upload).</summary>
+    /// <summary>New window regions or palette; call only when they changed (2.5 KB upload).</summary>
     public void UpdateWindows(ID3D11DeviceContext context, in WindowConstants windows) =>
         context.UpdateSubresource(windows, _windows);
 

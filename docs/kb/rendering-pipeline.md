@@ -58,18 +58,24 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   `DWMWA_EXTENDED_FRAME_BOUNDS` (ohne unsichtbaren Rand), überspringt verborgene, minimierte,
   ge-cloakte und klick-durchlässige Overlays (`WS_EX_TRANSPARENT|WS_EX_LAYERED`, auch ZoomINs
   eigene) und Schatten (`SysShadow`). Name/Klasse je Fenster nur einmal lesen.
-- **Einstufung** einmal beim ersten Erscheinen: GDI-`StretchBlt(HALFTONE)` auf 64×64 auf dem
-  Tracker-Thread (Overlays sind aus der Kopie ausgenommen); `BrightnessMeter` zählt nur sichtbare
+- **Einstufung** einmal beim ersten Erscheinen: GDI-`StretchBlt(COLORONCOLOR)` auf 64×64 auf dem eigenen
+  Blick-Thread `LookWorker` (ADR-0022; Overlays sind aus der Kopie ausgenommen); `BrightnessMeter` zählt nur sichtbare
   Pixel (nicht verdeckt, auf einem Monitor), `BrightnessVote` entscheidet 2 von 3. Verborgen und
   wieder gezeigt = keine neue Messung (Zustand lebt bis `IsWindow` false).
-- **Snapshot** `WindowRegions` (≤ 32 Rechtecke + Palettenindex) per `WindowFilterModel.Publish`;
-  gleicher Inhalt → kein Wecken. Render-Thread: `ChangesMonitor` (33 ns, 0 B) entscheidet über
+- **Snapshot** `WindowRegions` (≤ 64 Rechtecke + Palettenindex) per `WindowFilterModel.Publish`;
+  gleicher Inhalt → kein Wecken. Render-Thread: `ChangesMonitor` (65 ns bei 64 Bereichen, 0 B) entscheidet über
   Pause; `WindowConstants.Fill` + Upload in `b1` nur bei neuem Snapshot oder neuen Effekten.
 - **Shader:** Quell-UV gegen die Rechtecke (Monitor-UV), erstes Treffer-Rechteck wählt die Matrix
   aus `Palette` (9 Einträge), sonst Monitor-Matrix. Gilt auch beim Zoom, weil im Quellraum geprüft.
 - **Gemessen (Dev-PC, 2026-11-06):** Aktualisieren 0,10 ms bei 16 sichtbaren Fenstern; ein Blick
   16,5 ms (1200×800) bzw. 17 ms (ganzer Monitor) – GDI wartet auf den nächsten DWM-Frame; ein
   sichtbares Fenster ist nach ≈ 0,6 s entschieden (Blicke bei 250 und 600 ms).
+- **GDI-Blicke blockieren:** jeder `StretchBlt` vom Bildschirm-DC wartet auf den nächsten DWM-Frame
+  (≈ 17 ms, egal wie groß, egal ob HALFTONE oder COLORONCOLOR). Auf dem Tracker-Thread verzögerte
+  das WinEvents um bis zu 75 ms (Menüs blitzten) – deshalb eigener Blick-Thread (ADR-0022).
+  Danach: Popup sichtbar → Bereich Median 3,3 ms, 90 % < 4,5 ms.
+- **Lupe/Angedockt mit Filter:** zuerst ein Vollbild-Durchgang in 1× (Monitor- und Fensterfilter),
+  darüber die Lupe; ohne Filter bleibt außen alles durchsichtig (ADR-0022 Nr. 4).
 - **Nicht automatisch prüfbar:** Versatz beim Ziehen (Ereignis vs. Duplication-Frame) und die
   sichtbare Wirkung – das Overlay ist aus Screenshots ausgenommen; Sichtprüfung durch Menschen.
 

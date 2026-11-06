@@ -19,7 +19,7 @@ cbuffer MagnifyConstants : register(b0)
 // Filter per window (ADR-0020): window rectangles front to back, each with a palette entry. The
 // first rectangle holding the source pixel wins, so windows above hide the ones below; pixels in
 // none of them keep the monitor's matrix (ColorRow0–2). Updated only when windows or filters change.
-#define MAX_REGIONS 32
+#define MAX_REGIONS 64
 #define PALETTE_SIZE 9
 
 cbuffer WindowConstants : register(b1)

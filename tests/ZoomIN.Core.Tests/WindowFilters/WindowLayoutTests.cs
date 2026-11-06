@@ -101,6 +101,15 @@ public sealed class WindowLayoutTests
 
         Assert.Equal(WindowRegions.Max, regions.Count);
         Assert.Equal(windows[0].Bounds, regions.Rects[0]);
+        Assert.Equal(8, regions.Dropped);
+    }
+
+    [Fact]
+    public void WithinTheLimit_NothingIsDropped()
+    {
+        var regions = WindowLayout.Build([Window(1, 0, 0, 900, 1000, s_word, WindowBrightness.Light)], WindowFilterOptions.Default);
+
+        Assert.Equal(0, regions.Dropped);
     }
 
     [Fact]

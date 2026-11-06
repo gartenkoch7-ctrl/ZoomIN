@@ -11,12 +11,15 @@ namespace ZoomIN.Core.WindowFilters;
 public sealed class WindowRegions
 {
     /// <summary>The most rectangles the shader takes; further windows fall back to the monitor filter.</summary>
-    public const int Max = 32;
+    public const int Max = 64;
 
     private readonly PhysicalRect[] _rects;
     private readonly byte[] _palette;
 
-    public WindowRegions(ReadOnlySpan<PhysicalRect> rects, ReadOnlySpan<byte> palette)
+    /// <param name="rects">Window rectangles, front to back.</param>
+    /// <param name="palette">One palette index per rectangle.</param>
+    /// <param name="dropped">Windows left out before because of <see cref="Max"/> (for telemetry).</param>
+    public WindowRegions(ReadOnlySpan<PhysicalRect> rects, ReadOnlySpan<byte> palette, int dropped = 0)
     {
         if (rects.Length != palette.Length)
         {
@@ -24,6 +27,7 @@ public sealed class WindowRegions
         }
 
         Count = Math.Min(rects.Length, Max);
+        Dropped = dropped + (rects.Length - Count);
         _rects = rects[..Count].ToArray();
         _palette = palette[..Count].ToArray();
     }
@@ -32,6 +36,9 @@ public sealed class WindowRegions
     public static WindowRegions Empty { get; } = new([], []);
 
     public int Count { get; }
+
+    /// <summary>Windows that needed a region but did not get one (over <see cref="Max"/>); they show the monitor filter.</summary>
+    public int Dropped { get; }
 
     public ReadOnlySpan<PhysicalRect> Rects => _rects;
 

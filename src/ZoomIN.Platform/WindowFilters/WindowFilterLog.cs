@@ -19,4 +19,7 @@ internal static partial class WindowFilterLog
 
     [LoggerMessage(EventId = 2704, Level = LogLevel.Warning, Message = "No bitmap for brightness looks; windows stay unmeasured")]
     public static partial void WindowSamplerFailed(this ILogger logger, Exception exception);
+
+    [LoggerMessage(EventId = 2705, Level = LogLevel.Information, Message = "{Dropped} windows over the limit of {Max} regions show the monitor filter")]
+    public static partial void WindowRegionsDropped(this ILogger logger, int dropped, int max);
 }
