@@ -1,0 +1,139 @@
+using ZoomIN.Core.Filters;
+using ZoomIN.Core.Pointer;
+using ZoomIN.Core.Viewport;
+using ZoomIN.Core.WindowFilters;
+using ZoomIN.Rendering.Gpu;
+
+namespace ZoomIN.Rendering.Tests.Gpu;
+
+/// <summary>Smart inversion (ADR-0024) on WARP: light surroundings inverted, dark bars and photos kept.</summary>
+public sealed class SmartInvertTests
+{
+    private const int Size = 128;
+
+    // A dark bar (like the navigation bar of the Control Panel) with light text over a white page
+    // with dark text; the page's text lines are 2 px high every 8 px.
+    private const int BarBottom = 48;
+    private static readonly Bgra s_white = new(255, 255, 255, 255);
+    private static readonly Bgra s_black = new(0, 0, 0, 255);
+    private static readonly Bgra s_bar = new(32, 32, 32, 255);
+    private static readonly PhysicalRect s_monitor = new(0, 0, Size, Size);
+    private static readonly DisplayEffects s_smartMonitor =
+        new(new FilterSettings(true, ColorFilter.InvertedSmart, 1, 0), Smoothing.Pixel, PointerStyle.Default);
+
+    [Fact]
+    public void LightPage_IsInverted_DarkBarStaysDark()
+    {
+        var pixels = Render(BarOverPage, s_smartMonitor);
+
+        Assert.True(Luma(pixels.At(64, 16)) < 60, "the dark bar must stay dark");
+        Assert.True(Luma(pixels.At(64, 100)) < 30, "white page must turn dark");
+        Assert.True(Luma(pixels.At(64, 96)) > 200, "dark text on the page must turn light");
+    }
+
+    [Fact]
+    public void Photo_StaysOriginal()
+    {
+        // Colourful, detailed light content: bright stripes of different hues.
+        var pixels = Render(Photo, s_smartMonitor);
+
+        Assert.Equal(Photo(64, 64), pixels.At(64, 64));
+    }
+
+    [Fact]
+    public void Photo_IsInverted_WhenNotProtected()
+    {
+        var pixels = Render(Photo, s_smartMonitor with { ProtectPhotos = false });
+
+        Assert.NotEqual(Photo(64, 64), pixels.At(64, 64));
+    }
+
+    [Fact]
+    public void SmartWindow_OnlyInsideTheWindow()
+    {
+        var window = new WindowRegions([new PhysicalRect(0, 64, 64, 64)], [WindowPalette.Smart]);
+        var pixels = Render(BarOverPage, DisplayEffects.Default, window);
+
+        Assert.True(Luma(pixels.At(32, 100)) < 30, "white page inside the window turns dark");
+        Assert.Equal(s_white, pixels.At(100, 100));
+        Assert.Equal(s_bar, pixels.At(32, 16));
+    }
+
+    [Fact]
+    public void Smoothing_ChangesFadeInOverFrames()
+    {
+        using var gpu = GpuDevice.CreateWarp();
+        using var dark = TestImage.Create(gpu.Device, Size, (_, _) => s_bar);
+        using var light = TestImage.Create(gpu.Device, Size, (_, _) => s_white);
+        using var target = RenderTarget.Create(gpu.Device, Size);
+        using var pass = new MagnifyPass(gpu.Device);
+        using var ambient = new AmbientPass(gpu.Device, Size, Size);
+        Upload(gpu, pass, s_smartMonitor, WindowRegions.Empty);
+
+        ambient.Update(gpu.Context, dark.View, 1, protectPhotos: true);
+        ambient.Update(gpu.Context, light.View, 0.25f, protectPhotos: true);
+        Draw(gpu, pass, light, target, ambient);
+        var halfway = Luma(target.ReadBack(gpu.Device, gpu.Context).At(64, 64));
+
+        for (var i = 0; i < 20; i++)
+        {
+            ambient.Update(gpu.Context, light.View, 0.25f, protectPhotos: true);
+        }
+
+        Draw(gpu, pass, light, target, ambient);
+        var settled = Luma(target.ReadBack(gpu.Device, gpu.Context).At(64, 64));
+
+        Assert.InRange(halfway, 150, 220); // a quarter inverted: white only a bit darker
+        Assert.True(settled < 10, $"after 20 frames the white page is inverted ({settled})");
+    }
+
+    [Fact]
+    public void Monitor_NotSmart_NeedsNoWeights()
+    {
+        var pixels = Render(BarOverPage, DisplayEffects.Default);
+
+        Assert.Equal(s_white, pixels.At(64, 100));
+    }
+
+    private static Bgra BarOverPage(int x, int y) =>
+        y < BarBottom
+            ? (y % 16 is 7 or 8 && x % 4 < 2 ? s_white : s_bar)
+            : (y % 8 is 0 or 1 && x % 16 < 12 ? s_black : s_white);
+
+    // Light, saturated patches of changing hue, 8 px each. Shifted by 2 px so the samples of the
+    // ambient pass (2 × 2 means every 8 px) fall inside a patch instead of averaging four hues.
+    private static Bgra Photo(int x, int y) => ((((x + 2) / 8) + ((y + 2) / 8)) % 3) switch
+    {
+        0 => new Bgra(80, 230, 255, 255),
+        1 => new Bgra(255, 200, 90, 255),
+        _ => new Bgra(140, 255, 160, 255),
+    };
+
+    private static int Luma(Bgra c) => (int)((0.2126 * c.R) + (0.7152 * c.G) + (0.0722 * c.B));
+
+    private static PixelBuffer Render(Func<int, int, Bgra> image, DisplayEffects effects, WindowRegions? windows = null)
+    {
+        using var gpu = GpuDevice.CreateWarp();
+        using var texture = TestImage.Create(gpu.Device, Size, image);
+        using var target = RenderTarget.Create(gpu.Device, Size);
+        using var pass = new MagnifyPass(gpu.Device);
+        using var ambient = new AmbientPass(gpu.Device, Size, Size);
+        Upload(gpu, pass, effects, windows ?? WindowRegions.Empty);
+
+        ambient.Update(gpu.Context, texture.View, 1, effects.ProtectPhotos);
+        pass.Draw(gpu.Context, texture.View, target.View, Size, Size,
+            MagnifyConstants.Fullscreen(s_monitor, s_monitor, effects.Matrix, Smoothing.Pixel, effects.IsSmart), ambient.Weights);
+        return target.ReadBack(gpu.Device, gpu.Context);
+    }
+
+    private static void Upload(GpuDevice gpu, MagnifyPass pass, DisplayEffects effects, WindowRegions windows)
+    {
+        var constants = default(WindowConstants);
+        WindowConstants.Fill(ref constants, windows, s_monitor, effects);
+        pass.UpdateWindows(gpu.Context, constants);
+    }
+
+    private static void Draw(GpuDevice gpu, MagnifyPass pass, TestImage image, RenderTarget target, AmbientPass ambient) =>
+        pass.Draw(gpu.Context, image.View, target.View, Size, Size,
+            MagnifyConstants.Fullscreen(s_monitor, s_monitor, s_smartMonitor.Matrix, Smoothing.Pixel, smart: true), ambient.Weights);
+}

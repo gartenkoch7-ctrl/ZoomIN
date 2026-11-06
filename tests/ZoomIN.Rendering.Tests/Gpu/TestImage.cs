@@ -21,14 +21,18 @@ internal sealed class TestImage : IDisposable
 
     public ID3D11ShaderResourceView View { get; }
 
-    public static TestImage Create(ID3D11Device device, int size)
+    public static TestImage Create(ID3D11Device device, int size) =>
+        Create(device, size, (x, y) => x < size / 4 && y < size / 4 ? Green : x < size / 2 ? Red : Blue);
+
+    /// <summary>A square image with the colour <paramref name="pixel"/> returns for each x, y.</summary>
+    public static TestImage Create(ID3D11Device device, int size, Func<int, int, Bgra> pixel)
     {
         var data = new Bgra[size * size];
         for (var y = 0; y < size; y++)
         {
             for (var x = 0; x < size; x++)
             {
-                data[(y * size) + x] = x < size / 4 && y < size / 4 ? Green : x < size / 2 ? Red : Blue;
+                data[(y * size) + x] = pixel(x, y);
             }
         }
 

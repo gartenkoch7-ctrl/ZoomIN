@@ -23,10 +23,10 @@ public sealed partial class WindowFilterViewModel : ObservableObject
     {
         _context = context;
         var options = Model.Options;
-        FilterNames = Enum.GetValues<ColorFilter>().Select(f => Text.Get("Filter." + f)).ToList();
+        FilterNames = ColorFilters.DisplayOrder.Select(f => Text.Get("Filter." + f)).ToList();
         SensitivityNames = [Text.Get("WinFilter.Low"), Text.Get("WinFilter.Medium"), Text.Get("WinFilter.High"), Text.Get("WinFilter.Custom")];
         Enabled = options.Enabled;
-        AutoFilterIndex = (int)options.AutoFilter;
+        AutoFilterIndex = ColorFilters.DisplayIndexOf(options.AutoFilter);
         SensitivityIndex = (int)options.Sensitivity;
         Percent = options.CustomPercent;
         LoadRules();
@@ -103,7 +103,7 @@ public sealed partial class WindowFilterViewModel : ObservableObject
     {
         if (value >= 0)
         {
-            Change(o => o with { AutoFilter = (ColorFilter)value });
+            Change(o => o with { AutoFilter = ColorFilters.DisplayOrder[value] });
         }
     }
 

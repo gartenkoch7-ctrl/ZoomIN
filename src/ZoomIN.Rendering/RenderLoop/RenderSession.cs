@@ -33,6 +33,7 @@ internal sealed class RenderSession : IDisposable
     private readonly MagnifyPass _pass;
     private readonly CursorLayer _cursorLayer;
     private readonly HighlightLayer _highlights;
+    private readonly SmartInvertLayer _smart;
     private readonly AnchorController _anchors = new();
     private readonly int _displayGeneration;
     private PhysicalPoint _lastCursor;
@@ -63,6 +64,7 @@ internal sealed class RenderSession : IDisposable
             var cursorPass = Own(new CursorPass(_gpu.Device));
             _cursorLayer = new CursorLayer(cursorPass, pointer.Shapes, pointer.SystemCursor);
             _highlights = new HighlightLayer(cursorPass);
+            _smart = new SmartInvertLayer(Own(new AmbientPass(_gpu.Device, _monitor.Width, _monitor.Height)), deviceName);
         }
         catch
         {
@@ -186,10 +188,13 @@ internal sealed class RenderSession : IDisposable
         }
 
         var matrix = effects.Matrix;
+        var smart = effects.IsSmart;
+        var weights = _smart.Prepare(
+            _gpu.Context, _duplicator.ShaderResource, smart || windows.UsesSmart(monitor), effects.ProtectPhotos);
         if (!frame.HasFrame)
         {
             _pass.Draw(_gpu.Context, _duplicator.ShaderResource, _swapchain.RenderTarget, _swapchain.Width, _swapchain.Height,
-                MagnifyConstants.Fullscreen(frame.Source, monitor, matrix, effects.Smoothing));
+                MagnifyConstants.Fullscreen(frame.Source, monitor, matrix, effects.Smoothing, smart), weights);
             return;
         }
 
@@ -199,7 +204,7 @@ internal sealed class RenderSession : IDisposable
         if (effects.Filter.ChangesColors || windowsFiltered)
         {
             _pass.Draw(_gpu.Context, _duplicator.ShaderResource, _swapchain.RenderTarget, _swapchain.Width, _swapchain.Height,
-                MagnifyConstants.Fullscreen(monitor, monitor, matrix, effects.Smoothing));
+                MagnifyConstants.Fullscreen(monitor, monitor, matrix, effects.Smoothing, smart), weights);
         }
         else
         {
@@ -207,7 +212,7 @@ internal sealed class RenderSession : IDisposable
         }
 
         var viewport = Expand(frame.Target, FrameThickness, monitor);
-        var constants = MagnifyConstants.WithFrame(frame.Source, monitor, frame.Target, viewport, FrameColor.Default, matrix, effects.Smoothing);
+        var constants = MagnifyConstants.WithFrame(frame.Source, monitor, frame.Target, viewport, FrameColor.Default, matrix, effects.Smoothing, smart);
         _pass.Draw(
             _gpu.Context,
             _duplicator.ShaderResource,
@@ -216,7 +221,8 @@ internal sealed class RenderSession : IDisposable
             (float)(viewport.Y - monitor.Y),
             (float)viewport.Width,
             (float)viewport.Height,
-            constants);
+            constants,
+            weights);
     }
 
     private static PhysicalRect Expand(PhysicalRect rect, double by, PhysicalRect within)

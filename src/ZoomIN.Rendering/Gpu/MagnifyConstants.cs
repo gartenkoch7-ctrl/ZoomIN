@@ -25,11 +25,11 @@ internal readonly struct MagnifyConstants
     public readonly float TextureWidth;
     public readonly float TextureHeight;
     public readonly uint SmoothingMode;
-    public readonly float Padding;
+    public readonly uint MonitorSmart;
 
     private MagnifyConstants(
         PhysicalRect source, PhysicalRect monitor, PhysicalRect target, PhysicalRect viewport,
-        FrameColor frame, in ColorMatrix color, Smoothing smoothing)
+        FrameColor frame, in ColorMatrix color, Smoothing smoothing, bool smart = false)
     {
         SourceOffsetU = (float)((source.X - monitor.X) / monitor.Width);
         SourceOffsetV = (float)((source.Y - monitor.Y) / monitor.Height);
@@ -46,7 +46,7 @@ internal readonly struct MagnifyConstants
         TextureWidth = (float)monitor.Width;
         TextureHeight = (float)monitor.Height;
         SmoothingMode = (uint)smoothing;
-        Padding = 0;
+        MonitorSmart = smart ? 1u : 0u;
     }
 
     /// <summary>Magnifies <paramref name="source"/> onto the whole viewport, without frame or filter.</summary>
@@ -54,8 +54,9 @@ internal readonly struct MagnifyConstants
         new(source, monitor, monitor, monitor, default, ColorMatrix.Identity, Smoothing.Soft);
 
     /// <summary>Magnifies onto the whole viewport with colour matrix and smoothing.</summary>
-    public static MagnifyConstants Fullscreen(PhysicalRect source, PhysicalRect monitor, in ColorMatrix color, Smoothing smoothing) =>
-        new(source, monitor, monitor, monitor, default, color, smoothing);
+    /// <param name="smart">The matrix is the inverted part of the smart inversion (ADR-0024).</param>
+    public static MagnifyConstants Fullscreen(PhysicalRect source, PhysicalRect monitor, in ColorMatrix color, Smoothing smoothing, bool smart = false) =>
+        new(source, monitor, monitor, monitor, default, color, smoothing, smart);
 
     /// <summary>
     /// Magnifies <paramref name="source"/> into <paramref name="target"/>; the rest of
@@ -67,6 +68,6 @@ internal readonly struct MagnifyConstants
 
     public static MagnifyConstants WithFrame(
         PhysicalRect source, PhysicalRect monitor, PhysicalRect target, PhysicalRect viewport,
-        FrameColor frame, in ColorMatrix color, Smoothing smoothing) =>
-        new(source, monitor, target, viewport, frame, color, smoothing);
+        FrameColor frame, in ColorMatrix color, Smoothing smoothing, bool smart = false) =>
+        new(source, monitor, target, viewport, frame, color, smoothing, smart);
 }

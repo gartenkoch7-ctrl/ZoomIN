@@ -22,6 +22,12 @@ public static class WindowPalette
 
     public static byte For(ColorFilter filter) => (byte)(2 + (int)filter);
 
+    /// <summary>
+    /// The smart inversion (ADR-0024): its matrix is the inverted part only; the shader blends it
+    /// per pixel with <see cref="Original"/>. Same matrix as "keep hue", so compare by index too.
+    /// </summary>
+    public static byte Smart { get; } = For(ColorFilter.InvertedSmart);
+
     /// <summary>True for entries that are a filter of their own (the window is left out of the monitor filter).</summary>
     public static bool IsOwnFilter(byte index) => index >= 2;
 

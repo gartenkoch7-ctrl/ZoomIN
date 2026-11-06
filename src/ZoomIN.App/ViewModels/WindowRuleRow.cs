@@ -51,7 +51,7 @@ public sealed partial class WindowRuleRow : ObservableObject
         {
             <= 0 => WindowFilterRule.For(Kind, WindowFilterChoice.Automatic),
             1 => WindowFilterRule.For(Kind, WindowFilterChoice.None),
-            _ => WindowFilterRule.For(Kind, WindowFilterChoice.Filter, (ColorFilter)(ChoiceIndex - 2)),
+            _ => WindowFilterRule.For(Kind, WindowFilterChoice.Filter, ColorFilters.DisplayOrder[ChoiceIndex - 2]),
         };
         return rule with { TitleBar = TitleBarIndex > 0 ? (WindowTitleBarChoice)TitleBarIndex : WindowTitleBarChoice.Automatic };
     }
@@ -61,7 +61,7 @@ public sealed partial class WindowRuleRow : ObservableObject
     [
         Text.Get("WinFilter.Choice.Automatic"),
         Text.Get("WinFilter.Choice.None"),
-        .. Enum.GetValues<ColorFilter>().Select(f => Text.Get("Filter." + f)),
+        .. ColorFilters.DisplayOrder.Select(f => Text.Get("Filter." + f)),
     ];
 
     /// <summary>The title bar choices as the rows show them.</summary>
@@ -91,7 +91,7 @@ public sealed partial class WindowRuleRow : ObservableObject
     private static int IndexOf(WindowFilterRule rule) => rule.Choice switch
     {
         WindowFilterChoice.None => 1,
-        WindowFilterChoice.Filter => 2 + (int)rule.Filter,
+        WindowFilterChoice.Filter => 2 + ColorFilters.DisplayIndexOf(rule.Filter),
         _ => 0,
     };
 }

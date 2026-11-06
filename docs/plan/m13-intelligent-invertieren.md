@@ -31,24 +31,24 @@ dem Tag `v1.0.0`.
 
 ## Aufgaben
 ### 1 · Spike (Risiko zuerst)
-- [ ] Umgebungsbild: verkleinerte Kopie des Desktop-Bilds (je Monitor, z. B. 1/16 bis 1/32) mit
+- [x] Umgebungsbild: verkleinerte Kopie des Desktop-Bilds (je Monitor, z. B. 1/16 bis 1/32) mit
       Helligkeit und einem Maß für Farbigkeit/Detailreichtum; nur neu bei geändertem Desktop.
       Heute hat die Kopie keine Mip-Stufen und ist kein Render-Target (`DesktopDuplicator`) →
       eigener Verkleinerungs-Durchgang, Feature-Level 10_0 muss reichen
-- [ ] Gedächtnis-Textur für die zeitliche Glättung (~150 ms), unabhängig von der Bildrate
-- [ ] Shader: Entscheidung je Pixel aus dem Umgebungsbild (bilinear gelesen, weiche Schwelle),
+- [x] Gedächtnis-Textur für die zeitliche Glättung (~150 ms), unabhängig von der Bildrate
+- [x] Shader: Entscheidung je Pixel aus dem Umgebungsbild (bilinear gelesen, weiche Schwelle),
       Foto-Schutz, Farbton erhalten; nur für Bereiche, deren Palette-Eintrag „intelligent“ ist
 - [ ] Werte abstimmen: Umgebungsgröße, Schwelle und Breite des Übergangs, Foto-Kriterium, Glättung –
       an Systemsteuerung, Explorer, Browser mit Fotos, Word, Video (Sichtprüfung durch den Nutzer)
-- [ ] GPU-Zeit messen (Zeitstempel-Abfragen) auf der RTX bei 1080p, hochrechnen auf 1440p
+- [x] GPU-Zeit messen (Zeitstempel-Abfragen) auf der RTX bei 1080p, hochrechnen auf 1440p
       Onboard-Grafik; Grenze für den Rückfall festlegen
 - [ ] Ergebnis in `docs/kb/rendering-pipeline.md` und `docs/kb/performance.md`; bei Fehlschlag
       Rücksprache (Plan B: Kachel-Entscheidung ohne Glättung, oder nur Fenster-/Monitorebene)
 
 ### 2 · Core
-- [ ] `ColorFilter.InvertedSmart` (am Ende des Enums) und Name/Texte; Palette wächst um einen
+- [x] `ColorFilter.InvertedSmart` (am Ende des Enums) und Name/Texte; Palette wächst um einen
       Eintrag (`PALETTE_SIZE` im Shader und `WindowConstants` mitziehen)
-- [ ] „Intelligent“ ist keine Matrix: Palette-Eintrag mit Kennzeichen „adaptiv“ + Matrix für
+- [x] „Intelligent“ ist keine Matrix: Palette-Eintrag mit Kennzeichen „adaptiv“ + Matrix für
       „Farbton erhalten“, Kontrast/Helligkeit weiter für alles
 - [ ] Settings: Schalter „Fotos und Videos nicht invertieren“ (ab Werk an); Migration des
       Automatik-Filters (nur alter Werkswert „Invertiert“ → „intelligent“)
@@ -57,7 +57,7 @@ dem Tag `v1.0.0`.
 ### 3 · Rendering
 - [ ] Verkleinerungs-Durchgang und Gedächtnis-Textur je Monitor, beim Start/Resize angelegt,
       keine Allokation im Render-Loop; nur aktiv, wenn ein Bereich oder der Monitor „intelligent“ nutzt
-- [ ] Vollbild-Zoom, Lupe und Angedockt: Umgebung in Quell-Koordinaten (Desktop), auch im
+- [x] Vollbild-Zoom, Lupe und Angedockt: Umgebung in Quell-Koordinaten (Desktop), auch im
       1×-Durchgang außerhalb der Lupe
 - [ ] Rückfall auf „Farbton erhalten“, wenn eine GPU-Funktion fehlt oder das Budget gerissen wird
 - [ ] `WDA_EXCLUDEFROMCAPTURE` bleibt; WARP-Shadertests (dunkle Leiste bleibt, helle Fläche
@@ -69,8 +69,18 @@ dem Tag `v1.0.0`.
 - [ ] Katalog `docs/kb/telemetrie.md`, Diagnose-Seite zeigt „intelligent aktiv / Rückfall“
 
 ### 5 · Einstellungen & Bedienung
-- [ ] Filterlisten (Farbfilter-Seite, Automatik-Filter, Regeln je App) zeigen „Invertiert (intelligent)“
+- [x] Filterlisten (Farbfilter-Seite, Automatik-Filter, Regeln je App) zeigen „Invertiert (intelligent)“
 - [ ] „Erweitert“: „Fotos und Videos nicht invertieren“; Texte Deutsch/Englisch, Tastatur, Bildschirmleser
+
+### Stand Spike 2026-11-06 (Branch `feat/m13-intelligent-invertieren`)
+- Läuft im Dev-Build: Filter „Invertiert (intelligent)“ wählbar für Monitor, Automatik-Filter und
+  App-Regeln, in Liste und `Strg+Alt+Umschalt+C` direkt nach „Invertiert“ (`ColorFilters.DisplayOrder`).
+- WARP-Tests: dunkle Leiste bleibt, Textseite invertiert, buntes Foto bleibt (ohne Schutz invertiert),
+  nur im Fensterbereich, Glättung über Frames; 0 B im Render-Loop.
+- GPU auf RTX 3060 Ti, 1440p: **+0,046 ms** pro Frame (Hochrechnung Onboard ≈ 0,5 ms).
+- Werte (Schwellen, Umfeld 32 px, Glättung 50 ms) vorläufig; Abstimmung nach der Sichtprüfung.
+- Noch offen: Schalter „Fotos schützen“ in Settings/UI (heute fest an), Migration Automatik-Filter,
+  Rückfall bei Budget, Telemetrie, Diagnose.
 
 ## Akzeptanzkriterien
 - [ ] Systemsteuerung (dunkles Design): helle Fläche dunkel, dunkle Leisten bleiben dunkel
@@ -82,6 +92,13 @@ dem Tag `v1.0.0`.
 - [ ] Render-Loop-Benchmark `0 B`; Architekturtests grün; Telemetrie im Katalog
 
 ## Offene Fragen / Risiken
+- Review Spike: Das Umfeld (32 px) reicht über Fenstergrenzen. Neben einem dunklen Fenster kann
+  der Rand eines hellen, intelligent gefilterten Fensters halb invertiert bleiben. Nach der
+  Sichtprüfung entscheiden: Proben auf den eigenen Fensterbereich begrenzen (b1 im Umgebungs-Shader).
+- Review Spike: Der Umgebungs-Durchgang läuft auch bei ruhendem Desktop (RTX ~0,03 ms). Er ließe
+  sich überspringen, wenn kein neues Bild kam und die Glättung eingeschwungen ist.
+- Downgrade: Ältere Versionen kennen `InvertedSmart` nicht. Ihre Settings-Datei gilt dann als
+  defekt (Werkswerte, Sicherung `.broken`). Bei Versionswahl rückwärts (ADR-0014) beachten.
 - Saum an Kanten zwischen hell und dunkel (Breite = Umgebungsgröße); bei hohem Zoom sichtbar breiter.
 - Foto-Erkennung: helle, blasse Fotos werden evtl. invertiert; bunte Bedienflächen evtl. nicht.
 - Text auf mittlerem Grau (z. B. Schaltflächen) liegt im Übergang und verliert Kontrast.

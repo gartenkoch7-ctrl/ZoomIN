@@ -118,6 +118,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.tracking.caret_sources` | Quellen | `process.name`, `zoomin.caret.source` (`system`, `msaa`, `uia`, `estimated`, `cell`) | Caret-Quelle zum ersten Mal in einem Prozess gesehen (dazu Log 2002) |
 | `zoomin.tracking.chromium_nudges` | Fenster | – | Chromium-Inhaltsfenster nach IAccessible2 gefragt |
 | `zoomin.tracking.anchor_switches` | Wechsel | `zoomin.anchor.source` (`mouse`, `focus`, `caret`) | Ansicht folgt jetzt Maus, Fokus oder Caret (Render-Thread, ohne Allokation) |
+| `zoomin.render.smart_invert_frames` | Frames | `zoomin.monitor` | Frames mit intelligentem Invertieren (Umgebungs-Durchgang, ADR-0024); im Verhältnis zu `frame_interval`-Zählungen der Anteil |
 | `zoomin.render.overlay_time` | s | `zoomin.monitor`, `zoomin.state` (`active`, `paused`) | Zeit, in der der Render-Thread arbeitet bzw. schläft – ergibt den Pausenanteil des Filters pro Fenster |
 | `zoomin.windowfilter.classifications` | Fenster | `process.name`, `zoomin.result` (`light`, `dark`, `unknown`), `zoomin.caption` (Titelleiste: `light`, `dark`, `unknown`, `none`) | Fenster beim Öffnen eingestuft (dazu Log 2701) |
 | `zoomin.windowfilter.look_duration` | ms | – | Ein Blick auf ein Fenster (GDI-Kopie 64×256 und Zählen) |

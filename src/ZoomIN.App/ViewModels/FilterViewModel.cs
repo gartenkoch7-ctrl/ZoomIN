@@ -20,7 +20,7 @@ public sealed partial class FilterViewModel : ObservableObject
         _context = context;
         var controller = context.Controller;
         var effects = controller.Effects.Current;
-        FilterNames = Enum.GetValues<ColorFilter>().Select(f => Text.Get("Filter." + f)).ToList();
+        FilterNames = ColorFilters.DisplayOrder.Select(f => Text.Get("Filter." + f)).ToList();
         _monitorIds = [.. controller.MonitorIds().Order(StringComparer.OrdinalIgnoreCase)];
         MonitorNames = [Text.Get("FilterMonitor.Shared"), .. _monitorIds.Select(MonitorName)];
         PerMonitor = effects.PerMonitorFilter;
@@ -107,7 +107,7 @@ public sealed partial class FilterViewModel : ObservableObject
         var effects = _context.Controller.Effects.Current;
         var choice = SelectedMonitor is { } id ? effects.FilterOf(id) : new MonitorFilter(effects.Filter.Enabled, effects.Filter.Filter);
         FilterOn = choice.Enabled;
-        FilterIndex = (int)choice.Filter;
+        FilterIndex = ColorFilters.DisplayIndexOf(choice.Filter);
     }
 
     private void ApplyChoice()
@@ -118,7 +118,7 @@ public sealed partial class FilterViewModel : ObservableObject
         }
 
         var effects = _context.Controller.Effects;
-        var choice = new MonitorFilter(FilterOn, (ColorFilter)FilterIndex);
+        var choice = new MonitorFilter(FilterOn, ColorFilters.DisplayOrder[FilterIndex]);
         if (SelectedMonitor is { } id)
         {
             effects.SetMonitorFilter(id, choice);

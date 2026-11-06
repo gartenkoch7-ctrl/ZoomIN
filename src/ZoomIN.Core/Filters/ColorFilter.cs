@@ -21,4 +21,11 @@ public enum ColorFilter
 
     /// <summary>White text on dark blue background.</summary>
     WhiteOnBlue,
+
+    /// <summary>
+    /// Inverts only light surroundings, keeping the hue (ADR-0024): dark bars stay dark, photos stay
+    /// original. Decided per pixel on the GPU; <see cref="ColorFilters.For"/> gives the inverted part.
+    /// Last in the enum, so settings and palette indexes of the other filters stay put.
+    /// </summary>
+    InvertedSmart,
 }

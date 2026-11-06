@@ -40,10 +40,12 @@ internal sealed class MagnifyPass : IDisposable
         ID3D11RenderTargetView target,
         int targetWidth,
         int targetHeight,
-        in MagnifyConstants constants) =>
-        Draw(context, source, target, 0, 0, targetWidth, targetHeight, constants);
+        in MagnifyConstants constants,
+        ID3D11ShaderResourceView? weights = null) =>
+        Draw(context, source, target, 0, 0, targetWidth, targetHeight, constants, weights);
 
     /// <summary>Draws into the viewport (x, y, width, height) of the render target; the rest is untouched.</summary>
+    /// <param name="weights">Smart inversion weights (<see cref="AmbientPass"/>); null if nothing on the monitor is smart.</param>
     public void Draw(
         ID3D11DeviceContext context,
         ID3D11ShaderResourceView source,
@@ -52,7 +54,8 @@ internal sealed class MagnifyPass : IDisposable
         float y,
         float width,
         float height,
-        in MagnifyConstants constants)
+        in MagnifyConstants constants,
+        ID3D11ShaderResourceView? weights = null)
     {
         context.UpdateSubresource(constants, _constants);
 
@@ -63,6 +66,15 @@ internal sealed class MagnifyPass : IDisposable
         context.VSSetShader(_vertexShader);
         context.PSSetShader(_pixelShader);
         context.PSSetShaderResource(0, source);
+        if (weights is null)
+        {
+            context.PSUnsetShaderResource(1);
+        }
+        else
+        {
+            context.PSSetShaderResource(1, weights);
+        }
+
         context.PSSetSampler(0, _sampler);
         context.PSSetSampler(1, _pointSampler);
         context.PSSetConstantBuffer(0, _constants);

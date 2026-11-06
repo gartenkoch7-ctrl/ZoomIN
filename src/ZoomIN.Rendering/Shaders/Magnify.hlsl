@@ -13,25 +13,33 @@ cbuffer MagnifyConstants : register(b0)
     float4 ColorRow2;
     float2 TextureSize;  // desktop texture size in pixels
     uint Smoothing;      // 0 = text (Catmull-Rom), 1 = soft (bilinear), 2 = pixel (nearest)
-    float Padding;
+    uint MonitorSmart;   // 1 = the monitor matrix is the smart inversion (ADR-0024)
 };
 
 // Filter per window (ADR-0020): window rectangles front to back, each with a palette entry. The
 // first rectangle holding the source pixel wins, so windows above hide the ones below; pixels in
 // none of them keep the monitor's matrix (ColorRow0–2). Updated only when windows or filters change.
 #define MAX_REGIONS 64
-#define PALETTE_SIZE 9
+#define PALETTE_SIZE 10
+
+// Palette entries with a fixed meaning (WindowPalette): the monitor's matrix, original colours.
+#define MONITOR_ENTRY 0
+#define ORIGINAL_ENTRY 1
 
 cbuffer WindowConstants : register(b1)
 {
     uint RegionCount;
-    float3 RegionPadding;
+    uint SmartEntry;                       // palette entry of the smart inversion (ADR-0024)
+    float2 RegionPadding;
     float4 RegionRects[MAX_REGIONS];       // left, top, right, bottom in desktop texture UV space
     float4 RegionEntries[MAX_REGIONS];     // x = palette entry
     float4 Palette[PALETTE_SIZE * 3];      // three colour matrix rows per entry
 };
 
 Texture2D Desktop : register(t0);
+
+// Smart inversion: how much each spot is inverted, 0–1, in desktop UV (Ambient.hlsl).
+Texture2D Weights : register(t1);
 SamplerState LinearSampler : register(s0);
 SamplerState PointSampler : register(s1);
 
@@ -93,6 +101,14 @@ float3 SampleDesktop(float2 uv)
         : Desktop.SampleLevel(PointSampler, uv, 0).rgb;
 }
 
+float3 Apply(float4 row0, float4 row1, float4 row2, float3 c)
+{
+    return saturate(float3(
+        dot(row0.xyz, c) + row0.w,
+        dot(row1.xyz, c) + row1.w,
+        dot(row2.xyz, c) + row2.w));
+}
+
 float4 PSMain(VertexOutput input) : SV_Target
 {
     float2 inner = (input.Uv - InnerOffset) / InnerScale;
@@ -107,24 +123,31 @@ float4 PSMain(VertexOutput input) : SV_Target
     float4 row0 = ColorRow0;
     float4 row1 = ColorRow1;
     float4 row2 = ColorRow2;
+    bool smart = MonitorSmart != 0;
     [loop]
     for (uint i = 0; i < RegionCount; i++)
     {
         float4 rect = RegionRects[i];
         if (all(uv >= rect.xy) && all(uv < rect.zw))
         {
-            uint entry = (uint)RegionEntries[i].x * 3;
-            row0 = Palette[entry];
-            row1 = Palette[entry + 1];
-            row2 = Palette[entry + 2];
+            uint entry = (uint)RegionEntries[i].x;
+            row0 = Palette[entry * 3];
+            row1 = Palette[entry * 3 + 1];
+            row2 = Palette[entry * 3 + 2];
+            smart = entry == SmartEntry || (entry == MONITOR_ENTRY && MonitorSmart != 0);
             break;
         }
     }
 
-    float3 filtered = saturate(float3(
-        dot(row0.xyz, c) + row0.w,
-        dot(row1.xyz, c) + row1.w,
-        dot(row2.xyz, c) + row2.w));
+    float3 filtered = Apply(row0, row1, row2, c);
+    if (smart)
+    {
+        // The rows are the inverted part; light surroundings get it, dark ones keep the original.
+        float weight = saturate(Weights.SampleLevel(LinearSampler, uv, 0).r);
+        uint original = ORIGINAL_ENTRY * 3;
+        float3 plain = Apply(Palette[original], Palette[original + 1], Palette[original + 2], c);
+        filtered = lerp(plain, filtered, weight);
+    }
 
     // The overlay is premultiplied-alpha; the desktop is opaque.
     return float4(filtered, 1);

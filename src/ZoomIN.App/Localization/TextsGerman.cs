@@ -59,6 +59,7 @@ internal static class TextsGerman
         ["Filter.YellowOnBlack"] = "Gelb auf Schwarz",
         ["Filter.BlackOnYellow"] = "Schwarz auf Gelb",
         ["Filter.WhiteOnBlue"] = "Weiß auf Blau",
+        ["Filter.InvertedSmart"] = "Invertiert (intelligent)",
         ["ColorsContrast"] = "Kontrast",
         ["ColorsBrightness"] = "Helligkeit",
 

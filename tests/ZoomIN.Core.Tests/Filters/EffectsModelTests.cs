@@ -17,7 +17,7 @@ public sealed class EffectsModelTests
         model.NextFilter(Display1);
 
         Assert.True(model.Current.Filter.Enabled);
-        Assert.Equal(ColorFilter.InvertedKeepHue, model.Current.Filter.Filter);
+        Assert.Equal(ColorFilter.InvertedSmart, model.Current.Filter.Filter);
         Assert.Same(model.Current, model.CurrentFor(Display2));
     }
 

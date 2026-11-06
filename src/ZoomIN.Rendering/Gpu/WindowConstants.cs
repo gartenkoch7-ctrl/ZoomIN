@@ -14,11 +14,12 @@ namespace ZoomIN.Rendering.Gpu;
 [StructLayout(LayoutKind.Sequential)]
 internal struct WindowConstants
 {
-    public const int PaletteRows = 3 * 9;
+    public const int PaletteRows = 3 * 10;
     public static readonly int SizeInBytes = Unsafe.SizeOf<WindowConstants>();
 
     public uint RegionCount;
-    public Vector3 Padding;
+    public uint SmartEntry;
+    public Vector2 Padding;
     public Regions Rects;
     public Regions Entries;
     public Rows Palette;
@@ -50,6 +51,7 @@ internal struct WindowConstants
         }
 
         target.RegionCount = (uint)count;
+        target.SmartEntry = WindowPalette.Smart;
         var matrices = effects.WindowMatrices;
         for (var i = 0; i < matrices.Length && (i * 3) + 2 < PaletteRows; i++)
         {

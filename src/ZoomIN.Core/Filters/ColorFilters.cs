@@ -19,10 +19,37 @@ public static class ColorFilters
         0.426f, 1.430f, -0.856f,
         0, 0, 0);
 
+    /// <summary>
+    /// Order in lists and for "next filter": the smart inversion right after the plain one. The enum
+    /// order stays as it is, since palette indexes and saved settings depend on it.
+    /// </summary>
+    public static IReadOnlyList<ColorFilter> DisplayOrder { get; } =
+    [
+        ColorFilter.Inverted, ColorFilter.InvertedSmart, ColorFilter.InvertedKeepHue, ColorFilter.Grayscale,
+        ColorFilter.GrayscaleInverted, ColorFilter.YellowOnBlack, ColorFilter.BlackOnYellow, ColorFilter.WhiteOnBlue,
+    ];
+
+    /// <summary>Position of <paramref name="filter"/> in <see cref="DisplayOrder"/>.</summary>
+    public static int DisplayIndexOf(ColorFilter filter)
+    {
+        for (var i = 0; i < DisplayOrder.Count; i++)
+        {
+            if (DisplayOrder[i] == filter)
+            {
+                return i;
+            }
+        }
+
+        return 0;
+    }
+
     public static ColorMatrix For(ColorFilter filter) => filter switch
     {
         ColorFilter.Inverted => s_invert,
         ColorFilter.InvertedKeepHue => s_hueRotate180.After(s_invert),
+
+        // Where the shader inverts at all (ADR-0024); also what is left when it cannot decide.
+        ColorFilter.InvertedSmart => s_hueRotate180.After(s_invert),
         ColorFilter.Grayscale => s_luma,
         ColorFilter.GrayscaleInverted => s_lumaInverted,
 

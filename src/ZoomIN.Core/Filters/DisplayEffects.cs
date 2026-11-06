@@ -37,6 +37,12 @@ public sealed record DisplayEffects
 
     public Smoothing Smoothing { get; init; }
 
+    /// <summary>The monitor filter is the smart inversion (ADR-0024), decided per pixel by the shader.</summary>
+    public bool IsSmart => Filter.Enabled && Filter.Filter == ColorFilter.InvertedSmart;
+
+    /// <summary>Smart inversion leaves colourful, detailed surroundings (photos, videos) original.</summary>
+    public bool ProtectPhotos { get; init; } = true;
+
     public PointerStyle Cursor { get; init; }
 
     /// <summary>Precomputed, so the render thread never builds matrices.</summary>

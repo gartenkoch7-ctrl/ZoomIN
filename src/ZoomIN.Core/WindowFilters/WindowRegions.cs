@@ -54,9 +54,25 @@ public sealed class WindowRegions
         var monitorMatrix = matrices[WindowPalette.Monitor];
         for (var i = 0; i < Count; i++)
         {
-            if (_palette[i] != WindowPalette.Monitor
+            // Smart and "keep hue" share a matrix but not a look (ADR-0024).
+            var entry = _palette[i];
+            if (entry != WindowPalette.Monitor
                 && RectMath.Intersects(_rects[i], monitor)
-                && matrices[_palette[i]] != monitorMatrix)
+                && (matrices[entry] != monitorMatrix || (entry == WindowPalette.Smart) != effects.IsSmart))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Some region on <paramref name="monitor"/> uses the smart inversion. Per frame, no allocation.</summary>
+    public bool UsesSmart(PhysicalRect monitor)
+    {
+        for (var i = 0; i < Count; i++)
+        {
+            if (_palette[i] == WindowPalette.Smart && RectMath.Intersects(_rects[i], monitor))
             {
                 return true;
             }

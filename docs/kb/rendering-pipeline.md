@@ -85,6 +85,36 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
 - **Nicht automatisch prüfbar:** Versatz beim Ziehen (Ereignis vs. Duplication-Frame) und die
   sichtbare Wirkung – das Overlay ist aus Screenshots ausgenommen; Sichtprüfung durch Menschen.
 
+## Intelligentes Invertieren (M13, ADR-0024)
+- **Zwei Durchgänge:** `Ambient.hlsl` (`AmbientPass`) schreibt je 16 × 16 Desktop-Pixel ein Gewicht
+  0–1 in eine `R16_FLOAT`-Textur (1440p → 160 × 90). `Magnify.hlsl` liest sie bilinear in
+  **Desktop-UV** und mischt zwischen „Original“ (Palette 1, nur Kontrast/Helligkeit) und
+  „Invertiert, Farbton erhalten“. In Desktop-UV gemessen, damit beim Zoomen nichts umkippt.
+- **Entscheidung je Texel:** 4 × 4 Proben im Abstand von 8 px, jede genau zwischen vier Pixeln
+  (bilinear = ihr Mittel) → Umfeld 32 × 32 px, Nachbar-Texel überlappen. Gewicht =
+  `smoothstep(0,45; 0,75; Anteil heller Proben)`, eine Probe zählt hell ab Luma 0,55–0,75. Text auf
+  Weiß behält einen hohen Anteil, eine dunkle Leiste mit hellem Text einen niedrigen.
+- **Foto-Schutz:** Gewicht × (1 − bunt × Streuung). Bunt = mittlere Chroma (max − min), 0,10–0,25;
+  Streuung = Standardabweichung der **Farben** (nicht der Luma), 0,06–0,15. Grauer Text auf Weiß
+  streut, ist aber nicht bunt; eine einfarbige Schaltfläche ist bunt, streut aber nicht.
+  Erst getestet mit Luma-Streuung: Gleich helle, bunte Flächen fielen durch.
+- **Grenze des Foto-Schutzes:** Farbdetails unter ~4 px (feines Rauschen, kleine Muster) mittelt
+  die 2 × 2-Probe zu Grau, das gilt dann nicht als Foto. Fotos mit Flächen ≥ 8 px werden erkannt
+  (Test). Ein WARP-Testmuster mit 4-px-Kacheln genau auf dem Probenraster fiel deshalb durch.
+- **Zeitliche Glättung:** zwei Texturen im Wechsel, neues Gewicht = `lerp(alt, neu, α)` mit
+  `α = 1 − e^(−Δt / 50 ms)` (95 % nach ~150 ms, unabhängig von der Bildrate). Nach einer Pause
+  `α = 1`: Die alte Textur wird gar nicht gelesen (nie geschrieben, kann NaN enthalten).
+- **Nur bei Bedarf:** `SmartInvertLayer` läuft nur, wenn der Monitorfilter intelligent ist
+  (`DisplayEffects.IsSmart`) oder ein Fensterbereich auf diesem Monitor (`WindowRegions.UsesSmart`).
+- **Palette:** „intelligent“ hat dieselbe Matrix wie „Farbton erhalten“. Deshalb vergleicht
+  `ChangesMonitor` zusätzlich den Index, sonst würde ein intelligentes Fenster auf einem
+  Monitor mit „Farbton erhalten“ als „gleich“ gelten und das Overlay pausieren.
+- **Reihenfolge in Listen:** `ColorFilters.DisplayOrder` (intelligent direkt nach Invertiert). Das
+  Enum bleibt unverändert, weil gespeicherte Einstellungen und Paletten-Indizes daran hängen.
+- **GPU-Zeit:** siehe `performance.md` (Messprotokoll); Messung mit
+  `ZOOMIN_GPU_TIMING=1 dotnet test --project tests/ZoomIN.Rendering.Tests --filter-method "*SmartInvertGpuTimeTests*"`,
+  das Ergebnis steht in `%TEMP%\zoomin-gpu-timing.txt`.
+
 ## Shader-Regeln
 - HLSL-Dateien in `ZoomIN.Rendering/Shaders/`, als Embedded Resource eingebettet und beim
   Start mit dem in Windows enthaltenen D3DCompiler übersetzt (Entscheidung M1: kein SDK-Tool

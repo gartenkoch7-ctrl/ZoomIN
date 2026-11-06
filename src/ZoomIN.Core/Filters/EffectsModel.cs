@@ -10,8 +10,6 @@ namespace ZoomIN.Core.Filters;
 /// </summary>
 public sealed class EffectsModel
 {
-    private static readonly ColorFilter[] s_order = Enum.GetValues<ColorFilter>();
-
     private EffectsSnapshot _snapshot;
     private long _locateRequestedAt;
     private volatile bool _typing;
@@ -46,8 +44,8 @@ public sealed class EffectsModel
     public void ToggleFilter(string monitorId) => ChangeFilter(monitorId, f => f with { Enabled = !f.Enabled });
 
     /// <summary>Strg+Alt+Umschalt+C: next filter on the monitor, and switch it on.</summary>
-    public void NextFilter(string monitorId) => ChangeFilter(monitorId, f =>
-        new MonitorFilter(true, s_order[(Array.IndexOf(s_order, f.Filter) + 1) % s_order.Length]));
+    public void NextFilter(string monitorId) => ChangeFilter(monitorId, f => new MonitorFilter(
+        true, ColorFilters.DisplayOrder[(ColorFilters.DisplayIndexOf(f.Filter) + 1) % ColorFilters.DisplayOrder.Count]));
 
     public void SetSmoothing(Smoothing smoothing) => Update(e => e with { Smoothing = smoothing });
 
