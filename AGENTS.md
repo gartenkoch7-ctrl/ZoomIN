@@ -173,3 +173,16 @@ git config core.hooksPath .githooks           # Pre-Commit-Hook aktivieren (einm
 - [ ] Neues Wissen in `docs/kb/`, neue Grundsatzentscheidung als ADR
 - [ ] Overlay-Fenster aus Bildschirmaufnahmen ausgeschlossen
 - [ ] Clean-Room-Regeln eingehalten
+- [ ] Code-Review-Schleife nach Abschnitt 9 ohne offene Befunde durchlaufen
+
+---
+
+## 9. Review, Commit, Push, Merge
+
+1. **Vor jedem Commit ein Code-Review** der gesamten Änderung (z. B. `/code-review`).
+2. **Führt das Review zu Änderungen**, wird danach wieder der **komplette** geänderte Code
+   reviewt – nicht nur die Korrekturen.
+3. Schritt 2 wiederholen, **bis ein Review keine Änderungen mehr ergibt**. Erst dann committen
+   (Build, Tests und `check-file-length.ps1` vorher grün, siehe Abschnitt 8).
+4. **Push** auf den eigenen Feature-Branch ist danach ohne Rückfrage erlaubt.
+5. **Mergen** (in `develop`, `main` oder per PR) nur mit ausdrücklicher Genehmigung des Nutzers.
