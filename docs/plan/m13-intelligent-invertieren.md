@@ -94,7 +94,8 @@ dem Tag `v1.0.0`.
   „intelligent“ weiß – Ursache noch offen, wird mit dem Schnappschuss untersucht.
 
 ## Akzeptanzkriterien
-- [ ] Systemsteuerung (dunkles Design): helle Fläche dunkel, dunkle Leisten bleiben dunkel
+- [x] Systemsteuerung (dunkles Design): helle Fläche dunkel, dunkle Leisten bleiben dunkel – geprüft
+      2026-11-06 vom Nutzer an der Einstellungen-App (dev.113.m13, Automatik-Filter intelligent)
 - [ ] Foto im Browser bleibt original; ein Video läuft ohne Negativ-Look
 - [ ] Scrollen einer Seite mit hellen und dunklen Teilen: kein Flackern, kein Springen
 - [ ] Monitorfilter, Lupe und Angedockt verhalten sich gleich; Zoomen kippt keine Fläche
