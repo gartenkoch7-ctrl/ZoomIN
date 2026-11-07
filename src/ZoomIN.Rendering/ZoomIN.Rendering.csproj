@@ -35,6 +35,7 @@
     <ShaderEntry Include="Cursor.hlsl" Entry="PSCursor" Profile="ps_4_0" />
     <ShaderEntry Include="Cursor.hlsl" Entry="PSRing" Profile="ps_4_0" />
     <ShaderEntry Include="Cursor.hlsl" Entry="PSRect" Profile="ps_4_0" />
+    <ShaderInclude Include="Shaders\*.hlsli" />
   </ItemGroup>
 
   <!-- Build tool only: no assembly reference, its output path arrives as item ShaderCompilerTool. -->
@@ -54,7 +55,7 @@
   <!--
     After ResolveReferences (the tool is built then), before resources are embedded. Not in design-time
     builds of VS/Rider: they do not build the tool and must not race a real build on the .cso files.
-    #include is not supported yet (no include handler, .hlsli not in Inputs).
+    #include "X.hlsli" is inlined by the tool; every .hlsli is an input, so changing one recompiles.
   -->
   <PropertyGroup>
     <ShaderDotnet Condition="'$(DOTNET_HOST_PATH)' != ''">$(DOTNET_HOST_PATH)</ShaderDotnet>
@@ -62,7 +63,7 @@
   </PropertyGroup>
   <Target Name="CompileShaders" DependsOnTargets="ShaderPaths" AfterTargets="ResolveReferences" BeforeTargets="PrepareResources"
           Condition="'$(DesignTimeBuild)' != 'true' and '$(BuildingProject)' == 'true'"
-          Inputs="@(ShaderEntry->'Shaders\%(Identity)');$(MSBuildProjectFullPath);@(ShaderCompilerTool)"
+          Inputs="@(ShaderEntry->'Shaders\%(Identity)');@(ShaderInclude);$(MSBuildProjectFullPath);@(ShaderCompilerTool)"
           Outputs="@(ShaderEntry->'$(ShaderOutputDir)%(Identity).%(Entry).%(Profile).cso')">
     <Exec Command="&quot;$(ShaderDotnet)&quot; &quot;@(ShaderCompilerTool->'%(FullPath)')&quot; &quot;$(MSBuildProjectDirectory)\Shaders&quot; &quot;$(ShaderOutputDir.TrimEnd('\'))&quot; @(ShaderEntry->'&quot;%(Identity)|%(Entry)|%(Profile)&quot;', ' ')" />
   </Target>

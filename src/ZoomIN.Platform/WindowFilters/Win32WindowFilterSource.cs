@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Windows.Win32;
 using Windows.Win32.Foundation;
-using Windows.Win32.UI.Accessibility;
 using Windows.Win32.UI.WindowsAndMessaging;
 using ZoomIN.Core.Monitors;
 using ZoomIN.Core.WindowFilters;
@@ -20,21 +19,9 @@ public sealed class Win32WindowFilterSource : IWindowFilterSource
     private const uint LooksDoneMessage = PInvoke.WM_APP + 2;
     private const uint LookInterval = 50;
 
-    // Event ranges: foreground; move/size; minimize; destroy–reorder; location; cloak/uncloak.
-    private static readonly (uint Min, uint Max)[] s_events =
-        [(0x0003, 0x0003), (0x000A, 0x000B), (0x0016, 0x0017), (0x8001, 0x8004), (0x800B, 0x800B), (0x8017, 0x8018)];
-
-    private const uint EventForeground = 0x0003;
-    private const uint EventDestroy = 0x8001;
-
-    // One tracker per process; the static callback finds it here.
-    private static Win32WindowFilterSource? s_current;
-    private static readonly WINEVENTPROC s_callback = OnEvent;
-
     private readonly ILogger _log;
     private readonly IMonitorProvider _monitors;
     private readonly ManualResetEventSlim _ready = new();
-    private readonly List<HWINEVENTHOOK> _hooks = [];
     private Thread? _thread;
     private WindowFilterModel? _model;
     private WindowTracker? _tracker;
@@ -96,8 +83,10 @@ public sealed class Win32WindowFilterSource : IWindowFilterSource
         var threadId = _threadId;
         using var looks = new LookWorker(_log, () => PInvoke.PostThreadMessage(threadId, LooksDoneMessage, default, default));
         _tracker = tracker;
-        s_current = this;
-        Hook();
+
+        // Declared last, so the hooks are removed before the tracker and the looks go away.
+        using var hooks = new WindowEventHooks(tracker.ForegroundChanged, RequestUpdate);
+        LogHooks(hooks.Count);
         _ready.Set();
         Safely(tracker.Update);
         UpdateTimer();
@@ -135,33 +124,17 @@ public sealed class Win32WindowFilterSource : IWindowFilterSource
                 PInvoke.DispatchMessage(msg);
             }
         }
-
-        foreach (var hook in _hooks)
-        {
-            PInvoke.UnhookWinEvent(hook);
-        }
-
-        s_current = null;
     }
 
-    private void Hook()
+    private void LogHooks(int count)
     {
-        foreach (var (min, max) in s_events)
-        {
-            var hook = PInvoke.SetWinEventHook(min, max, HMODULE.Null, s_callback, 0, 0, 0); // WINEVENT_OUTOFCONTEXT
-            if (hook != HWINEVENTHOOK.Null)
-            {
-                _hooks.Add(hook);
-            }
-        }
-
-        if (_hooks.Count == 0)
+        if (count == 0)
         {
             _log.WindowHooksFailed();
         }
         else
         {
-            _log.WindowFilterStarted(_hooks.Count);
+            _log.WindowFilterStarted(count);
         }
     }
 
@@ -171,24 +144,6 @@ public sealed class Win32WindowFilterSource : IWindowFilterSource
         {
             tracker.Update();
         }
-    }
-
-    private static void OnEvent(HWINEVENTHOOK hook, uint @event, HWND hwnd, int idObject, int idChild, uint thread, uint time)
-    {
-        // Only whole top-level windows; carets and controls report location changes too. A
-        // destroyed window has no ancestor any more, so destroy events skip that check.
-        if (s_current is not { } source || hwnd == HWND.Null || idObject != 0 || idChild != 0
-            || (@event != EventDestroy && PInvoke.GetAncestor(hwnd, GET_ANCESTOR_FLAGS.GA_ROOT) != hwnd))
-        {
-            return;
-        }
-
-        if (@event == EventForeground)
-        {
-            source._tracker?.ForegroundChanged(hwnd);
-        }
-
-        source.RequestUpdate();
     }
 
     // From the hook (tracker thread) or the settings (any thread); a posted flag keeps one request in the queue.

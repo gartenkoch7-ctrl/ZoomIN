@@ -59,6 +59,8 @@ internal static class ServiceRegistration
         services.AddSingleton<SetupLauncher>();
         services.AddSingleton<ISecureDesktopSwitch, SecureDesktopSwitch>();
         services.AddSingleton<IWatchdogLauncher, ShellWatchdogLauncher>();
+        services.AddSingleton<TrayMenuSync>();
+        services.AddSingleton<StartupNotices>();
         services.AddSingleton<AppShell>();
         services.AddSingleton<IShellActions>(sp => sp.GetRequiredService<AppShell>());
         services.AddSingleton<PageServices>();

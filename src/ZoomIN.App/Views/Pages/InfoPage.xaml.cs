@@ -48,7 +48,7 @@ public sealed partial class InfoPage : Page
         var mode = model.Mode;
         var levels = _services.Get<ZoomCommands>().MonitorIds().Select(id => string.Create(
             CultureInfo.CurrentCulture, $"{id.TrimStart('\\', '.')} {(model.IsOn ? model.TargetFor(id) : model.LastLevelFor(mode, id)):0.##}×"));
-        ZoomText.Text = $"{AppShell.ModeName(mode)} – {(model.IsOn ? Text.On : Text.Off)}: {string.Join(" · ", levels)}";
+        ZoomText.Text = $"{Text.ModeName(mode)} – {(model.IsOn ? Text.On : Text.Off)}: {string.Join(" · ", levels)}";
         FpsText.Text = status.IsVisible
             ? string.Create(CultureInfo.CurrentCulture, $"{status.FramesPerSecond} fps")
             : "–";

@@ -21,8 +21,7 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
     private static readonly HOOKPROC s_keyboardProc = KeyboardProc;
 
     private readonly ILogger _log;
-    private Thread? _thread;
-    private uint _threadId;
+    private LowLevelHookThread? _hooks;
     private IInputActivityHandler? _handler;
 
     // Ctrl went down with nothing else pressed; a release now counts as "Ctrl alone".
@@ -35,48 +34,30 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
 
     public void Start(IInputActivityHandler handler)
     {
-        if (_thread is not null)
+        if (_hooks is not null)
         {
             return;
         }
 
         _handler = handler;
         s_active = this;
-        using var started = new ManualResetEventSlim();
-        _thread = new Thread(() => Run(started)) { IsBackground = true, Name = "ZoomIN Activity Hook" };
-        _thread.Start();
-        started.Wait();
+        _hooks = new LowLevelHookThread(
+            "ZoomIN Activity Hook", (WINDOWS_HOOK_ID.WH_MOUSE_LL, s_mouseProc), (WINDOWS_HOOK_ID.WH_KEYBOARD_LL, s_keyboardProc));
+        if (!_hooks.AllInstalled)
+        {
+            _log.ActivityHooksUnavailable();
+        }
     }
 
     public void Dispose()
     {
-        if (_thread is null)
+        if (_hooks is null)
         {
             return;
         }
 
-        PInvoke.PostThreadMessage(_threadId, PInvoke.WM_QUIT, default, default);
-        _thread.Join(TimeSpan.FromSeconds(2));
+        _hooks.Dispose();
         s_active = null;
-    }
-
-    private void Run(ManualResetEventSlim started)
-    {
-        _threadId = PInvoke.GetCurrentThreadId();
-        using var module = PInvoke.GetModuleHandle((string?)null);
-        using var mouse = PInvoke.SetWindowsHookEx(WINDOWS_HOOK_ID.WH_MOUSE_LL, s_mouseProc, module, 0);
-        using var keyboard = PInvoke.SetWindowsHookEx(WINDOWS_HOOK_ID.WH_KEYBOARD_LL, s_keyboardProc, module, 0);
-        if (mouse.IsInvalid || keyboard.IsInvalid)
-        {
-            _log.ActivityHooksUnavailable();
-        }
-
-        started.Set();
-        while (PInvoke.GetMessage(out var msg, HWND.Null, 0, 0) > 0)
-        {
-            PInvoke.TranslateMessage(msg);
-            PInvoke.DispatchMessage(msg);
-        }
     }
 
     private static LRESULT MouseProc(int code, WPARAM wParam, LPARAM lParam)

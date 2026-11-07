@@ -229,8 +229,11 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
     `Magnify.hlsl` 125 ms (2026-11-07, i7-12700KF).
   - Jeder Einstieg braucht einen `ShaderEntry` in `ZoomIN.Rendering.csproj`.
     `ShaderBytecodeTests` prüft, dass jedes `ShaderSource.Load` im Code eingebettet ist.
-  - `#include` geht noch nicht: Das Werkzeug hat keinen Include-Handler, und `.hlsli` stehen nicht
-    in den `Inputs` des Targets. Beides mit dem ersten `#include` nachziehen.
+  - `#include "X.hlsli"` setzt das Werkzeug selbst ein (`IncludeExpander`, M14 Schritt 10), mit
+    `#line`-Marken, damit Fehlermeldungen Datei und Zeile der `.hlsli` nennen. Nur Dateien im
+    Ordner `Shaders/`, jede einmal je Shader. Alle `*.hlsli` stehen in den `Inputs` des Targets;
+    eine Änderung übersetzt neu. Beispiel: `SmartWeight.hlsli` (randtreues Gewicht der
+    Smart-Invertierung), eingebunden von `Magnify.hlsl` nach dessen Ressourcen.
   - In Design-Time-Builds (VS, Rider) übersetzt das Target nicht.
   - Fehlt einer, schlägt der Pipeline-Start mit Log 3003 fehl. Es gibt bewusst keinen Rückfall
     auf Laufzeit-Übersetzung.

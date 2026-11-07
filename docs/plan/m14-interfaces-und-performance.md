@@ -223,9 +223,9 @@
 - [~] Gewichtung in Desktop-Auflösung, Scissor auf den Quellbereich: **entfällt** (siehe oben).
 - [~] Lupe/Angedockt nicht doppelt zeichnen: **entfällt**. Es spart nur die Lupenfläche
       (etwa 12 %) und bräuchte vier beschnittene Zeichnungen statt einer.
-- [ ] `Magnify.hlsl` (285 Zeilen) unter 250 bringen: Die Gewichtung kommt in eine eigene `.hlsli`.
-      Das braucht `#include` im Shader-Werkzeug (Include-Handler, `.hlsli` als Input). Zusammen
-      mit dem nächsten Shader-Umbau, Teil C.
+- [x] `Magnify.hlsl` (285 Zeilen) unter 250 gebracht (156): Die Gewichtung steht in
+      `SmartWeight.hlsli` (133). Das Werkzeug setzt `#include` selbst ein (`IncludeExpander`,
+      mit `#line`), `.hlsli` sind Inputs des Targets (Schritt 10).
 - **Telemetrie:**
   - `zoomin.render.smart_invert_gpu_time` = Umgebung + Mehrkosten im Magnify-Durchgang; Katalog
     angepasst.
@@ -373,16 +373,20 @@
   - Die Rückrufe ins Fenster (Übersicht nach dem Erststart, Beenden fürs Update, Fenster-Handle
     für Dateidialoge) sind `IShellActions`, umgesetzt von `AppShell`.
   - `AppShell` sinkt von 14 auf 11 Parameter.
-- [ ] `AppShell` weiter aufteilen (Tray-Befehle, Fenster/Erststart, Update-Hinweise).
+- [x] `AppShell` weiter aufgeteilt: `TrayMenuSync` (Menü, Tooltip, Zoom- und Profilbefehle,
+      Fensterfilter-Hinweis), `StartupNotices` (Update- und UIAccess-Hinweis). `AppShell` behält
+      Fenster, Erststart und Beenden, 8 Parameter. `ModeName` steht jetzt in der `Text`-Fassade.
 - [x] `MonitorRenderer.cs` unter 250 Zeilen (230, Schritt 3)
-- [ ] `AnchorController.cs` (244) und `Win32WindowFilterSource.cs` (236) nach Verantwortung
-      aufteilen, Ziel ≤ 200 Zeilen. Beide stehen kurz vor der Teilungsgrenze.
-- [ ] Gemeinsame `LowLevelHookThread` für `Win32WheelHook` und `Win32InputActivityHook`. Die
-      statische Rückruf-Weiterleitung bleibt nach ADR-0025 Punkt 1.
-- [ ] `TrayIconImage` (letzter Eintrag der Ausnahmeliste) liest die Icon-Datei: als Instanz oder
-      über `IAppFolders`-ähnlichen Zugriff auf `AppContext.BaseDirectory`.
+- [x] `AnchorController.cs` (244 → 199): Rechteck-Mathe in `AnchorGeometry`, `Move` ohne doppelte
+      Zweige. `Win32WindowFilterSource.cs` (236 → 191): WinEvent-Hooks in `WindowEventHooks`.
+- [x] Gemeinsame `LowLevelHookThread` für `Win32WheelHook` und `Win32InputActivityHook`. Die
+      statische Rückruf-Weiterleitung bleibt nach ADR-0025 Punkt 1. `Dispose` schickt `WM_QUIT`
+      nur einmal: ein zweites ginge an eine Thread-Id, die Windows schon neu vergeben haben kann.
+- [x] `TrayIconImage` ist eine Instanz mit dem Icon-Pfad; die Ausnahmeliste von
+      `StaticClassTests` ist leer.
 - **Telemetrie:** Die Logs bleiben bei ihren Klassen bzw. Feature-Ordnern (EventIds unverändert).
-  Die Log-Kategorie der Kürzel folgt jetzt `HotkeyBindings`.
+  Die Log-Kategorie der Kürzel folgt jetzt `HotkeyBindings`; die von 1006 (UIAccess) und 1007
+  (Update-Prüfungen) folgt `StartupNotices` statt `AppShell`.
 - **Tests:** Hotkey-Tabelle, Fensterfilter-Befehle, Tray-Befehle und „jedes View-Model lässt
   sich aus dem Container bauen“ (App.Tests, Schritt 11).
 
@@ -421,7 +425,7 @@
       `Win32TrayIcon`, Schritt 10)
 - [ ] App, Watchdog und Setup haben Testprojekte ([x], Schritt 11); Deinstallation, Update und
       Watchdog-Neustart als Ablauf-Tests noch offen (Update im Testbuild echt geprüft)
-- [ ] `MonitorRenderer.cs` und `Magnify.hlsl` unter 250 Zeilen; `AnchorController.cs` und
+- [x] `MonitorRenderer.cs` und `Magnify.hlsl` unter 250 Zeilen; `AnchorController.cs` und
       `Win32WindowFilterSource.cs` ≤ 200; `check-file-length.ps1` grün
 - [x] Telemetrie im Katalog `docs/kb/telemetrie.md`, Messwerte in `docs/kb/performance.md`
 

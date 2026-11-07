@@ -148,7 +148,7 @@ public sealed class SmartInvertTests
     public void ShaderBlock_MatchesAmbientPass()
     {
         var source = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..",
-            "src", "ZoomIN.Rendering", "Shaders", "Magnify.hlsl"));
+            "src", "ZoomIN.Rendering", "Shaders", "SmartWeight.hlsli"));
 
         Assert.Contains($"#define WEIGHT_BLOCK {AmbientPass.Block}.0", source, StringComparison.Ordinal);
     }

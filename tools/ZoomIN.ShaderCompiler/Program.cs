@@ -5,6 +5,7 @@ namespace ZoomIN.ShaderCompiler;
 /// <summary>
 /// Usage: ZoomIN.ShaderCompiler &lt;source folder&gt; &lt;output folder&gt; File.hlsl|Entry|profile ...
 /// Writes one &lt;File.hlsl&gt;.&lt;Entry&gt;.&lt;profile&gt;.cso per shader; ZoomIN.Rendering embeds them.
+/// Quoted #include lines are inlined first (<see cref="IncludeExpander"/>).
 /// Exit code 1 with the compiler messages on stderr when a shader does not compile.
 /// </summary>
 internal static class Program
@@ -32,7 +33,7 @@ internal static class Program
             var (file, entry, profile) = (parts[0], parts[1], parts[2]);
             try
             {
-                var code = File.ReadAllText(Path.Combine(source, file));
+                var code = IncludeExpander.Expand(source, file);
 
                 // Must match the flags the shaders were tested with (OfflineRenderTests and friends).
                 var bytecode = Compiler.Compile(code, entry, file, profile, ShaderFlags.OptimizationLevel3);

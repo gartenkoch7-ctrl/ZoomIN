@@ -34,6 +34,15 @@ public static class Text
     public static string ModeFullscreen => Get(nameof(ModeFullscreen));
     public static string ModeLens => Get(nameof(ModeLens));
     public static string ModeDocked => Get(nameof(ModeDocked));
+
+    // Fully qualified: the text ZoomMode below hides the enum inside this class.
+    public static string ModeName(Core.Modes.ZoomMode mode) => mode switch
+    {
+        Core.Modes.ZoomMode.Lens => ModeLens,
+        Core.Modes.ZoomMode.Docked => ModeDocked,
+        _ => ModeFullscreen,
+    };
+
     public static string On => Get(nameof(On));
     public static string Off => Get(nameof(Off));
 

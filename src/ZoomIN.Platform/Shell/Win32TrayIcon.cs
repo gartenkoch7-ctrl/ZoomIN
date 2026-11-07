@@ -80,7 +80,7 @@ public sealed unsafe class Win32TrayIcon : ITrayIcon
         }
 
         _window = PInvoke.CreateWindowEx(0, ClassName, "ZoomIN Tray", 0, 0, 0, 0, 0, HWND.Null, null, module, null);
-        _icon = TrayIconImage.Load();
+        _icon = new TrayIconImage(Path.Combine(AppContext.BaseDirectory, "Assets", "ZoomIN.ico")).Load();
         _ready.Set();
 
         while (PInvoke.GetMessage(out var msg, HWND.Null, 0, 0) > 0)
@@ -196,12 +196,11 @@ public sealed unsafe class Win32TrayIcon : ITrayIcon
         return PInvoke.DefWindowProc(hwnd, msg, wParam, lParam);
     }
 
-    private static class TrayIconImage
+    private sealed class TrayIconImage(string path)
     {
         /// <summary>ZoomIN icon next to the exe; Windows' application icon if it is missing.</summary>
-        public static nint Load()
+        public nint Load()
         {
-            var path = Path.Combine(AppContext.BaseDirectory, "Assets", "ZoomIN.ico");
             var size = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXSMICON);
             if (File.Exists(path))
             {

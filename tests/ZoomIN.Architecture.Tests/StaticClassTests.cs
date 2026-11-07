@@ -13,7 +13,7 @@ public sealed partial class StaticClassTests
     // StaleExceptions fails as soon as an entry no longer offends.
     private static readonly Dictionary<string, string> s_exceptions = new(StringComparer.Ordinal)
     {
-        ["ZoomIN.Platform/Shell/Win32TrayIcon.cs"] = "step 10: TrayIconImage reads the icon file",
+        // Empty since M14 step 10; new entries need a step that removes them again.
     };
 
     [Fact]
