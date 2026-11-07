@@ -191,7 +191,9 @@
       **entfällt nach Messung** (dev.120.m14, 2026-11-07). Die ganze Phase `zoomin.app.start.shell`
       dauert 115 ms, `services` 189 ms (davon Einstellungen laden 92 ms). Die Shader waren mit
       617 ms von 697 ms Pipeline-Start der eigentliche Brocken.
-- [ ] Nachher-Wert aus einem echten Start von dev.121.m14 (Nutzer startet über das Startmenü).
+- [x] Nachher-Wert (dev.123.m14, 2026-11-07): `pipeline_start` 184 ms statt 697 ms, davon Shader
+      6 ms statt 617 ms. `zoomin.app.start.shell` lag in diesem Einzellauf direkt nach einem
+      Update-Schritt bei 376 ms (vorher 115 ms); beim nächsten Start gegenprüfen.
 - **Telemetrie:** Die Kind-Abläufe aus Schritt 1 und `zoomin.render.ready_time` zeigen den
   Gewinn. Es gibt keine neuen Ereignisse.
 - **Tests:**
@@ -333,6 +335,13 @@
   - Deinstallation: Reihenfolge, Abbruch, Fehler beim Entfernen
   - Update: Rückgabewerte, Adminschritt abgelehnt
   - Watchdog: Neustart-Politik, Aufräumen, Aufgeben auf sicheren Bildschirmen
+- **Testbuild 2026-11-07 (Schritte 7 und 8):**
+  - dev.122.m14 per Skript installiert. Die installierte dev.122 hat sich danach über ihren
+    neuen Update-Schritt auf dev.123.m14 aktualisiert: Exit-Code 0, Versionsordner umgestellt,
+    Apps-Eintrag 1.0.0-dev.123.m14, Traces ohne Fehler.
+  - Nutzer: Start, Anmeldebildschirm-Schalter, sichere Instanz (Win+L), Diagnosepaket und
+    Info-Seite „Alles in Ordnung“.
+  - Nicht geprüft: Deinstallation über Windows „Apps“ (entfernt die Installation).
 
 #### 9 · Mapper nach Core
 - [x] `ZoomMapping` (Core/Zoom), `EffectsMapping` (Core/Filters) und `TrackingMapping`
@@ -376,8 +385,8 @@
 ## Akzeptanzkriterien
 - [x] Leerlauf: Ruhender Desktop bei 2× → GPU-Last nahe null, `frames_skipped` steigt.
       Mausbewegung ohne spürbare Verzögerung (Sichtprüfung durch den Nutzer 2026-11-07, dev.120.m14).
-- [ ] Start bis zur fertigen Pipeline (`ready_time`) gegenüber der Messbasis messbar kürzer; keine
-      Laufzeit-Übersetzung der Shader mehr ([x], Schritt 4). Messung an einem echten Start offen
+- [x] Start bis zur fertigen Pipeline gegenüber der Messbasis messbar kürzer (697 → 184 ms); keine
+      Laufzeit-Übersetzung der Shader mehr (Schritt 4, gemessen an dev.123.m14)
 - [x] Kein Lock und keine Allokation im Render-Loop (Benchmarks und WARP-Tests `0 B`, Code-Review; Teil A)
 - [x] Smart Invert: Das Budget umfasst Umgebung und Mehrkosten im Magnify-Durchgang (Grilling
       2026-11-07: kein Umbau der Gewichtung, Ziel ≤ 0,6 ms entfällt); Offline-Wiedergabe unverändert
