@@ -12,6 +12,7 @@
     <Project Path="src/ZoomIN.Watchdog/ZoomIN.Watchdog.csproj" />
   </Folder>
   <Folder Name="/tools/">
+    <Project Path="tools/ZoomIN.ShaderCompiler/ZoomIN.ShaderCompiler.csproj" />
     <Project Path="tools/ZoomIN.TrackingProbe/ZoomIN.TrackingProbe.csproj">
       <Platform Project="x64" />
     </Project>

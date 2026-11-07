@@ -147,7 +147,7 @@
 - [ ] Prüfen, ob sich das Kopieren nur der geänderten Bereiche lohnt (`GetFrameDirtyRects`/
       `MoveRects`) statt der ganzen Textur. Erst nach der Sichtprüfung; vermutlich klein,
       weil ruhende Frames jetzt gar nicht mehr kopieren.
-- [ ] Sichtprüfung durch den Nutzer:
+- [x] Sichtprüfung durch den Nutzer (2026-11-07, dev.120.m14): „Alles in Ordnung“.
   - GPU-Last im Task-Manager bei ruhendem 2×-Zoom nahe null
   - Maus, Tippen, Scrollen und Video flüssig wie vorher
   - Lupe, Angedockt und intelligentes Invertieren ohne Flackern
@@ -172,23 +172,35 @@
     getestet, das Ganze prüft der Nutzer bei der Sichtprüfung.
 
 #### 4 · Schnellerer Start
-- [ ] Shader zur Build-Zeit kompilieren (Bytecode `.cso` als eingebettete Ressource).
-  - Zuerst ein Spike: Werkzeug (fxc aus dem Windows SDK oder ein kleines Build-Tool mit
-    Vortice) und der Schritt in MSBuild/CI.
-  - Rückfall: ein Bytecode-Cache je (Datei, Einstieg, Profil) im Prozess.
-- [ ] Smart-Invert-Ressourcen (3 Shader, 3 Texturen, Abfragen) erst bei der ersten Nutzung von
-      „intelligent“ anlegen
-- [ ] `Win32WindowFilterSource.Start` blockiert nicht mehr bis zu 2 s. Ist der Filter pro Fenster
-      aus, wird er gar nicht erst gestartet.
-- [ ] Watchdog-Start, `EaseOfAccessNotifier` und Tray-Menütexte erst nach dem ersten Frame;
-      `Process`-Objekt der Startzeitmessung freigeben
-- **Telemetrie:**
-  - Die Abläufe und `ready_time` aus 1 zeigen den Gewinn.
-  - Neues Log 3008 (Warnung, einmal je Prozess), falls der Rückfall greift:
-    `Shader bytecode for {Shader} missing; compiling at runtime`.
-  - Der Eintrag kommt in den Katalog.
-- **Tests:** Test, dass jede eingebettete Shader-Ressource Bytecode für alle Einstiege enthält.
-  WARP-Tests laufen mit vorkompiliertem Bytecode.
+- **Messbasis** (2026-11-07, Trace des Nutzers mit dev.119.m13, 1 Monitor):
+  - `zoomin.app.start` 903 ms, darin Einstellungen laden 109 ms
+  - `zoomin.render.pipeline_start` 664 ms, davon Shader-Übersetzung etwa 570 ms
+    (`PhotoFill` 347 ms, `Magnify` PS 125 ms, `Ambient` PS 81 ms)
+- [x] Shader zur Build-Zeit übersetzen:
+  - Werkzeug `tools/ZoomIN.ShaderCompiler`: derselbe d3dcompiler_47 über Vortice mit denselben
+    Flags, also kein SDK-Werkzeug in Build oder CI.
+  - MSBuild-Target in `ZoomIN.Rendering.csproj`, inkrementell. Eingebettet wird nur der
+    Bytecode; Vortice.D3DCompiler ist keine Laufzeit-Abhängigkeit mehr.
+  - **Abweichung vom Plan:** kein Laufzeit-Rückfall und kein Log 3008. Fehlender Bytecode ist ein
+    Build-Fehler, den `ShaderBytecodeTests` abfängt. Zur Laufzeit schlägt der Pipeline-Start
+    mit Log 3003 fehl. Ein Rückfall hätte den D3D-Compiler weiter mitgeschleppt.
+- [~] Smart-Invert-Ressourcen erst bei Bedarf anlegen: **entfällt**. Ohne Übersetzung sind es
+      nur noch 3 Shader-Objekte und 3 kleine Texturen (1/16 Auflösung). Der Gewinn lag fast
+      ganz in `PhotoFill`.
+- [ ] `Win32WindowFilterSource.Start`: Die 2 s sind nur ein Timeout. Gewartet wird auf
+      Thread-Start und Hooks. Ob sich mehr lohnt, zeigen erst die Startphasen aus einem echten
+      Start (`zoomin.app.start.shell`).
+- [ ] Watchdog-Start und `EaseOfAccessNotifier` nach dem ersten Frame: ebenso erst nach den
+      echten Startphasen entscheiden. Das `Process`-Objekt der Startzeitmessung wird seit
+      Schritt 1 freigegeben.
+- **Telemetrie:** Die Kind-Abläufe aus Schritt 1 und `zoomin.render.ready_time` zeigen den
+  Gewinn. Es gibt keine neuen Ereignisse.
+- **Tests:**
+  - `ShaderBytecodeTests`: Jeder `ShaderSource.Load` im Code ist als DXBC eingebettet, und ein
+    fehlender nennt den `ShaderEntry`.
+  - Alle WARP- und Offline-Tests laufen mit dem vorkompilierten Bytecode und sind
+    unverändert grün.
+  - Veröffentlichung geprüft: weder Werkzeug noch D3DCompiler im Paket.
 
 #### 5 · Smart-Invert-Kosten
 - [ ] Gewichtung (`SmartWeight`) in einem eigenen Durchgang in **Desktop-Auflösung**, begrenzt

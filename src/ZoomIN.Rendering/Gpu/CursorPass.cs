@@ -28,10 +28,10 @@ internal sealed class CursorPass : IDisposable
     public CursorPass(ID3D11Device device)
     {
         _device = device;
-        _vertexShader = device.CreateVertexShader(ShaderSource.Compile("Cursor.hlsl", "VSMain", "vs_4_0").Span);
-        _pointerShader = device.CreatePixelShader(ShaderSource.Compile("Cursor.hlsl", "PSCursor", "ps_4_0").Span);
-        _ringShader = device.CreatePixelShader(ShaderSource.Compile("Cursor.hlsl", "PSRing", "ps_4_0").Span);
-        _rectShader = device.CreatePixelShader(ShaderSource.Compile("Cursor.hlsl", "PSRect", "ps_4_0").Span);
+        _vertexShader = device.CreateVertexShader(ShaderSource.Load("Cursor.hlsl", "VSMain", "vs_4_0"));
+        _pointerShader = device.CreatePixelShader(ShaderSource.Load("Cursor.hlsl", "PSCursor", "ps_4_0"));
+        _ringShader = device.CreatePixelShader(ShaderSource.Load("Cursor.hlsl", "PSRing", "ps_4_0"));
+        _rectShader = device.CreatePixelShader(ShaderSource.Load("Cursor.hlsl", "PSRect", "ps_4_0"));
         _sampler = device.CreateSamplerState(new SamplerDescription(
             Filter.MinMagMipLinear, TextureAddressMode.Border, TextureAddressMode.Border, TextureAddressMode.Border,
             0, 1, ComparisonFunction.Never, new Color4(0, 0, 0, 0)));
