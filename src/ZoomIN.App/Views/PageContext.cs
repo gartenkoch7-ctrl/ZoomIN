@@ -1,3 +1,4 @@
+using ZoomIN.App.SecureDesktop;
 using ZoomIN.App.Settings;
 using ZoomIN.App.Updates;
 using ZoomIN.App.Zoom;
@@ -19,6 +20,7 @@ namespace ZoomIN.App.Views;
 /// <param name="Setup">Installs the signed build when UIAccess is missing (ADR-0017).</param>
 /// <param name="Folders">Where logs, diagnostics and debug snapshots are kept (ADR-0025).</param>
 /// <param name="Diagnostics">Creates the diagnostics package (ADR-0019).</param>
+/// <param name="SecureDesktopSwitch">The "also on the sign-in screen" switch (ADR-0016).</param>
 /// <param name="WindowHandle">Settings window handle, needed by file pickers.</param>
 /// <param name="WelcomeFinished">Called when the first-run assistant is done.</param>
 /// <param name="ExitForUpdate">Starts the freshly installed version and ends this one.</param>
@@ -33,6 +35,7 @@ public sealed record PageContext(
     SetupLauncher Setup,
     IAppFolders Folders,
     IDiagnosticsPackage Diagnostics,
+    ISecureDesktopSwitch SecureDesktopSwitch,
     Func<nint> WindowHandle,
     Action WelcomeFinished,
     Action ExitForUpdate);

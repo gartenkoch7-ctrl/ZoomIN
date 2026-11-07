@@ -313,8 +313,14 @@
 - [x] `Program.RunFlow` baut für Update und Deinstallation einen kleinen Container
       (`ServiceRegistration.BuildRole`). Das Setup hat `SetupServices` als handgeschriebene
       Composition Root. Dort liegt auch das Installationsziel `Program Files\ZoomIN`.
-- [ ] Noch offen: `SecureDesktopHost`, `SecureDesktopSetting`, `WatchdogRunner` und
-      `RestartArguments` (Ausnahmeliste).
+- [x] `SecureDesktopHost` und `WatchdogRunner` sind Instanzklassen (Einstieg ihrer Rolle).
+  - Vom Schalter für den Anmeldebildschirm bleibt nur das Parsen statisch
+    (`SecureDesktopSetting`). Der Schalter selbst ist der Dienst `ISecureDesktopSwitch`
+    (`SecureDesktopSwitch`): in der Einstellungsseite über `PageContext`, im Admin-Schritt über
+    `RunFlow`.
+  - `RestartArguments` parst nur noch; das Warten auf die alte Version macht `Program`.
+  - Die Ausnahmeliste von `StaticClassTests` hat nur noch einen Eintrag: `Win32TrayIcon`
+    (Schritt 10).
 - [ ] Vor den Ablauf-Tests in Schritt 11 fehlen noch Nahtstellen (Review 2026-11-07):
   - `UninstallFlow` startet die Admin-Entfernung selbst (`Process.Start` mit runas), löscht
     Ordner direkt, schaltet den Autostart mit `new RegistryAutostart` ab und liest die
@@ -329,10 +335,17 @@
   - Watchdog: Neustart-Politik, Aufräumen, Aufgeben auf sicheren Bildschirmen
 
 #### 9 · Mapper nach Core
-- [ ] `ZoomModelFactory`, `EffectsFactory` und `TrackingFactory` wandern als Settings-Mapper nach
-      Core (Ordner nach Feature). Die etwa 25 Zeigerfelder bekommen einen eigenen Mapper statt
-      Feld-für-Feld-Kopien in zwei Richtungen.
-- **Tests:** Rundreise-Tests (Settings → Modell → Settings ist identisch) für alle drei.
+- [x] `ZoomMapping` (Core/Zoom), `EffectsMapping` (Core/Filters) und `TrackingMapping`
+      (Core/Tracking), bisher `ZoomModelFactory`, `EffectsFactory` und `TrackingFactory` in App.
+  - Die 19 Zeigerfelder stehen einmal in `PointerMapping` (Core/Pointer), in beide Richtungen.
+    `EffectsMapping` nutzt es.
+- **Tests:** `SettingsMappingRoundTripTests`
+  - Settings → Modell → Settings gibt jeden gemappten Wert zurück, auch die Zoomstufen pro
+    Monitor. Verglichen wird nach exaktem Property-Namen, mit Werten abseits der
+    Werkseinstellung; vergisst ein Mapper ein Feld, schlägt der Test an.
+  - Ausnahme ist `ZoomOn`: Jeder Start beginnt ungezoomt, `ZoomMapping.Create` übernimmt es
+    bewusst nicht.
+  - Unlesbare Farbe → Standardfarbe.
 
 ### Teil C – Struktur und Duplikate
 

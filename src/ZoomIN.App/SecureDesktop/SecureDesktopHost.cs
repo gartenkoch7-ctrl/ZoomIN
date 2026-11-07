@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using ZoomIN.App.Composition;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.App.Zoom;
+using ZoomIN.Core.Folders;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Settings;
 using ZoomIN.Platform.Diagnostics;
@@ -18,17 +19,17 @@ namespace ZoomIN.App.SecureDesktop;
 /// and ends it on every desktop switch. Started by hand as a normal user it runs the same way on
 /// the normal desktop, for quick tests; Strg+Alt+Umschalt+Z ends it.
 /// </summary>
-internal static class SecureDesktopHost
+internal sealed class SecureDesktopHost(TelemetryHost telemetry, IAppFolders folders)
 {
     // Not the tray app's name: both run at the same time in the same session.
     private const string MutexName = @"Local\ZoomIN.SecureInstance";
 
     private static readonly TimeSpan FirstFrameTimeout = TimeSpan.FromSeconds(10);
 
-    public static int Run(TelemetryHost telemetry)
+    public int Run()
     {
-        var log = telemetry.Logger<SecureDesktopHostCategory>();
-        if (new SecureDesktopGiveUp(Program.Folders).IsActive())
+        var log = telemetry.Logger<SecureDesktopHost>();
+        if (new SecureDesktopGiveUp(folders).IsActive())
         {
             log.GaveUp();
             return 0;
@@ -49,7 +50,7 @@ internal static class SecureDesktopHost
 
         using var exit = new ManualResetEventSlim();
         var start = telemetry.StartOperation("zoomin.secure.start");
-        using (var services = ServiceRegistration.BuildSecureDesktop(telemetry, Program.Folders))
+        using (var services = ServiceRegistration.BuildSecureDesktop(telemetry, folders))
         {
             // The sanitizer has already cleared any export address: SYSTEM never sends (ADR-0019).
             telemetry.Apply(services.GetRequiredService<AppSettings>().Telemetry());
@@ -115,8 +116,9 @@ internal static class SecureDesktopHost
         }
     }
 
-    private static TimeSpan SinceStart() => DateTime.Now - Process.GetCurrentProcess().StartTime;
-
-    /// <summary>Log category of the static host.</summary>
-    private sealed class SecureDesktopHostCategory;
+    private static TimeSpan SinceStart()
+    {
+        using var process = Process.GetCurrentProcess();
+        return DateTime.Now - process.StartTime;
+    }
 }

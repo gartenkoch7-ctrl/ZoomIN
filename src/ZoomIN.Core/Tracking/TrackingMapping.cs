@@ -1,14 +1,13 @@
 using ZoomIN.Core.Settings;
-using ZoomIN.Core.Tracking;
 
-namespace ZoomIN.App.Zoom;
+namespace ZoomIN.Core.Tracking;
 
-/// <summary>Maps between persisted <see cref="AppSettings"/> and the runtime <see cref="TrackingModel"/>.</summary>
-internal static class TrackingFactory
+/// <summary>Maps between persisted <see cref="AppSettings"/> and the runtime <see cref="TrackingModel"/> (M14 step 9).</summary>
+public static class TrackingMapping
 {
     public static TrackingModel Create(AppSettings settings) => new(Options(settings));
 
-    public static TrackingOptions Options(AppSettings s) => new(
+    public static TrackingOptions Options(AppSettings s) => s is null ? throw new ArgumentNullException(nameof(s)) : new(
         s.TrackingEnabled,
         s.TrackFocus,
         s.TrackCaret,
@@ -20,6 +19,7 @@ internal static class TrackingFactory
 
     public static AppSettings Apply(AppSettings settings, TrackingModel model)
     {
+        ArgumentNullException.ThrowIfNull(model);
         var o = model.Options;
         return settings with
         {

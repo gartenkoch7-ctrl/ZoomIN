@@ -15,12 +15,12 @@ namespace ZoomIN.Watchdog;
 /// (crash, killed in Task Manager) triggers cleanup and a restart within the limits of
 /// <see cref="RestartPolicy"/> (ADR-0007).
 /// </summary>
-public static class WatchdogRunner
+/// <param name="folders">Where the crash log and the give-up mark are kept (ADR-0025).</param>
+/// <param name="cleanup">What a crashed ZoomIN leaves behind and the watchdog gives back.</param>
+public sealed class WatchdogRunner(IAppFolders folders, ILogger log, IReadOnlyList<ICleanupStep> cleanup)
 {
     /// <param name="secure">Watches the secure-desktop instance (ADR-0016): restarts it with its switch, never notifies.</param>
-    /// <param name="folders">Where the crash log and the give-up mark are kept (ADR-0025).</param>
-    public static int Run(
-        int processId, string appPath, IAppFolders folders, ILogger log, IReadOnlyList<ICleanupStep> cleanup, bool secure = false)
+    public int Run(int processId, string appPath, bool secure = false)
     {
         int exitCode;
         try

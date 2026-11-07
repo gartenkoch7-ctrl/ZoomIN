@@ -45,7 +45,7 @@ public static class Program
         if (WatchdogArguments.TryParse(args, out var processId, out var secure))
         {
             return RunRole(TelemetryRole.Watchdog, traceParent, log =>
-                WatchdogRunner.Run(processId, Environment.ProcessPath!, Folders, log, cleanup: [new AppBarCleanup(Folders), new SystemCursorCleanup()], secure));
+                new WatchdogRunner(Folders, log, [new AppBarCleanup(Folders), new SystemCursorCleanup()]).Run(processId, Environment.ProcessPath!, secure));
         }
 
         // As SYSTEM, ZoomIN is always the secure-desktop instance, whatever the arguments: Windows
@@ -54,12 +54,12 @@ public static class Program
         if (args is [SecureDesktopMode.Switch] || SessionUserFolders.IsSystem)
         {
             using var telemetry = Start(TelemetryRole.Secure, traceParent);
-            return SecureDesktopHost.Run(telemetry);
+            return new SecureDesktopHost(telemetry, Folders).Run();
         }
 
         if (SecureDesktopSetting.TryParse(args, out var secureDesktopOn))
         {
-            return RunRole(TelemetryRole.Elevated, traceParent, log => SecureDesktopSetting.RunElevated(secureDesktopOn, log));
+            return RunFlow(TelemetryRole.Elevated, traceParent, services => services.GetRequiredService<ISecureDesktopSwitch>().ApplyElevated(secureDesktopOn));
         }
 
         if (UpdateCommand.TryParse(args, out var update))
@@ -77,7 +77,11 @@ public static class Program
             return RunFlow(TelemetryRole.Uninstall, traceParent, services => services.GetRequiredService<UninstallFlow>().RemoveElevated(asker));
         }
 
-        RestartArguments.WaitIfRequested(args);
+        if (RestartArguments.TryParse(args, out var oldProcess))
+        {
+            WaitForExit(oldProcess);
+        }
+
         using var instance = SingleInstance.TryAcquire();
         if (instance is null)
         {
@@ -121,6 +125,20 @@ public static class Program
         }
 
         return exitCode;
+    }
+
+    // After an update: the old version must be gone before the single-instance check (ADR-0015).
+    private static void WaitForExit(int processId)
+    {
+        try
+        {
+            using var process = Process.GetProcessById(processId);
+            process.WaitForExit(TimeSpan.FromSeconds(15));
+        }
+        catch (ArgumentException)
+        {
+            // Already gone.
+        }
     }
 
     private static TelemetryHost Start(TelemetryRole role, string? traceParent)

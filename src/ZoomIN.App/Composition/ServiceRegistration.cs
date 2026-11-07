@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ZoomIN.App.Lifecycle;
+using ZoomIN.App.SecureDesktop;
 using ZoomIN.App.Localization;
 using ZoomIN.App.Updates;
 using ZoomIN.Core.Diagnostics;
@@ -51,6 +52,7 @@ internal static class ServiceRegistration
         services.AddSingleton<UpdateService>();
         services.AddSingleton<IDiagnosticsPackage, DiagnosticsPackage>();
         services.AddSingleton<SetupLauncher>();
+        services.AddSingleton<ISecureDesktopSwitch, SecureDesktopSwitch>();
         services.AddSingleton<IWatchdogLauncher, ShellWatchdogLauncher>();
         services.AddSingleton<AppShell>();
         return services.BuildServiceProvider();
@@ -69,6 +71,7 @@ internal static class ServiceRegistration
         services.AddInstall();
         services.AddSingleton<UpdateRunner>();
         services.AddSingleton<UninstallFlow>();
+        services.AddSingleton<ISecureDesktopSwitch, SecureDesktopSwitch>();
         return services.BuildServiceProvider();
     }
 

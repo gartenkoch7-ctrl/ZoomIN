@@ -13,11 +13,7 @@ public sealed partial class StaticClassTests
     // StaleExceptions fails as soon as an entry no longer offends.
     private static readonly Dictionary<string, string> s_exceptions = new(StringComparer.Ordinal)
     {
-        ["ZoomIN.App/SecureDesktop/SecureDesktopHost.cs"] = "step 8: flow",
-        ["ZoomIN.App/SecureDesktop/SecureDesktopSetting.cs"] = "step 8: flow",
-        ["ZoomIN.App/Updates/RestartArguments.cs"] = "step 8: waits for a process",
         ["ZoomIN.Platform/Shell/Win32TrayIcon.cs"] = "step 10: TrayIconImage reads the icon file",
-        ["ZoomIN.Watchdog/WatchdogRunner.cs"] = "step 8: flow",
     };
 
     [Fact]

@@ -33,9 +33,9 @@ internal static class EngineRegistration
     {
         // Settings and models
         services.AddSingleton(sp => sp.GetRequiredService<ISettingsStore>().Load());
-        services.AddSingleton(sp => ZoomModelFactory.Create(sp.GetRequiredService<AppSettings>()));
-        services.AddSingleton(sp => EffectsFactory.Create(sp.GetRequiredService<AppSettings>()));
-        services.AddSingleton(sp => TrackingFactory.Create(sp.GetRequiredService<AppSettings>()));
+        services.AddSingleton(sp => ZoomMapping.Create(sp.GetRequiredService<AppSettings>()));
+        services.AddSingleton(sp => EffectsMapping.Create(sp.GetRequiredService<AppSettings>()));
+        services.AddSingleton(sp => TrackingMapping.Create(sp.GetRequiredService<AppSettings>()));
         services.AddSingleton(sp => new WindowFilterModel(sp.GetRequiredService<AppSettings>().WindowFilter ?? WindowFilterOptions.Default));
         services.AddSingleton(sp => new RenderModels(
             sp.GetRequiredService<ZoomModel>(),

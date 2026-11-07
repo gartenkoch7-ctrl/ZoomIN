@@ -1,5 +1,6 @@
 using Microsoft.UI.Dispatching;
 using ZoomIN.App.Localization;
+using ZoomIN.App.SecureDesktop;
 using ZoomIN.App.Settings;
 using ZoomIN.App.Updates;
 using ZoomIN.App.Views;
@@ -36,7 +37,8 @@ public sealed class AppShell
     public AppShell(
         ZoomController controller, SettingsService settings, ProfileService profiles, ITrayIcon tray,
         UpdateService updates, IAutostart autostart, ICursorShapeSource cursorShapes, IUiAccessProbe uiAccess,
-        SetupLauncher setup, IAppFolders folders, IDiagnosticsPackage diagnostics, ILocalizer texts, ILogger<AppShell> log)
+        SetupLauncher setup, IAppFolders folders, IDiagnosticsPackage diagnostics,
+        ISecureDesktopSwitch secureDesktopSwitch, ILocalizer texts, ILogger<AppShell> log)
     {
         _texts = texts;
         _controller = controller;
@@ -48,7 +50,7 @@ public sealed class AppShell
         _log = log;
         _dispatcher = DispatcherQueue.GetForCurrentThread();
         _pages = new PageContext(
-            settings, profiles, controller, autostart, cursorShapes, updates, uiAccess, setup, folders, diagnostics,
+            settings, profiles, controller, autostart, cursorShapes, updates, uiAccess, setup, folders, diagnostics, secureDesktopSwitch,
             () => _window?.Handle ?? 0, () => _window?.ShowOverview(), ExitForUpdate);
     }
 

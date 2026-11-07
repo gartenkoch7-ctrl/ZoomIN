@@ -22,8 +22,8 @@ public sealed partial class GeneralViewModel : ObservableObject
         var s = context.Settings.Current;
         LanguageIndex = (int)s.Language;
         Autostart = context.Autostart.IsEnabled;
-        SecureDesktopAvailable = SecureDesktopSetting.IsAvailable;
-        SecureDesktop = SecureDesktopSetting.IsEnabled;
+        SecureDesktopAvailable = context.SecureDesktopSwitch.IsAvailable;
+        SecureDesktop = context.SecureDesktopSwitch.IsEnabled;
         _ready = true;
     }
 
@@ -70,11 +70,10 @@ public sealed partial class GeneralViewModel : ObservableObject
     private async Task ChangeSecureDesktopAsync(bool value)
     {
         // The administrator prompt blocks until answered; keep the UI responsive meanwhile.
-        var log = Program.Telemetry!.Logger<GeneralViewModel>();
-        await Task.Run(() => SecureDesktopSetting.RequestChange(value, log));
+        await Task.Run(() => _context.SecureDesktopSwitch.RequestChange(value));
 
         // "No" at the prompt or a failure: show the real state again.
-        var actual = SecureDesktopSetting.IsEnabled;
+        var actual = _context.SecureDesktopSwitch.IsEnabled;
         if (actual != value)
         {
             _reverting = true;

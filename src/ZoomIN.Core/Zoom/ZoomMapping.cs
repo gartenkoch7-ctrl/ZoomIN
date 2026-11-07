@@ -1,11 +1,10 @@
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Settings;
-using ZoomIN.Core.Zoom;
 
-namespace ZoomIN.App.Zoom;
+namespace ZoomIN.Core.Zoom;
 
-/// <summary>Maps between persisted <see cref="AppSettings"/> and the runtime <see cref="ZoomModel"/>.</summary>
-internal static class ZoomModelFactory
+/// <summary>Maps between persisted <see cref="AppSettings"/> and the runtime <see cref="ZoomModel"/> (M14 step 9).</summary>
+public static class ZoomMapping
 {
     public static ZoomModel Create(AppSettings settings)
     {
