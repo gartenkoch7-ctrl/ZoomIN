@@ -112,48 +112,64 @@
     ausblenden würde. Code-Review und Sichtprüfung decken ihn ab.
 
 #### 3 · Leerlauf-Frames überspringen
-- [ ] Bedingung „nichts geändert“ in Core. Sie ist rein und testbar und hält alles fest, was
-      einen neuen Frame nötig macht:
-  - kein neues Desktop-Bild
-  - Zeiger und Zeigerform gleich
-  - Animation eingeschwungen
-  - gleiche Snapshot-Referenz
-  - kein Locator, keine Glättung im Lauf
-  - kein Schnappschuss angefordert
-- [ ] `RenderSession` lässt in diesem Fall Zeichnen **und** `Present` aus.
+- [x] Bedingung „nichts geändert“ in Core: `FrameChanges.NeedsRedraw`. Sie ist rein und
+      getestet. Ein neuer Frame ist nötig bei:
+  - neuem Desktop-Bild
+  - geänderter Zeigerposition oder Zeigerform (nur auf dem eigenen Monitor)
+  - bewegter Ansicht (Zoom-Animation, Gleiten, Modus)
+  - neuer Snapshot-Referenz (Filter, Fenster, Tracking, Zeigeroptionen)
+  - laufendem Locator oder laufender Smart-Invert-Glättung
+  - angefordertem Schnappschuss
+  - erstem Frame bzw. Frame nach dem Ausblenden
+  - Vergleich mit dem zuletzt gezeigten Frame: `FrameChangeTracker` (Rendering, 0 B)
+- [x] `RenderSession` lässt in diesem Fall Zeichnen **und** `Present` aus.
       DirectComposition zeigt den letzten Frame weiter.
-- [ ] Taktgeber im Leerlauf (siehe Risiko). Die Swapchain-Wartemarke wirkt wie eine Semaphore
-      (`MaximumFrameLatency = 1`). Ohne `Present` blockiert `WaitForNextFrame` bis zum Timeout
-      von 100 ms und zählt `frames_missed` hoch. Deshalb:
-  - Die Leerlauf-Bedingung wird **vor** dem Warten geprüft. Im Leerlauf entfällt das Warten
-    auf die Swapchain.
-  - Stattdessen wartet der Loop in Scheiben von höchstens einem Bildschirmtakt:
-    `WaitForVBlank`, oder `AcquireNextFrame` mit dem Timeout einer Frame-Zeit.
-  - Beide Aufrufe lassen sich nicht von außen unterbrechen. Deshalb prüft der Loop nach jeder
-    Scheibe:
-    - die Snapshot-Referenz (Hotkey, Zoom, Filter)
-    - Zeigerposition und Zeigerform
-    - ein neues Desktop-Bild
-  - Eine Änderung wird spätestens nach einem Bildschirmtakt gezeichnet.
-- [ ] Umgebungsdurchgang (Smart Invert) nur bei neuem Desktop-Bild, oder bis die Glättung
-      eingeschwungen ist (etwa 3 τ)
+- [x] Taktgeber im Leerlauf. Die Swapchain-Wartemarke wirkt wie eine Semaphore
+      (`MaximumFrameLatency = 1`):
+  - Ein Leerlauf-Durchgang behält den Platz, auf den er gewartet hat. Der nächste gezeichnete
+    Frame wartet deshalb nicht bis zum Timeout von 100 ms.
+  - Im Leerlauf wartet der Loop auf das VBlank des Monitors (`DesktopDuplicator.WaitForNextRefresh`).
+    Schlägt das fehl oder kehrt es dreimal in Folge sofort zurück (Monitor aus), schläft er 8 ms.
+    Der Aufruf geht direkt über die COM-Vtable (`DxgiInterop.WaitForVBlank`), weil Vortice bei
+    Fehlern eine Ausnahme wirft und damit pro Durchgang allokieren würde.
+  - Auch im Leerlauf bestätigt der Monitor mit dem Zeiger die gewünschte Sichtbarkeit des
+    Systemzeigers (`CursorLayer.KeepSystemCursor`, lock-frei). Ein anderer Monitor kann ihn
+    inzwischen umgeschaltet haben.
+  - Ein Rückfall auf „Farbton erhalten“ erzwingt noch einen Frame, damit er sichtbar wird.
+  - Nach jedem Takt prüft er Snapshots, Zeiger und Desktop-Bild erneut. Eine Änderung wird
+    damit spätestens nach einem Bildschirmtakt gezeichnet.
+- [x] Umgebungsdurchgang (Smart Invert) nur bei neuem Desktop-Bild oder geänderten Effekten.
+  - Danach läuft er weiter, bis die Glättung eingeschwungen ist (6 τ = 0,3 s,
+    `SmartInvertLayer.Settling`).
+  - Auch beim Bewegen der Maus über einem ruhenden Desktop fällt er damit weg.
+  - Die erste Änderung nach einer Ruhepause wird wie ein Frame geglättet, nicht auf einmal
+    übernommen (gegen Flackern).
 - [ ] Prüfen, ob sich das Kopieren nur der geänderten Bereiche lohnt (`GetFrameDirtyRects`/
-      `MoveRects`) statt der ganzen Textur. Nur umsetzen, wenn die Messung aus 1 es trägt.
+      `MoveRects`) statt der ganzen Textur. Erst nach der Sichtprüfung; vermutlich klein,
+      weil ruhende Frames jetzt gar nicht mehr kopieren.
+- [ ] Sichtprüfung durch den Nutzer:
+  - GPU-Last im Task-Manager bei ruhendem 2×-Zoom nahe null
+  - Maus, Tippen, Scrollen und Video flüssig wie vorher
+  - Lupe, Angedockt und intelligentes Invertieren ohne Flackern
 - **Telemetrie:**
   - Neuer Zähler `zoomin.render.frames_skipped` (Tags `zoomin.monitor`, `zoomin.reason=idle`),
     Instrument beim Start. Kein Log pro Frame.
-  - `zoomin.render.frame_interval` wird nicht über eine Leerlauf-Lücke hinweg erfasst. Sonst
-    erscheint jede Pause als Ruckler.
+  - `zoomin.render.frame_interval` wird nicht über eine Leerlauf-Lücke hinweg erfasst.
   - `zoomin.render.frames_missed` zählt im Leerlauf nicht.
-  - Beide Änderungen kommen in den Katalog.
+  - Die Bildrate im Status (Übersicht, Info-Seite) zählt Leerlauf-Durchgänge als pünktlich. Ein
+    ruhender Zoom zeigt also weiter die Bildwiederholrate und nicht „0 Bilder pro Sekunde“.
+  - `FrameStatistics` bündelt die Buchführung. Damit fällt `MonitorRenderer` von 257 auf
+    230 Zeilen.
 - **Tests:**
-  - Unit-Tests für die Bedingung (jede Änderung erzwingt einen Frame)
-  - WARP-Tests:
-    - Ein ruhender Desktop zeichnet nach dem Einschwingen keinen Frame mehr.
-    - Eine Mausbewegung zeichnet spätestens nach einem Bildschirmtakt.
-    - Eine Zoom- oder Filteränderung **im Leerlauf** zeichnet spätestens nach einem
-      Bildschirmtakt, nicht erst nach 100 ms.
-  - Benchmark `0 B`
+  - `FrameChangesTests`: Jede Änderung erzwingt einen Frame.
+  - `FrameChangeTrackerTests`: Zeiger auf einem anderen Monitor ändert nichts, alle
+    Snapshots, 0 B.
+  - `SmartInvertSettleTests` (WARP): Die Glättung schwingt ein, ein neues Bild startet sie neu.
+  - `DxgiInteropTests`: Der Vtable-Platz von `WaitForVBlank` wartet auf einem echten Monitor
+    wirklich auf den nächsten Takt (übersprungen ohne Monitor).
+  - Ein WARP-Test für den ganzen `RenderFrame` (Leerlauf, Wecken nach einem Takt) geht nicht:
+    Er braucht Duplication und Swapchain eines echten Monitors. Die Teile sind einzeln
+    getestet, das Ganze prüft der Nutzer bei der Sichtprüfung.
 
 #### 4 · Schnellerer Start
 - [ ] Shader zur Build-Zeit kompilieren (Bytecode `.cso` als eingebettete Ressource).

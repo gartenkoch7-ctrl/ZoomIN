@@ -32,6 +32,10 @@ internal sealed class RenderMetrics
     private static readonly Counter<double> s_overlayTime = Telemetry.Meter.CreateCounter<double>(
         "zoomin.render.overlay_time", "s", "Time the render thread worked (active) or slept (paused)");
 
+    // Idle frames (M14 step 3): nothing changed, nothing drawn or presented.
+    private static readonly Counter<long> s_framesSkipped = Telemetry.Meter.CreateCounter<long>(
+        "zoomin.render.frames_skipped", "{frame}", "Render passes without a change: nothing drawn or presented");
+
     // Startup measurement (M14): how long after the process start each monitor could zoom.
     private static readonly Histogram<double> s_readyTime = Telemetry.Meter.CreateHistogram<double>(
         "zoomin.render.ready_time", "ms", "From process start to the first ready zoom pipeline of a monitor");
@@ -45,6 +49,7 @@ internal sealed class RenderMetrics
     private readonly KeyValuePair<string, object?> _monitor;
     private readonly KeyValuePair<string, object?> _active = new(StateTag, "active");
     private readonly KeyValuePair<string, object?> _paused = new(StateTag, "paused");
+    private readonly KeyValuePair<string, object?> _idle = new(ReasonTag, "idle");
 
     public RenderMetrics(string deviceName)
     {
@@ -56,6 +61,9 @@ internal sealed class RenderMetrics
 
     /// <summary>Render loop: the compositor did not request a frame in time.</summary>
     public void FrameMissed() => s_framesMissed.Add(1, _monitor);
+
+    /// <summary>Render loop: nothing changed, the pass drew nothing (tag zoomin.reason = idle).</summary>
+    public void FrameSkipped() => s_framesSkipped.Add(1, _monitor, _idle);
 
     public void Shown(double latencyMs) => s_showLatency.Record(latencyMs, _monitor);
 

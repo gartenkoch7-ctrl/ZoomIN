@@ -24,16 +24,22 @@ internal sealed class DesktopLayer(MagnifyPass pass, SmartInvertLayer smart, Gpu
     private DisplayEffects? _uploadedEffects;
     private bool _uploadedSmart;
 
+    /// <summary>The smart inversion smoothing still moves: keep drawing frames (M14 step 3).</summary>
+    public bool SmartSettling => smart.Settling;
+
+    /// <param name="newImage">The desktop image changed since the last frame (Desktop Duplication).</param>
     /// <returns>The smart inversion weights used, or null.</returns>
     public ID3D11ShaderResourceView? Draw(
         ID3D11DeviceContext context, ID3D11ShaderResourceView desktop, ID3D11RenderTargetView target, int width, int height,
-        PhysicalRect monitor, in ModeFrame frame, DisplayEffects effects, WindowRegions windows, bool windowsFiltered)
+        PhysicalRect monitor, in ModeFrame frame, DisplayEffects effects, WindowRegions windows, bool windowsFiltered,
+        bool newImage = true)
     {
         // After a fall-back the smart entries show their matrix, "keep hue" (ADR-0024 decision 6).
         var smartActive = smart.Active;
 
         // Only when windows, filters or the fall-back changed: while nothing moves the upload is skipped.
-        if (!ReferenceEquals(windows, _uploadedWindows) || !ReferenceEquals(effects, _uploadedEffects) || smartActive != _uploadedSmart)
+        var effectsChanged = !ReferenceEquals(effects, _uploadedEffects);
+        if (!ReferenceEquals(windows, _uploadedWindows) || effectsChanged || smartActive != _uploadedSmart)
         {
             WindowConstants.Fill(ref _windowConstants, windows, monitor, effects, smartActive);
             pass.UpdateWindows(context, _windowConstants);
@@ -43,7 +49,9 @@ internal sealed class DesktopLayer(MagnifyPass pass, SmartInvertLayer smart, Gpu
         }
 
         var matrix = effects.Matrix;
-        var weights = smart.Prepare(context, desktop, effects.IsSmart || windows.UsesSmart(monitor), effects.ProtectPhotos);
+        // The weights depend only on the desktop image and the photo protection (part of effects).
+        var weights = smart.Prepare(
+            context, desktop, effects.IsSmart || windows.UsesSmart(monitor), effects.ProtectPhotos, newImage || effectsChanged);
         var monitorSmart = effects.IsSmart && weights is not null;
         magnifyTime.Collect(context);
         magnifyTime.Begin(context);

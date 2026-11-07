@@ -23,6 +23,12 @@ internal sealed class SmartInvertLayer : IDisposable
     // Time constant of the smoothing: after 3 τ (~150 ms) a change is 95 % through.
     private const double SmoothingSeconds = 0.05;
 
+    // After 6 τ less than 0.3 % of the old weights is left: the weights are final until the next change.
+    private const double SettleSeconds = 6 * SmoothingSeconds;
+
+    // One frame at 60 Hz: the step the smoothing takes for the first change after a settled pause.
+    private const double OneFrameSeconds = 1.0 / 60;
+
     // Frames with the smart inversion vs all frames (zoomin.render.frame_interval) shows how often it runs.
     private static readonly Counter<long> s_frames = Telemetry.Meter.CreateCounter<long>(
         "zoomin.render.smart_invert_frames", "{frame}", "Frames that decided the smart inversion (ADR-0024)");
@@ -38,6 +44,8 @@ internal sealed class SmartInvertLayer : IDisposable
     private readonly KeyValuePair<string, object?> _monitor;
     private long _lastUpdate;
     private bool _running;
+    private long _changedAt;
+    private bool _settled;
 
     // Decided on a mean of SampleMean.Count frames, so a single slow frame changes nothing.
     private SampleMean _mean;
@@ -58,6 +66,9 @@ internal sealed class SmartInvertLayer : IDisposable
 
     /// <summary>False after a fall-back: the smart filter then shows "keep hue" on this monitor.</summary>
     public bool Active { get; private set; } = true;
+
+    /// <summary>The smoothing still moves the weights: the monitor keeps drawing frames (M14 step 3).</summary>
+    public bool Settling { get; private set; }
 
     /// <summary>Sets up the weights and the timing; without them the layer starts in fall-back.</summary>
     public static SmartInvertLayer Create(ID3D11Device device, int width, int height, string deviceName, SmartInvertHealth health, ILogger log)
@@ -83,17 +94,45 @@ internal sealed class SmartInvertLayer : IDisposable
     /// Updates the weights from <paramref name="desktop"/> when <paramref name="needed"/>;
     /// returns them for the magnify pass, or null when nothing on the monitor is smart or after a fall-back.
     /// </summary>
-    public ID3D11ShaderResourceView? Prepare(ID3D11DeviceContext context, ID3D11ShaderResourceView desktop, bool needed, bool protectPhotos)
+    /// <param name="inputChanged">
+    /// A new desktop image or other options came in. Without one the weights stop changing once the
+    /// smoothing has settled, and the ambient pass is skipped (M14 step 3).
+    /// </param>
+    public ID3D11ShaderResourceView? Prepare(
+        ID3D11DeviceContext context, ID3D11ShaderResourceView desktop, bool needed, bool protectPhotos, bool inputChanged = true)
     {
         if (!needed || !Active || _pass is null)
         {
             _running = false;
+            Settling = false;
             return null;
         }
 
         var now = Stopwatch.GetTimestamp();
+        if (inputChanged || !_running)
+        {
+            _changedAt = now;
+        }
+
+        Settling = Stopwatch.GetElapsedTime(_changedAt, now).TotalSeconds < SettleSeconds;
+        if (_running && !Settling)
+        {
+            _settled = true;
+            CheckBudget(context);
+            return _pass.Weights;
+        }
+
+        // After a settled pause (no updates, maybe idle frames) the time since the last update says
+        // nothing about the change: it starts now. Smooth it like one frame, never jump at once.
+        var elapsed = Stopwatch.GetElapsedTime(_lastUpdate, now).TotalSeconds;
+        if (_settled)
+        {
+            elapsed = Math.Min(elapsed, OneFrameSeconds);
+            _settled = false;
+        }
+
         var timed = _stopwatch?.Begin(context) == true;
-        _pass.Update(context, desktop, AlphaAfter(Stopwatch.GetElapsedTime(_lastUpdate, now).TotalSeconds, _running), protectPhotos);
+        _pass.Update(context, desktop, AlphaAfter(elapsed, _running), protectPhotos);
         if (timed)
         {
             _stopwatch!.End(context);
@@ -143,6 +182,9 @@ internal sealed class SmartInvertLayer : IDisposable
     {
         Active = false;
         _running = false;
+
+        // One more frame shows the fall-back even when nothing else changes (M14 step 3).
+        Settling = true;
         _log.SmartInvertFallback(_deviceName, reason, milliseconds);
         _health.Report(new SmartInvertFallback(_deviceName, reason, milliseconds));
     }

@@ -22,6 +22,7 @@ internal sealed class CursorLayer
     private readonly ICursorShapeSource _shapes;
     private readonly ISystemCursor _systemCursor;
     private PointerPlacement _placement;
+    private bool _systemVisible = true;
 
     public CursorLayer(CursorPass pass, ICursorShapeSource shapes, ISystemCursor systemCursor)
     {
@@ -55,10 +56,14 @@ internal sealed class CursorLayer
 
         // ZoomIN draws the pointer: the real one would sit somewhere else in the image, so it is
         // hidden. Docked: the real pointer works in the rest of the screen and stays visible.
-        _systemCursor.SetVisible(!hidden && (!drawn || docked));
+        _systemVisible = !hidden && (!drawn || docked);
+        _systemCursor.SetVisible(_systemVisible);
 
         return DrawLocator(context, target, monitor, shown, Stopwatch.GetTimestamp(), locateRequestedAt, style);
     }
+
+    /// <summary>Idle frame (M14 step 3): repeats the last wanted system pointer visibility.</summary>
+    public void KeepSystemCursor() => _systemCursor.SetVisible(_systemVisible);
 
     /// <summary>Called when this monitor stops drawing while the pointer is on it.</summary>
     public void ShowSystemCursor() => _systemCursor.SetVisible(true);
