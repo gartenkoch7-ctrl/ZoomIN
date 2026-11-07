@@ -37,6 +37,17 @@
             <c:SettingCard Glyph="&#xE777;" Header="{x:Bind loc:Text.Get('FilterReset')}">
                 <Button Click="OnReset" Content="{x:Bind loc:Text.Get('Reset')}" />
             </c:SettingCard>
+
+            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('ShareGroup')}" />
+            <c:SettingCard Description="{x:Bind loc:Text.Get('ShareOn.Desc')}" Glyph="&#xE72D;" Header="{x:Bind loc:Text.Get('ShareOn')}">
+                <ToggleSwitch IsOn="{x:Bind ShareVm.Enabled, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('ShareAuto.Desc')}" Glyph="&#xE895;" Header="{x:Bind loc:Text.Get('ShareAuto')}">
+                <ToggleSwitch IsEnabled="{x:Bind ShareVm.Enabled, Mode=OneWay}" IsOn="{x:Bind ShareVm.AutoDetect, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('ShareKind.Desc')}" Glyph="&#xE7B3;" Header="{x:Bind loc:Text.Get('ShareKind')}">
+                <ComboBox MinWidth="240" IsEnabled="{x:Bind ShareVm.Enabled, Mode=OneWay}" ItemsSource="{x:Bind ShareVm.FilterNames}" SelectedIndex="{x:Bind ShareVm.FilterIndex, Mode=TwoWay}" />
+            </c:SettingCard>
         </StackPanel>
     </ScrollViewer>
 </Page>

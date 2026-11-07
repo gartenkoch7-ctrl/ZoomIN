@@ -10,6 +10,8 @@ internal static class TextsGermanCards
         ["NavPointer"] = "Mauszeiger",
         ["Reset"] = "Zurücksetzen",
         ["Act.Crosshair"] = "Fadenkreuz an/aus",
+        ["Act.ShareWindow"] = "Freigabe-Filter: Fenster unter der Maus",
+        ["Act.ShareScreen"] = "Freigabe-Filter: Monitor unter der Maus",
 
         ["Overview.Zoom"] = "Zoom",
         ["Overview.Zoom.Desc"] = "Strg+Alt+Z schaltet überall um, Strg+Mausrad zoomt stufenlos.",
@@ -44,6 +46,13 @@ internal static class TextsGermanCards
         ["FilterBrightness"] = "Helligkeit",
         ["FilterBrightness.Desc"] = "0 % = unverändert",
         ["FilterReset"] = "Kontrast und Helligkeit zurücksetzen",
+        ["ShareGroup"] = "Bei Bildschirmfreigabe",
+        ["ShareOn"] = "Eigener Filter für den geteilten Bereich",
+        ["ShareOn.Desc"] = "Während du in Teams teilst, siehst nur du den geteilten Bildschirm oder das geteilte Fenster mit diesem Filter. Die Zuschauer sehen die Originalfarben.",
+        ["ShareAuto"] = "Teams-Freigabe automatisch erkennen",
+        ["ShareAuto.Desc"] = "Klappt die Erkennung nicht, markiert Strg+Alt+W das Fenster und Strg+Alt+Umschalt+W den Monitor unter der Maus.",
+        ["ShareKind"] = "Freigabe-Filter",
+        ["ShareKind.Desc"] = "Gilt im geteilten Bereich statt des normalen Filters.",
 
         ["PointerPreview.Desc"] = "Vorschau: links ohne Zoom, rechts bei 3-fachem Zoom.",
         ["PointerTestLocator"] = "Suchhilfe testen",

@@ -6,6 +6,7 @@ using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Pointer;
+using ZoomIN.Core.Sharing;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Zoom;
 
@@ -22,6 +23,7 @@ public sealed class ZoomController : IDisposable
     private readonly ProfileService _profiles;
     private readonly IZoomOutput _output;
     private readonly ITrackingSource _trackingSource;
+    private readonly IShareSource _shareSource;
     private readonly IHotkeyService _hotkeys;
     private readonly IMouseWheelHook _wheel;
     private readonly IInputActivitySource _activity;
@@ -35,6 +37,7 @@ public sealed class ZoomController : IDisposable
         ProfileService profiles,
         IZoomOutput output,
         ITrackingSource trackingSource,
+        IShareSource shareSource,
         IHotkeyService hotkeys,
         IMouseWheelHook wheel,
         IInputActivitySource activity,
@@ -47,6 +50,7 @@ public sealed class ZoomController : IDisposable
         _profiles = profiles;
         _output = output;
         _trackingSource = trackingSource;
+        _shareSource = shareSource;
         _hotkeys = hotkeys;
         _wheel = wheel;
         _activity = activity;
@@ -61,6 +65,8 @@ public sealed class ZoomController : IDisposable
     public EffectsModel Effects => _settings.Models.Effects;
 
     public TrackingModel Tracking => _settings.Models.Tracking;
+
+    public ShareModel Share => _settings.Share;
 
     public ZoomStatus Status => _output.Status;
 
@@ -77,6 +83,7 @@ public sealed class ZoomController : IDisposable
         Model.Changed += _dockedStrip.Update;
         _output.Start();
         _trackingSource.Start(Tracking);
+        _shareSource.Start(Share);
     }
 
     /// <summary>Registers all shortcuts again, e.g. after one was changed in the settings.</summary>
@@ -116,6 +123,31 @@ public sealed class ZoomController : IDisposable
 
     /// <summary>Colour filter on/off for the monitor under the mouse (or all, if monitors share it).</summary>
     public void ToggleFilter() => Effects.ToggleFilter(MonitorUnderMouse());
+
+    /// <summary>Strg+Alt+W: share filter for the window under the mouse, or off if one shows (ADR-0018).</summary>
+    public void ToggleShareWindow()
+    {
+        if (!_cursor.TryGetPosition(out var position))
+        {
+            return;
+        }
+
+        // Pressed over the desktop with nothing to mark, the call still hides a detected share.
+        _shareSource.TryGetWindowAt(position, out var window, out var bounds);
+        if (window != 0 || Share.Current.HasManual || Share.Current.Area is not null)
+        {
+            Share.ToggleWindow(window, bounds);
+        }
+    }
+
+    /// <summary>Strg+Alt+Umschalt+W: share filter for the monitor under the mouse, or off.</summary>
+    public void ToggleShareScreen()
+    {
+        if (_monitors.BoundsOf(MonitorUnderMouse()) is { } bounds)
+        {
+            Share.ToggleScreen(bounds);
+        }
+    }
 
     public string MonitorUnderMouse() =>
         _monitors.MonitorAt(_cursor.TryGetPosition(out var position) ? position : default);
@@ -158,6 +190,8 @@ public sealed class ZoomController : IDisposable
         Register(s.CrosshairHotkey, Effects.ToggleCrosshair);
         Register(s.TrackingHotkey, Tracking.ToggleEnabled);
         Register(s.ProfileHotkey, _profiles.Next);
+        Register(s.ShareWindowHotkey, ToggleShareWindow);
+        Register(s.ShareScreenHotkey, ToggleShareScreen);
         UnavailableHotkeys = unavailable;
     }
 

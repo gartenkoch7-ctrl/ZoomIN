@@ -37,6 +37,7 @@ public static class SecureSettingsSanitizer
             UpdateChannel = Defined(s.UpdateChannel, d.UpdateChannel),
             ActiveProfile = Text(s.ActiveProfile, d.ActiveProfile),
             LastMode = Defined(s.LastMode, d.LastMode),
+            ShareColorFilter = Defined(s.ShareColorFilter, d.ShareColorFilter),
             LastZoomLevel = Level(s.LastZoomLevel, d.LastZoomLevel),
             MonitorZoomLevels = Levels(s.MonitorZoomLevels),
             LensZoomLevel = Level(s.LensZoomLevel, d.LensZoomLevel),
@@ -80,6 +81,8 @@ public static class SecureSettingsSanitizer
             CrosshairHotkey = Hotkey(s.CrosshairHotkey, d.CrosshairHotkey),
             TrackingHotkey = Hotkey(s.TrackingHotkey, d.TrackingHotkey),
             ProfileHotkey = Hotkey(s.ProfileHotkey, d.ProfileHotkey),
+            ShareWindowHotkey = Hotkey(s.ShareWindowHotkey, d.ShareWindowHotkey),
+            ShareScreenHotkey = Hotkey(s.ShareScreenHotkey, d.ShareScreenHotkey),
             WheelModifiers = Wheel(s.WheelModifiers, d.WheelModifiers),
         };
     }

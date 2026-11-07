@@ -20,5 +20,7 @@ public sealed record HotkeyBinding(string TextKey, Func<AppSettings, HotkeyGestu
         new("Act.Crosshair", s => s.CrosshairHotkey, (s, g) => s with { CrosshairHotkey = g }),
         new("Act.Tracking", s => s.TrackingHotkey, (s, g) => s with { TrackingHotkey = g }),
         new("Act.Profile", s => s.ProfileHotkey, (s, g) => s with { ProfileHotkey = g }),
+        new("Act.ShareWindow", s => s.ShareWindowHotkey, (s, g) => s with { ShareWindowHotkey = g }),
+        new("Act.ShareScreen", s => s.ShareScreenHotkey, (s, g) => s with { ShareScreenHotkey = g }),
     ];
 }

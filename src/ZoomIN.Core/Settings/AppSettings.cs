@@ -2,6 +2,7 @@ using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
+using ZoomIN.Core.Sharing;
 using ZoomIN.Core.Updates;
 using ZoomIN.Core.Zoom;
 
@@ -96,6 +97,14 @@ public sealed record AppSettings
 
     public Smoothing Smoothing { get; set; } = Smoothing.Text;
 
+    // --- Share filter (ADR-0018): only the user sees it, viewers get the original colours ---
+    public bool ShareFilterEnabled { get; set; } = ShareOptions.Default.Enabled;
+
+    /// <summary>Detect Teams sharing automatically; off leaves only the hotkeys.</summary>
+    public bool ShareAutoDetect { get; set; } = ShareOptions.Default.AutoDetect;
+
+    public ColorFilter ShareColorFilter { get; set; } = ShareOptions.Default.Filter;
+
     // --- Pointer (pointer page); colours are "#RRGGBB" ---
 
     /// <summary>The magnified pointer grows with the zoom up to this factor.</summary>
@@ -186,6 +195,10 @@ public sealed record AppSettings
     public HotkeyGesture TrackingHotkey { get; set; } = HotkeyGesture.ToggleTracking;
 
     public HotkeyGesture ProfileHotkey { get; set; } = HotkeyGesture.NextProfile;
+
+    public HotkeyGesture ShareWindowHotkey { get; set; } = HotkeyGesture.ShareWindow;
+
+    public HotkeyGesture ShareScreenHotkey { get; set; } = HotkeyGesture.ShareScreen;
 
     public HotkeyModifiers WheelModifiers { get; set; } = HotkeyModifiers.Control;
 }

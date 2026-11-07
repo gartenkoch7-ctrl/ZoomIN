@@ -1,5 +1,6 @@
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Settings;
+using ZoomIN.Core.Sharing;
 using ZoomIN.Rendering.RenderLoop;
 
 namespace ZoomIN.App.Settings;
@@ -14,6 +15,7 @@ public sealed class SettingsService : IDisposable
     private static readonly TimeSpan SaveDelay = TimeSpan.FromSeconds(1);
 
     private readonly RenderModels _models;
+    private readonly ShareModel _share;
     private readonly ISettingsStore _store;
     private readonly IProfileStore _profiles;
     private readonly Timer _saveTimer;
@@ -21,23 +23,28 @@ public sealed class SettingsService : IDisposable
     private AppSettings _shared;
     private bool _savedZoomOn;
 
-    public SettingsService(AppSettings initial, RenderModels models, ISettingsStore store, IProfileStore profiles)
+    public SettingsService(AppSettings initial, RenderModels models, ShareModel share, ISettingsStore store, IProfileStore profiles)
     {
         _shared = initial;
         _savedZoomOn = initial.ZoomOn;
         _models = models;
+        _share = share;
         _store = store;
         _profiles = profiles;
         _saveTimer = new Timer(_ => SaveNow());
         _models.Zoom.Changed += OnZoomChanged;
         _models.Effects.Changed += ScheduleSave;
         _models.Tracking.Changed += ScheduleSave;
+        _share.OptionsChanged += ScheduleSave;
     }
 
     /// <summary>Raised after shared settings changed (language, hotkeys, …), on the caller's thread.</summary>
     public event Action? Changed;
 
     public RenderModels Models => _models;
+
+    /// <summary>Share filter; kept apart from <see cref="RenderModels"/> until the overlay draws it.</summary>
+    public ShareModel Share => _share;
 
     /// <summary>Everything as it would be saved now: shared settings plus the models' state.</summary>
     public AppSettings Current
@@ -52,7 +59,8 @@ public sealed class SettingsService : IDisposable
 
             var settings = ZoomModelFactory.Apply(shared, _models.Zoom);
             settings = EffectsFactory.Apply(settings, _models.Effects);
-            return TrackingFactory.Apply(settings, _models.Tracking);
+            settings = TrackingFactory.Apply(settings, _models.Tracking);
+            return ShareFactory.Apply(settings, _share);
         }
     }
 
@@ -73,6 +81,7 @@ public sealed class SettingsService : IDisposable
         ZoomModelFactory.ApplyTo(_models.Zoom, profile);
         _models.Effects.Replace(EffectsFactory.Effects(profile));
         _models.Tracking.SetOptions(TrackingFactory.Options(profile));
+        _share.SetOptions(ShareFactory.Options(profile));
     }
 
     public void SaveNow()
@@ -88,6 +97,7 @@ public sealed class SettingsService : IDisposable
         _models.Zoom.Changed -= OnZoomChanged;
         _models.Effects.Changed -= ScheduleSave;
         _models.Tracking.Changed -= ScheduleSave;
+        _share.OptionsChanged -= ScheduleSave;
         _saveTimer.Dispose();
         SaveNow();
     }

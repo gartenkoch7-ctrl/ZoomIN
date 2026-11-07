@@ -10,6 +10,8 @@ internal static class TextsEnglishCards
         ["NavPointer"] = "Mouse pointer",
         ["Reset"] = "Reset",
         ["Act.Crosshair"] = "Crosshair on/off",
+        ["Act.ShareWindow"] = "Share filter: window under the mouse",
+        ["Act.ShareScreen"] = "Share filter: monitor under the mouse",
 
         ["Overview.Zoom"] = "Zoom",
         ["Overview.Zoom.Desc"] = "Ctrl+Alt+Z switches anywhere, Ctrl+mouse wheel zooms smoothly.",
@@ -44,6 +46,13 @@ internal static class TextsEnglishCards
         ["FilterBrightness"] = "Brightness",
         ["FilterBrightness.Desc"] = "0 % = unchanged",
         ["FilterReset"] = "Reset contrast and brightness",
+        ["ShareGroup"] = "While screen sharing",
+        ["ShareOn"] = "Own filter for the shared area",
+        ["ShareOn.Desc"] = "While you share in Teams, only you see the shared screen or window with this filter. Viewers see the original colours.",
+        ["ShareAuto"] = "Detect Teams sharing automatically",
+        ["ShareAuto.Desc"] = "If detection fails, Ctrl+Alt+W marks the window and Ctrl+Alt+Shift+W the monitor under the mouse.",
+        ["ShareKind"] = "Share filter",
+        ["ShareKind.Desc"] = "Applies inside the shared area instead of the normal filter.",
 
         ["PointerPreview.Desc"] = "Preview: left without zoom, right at 3× zoom.",
         ["PointerTestLocator"] = "Test locator",

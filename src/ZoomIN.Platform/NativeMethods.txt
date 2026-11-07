@@ -129,3 +129,18 @@ INPUT
 
 // Lifecycle/Win32UiAccessProbe
 GetTokenInformation
+
+// Sharing/MeetingWindowReader, Sharing/TeamsShareSource
+EnumWindows
+GetWindowThreadProcessId
+IsWindowVisible
+IsWindow
+IsIconic
+GetWindowLongPtr
+GetWindowRect
+WindowFromPoint
+GetAncestor
+GetClassName
+DwmGetWindowAttribute
+DWMWINDOWATTRIBUTE
+WINDOW_EX_STYLE

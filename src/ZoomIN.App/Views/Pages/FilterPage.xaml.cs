@@ -14,9 +14,12 @@ public sealed partial class FilterPage : Page
 
     public FilterViewModel? Vm { get; private set; }
 
+    public ShareFilterViewModel? ShareVm { get; private set; }
+
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         Vm = new FilterViewModel((PageContext)e.Parameter);
+        ShareVm = new ShareFilterViewModel((PageContext)e.Parameter);
         Bindings.Update();
     }
 

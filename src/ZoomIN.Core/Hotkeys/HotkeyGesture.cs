@@ -32,6 +32,11 @@ public readonly record struct HotkeyGesture(HotkeyModifiers Modifiers, int Virtu
 
     public static HotkeyGesture NextProfile { get; } = new(CtrlAlt, 0x50); // P
 
+    /// <summary>Share filter for the window under the mouse (ADR-0018), when detection fails.</summary>
+    public static HotkeyGesture ShareWindow { get; } = new(CtrlAlt, 0x57); // W
+
+    public static HotkeyGesture ShareScreen { get; } = new(CtrlAltShift, 0x57); // Shift+W
+
     /// <summary>Ends ZoomIN on the secure desktop only (ADR-0016); Shift+Z, because Q types @ with AltGr.</summary>
     public static HotkeyGesture ExitSecureDesktop { get; } = new(CtrlAltShift, 0x5A); // Shift+Z
 

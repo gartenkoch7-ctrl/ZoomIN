@@ -45,7 +45,8 @@ public sealed class HotkeyRulesTests
         [
             HotkeyGesture.ToggleZoom, HotkeyGesture.ZoomIn, HotkeyGesture.ZoomOut, HotkeyGesture.Fullscreen,
             HotkeyGesture.Lens, HotkeyGesture.Docked, HotkeyGesture.ToggleFilter, HotkeyGesture.NextFilter,
-            HotkeyGesture.Locate, HotkeyGesture.ToggleTracking, HotkeyGesture.NextProfile,
+            HotkeyGesture.Locate, HotkeyGesture.ToggleCrosshair, HotkeyGesture.ToggleTracking, HotkeyGesture.NextProfile,
+            HotkeyGesture.ShareWindow, HotkeyGesture.ShareScreen, HotkeyGesture.ExitSecureDesktop,
         ];
 
         Assert.All(defaults, g => Assert.True(HotkeyRules.HasModifier(g) && !HotkeyRules.BlocksAltGrCharacter(g), g.ToString()));

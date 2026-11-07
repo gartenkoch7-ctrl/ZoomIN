@@ -9,6 +9,7 @@ Thematisch aufgeteilt, damit Agents nur laden, was sie brauchen. Jede Datei blei
 | [architektur.md](architektur.md) | Projekte, Schichten, Ordnerstruktur, Datenfluss |
 | [rendering-pipeline.md](rendering-pipeline.md) | Capture → Shader → Swapchain, Frame-Ablauf |
 | [capture-ausschluss.md](capture-ausschluss.md) | Warum der Zoom in Teams & Co. unsichtbar ist |
+| [freigabe-filter.md](freigabe-filter.md) | Eigener Filter für den in Teams geteilten Bereich, Erkennung, Probe |
 | [eingabe-und-tracking.md](eingabe-und-tracking.md) | Maus, Fokus, Textcursor, Klick-Mapping, Hotkeys |
 | [performance.md](performance.md) | Budgets, Messung, Regeln für den Hot Path |
 | [supernova-analyse.md](supernova-analyse.md) | Black-Box-Beobachtungen zum Vorbild |
