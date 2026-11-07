@@ -10,12 +10,18 @@ namespace ZoomIN.Core.Filters;
 /// </summary>
 public sealed class EffectsModel
 {
+    private readonly TimeProvider _time;
     private EffectsSnapshot _snapshot;
     private long _locateRequestedAt;
     private volatile bool _typing;
 
-    public EffectsModel(DisplayEffects initial)
+    /// <param name="time">
+    /// Clock of the locator request (ADR-0025); the render threads compare it with <see cref="Stopwatch"/>,
+    /// so only <see cref="TimeProvider.System"/> or a test clock with the same tick rate fits.
+    /// </param>
+    public EffectsModel(DisplayEffects initial, TimeProvider? time = null)
     {
+        _time = time ?? TimeProvider.System;
         _snapshot = EffectsSnapshot.Create(Normalized(initial));
     }
 
@@ -72,7 +78,7 @@ public sealed class EffectsModel
     /// <summary>Shows the pointer locator for a moment (hotkey, shake, …).</summary>
     public void Locate()
     {
-        Volatile.Write(ref _locateRequestedAt, Stopwatch.GetTimestamp());
+        Volatile.Write(ref _locateRequestedAt, _time.GetTimestamp());
         Signaled?.Invoke();
     }
 

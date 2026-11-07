@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
+using ZoomIN.Core.Folders;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Updates;
@@ -20,9 +21,12 @@ public sealed class SetupLauncher
     private readonly IPackageDownloader _downloader;
     private readonly ISignatureVerifier _verifier;
     private readonly ILogger _log;
+    private readonly IAppFolders _folders;
 
-    public SetupLauncher(UpdateService updates, IPackageDownloader downloader, ISignatureVerifier verifier, ILogger<SetupLauncher> log)
+    public SetupLauncher(
+        UpdateService updates, IPackageDownloader downloader, ISignatureVerifier verifier, IAppFolders folders, ILogger<SetupLauncher> log)
     {
+        _folders = folders;
         _updates = updates;
         _downloader = downloader;
         _verifier = verifier;
@@ -54,7 +58,7 @@ public sealed class SetupLauncher
             return SetupLaunch.NoRelease;
         }
 
-        var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ZoomIN", "setup");
+        var folder = _folders.Setup();
         var download = await _downloader.DownloadSetupAsync(release, folder, progress, cancellationToken).ConfigureAwait(false);
         if (download.Path is null)
         {

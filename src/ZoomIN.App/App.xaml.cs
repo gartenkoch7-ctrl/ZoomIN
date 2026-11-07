@@ -37,7 +37,7 @@ public partial class App : Application
         var parent = Program.StartOperation?.Context ?? default;
         using (Telemetry.Source.StartActivity("zoomin.app.start.services", ActivityKind.Internal, parent))
         {
-            _services = ServiceRegistration.Build(telemetry);
+            _services = ServiceRegistration.Build(telemetry, Program.Folders);
             _log = _services.GetRequiredService<ILogger<App>>();
 
             // The user's diagnostics level is known only once the settings are loaded (ADR-0019);

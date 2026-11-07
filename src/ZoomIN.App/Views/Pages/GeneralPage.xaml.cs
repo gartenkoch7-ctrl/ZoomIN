@@ -21,8 +21,8 @@ public sealed partial class GeneralPage : Page
     {
         var context = (PageContext)e.Parameter;
         Vm = new GeneralViewModel(context);
-        Diag = new DiagnosticsViewModel(context.Settings);
-        Snapshot = new DebugSnapshotViewModel(context.Settings.Models.Snapshots, context.Settings.Models.SmartInvert);
+        Diag = new DiagnosticsViewModel(context.Settings, context.Folders);
+        Snapshot = new DebugSnapshotViewModel(context.Settings.Models.Snapshots, context.Settings.Models.SmartInvert, context.Folders);
         Bindings.Update();
     }
 }

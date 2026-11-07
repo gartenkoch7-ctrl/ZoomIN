@@ -49,7 +49,7 @@ internal static class SecureDesktopHost
 
         using var exit = new ManualResetEventSlim();
         var start = telemetry.StartOperation("zoomin.secure.start");
-        using (var services = ServiceRegistration.BuildSecureDesktop(telemetry))
+        using (var services = ServiceRegistration.BuildSecureDesktop(telemetry, Program.Folders))
         {
             // The sanitizer has already cleared any export address: SYSTEM never sends (ADR-0019).
             telemetry.Apply(services.GetRequiredService<AppSettings>().Telemetry());

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Reflection;
 using ZoomIN.App.Settings;
 using Microsoft.Extensions.Logging;
+using ZoomIN.Core.Folders;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Updates;
@@ -22,6 +23,7 @@ public sealed class UpdateService
     private readonly ISettingsBackup _backup;
     private readonly SettingsService _settings;
     private readonly ILogger _log;
+    private readonly IAppFolders _folders;
     private readonly InstallLayout? _layout;
     private AppVersion? _notified;
 
@@ -29,8 +31,10 @@ public sealed class UpdateService
     private ActivityContext _installed;
 
     public UpdateService(
-        IReleaseFeed feed, IPackageDownloader downloader, ISettingsBackup backup, SettingsService settings, ILogger<UpdateService> log)
+        IReleaseFeed feed, IPackageDownloader downloader, ISettingsBackup backup, SettingsService settings, IAppFolders folders,
+        ILogger<UpdateService> log)
     {
+        _folders = folders;
         _feed = feed;
         _downloader = downloader;
         _backup = backup;
@@ -100,7 +104,7 @@ public sealed class UpdateService
             return UpdateResult.NotInstalled;
         }
 
-        var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ZoomIN", "updates");
+        var folder = _folders.Updates();
         var download = await _downloader.DownloadAsync(release, folder, progress, cancellationToken).ConfigureAwait(false);
         if (download.Path is null)
         {

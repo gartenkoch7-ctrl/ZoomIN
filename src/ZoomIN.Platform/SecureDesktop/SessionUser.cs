@@ -5,6 +5,7 @@ using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Shell;
 using Microsoft.Extensions.Logging;
+using ZoomIN.Core.Folders;
 using ZoomIN.Core.SecureDesktop;
 
 namespace ZoomIN.Platform.SecureDesktop;
@@ -36,12 +37,14 @@ public sealed unsafe class SessionUser : IDisposable
     public static SessionUser ForFolder(string? zoomFolder) => new(zoomFolder, null);
 
     /// <param name="log">Only error codes are logged, never paths or names (secure log, ADR-0016).</param>
-    public static SessionUser Open(ILogger log)
+    /// <param name="folders">Own folders; used as they are when not running as SYSTEM.</param>
+    public static SessionUser Open(ILogger log, IAppFolders folders)
     {
         ArgumentNullException.ThrowIfNull(log);
+        ArgumentNullException.ThrowIfNull(folders);
         if (!SessionUserFolders.IsSystem)
         {
-            return ForFolder(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ZoomIN"));
+            return ForFolder(folders.Roaming);
         }
 
         if (!PInvoke.ProcessIdToSessionId((uint)Environment.ProcessId, out var session))

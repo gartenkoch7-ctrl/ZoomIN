@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
 using ZoomIN.App.Localization;
 using ZoomIN.App.Settings;
+using ZoomIN.Core.Folders;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Settings;
 using ZoomIN.Platform.Diagnostics;
@@ -22,10 +23,12 @@ public sealed partial class DiagnosticsViewModel : ObservableObject
 
     private readonly SettingsService _settings;
     private readonly bool _ready;
+    private readonly IAppFolders _folders;
 
-    public DiagnosticsViewModel(SettingsService settings)
+    public DiagnosticsViewModel(SettingsService settings, IAppFolders folders)
     {
         _settings = settings;
+        _folders = folders;
         var options = settings.Current.Telemetry().Effective(DateTimeOffset.Now);
         LevelIndex = (int)options.Level;
         Logs = options.Logs;
@@ -108,7 +111,7 @@ public sealed partial class DiagnosticsViewModel : ObservableObject
         var options = _settings.Current.Telemetry();
         try
         {
-            var path = await Task.Run(() => DiagnosticsPackage.Create(telemetry, options, DiagnosticsPackage.DefaultFolder));
+            var path = await Task.Run(() => DiagnosticsPackage.Create(telemetry, options, _folders.Diagnostics()));
             PackageStatus = Text.Format("Diag.Created", Path.GetFileName(path));
             FileReveal.Reveal(path);
         }

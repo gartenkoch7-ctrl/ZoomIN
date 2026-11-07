@@ -1,3 +1,4 @@
+using ZoomIN.Core.Folders;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Updates;
@@ -13,8 +14,8 @@ public sealed class FolderSettingsBackup : ISettingsBackup
     private readonly string _root;
     private readonly ILogger _log;
 
-    public FolderSettingsBackup(ILogger<FolderSettingsBackup> log)
-        : this(log, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ZoomIN"))
+    public FolderSettingsBackup(ILogger<FolderSettingsBackup> log, IAppFolders folders)
+        : this(log, folders?.Roaming ?? throw new ArgumentNullException(nameof(folders)))
     {
     }
 

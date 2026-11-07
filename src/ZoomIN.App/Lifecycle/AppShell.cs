@@ -5,6 +5,8 @@ using ZoomIN.App.Updates;
 using ZoomIN.App.Views;
 using ZoomIN.App.Zoom;
 using Microsoft.Extensions.Logging;
+using ZoomIN.Core.Folders;
+using ZoomIN.Core.Localization;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.Modes;
@@ -26,6 +28,7 @@ public sealed class AppShell
     private readonly UpdateService _updates;
     private readonly IUiAccessProbe _uiAccess;
     private readonly ILogger _log;
+    private readonly ILocalizer _texts;
     private readonly PageContext _pages;
     private readonly DispatcherQueue _dispatcher;
     private SettingsWindow? _window;
@@ -33,8 +36,9 @@ public sealed class AppShell
     public AppShell(
         ZoomController controller, SettingsService settings, ProfileService profiles, ITrayIcon tray,
         UpdateService updates, IAutostart autostart, ICursorShapeSource cursorShapes, IUiAccessProbe uiAccess,
-        SetupLauncher setup, ILogger<AppShell> log)
+        SetupLauncher setup, IAppFolders folders, ILocalizer texts, ILogger<AppShell> log)
     {
+        _texts = texts;
         _controller = controller;
         _settings = settings;
         _profiles = profiles;
@@ -44,7 +48,7 @@ public sealed class AppShell
         _log = log;
         _dispatcher = DispatcherQueue.GetForCurrentThread();
         _pages = new PageContext(
-            settings, profiles, controller, autostart, cursorShapes, updates, uiAccess, setup,
+            settings, profiles, controller, autostart, cursorShapes, updates, uiAccess, setup, folders,
             () => _window?.Handle ?? 0, () => _window?.ShowOverview(), ExitForUpdate);
     }
 
@@ -53,13 +57,13 @@ public sealed class AppShell
 
     public void Start()
     {
-        Text.SetLanguage(_settings.Current.Language);
+        _texts.SetLanguage(_settings.Current.Language);
         _controller.Initialize();
 
         _tray.Command += command => _dispatcher.TryEnqueue(() => OnTrayCommand(command));
         _controller.Model.Changed += UpdateTray;
         _profiles.Changed += UpdateTray;
-        Text.LanguageChanged += UpdateTray;
+        _texts.LanguageChanged += UpdateTray;
         UpdateTray();
 
         // Short status after the window filter shortcut (ADR-0020); the tray works from any thread.

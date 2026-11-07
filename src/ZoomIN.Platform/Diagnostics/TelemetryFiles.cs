@@ -33,9 +33,6 @@ internal sealed class TelemetryFiles
         _time = time;
     }
 
-    public static string DefaultFolder { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ZoomIN", "logs");
-
     public string Folder { get; }
 
     public int RetentionDays

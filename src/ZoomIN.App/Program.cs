@@ -7,9 +7,11 @@ using ZoomIN.App.Lifecycle;
 using ZoomIN.App.SecureDesktop;
 using ZoomIN.App.Updates;
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Folders;
 using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Diagnostics;
+using ZoomIN.Platform.Folders;
 using ZoomIN.Platform.SecureDesktop;
 using ZoomIN.Watchdog;
 using ZoomIN.Watchdog.Crashes;
@@ -25,6 +27,9 @@ public static class Program
 {
     internal static SingleInstance? Instance { get; private set; }
 
+    /// <summary>The ZoomIN folders of this account, for every role and the DI container (ADR-0025).</summary>
+    internal static IAppFolders Folders { get; } = new WindowsAppFolders();
+
     /// <summary>Telemetry of the tray app; set before the WinUI app starts.</summary>
     internal static TelemetryHost? Telemetry { get; private set; }
 
@@ -38,7 +43,7 @@ public static class Program
         if (WatchdogArguments.TryParse(args, out var processId, out var secure))
         {
             return RunRole(TelemetryRole.Watchdog, traceParent, log =>
-                WatchdogRunner.Run(processId, Environment.ProcessPath!, log, cleanup: [new AppBarCleanup(), new SystemCursorCleanup()], secure));
+                WatchdogRunner.Run(processId, Environment.ProcessPath!, log, cleanup: [new AppBarCleanup(Folders), new SystemCursorCleanup()], secure));
         }
 
         // As SYSTEM, ZoomIN is always the secure-desktop instance, whatever the arguments: Windows
@@ -107,7 +112,7 @@ public static class Program
 
     private static TelemetryHost Start(TelemetryRole role, string? traceParent)
     {
-        var telemetry = TelemetryHost.Start(role, traceParent);
+        var telemetry = TelemetryHost.Start(role, Folders, traceParent);
         Core.Diagnostics.Telemetry.OnFlush(telemetry.Flush);
         LogBackgroundFailures(telemetry);
         return telemetry;

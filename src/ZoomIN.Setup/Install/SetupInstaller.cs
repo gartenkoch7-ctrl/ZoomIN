@@ -4,6 +4,7 @@ using ZoomIN.Core.Diagnostics;
 using ZoomIN.Platform.Diagnostics;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Lifecycle;
+using ZoomIN.Platform.Folders;
 using ZoomIN.Platform.Settings;
 using ZoomIN.Platform.Shell;
 using ZoomIN.Platform.Updates;
@@ -21,11 +22,11 @@ internal sealed class SetupInstaller
     private readonly ILogger _log;
     private readonly HttpPackageDownloader _downloader;
 
-    public SetupInstaller(TelemetryHost telemetry)
+    public SetupInstaller(TelemetryHost telemetry, HttpClient http)
     {
         _telemetry = telemetry;
         _log = telemetry.Logger<SetupInstaller>();
-        _downloader = new HttpPackageDownloader(telemetry.Logger<HttpPackageDownloader>());
+        _downloader = new HttpPackageDownloader(telemetry.Logger<HttpPackageDownloader>(), http);
     }
 
     /// <param name="steps">Ticked step by step; the caller marks the running step failed on an error result.</param>
@@ -97,7 +98,8 @@ internal sealed class SetupInstaller
             ShellShortcut.Remove(ShellShortcut.UserDesktop);
         }
 
-        var store = new JsonSettingsStore(_telemetry.Logger<JsonSettingsStore>());
+        // The setup runs as the user who installs: that user's %AppData%ZoomIN.
+        var store = new JsonSettingsStore(_telemetry.Logger<JsonSettingsStore>(), new WindowsAppFolders());
         store.Save(choices.ApplyTo(store.Load()));
     }
 }

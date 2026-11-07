@@ -187,12 +187,11 @@
 - [~] Smart-Invert-Ressourcen erst bei Bedarf anlegen: **entfällt**. Ohne Übersetzung sind es
       nur noch 3 Shader-Objekte und 3 kleine Texturen (1/16 Auflösung). Der Gewinn lag fast
       ganz in `PhotoFill`.
-- [ ] `Win32WindowFilterSource.Start`: Die 2 s sind nur ein Timeout. Gewartet wird auf
-      Thread-Start und Hooks. Ob sich mehr lohnt, zeigen erst die Startphasen aus einem echten
-      Start (`zoomin.app.start.shell`).
-- [ ] Watchdog-Start und `EaseOfAccessNotifier` nach dem ersten Frame: ebenso erst nach den
-      echten Startphasen entscheiden. Das `Process`-Objekt der Startzeitmessung wird seit
-      Schritt 1 freigegeben.
+- [~] `Win32WindowFilterSource.Start` und Watchdog/`EaseOfAccessNotifier` verschieben:
+      **entfällt nach Messung** (dev.120.m14, 2026-11-07). Die ganze Phase `zoomin.app.start.shell`
+      dauert 115 ms, `services` 189 ms (davon Einstellungen laden 92 ms). Die Shader waren mit
+      617 ms von 697 ms Pipeline-Start der eigentliche Brocken.
+- [ ] Nachher-Wert aus einem echten Start von dev.121.m14 (Nutzer startet über das Startmenü).
 - **Telemetrie:** Die Kind-Abläufe aus Schritt 1 und `zoomin.render.ready_time` zeigen den
   Gewinn. Es gibt keine neuen Ereignisse.
 - **Tests:**
@@ -242,26 +241,42 @@
 ### Teil B – Interfaces und DI (ADR-0025)
 
 #### 6 · Grundlagen und Regel
-- [ ] Architekturtest nach ADR-0025: Statische Klassen dürfen `File`, `Directory`, `Registry`,
-      `Process`, `Environment.GetFolderPath`/`GetEnvironmentVariable` und `HttpClient` nicht nutzen.
-  - Zuerst mit einer Ausnahmeliste, die alle heutigen Fälle enthält. Sie schrumpft mit jedem
-    Schritt und ist am Ende von M14 leer bis auf begründete Fälle.
-- [ ] Satz in AGENTS.md Abschnitt 2 (neuer Unterabschnitt „Statische Klassen“)
-- [ ] `IAppFolders` (Interface in Core, Implementierung in Platform) ersetzt die etwa 16
-      Pfad-Stellen. Es kennt beide Orte:
-  - Lokal (`%LocalAppData%\ZoomIN`): Logs, Wiederherstellung, Abstürze, Diagnose
-  - Roaming (`%AppData%\ZoomIN`): Einstellungen, Profile
-  - Auf sicheren Bildschirmen gelten die Ordner des Sitzungsnutzers.
-  - `RecoveryFiles` in Core bekommt die Pfade von außen.
-- [ ] `TimeProvider` statt `Stopwatch.GetTimestamp()`/`DateTime.UtcNow` in Core und in den
-      Diensten. Render-Loop: einmal im Konstruktor, Benchmark `0 B`.
-- [ ] Ein `HttpClient` aus DI (User-Agent zentral; Timeout je Aufruf) für `GitHubReleaseFeed` und
-      `HttpPackageDownloader`
-- [ ] `ILocalizer` (Sprache, `Get`, `Format`, Ereignis `LanguageChanged`) gemeinsam für App und
-      Setup. `Text` und `SetupText` werden zur Fassade über den Dienst.
-- **Telemetrie:** keine neuen Ereignisse. Die bestehenden Logs ziehen mit um (gleiche EventIds).
-- **Tests:** Architekturtest; Tests für `ILocalizer` (Sprachwechsel, fehlender Schlüssel) und
-  `IAppFolders` (sichere Bildschirme: Profil des Sitzungsnutzers).
+- [x] Architekturtest nach ADR-0025 (`StaticClassTests`). Statische Klassen dürfen `File`,
+      `Directory`, `Registry`, `Process`, `Environment.GetFolderPath`/`GetEnvironmentVariable`
+      und `HttpClient` nicht nutzen. Statische `HttpClient`-Felder sind ebenfalls verboten.
+  - Ausgenommen sind `Interop/`, `Composition/` und `Program.cs`.
+  - Die Ausnahmeliste nennt je Fall Grund und Schritt (heute 15 Fälle).
+    `Exceptions_AreNotStale` schlägt fehl, sobald ein Eintrag nicht mehr nötig ist; die Liste
+    kann also nur schrumpfen.
+- [x] Satz in AGENTS.md Abschnitt 2.6 (beim Plan angelegt)
+- [x] `IAppFolders` (Core) mit `Local` und `Roaming`, die Dateinamen in `AppFiles` (Core, reine
+      Pfadbildung) und die Implementierung `WindowsAppFolders` (Platform).
+  - `Program` erzeugt sie einmal für alle Rollen; DI gibt sie weiter.
+  - Umgestellt: `RecoveryFiles` (entfällt, Core liest keine Umgebung mehr), AppBar-Datei
+    (Reservierung und Watchdog-Aufräumen), Einstellungen, Profile, Sicherungen, Telemetrie-Logs,
+    Diagnosepakete, Debug-Schnappschüsse, Update- und Setup-Downloads, Info-Seite, Setup-Programm.
+  - Sichere Bildschirme: `Local` liegt im eigenen SYSTEM-Profil (wie bisher `MachineFolder`), die
+    Einstellungen des Sitzungsnutzers liest weiter `SessionUser` (Roaming des Nutzers, nur ohne
+    SYSTEM aus `IAppFolders.Roaming`).
+  - Noch nicht umgestellt, weil sie zu den Abläufen gehören: `CrashHistory.Default` und
+    `SecureDesktopGiveUp` (Watchdog), die Löschpfade in `UninstallFlow`, das SYSTEM-Profil in
+    `SecureDesktopInstall` und `Program Files` in `ElevatedInstall`. Das kommt in Schritt 7 und 8.
+- [x] `TimeProvider` statt `Stopwatch.GetTimestamp()` in Core (`EffectsModel`, einzige Stelle).
+  - Der Render-Loop (Rendering) misst weiter mit `Stopwatch`. Er ist kein Core; ein
+    `TimeProvider` dort brächte nur virtuelle Aufrufe pro Frame und keine testbare Logik.
+- [x] Ein `HttpClient` (`UpdateHttpClient`: User-Agent, kein globaler Timeout) aus DI für
+      `GitHubReleaseFeed` (15 s je Aufruf) und `HttpPackageDownloader`. Im Setup gehört er
+      `Program`.
+- [x] `ILocalizer` mit Implementierung `Localizer` (Core, reine Wörterbuch-Suche) für App und Setup.
+  - `Text` und `SetupText` sind Fassaden für `x:Bind`.
+  - Die App-Instanz kommt aus DI. `AppShell` nutzt sie direkt, `Text.Use` setzt sie in der
+    Composition Root.
+- **Telemetrie:** keine neuen Ereignisse; Logs und Abläufe unverändert.
+- **Tests:**
+  - `StaticClassTests`
+  - `LocalizerTests`: Sprachwechsel, Systemsprache, fehlender Schlüssel, Ereignis
+  - `AppFilesTests`: Alle Dateien liegen dort, wo sie immer lagen.
+  - `EffectsModelClockTests`
 
 #### 7 · Plattform-Dienste
 - [ ] Diese statischen Klassen werden zu Interfaces mit Implementierung, jeweils in der

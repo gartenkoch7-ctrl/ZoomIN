@@ -2,7 +2,10 @@ using System.Security.Principal;
 
 namespace ZoomIN.Platform.SecureDesktop;
 
-/// <summary>Where the secure-desktop instance keeps its own files (ADR-0016).</summary>
+/// <summary>
+/// Whether this process runs as SYSTEM: then it is the secure-desktop instance (ADR-0016). Its own
+/// files lie in SYSTEM's profile through <see cref="Core.Folders.IAppFolders"/>.
+/// </summary>
 public static class SessionUserFolders
 {
     public static bool IsSystem
@@ -13,12 +16,4 @@ public static class SessionUserFolders
             return identity.User?.IsWellKnown(WellKnownSidType.LocalSystemSid) == true;
         }
     }
-
-    /// <summary>
-    /// Settings copy and logs of the secure instance. As SYSTEM this is SYSTEM's own profile, which
-    /// only SYSTEM and administrators can write. Not %ProgramData%: users may create folders there
-    /// and could plant a link that redirects SYSTEM's writes.
-    /// </summary>
-    public static string MachineFolder =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ZoomIN");
 }

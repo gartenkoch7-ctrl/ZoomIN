@@ -18,9 +18,6 @@ public static class DiagnosticsPackage
 
     private const string Prefix = "ZoomIN-Diagnose-";
 
-    public static string DefaultFolder { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ZoomIN", "diagnostics");
-
     /// <summary>Writes the package into <paramref name="folder"/> and returns its path.</summary>
     public static string Create(TelemetryHost telemetry, TelemetryOptions options, string folder)
     {

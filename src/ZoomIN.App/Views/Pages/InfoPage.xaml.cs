@@ -5,6 +5,7 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
+using ZoomIN.Core.Folders;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.App.Localization;
 
@@ -57,7 +58,12 @@ public sealed partial class InfoPage : Page
 
     private void OnOpenLogs(object sender, RoutedEventArgs e)
     {
-        var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ZoomIN", "logs");
+        if (_context is null)
+        {
+            return;
+        }
+
+        var folder = _context.Folders.Logs();
         Directory.CreateDirectory(folder);
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{folder}\"") { UseShellExecute = false })?.Dispose();
     }

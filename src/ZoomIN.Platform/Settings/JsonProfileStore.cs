@@ -1,3 +1,4 @@
+using ZoomIN.Core.Folders;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Settings;
@@ -10,8 +11,8 @@ public sealed class JsonProfileStore : IProfileStore
     private readonly ILogger _log;
     private readonly string _directory;
 
-    public JsonProfileStore(ILogger<JsonProfileStore> log)
-        : this(log, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ZoomIN", "profiles"))
+    public JsonProfileStore(ILogger<JsonProfileStore> log, IAppFolders folders)
+        : this(log, folders.Profiles())
     {
     }
 

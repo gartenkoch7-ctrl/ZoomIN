@@ -3,6 +3,8 @@ using Microsoft.UI.Xaml;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Diagnostics;
+using ZoomIN.Platform.Folders;
+using ZoomIN.Platform.Updates;
 using ZoomIN.Setup.Install;
 
 namespace ZoomIN.Setup;
@@ -17,11 +19,14 @@ public static class Program
     /// <summary>Telemetry of the wizard; set before the WinUI app starts.</summary>
     internal static TelemetryHost? Telemetry { get; private set; }
 
+    /// <summary>The one HTTP client of the setup: release list and download (ADR-0025).</summary>
+    internal static HttpClient Http { get; } = new UpdateHttpClient();
+
     [STAThread]
     public static int Main(string[] args)
     {
         args = TraceParentArgument.Extract(args, out var traceParent);
-        using var telemetry = TelemetryHost.Start(TelemetryRole.Setup, traceParent);
+        using var telemetry = TelemetryHost.Start(TelemetryRole.Setup, new WindowsAppFolders(), traceParent);
         Core.Diagnostics.Telemetry.OnFlush(telemetry.Flush);
         if (UpdateCommand.TryParse(args, out var command))
         {
