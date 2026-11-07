@@ -13,20 +13,10 @@ public sealed partial class StaticClassTests
     // StaleExceptions fails as soon as an entry no longer offends.
     private static readonly Dictionary<string, string> s_exceptions = new(StringComparer.Ordinal)
     {
-        ["ZoomIN.App/Lifecycle/WatchdogStarter.cs"] = "step 7: process start",
         ["ZoomIN.App/SecureDesktop/SecureDesktopHost.cs"] = "step 8: flow",
         ["ZoomIN.App/SecureDesktop/SecureDesktopSetting.cs"] = "step 8: flow",
         ["ZoomIN.App/Updates/RestartArguments.cs"] = "step 8: waits for a process",
-        ["ZoomIN.App/Updates/UninstallFlow.cs"] = "step 8: flow",
-        ["ZoomIN.Platform/Diagnostics/DiagnosticsPackage.cs"] = "step 7: files",
-        ["ZoomIN.Platform/SecureDesktop/SecureDesktopInstall.cs"] = "step 7: registry",
-        ["ZoomIN.Platform/Shell/ShellShortcut.cs"] = "step 7: files",
         ["ZoomIN.Platform/Shell/Win32TrayIcon.cs"] = "step 10: TrayIconImage reads the icon file",
-        ["ZoomIN.Platform/Updates/ElevatedStep.cs"] = "step 7: process start",
-        ["ZoomIN.Platform/Updates/InstallRegistration.cs"] = "step 7: registry",
-        ["ZoomIN.Rendering/Snapshots/PngWriter.cs"] = "step 7: writes the snapshot file",
-        ["ZoomIN.Setup/Install/ElevatedInstall.cs"] = "step 8: flow",
-        ["ZoomIN.Watchdog/Crashes/SecureDesktopGiveUp.cs"] = "step 7: files",
         ["ZoomIN.Watchdog/WatchdogRunner.cs"] = "step 8: flow",
     };
 

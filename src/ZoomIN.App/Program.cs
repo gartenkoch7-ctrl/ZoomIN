@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.Globalization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using ZoomIN.App.Composition;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.App.SecureDesktop;
 using ZoomIN.App.Updates;
@@ -43,7 +45,7 @@ public static class Program
         if (WatchdogArguments.TryParse(args, out var processId, out var secure))
         {
             return RunRole(TelemetryRole.Watchdog, traceParent, log =>
-                WatchdogRunner.Run(processId, Environment.ProcessPath!, log, cleanup: [new AppBarCleanup(Folders), new SystemCursorCleanup()], secure));
+                WatchdogRunner.Run(processId, Environment.ProcessPath!, Folders, log, cleanup: [new AppBarCleanup(Folders), new SystemCursorCleanup()], secure));
         }
 
         // As SYSTEM, ZoomIN is always the secure-desktop instance, whatever the arguments: Windows
@@ -62,17 +64,17 @@ public static class Program
 
         if (UpdateCommand.TryParse(args, out var update))
         {
-            return RunRole(TelemetryRole.Update, traceParent, log => UpdateRunner.Run(update, log));
+            return RunFlow(TelemetryRole.Update, traceParent, services => services.GetRequiredService<UpdateRunner>().Run(update));
         }
 
         if (args is [UninstallEntry.UninstallSwitch])
         {
-            return RunRole(TelemetryRole.Uninstall, traceParent, UninstallFlow.Run);
+            return RunFlow(TelemetryRole.Uninstall, traceParent, services => services.GetRequiredService<UninstallFlow>().Run());
         }
 
         if (args is [UninstallEntry.RemoveSwitch, var pid] && int.TryParse(pid, NumberStyles.None, CultureInfo.InvariantCulture, out var asker))
         {
-            return RunRole(TelemetryRole.Uninstall, traceParent, log => UninstallFlow.RemoveElevated(asker, log));
+            return RunFlow(TelemetryRole.Uninstall, traceParent, services => services.GetRequiredService<UninstallFlow>().RemoveElevated(asker));
         }
 
         RestartArguments.WaitIfRequested(args);
@@ -96,12 +98,23 @@ public static class Program
         return 0;
     }
 
+    /// <summary>A short-lived role with its own small container (installation services, its flow).</summary>
+    private static int RunFlow(TelemetryRole role, string? traceParent, Func<IServiceProvider, int> run) =>
+        RunRole(role, traceParent, (telemetry, _) =>
+        {
+            using var services = ServiceRegistration.BuildRole(telemetry, Folders);
+            return run(services);
+        });
+
+    private static int RunRole(TelemetryRole role, string? traceParent, Func<ILogger, int> run) =>
+        RunRole(role, traceParent, (_, log) => run(log));
+
     /// <summary>A short-lived role: one operation from start to exit; a non-zero exit code marks it failed.</summary>
-    private static int RunRole(TelemetryRole role, string? traceParent, Func<ILogger, int> run)
+    private static int RunRole(TelemetryRole role, string? traceParent, Func<TelemetryHost, ILogger, int> run)
     {
         using var telemetry = Start(role, traceParent);
         using var operation = telemetry.StartOperation($"zoomin.{role.ToString().ToLowerInvariant()}.run");
-        var exitCode = run(telemetry.Loggers.CreateLogger("ZoomIN." + role));
+        var exitCode = run(telemetry, telemetry.Loggers.CreateLogger("ZoomIN." + role));
         if (exitCode != 0)
         {
             operation?.SetStatus(ActivityStatusCode.Error, string.Create(CultureInfo.InvariantCulture, $"exit code {exitCode}"));

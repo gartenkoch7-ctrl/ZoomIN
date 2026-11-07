@@ -24,6 +24,7 @@ public sealed class UpdateService
     private readonly SettingsService _settings;
     private readonly ILogger _log;
     private readonly IAppFolders _folders;
+    private readonly IElevatedStep _elevated;
     private readonly InstallLayout? _layout;
     private AppVersion? _notified;
 
@@ -32,9 +33,10 @@ public sealed class UpdateService
 
     public UpdateService(
         IReleaseFeed feed, IPackageDownloader downloader, ISettingsBackup backup, SettingsService settings, IAppFolders folders,
-        ILogger<UpdateService> log)
+        IElevatedStep elevated, ILogger<UpdateService> log)
     {
         _folders = folders;
+        _elevated = elevated;
         _feed = feed;
         _downloader = downloader;
         _backup = backup;
@@ -121,9 +123,9 @@ public sealed class UpdateService
                 _backup.Backup(CurrentVersion);
             }
 
-            var hash = await Task.Run(() => ElevatedStep.HashOf(download.Path), cancellationToken).ConfigureAwait(false);
+            var hash = await Task.Run(() => _elevated.HashOf(download.Path), cancellationToken).ConfigureAwait(false);
             var command = new UpdateCommand(download.Path, hash, release.Version);
-            return await Task.Run(() => ElevatedStep.Run(_layout.CurrentExecutable, command, _log), cancellationToken).ConfigureAwait(false);
+            return await Task.Run(() => _elevated.Run(_layout.CurrentExecutable, command), cancellationToken).ConfigureAwait(false);
         }
         finally
         {

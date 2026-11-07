@@ -1,19 +1,17 @@
 using Microsoft.Win32;
+using ZoomIN.Core.Shell;
 using ZoomIN.Core.Updates;
-using ZoomIN.Platform.Shell;
 
 namespace ZoomIN.Platform.Updates;
 
-/// <summary>
-/// Machine-wide traces of an installation (ADR-0014): the entry in Windows "Apps" and the Start
-/// menu shortcut for all users. Needs administrator rights, so it runs in the elevated step.
-/// </summary>
-public static class InstallRegistration
+/// <summary>The uninstall entry in HKLM and the Start menu shortcut for all users (ADR-0014).</summary>
+public sealed class WindowsInstallRegistration(IShortcuts shortcuts) : IInstallRegistration
 {
     private const string UninstallRoot = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\";
 
-    public static void Register(InstallLayout layout, AppVersion version)
+    public void Register(InstallLayout layout, AppVersion version)
     {
+        ArgumentNullException.ThrowIfNull(layout);
         var entry = UninstallEntry.For(layout, version);
         using var key = Registry.LocalMachine.CreateSubKey(UninstallRoot + UninstallEntry.KeyName);
         key.SetValue("DisplayName", UninstallEntry.DisplayName);
@@ -28,18 +26,16 @@ public static class InstallRegistration
         key.SetValue("NoModify", 1, RegistryValueKind.DWord);
         key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
 
-        ShellShortcut.Create(ShellShortcut.CommonStartMenu, layout.CurrentExecutable);
+        shortcuts.Create(shortcuts.CommonStartMenu, layout.CurrentExecutable);
     }
 
-    public static void Unregister()
+    public void Unregister()
     {
         Registry.LocalMachine.DeleteSubKeyTree(UninstallRoot + UninstallEntry.KeyName, throwOnMissingSubKey: false);
-        ShellShortcut.Remove(ShellShortcut.CommonStartMenu);
+        shortcuts.Remove(shortcuts.CommonStartMenu);
     }
 
-    /// <summary>Silently removes the old per-user Inno Setup installation (M8), if there is one.</summary>
-    /// <returns>True if one was found and its uninstaller ran.</returns>
-    public static bool RemoveLegacyInstall(TimeSpan timeout)
+    public bool RemoveLegacyInstall(TimeSpan timeout)
     {
         using var key = Registry.CurrentUser.OpenSubKey(UninstallRoot + LegacyInstall.InnoUninstallKey);
         var uninstaller = LegacyInstall.UninstallerPath(key?.GetValue("UninstallString") as string);

@@ -279,34 +279,50 @@
   - `EffectsModelClockTests`
 
 #### 7 · Plattform-Dienste
-- [ ] Diese statischen Klassen werden zu Interfaces mit Implementierung, jeweils in der
-      Composition Root registriert:
-  - `InstallRegistration`
-  - `ShellShortcut`
-  - `SecureDesktopInstall`
-  - `ElevatedStep`
-  - `MessageDialog`
-  - `DiagnosticsPackage`
-  - `SessionUserFolders`
-  - `WatchdogStarter`
-  - `SecureDesktopGiveUp`
-- [ ] Gemeinsamer `IAtomicFileWriter` (.tmp schreiben, dann `File.Move`) für `JsonSettingsStore`,
-      `JsonProfileStore` und `SecureSettingsStore`
-- **Telemetrie:** Die Abläufe `zoomin.update.*`, `zoomin.securedesktop.*` und
-  `zoomin.diagnostics.*` bleiben gleich. Im Katalog wird der Ort aktualisiert.
-- **Tests:** Platform-Tests der Implementierungen, wo es ohne Admin geht (temporäre Ordner,
-  HKCU-Testschlüssel).
+- [x] Interfaces in Core, Implementierungen in Platform, registriert in der Composition Root
+      (`AddInstall`):
+  - `IInstallRegistration` → `WindowsInstallRegistration` (bisher `InstallRegistration`)
+  - `IShortcuts` → `WindowsShortcuts` (bisher `ShellShortcut`)
+  - `ISecureDesktopInstall` → `SystemSecureDesktopInstall` (bisher `SecureDesktopInstall`)
+  - `IElevatedStep` → `ShellElevatedStep` (bisher `ElevatedStep`, auch `HashOf`)
+  - `IMessageDialog` mit `DialogAnswer` → `Win32MessageDialog` (bisher `MessageDialog`)
+  - `IDiagnosticsPackage` → `DiagnosticsPackage` (Instanz mit `TelemetryHost` und `IAppFolders`)
+  - `IWatchdogLauncher` (App) → `ShellWatchdogLauncher` (bisher `WatchdogStarter`). Die
+    Implementierung bleibt in App, weil sie die Watchdog-Argumente kennt.
+- [x] Klassen, deren einzige Nebenwirkung Dateien in den ZoomIN-Ordnern sind, werden
+      Instanzklassen mit `IAppFolders` (testbar mit Testordnern, ohne eigenes Interface):
+      `SecureDesktopGiveUp` (mit `TimeProvider`) und `CrashHistory` (`Default` entfällt).
+- [x] `PngWriter` schreibt nur noch in einen Stream; die Datei öffnet der Aufrufer (`SnapshotTaker`).
+- [x] `SessionUserFolders`: bereits in Schritt 6 erledigt (nur noch `IsSystem`).
+- [~] Gemeinsamer `IAtomicFileWriter`: **entfällt**. Es sind drei Zeilen je Store. Ein Dienst
+      hätte jeden Store und das Setup um einen Konstruktor-Parameter erweitert und mehr
+      gekostet, als er spart.
+- **Telemetrie:** Die Abläufe `zoomin.update.elevate`, `zoomin.diagnostics.package` und die Logs
+  der Dienste sind unverändert. Nur die Log-Kategorie folgt jetzt dem Typnamen der Dienste.
+- **Tests:**
+  - `WindowsShortcutsTests` (echte .lnk im Testordner)
+  - `DiagnosticsPackageTests` mit Testordnern
+  - Ausnahmeliste von `StaticClassTests` von 15 auf 5 Fälle geschrumpft
+  - Registry- und Adminschritte sind ohne Admin nicht testbar; ihre Abläufe testet Schritt 11
+    mit gefälschten Diensten.
 
 #### 8 · Abläufe als Klassen
-- [ ] Diese Abläufe werden zu Instanzklassen mit Diensten im Konstruktor:
-  - `UninstallFlow`
-  - `UpdateRunner`
-  - `SecureDesktopHost`
-  - `SecureDesktopSetting`
-  - `WatchdogRunner`
-  - `ElevatedInstall`
-- [ ] `Program.RunRole` baut je Rolle einen kleinen Container über dieselben `Add*`-Erweiterungen.
-      Bisher bekommt jede Rolle nur einen rohen `ILogger`.
+- [x] In Schritt 7 vorgezogen, weil sie die einzigen Nutzer der neuen Dienste sind:
+      `UninstallFlow`, `UpdateRunner` (App) und `ElevatedInstall` (Setup) sind Instanzklassen mit
+      Diensten im Konstruktor.
+- [x] `Program.RunFlow` baut für Update und Deinstallation einen kleinen Container
+      (`ServiceRegistration.BuildRole`). Das Setup hat `SetupServices` als handgeschriebene
+      Composition Root. Dort liegt auch das Installationsziel `Program Files\ZoomIN`.
+- [ ] Noch offen: `SecureDesktopHost`, `SecureDesktopSetting`, `WatchdogRunner` und
+      `RestartArguments` (Ausnahmeliste).
+- [ ] Vor den Ablauf-Tests in Schritt 11 fehlen noch Nahtstellen (Review 2026-11-07):
+  - `UninstallFlow` startet die Admin-Entfernung selbst (`Process.Start` mit runas), löscht
+    Ordner direkt, schaltet den Autostart mit `new RegistryAutostart` ab und liest die
+    Installation aus `Environment.ProcessPath`.
+  - `UpdateRunner` liest ebenso `Environment.ProcessPath`.
+  - Für Tests mit gefälschten Diensten (Abbruch, Fehler beim Entfernen) kommen ein Dienst für
+    den Admin-Schritt der Deinstallation, das Autostart-Interface und das `InstallLayout` in
+    den Konstruktor.
 - **Tests:** in den neuen Testprojekten (Schritt 11)
   - Deinstallation: Reihenfolge, Abbruch, Fehler beim Entfernen
   - Update: Rückgabewerte, Adminschritt abgelehnt

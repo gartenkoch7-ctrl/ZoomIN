@@ -6,27 +6,29 @@ using ZoomIN.Core.Updates;
 
 namespace ZoomIN.Platform.Updates;
 
-/// <summary>
-/// Starts "&lt;exe&gt; --apply-update …" with the administrator prompt and waits for it (ADR-0015).
-/// Used by the in-app updater (installed ZoomIN.exe) and by the setup (ZoomIN-Setup.exe).
-/// </summary>
-public static class ElevatedStep
+/// <summary>Runs the elevated install step through the shell with "runas" (ADR-0015).</summary>
+public sealed class ShellElevatedStep(ILogger<ShellElevatedStep> log) : IElevatedStep
 {
     // ERROR_CANCELLED: the user said "No" at the administrator prompt.
     private const int ErrorCancelled = 1223;
 
-    public static UpdateResult Run(string executable, UpdateCommand command, ILogger log)
+    public UpdateResult Run(string executable, UpdateCommand command)
     {
         ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(log);
 
         // The elevated process continues this operation (--traceparent below).
         using var operation = UpdateTelemetry.Start("zoomin.update.elevate", command.Version);
-        var result = RunElevated(executable, command, log);
+        var result = RunElevated(executable, command);
         return operation.Finish(result, UpdateTelemetry.Succeeded(result));
     }
 
-    private static UpdateResult RunElevated(string executable, UpdateCommand command, ILogger log)
+    public string HashOf(string path)
+    {
+        using var stream = File.OpenRead(path);
+        return Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(stream));
+    }
+
+    private UpdateResult RunElevated(string executable, UpdateCommand command)
     {
         try
         {
@@ -56,12 +58,5 @@ public static class ElevatedStep
             log.InstallStepFailed(ex);
             return UpdateResult.Failed;
         }
-    }
-
-    /// <summary>SHA-256 of the package as lowercase hex, the form <see cref="UpdateCommand"/> carries.</summary>
-    public static string HashOf(string path)
-    {
-        using var stream = File.OpenRead(path);
-        return Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(stream));
     }
 }

@@ -12,9 +12,11 @@ internal static class PngWriter
     private static readonly byte[] s_signature = [137, 80, 78, 71, 13, 10, 26, 10];
     private static readonly uint[] s_crcTable = BuildCrcTable();
 
-    public static void Write(string path, SnapshotImage image)
+    /// <summary>Writes the image as PNG into <paramref name="file"/>; the caller owns the stream (no IO here, ADR-0025).</summary>
+    public static void Write(Stream file, SnapshotImage image)
     {
-        using var file = File.Create(path);
+        ArgumentNullException.ThrowIfNull(file);
+        ArgumentNullException.ThrowIfNull(image);
         file.Write(s_signature);
 
         Span<byte> header = stackalloc byte[13];

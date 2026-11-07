@@ -80,11 +80,11 @@ internal sealed class SnapshotTaker(DebugSnapshots snapshots, string deviceName,
         {
             Directory.CreateDirectory(request.Folder);
             var prefix = Path.Combine(request.Folder, SafeName(deviceName));
-            PngWriter.Write(prefix + "-original.png", original);
-            PngWriter.Write(prefix + "-result.png", drawn);
+            WritePng(prefix + "-original.png", original);
+            WritePng(prefix + "-result.png", drawn);
             if (weights is not null)
             {
-                PngWriter.Write(prefix + "-weights.png", weights);
+                WritePng(prefix + "-weights.png", weights);
             }
 
             File.WriteAllText(prefix + "-info.txt", info);
@@ -98,6 +98,12 @@ internal sealed class SnapshotTaker(DebugSnapshots snapshots, string deviceName,
             activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, ex.GetType().Name);
             snapshots.Report(new DebugSnapshotResult(request.Generation, deviceName, false, ex.GetType().Name));
         }
+    }
+
+    private static void WritePng(string path, SnapshotImage image)
+    {
+        using var file = File.Create(path);
+        PngWriter.Write(file, image);
     }
 
     // "\\.\DISPLAY1" -> "DISPLAY1"

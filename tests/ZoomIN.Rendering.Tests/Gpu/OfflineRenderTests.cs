@@ -37,9 +37,9 @@ public sealed class OfflineRenderTests
 
         var suffix = (protect ? string.Empty : "-unprotected") + (zoom != 1 ? $"-zoom{zoom:0.#}" : string.Empty);
         var stem = Path.Combine(Path.GetDirectoryName(input!)!, Path.GetFileNameWithoutExtension(input!) + suffix);
-        PngWriter.Write(stem + "-result.png", renderer.ReadResult());
-        PngWriter.Write(stem + "-weights.png", renderer.ReadWeights());
-        PngWriter.Write(stem + "-decisions.png", renderer.ReadDecisions());
+        PngFile.Write(stem + "-result.png", renderer.ReadResult());
+        PngFile.Write(stem + "-weights.png", renderer.ReadWeights());
+        PngFile.Write(stem + "-decisions.png", renderer.ReadDecisions());
     }
 }
 

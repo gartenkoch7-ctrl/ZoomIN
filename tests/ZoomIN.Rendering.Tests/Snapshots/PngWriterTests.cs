@@ -18,7 +18,11 @@ public sealed class PngWriterTests
         var path = Path.Combine(Path.GetTempPath(), $"zoomin-png-{Guid.NewGuid():N}.png");
         try
         {
-            PngWriter.Write(path, new SnapshotImage(2, 2, rgba));
+            using (var file = File.Create(path))
+            {
+                PngWriter.Write(file, new SnapshotImage(2, 2, rgba));
+            }
+
             var bytes = File.ReadAllBytes(path);
 
             Assert.Equal(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }, bytes[..8]);

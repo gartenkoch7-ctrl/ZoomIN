@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Folders;
 using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Watchdog.Crashes;
@@ -17,7 +18,9 @@ namespace ZoomIN.Watchdog;
 public static class WatchdogRunner
 {
     /// <param name="secure">Watches the secure-desktop instance (ADR-0016): restarts it with its switch, never notifies.</param>
-    public static int Run(int processId, string appPath, ILogger log, IReadOnlyList<ICleanupStep> cleanup, bool secure = false)
+    /// <param name="folders">Where the crash log and the give-up mark are kept (ADR-0025).</param>
+    public static int Run(
+        int processId, string appPath, IAppFolders folders, ILogger log, IReadOnlyList<ICleanupStep> cleanup, bool secure = false)
     {
         int exitCode;
         try
@@ -50,7 +53,7 @@ public static class WatchdogRunner
         log.UnexpectedExit(exitCode);
         RunCleanup(cleanup, log);
 
-        var crashes = CrashHistory.Default.Record(DateTimeOffset.Now);
+        var crashes = new CrashHistory(folders.CrashLog()).Record(DateTimeOffset.Now);
         if (RestartPolicy.ShouldRestart(crashes, DateTimeOffset.Now))
         {
             log.Restarting();
@@ -64,7 +67,7 @@ public static class WatchdogRunner
         if (secure)
         {
             // No notification on a secure desktop; stay off there until Windows restarts.
-            SecureDesktopGiveUp.Mark();
+            new SecureDesktopGiveUp(folders).Mark();
             return 2;
         }
 

@@ -5,9 +5,9 @@ using ZoomIN.App.Updates;
 using ZoomIN.App.Views;
 using ZoomIN.App.Zoom;
 using Microsoft.Extensions.Logging;
+using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Folders;
 using ZoomIN.Core.Localization;
-using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Tracking;
@@ -36,7 +36,7 @@ public sealed class AppShell
     public AppShell(
         ZoomController controller, SettingsService settings, ProfileService profiles, ITrayIcon tray,
         UpdateService updates, IAutostart autostart, ICursorShapeSource cursorShapes, IUiAccessProbe uiAccess,
-        SetupLauncher setup, IAppFolders folders, ILocalizer texts, ILogger<AppShell> log)
+        SetupLauncher setup, IAppFolders folders, IDiagnosticsPackage diagnostics, ILocalizer texts, ILogger<AppShell> log)
     {
         _texts = texts;
         _controller = controller;
@@ -48,7 +48,7 @@ public sealed class AppShell
         _log = log;
         _dispatcher = DispatcherQueue.GetForCurrentThread();
         _pages = new PageContext(
-            settings, profiles, controller, autostart, cursorShapes, updates, uiAccess, setup, folders,
+            settings, profiles, controller, autostart, cursorShapes, updates, uiAccess, setup, folders, diagnostics,
             () => _window?.Handle ?? 0, () => _window?.ShowOverview(), ExitForUpdate);
     }
 

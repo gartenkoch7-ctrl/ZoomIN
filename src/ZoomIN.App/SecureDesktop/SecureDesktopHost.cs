@@ -28,7 +28,7 @@ internal static class SecureDesktopHost
     public static int Run(TelemetryHost telemetry)
     {
         var log = telemetry.Logger<SecureDesktopHostCategory>();
-        if (SecureDesktopGiveUp.IsActive())
+        if (new SecureDesktopGiveUp(Program.Folders).IsActive())
         {
             log.GaveUp();
             return 0;
@@ -54,7 +54,7 @@ internal static class SecureDesktopHost
             // The sanitizer has already cleared any export address: SYSTEM never sends (ADR-0019).
             telemetry.Apply(services.GetRequiredService<AppSettings>().Telemetry());
             log.Started(SessionUserFolders.IsSystem);
-            WatchdogStarter.Start(log, secure: true);
+            services.GetRequiredService<IWatchdogLauncher>().Start(secure: true);
             Start(services, exit, log, start);
             exit.Wait();
             log.Exits();

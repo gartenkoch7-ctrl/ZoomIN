@@ -45,7 +45,7 @@ public partial class App : Application
             telemetry.Apply(_services.GetRequiredService<AppSettings>().Telemetry());
             var settings = _services.GetRequiredService<SettingsService>();
             settings.Changed += () => telemetry.Apply(settings.Current.Telemetry());
-            WatchdogStarter.Start(_log);
+            _services.GetRequiredService<IWatchdogLauncher>().Start();
         }
 
         using (Telemetry.Source.StartActivity("zoomin.app.start.shell", ActivityKind.Internal, parent))

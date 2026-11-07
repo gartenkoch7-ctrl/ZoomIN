@@ -24,6 +24,9 @@ public static class AppFiles
     /// <summary>Crash times the watchdog keeps for its restart policy (ADR-0007).</summary>
     public static string CrashLog(this IAppFolders folders) => Path.Combine(Local(folders), "crashes.log");
 
+    /// <summary>The watchdog gave up on the secure-desktop instance (ADR-0016), with the time.</summary>
+    public static string SecureGaveUp(this IAppFolders folders) => Path.Combine(Local(folders), "secure-gave-up.txt");
+
     /// <summary>
     /// Window handle (decimal) of the registered AppBar while the docked strip is reserved: a
     /// crashed ZoomIN tells the watchdog what to give back (ADR-0007).

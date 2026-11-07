@@ -1,17 +1,18 @@
 using System.Runtime.InteropServices;
+using ZoomIN.Core.Shell;
 
 namespace ZoomIN.Platform.Shell;
 
 /// <summary>Creates and removes .lnk shortcuts (Start menu, desktop) through the Windows Script Host.</summary>
-public static class ShellShortcut
+public sealed class WindowsShortcuts : IShortcuts
 {
     public const string FileName = "ZoomIN.lnk";
 
-    public static string CommonStartMenu => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms), FileName);
+    public string CommonStartMenu => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms), FileName);
 
-    public static string UserDesktop => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), FileName);
+    public string UserDesktop => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), FileName);
 
-    public static void Create(string shortcutPath, string targetPath)
+    public void Create(string shortcutPath, string targetPath)
     {
         // WScript.Shell is part of every Windows; IShellLink through COM interop would need far
         // more code for the same .lnk file.
@@ -32,7 +33,7 @@ public static class ShellShortcut
         }
     }
 
-    public static void Remove(string shortcutPath)
+    public void Remove(string shortcutPath)
     {
         if (File.Exists(shortcutPath))
         {

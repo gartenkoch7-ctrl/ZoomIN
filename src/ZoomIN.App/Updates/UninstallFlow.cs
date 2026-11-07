@@ -1,15 +1,15 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
-using ZoomIN.App.Localization;
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Folders;
+using ZoomIN.Core.Localization;
+using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Settings;
+using ZoomIN.Core.Shell;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Lifecycle;
-using ZoomIN.Platform.SecureDesktop;
-using ZoomIN.Platform.Shell;
-using ZoomIN.Platform.Updates;
 
 namespace ZoomIN.App.Updates;
 
@@ -17,42 +17,44 @@ namespace ZoomIN.App.Updates;
 /// "ZoomIN.exe --uninstall" from Windows "Apps" (ADR-0014): asks whether settings stay, runs the
 /// elevated removal, then cleans up the signed-in user's own traces.
 /// </summary>
-internal static class UninstallFlow
+internal sealed class UninstallFlow(
+    IMessageDialog dialog, IShortcuts shortcuts, IInstallRegistration registration, ISecureDesktopInstall secureDesktop,
+    IAppFolders folders, ILocalizer texts, ILogger<UninstallFlow> log)
 {
     // ERROR_CANCELLED: the user said "No" at the administrator prompt.
     private const int ErrorCancelled = 1223;
 
-    public static int Run(ILogger log)
+    public int Run()
     {
-        Text.SetLanguage(AppLanguage.System);
-        var title = Text.Get("Uninstall.Title");
+        texts.SetLanguage(AppLanguage.System);
+        var title = texts.Get("Uninstall.Title");
         if (!InstallLayout.TryFromExecutable(Environment.ProcessPath, out var layout))
         {
             return (int)UpdateResult.NotInstalled;
         }
 
-        var answer = MessageDialog.AskYesNoCancel(title, Text.Get("Uninstall.Question"));
-        if (answer == MessageDialog.Answer.Cancel)
+        var answer = dialog.AskYesNoCancel(title, texts.Get("Uninstall.Question"));
+        if (answer == DialogAnswer.Cancel)
         {
             return 0;
         }
 
-        if (!RunElevatedRemoval(log))
+        if (!RunElevatedRemoval())
         {
-            MessageDialog.Inform(title, Text.Get("Uninstall.Failed"), error: true);
+            dialog.Inform(title, texts.Get("Uninstall.Failed"), error: true);
             return (int)UpdateResult.Failed;
         }
 
         new RegistryAutostart(RegistryAutostart.RunKey, $"\"{layout.CurrentExecutable}\"").SetEnabled(false);
-        TryRun(() => ShellShortcut.Remove(ShellShortcut.UserDesktop));
-        if (answer == MessageDialog.Answer.No)
+        TryRun(() => shortcuts.Remove(shortcuts.UserDesktop));
+        if (answer == DialogAnswer.No)
         {
-            TryRun(() => Directory.Delete(DataFolder(Environment.SpecialFolder.ApplicationData), recursive: true));
-            TryRun(() => Directory.Delete(DataFolder(Environment.SpecialFolder.LocalApplicationData), recursive: true));
+            TryRun(() => Directory.Delete(folders.Roaming, recursive: true));
+            TryRun(() => Directory.Delete(folders.Local, recursive: true));
         }
 
         log.Uninstalled();
-        MessageDialog.Inform(title, Text.Get("Uninstall.Done"));
+        dialog.Inform(title, texts.Get("Uninstall.Done"));
         return 0;
     }
 
@@ -61,7 +63,7 @@ internal static class UninstallFlow
     /// Start menu shortcut, and deletes Program Files\ZoomIN once the asking process has ended
     /// (its own files are in use until then).
     /// </summary>
-    public static int RemoveElevated(int waitForProcessId, ILogger log)
+    public int RemoveElevated(int waitForProcessId)
     {
         if (!InstallLayout.TryFromExecutable(Environment.ProcessPath, out var layout))
         {
@@ -76,8 +78,8 @@ internal static class UninstallFlow
             }
         }
 
-        InstallRegistration.Unregister();
-        SecureDesktopInstall.Remove(log);
+        registration.Unregister();
+        secureDesktop.Remove();
         var script = string.Create(
             CultureInfo.InvariantCulture,
             $"Wait-Process -Id {waitForProcessId},{Environment.ProcessId} -ErrorAction SilentlyContinue; Start-Sleep 1; Remove-Item -LiteralPath '{layout.Root}' -Recurse -Force");
@@ -90,7 +92,7 @@ internal static class UninstallFlow
         return 0;
     }
 
-    private static bool RunElevatedRemoval(ILogger log)
+    private bool RunElevatedRemoval()
     {
         try
         {
@@ -114,8 +116,6 @@ internal static class UninstallFlow
             return false;
         }
     }
-
-    private static string DataFolder(Environment.SpecialFolder folder) => Path.Combine(Environment.GetFolderPath(folder), "ZoomIN");
 
     private static void TryRun(Action action)
     {

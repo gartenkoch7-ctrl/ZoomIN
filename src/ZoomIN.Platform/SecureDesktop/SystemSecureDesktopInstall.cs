@@ -1,18 +1,14 @@
 using Microsoft.Extensions.Logging;
+using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Updates;
 
 namespace ZoomIN.Platform.SecureDesktop;
 
-/// <summary>
-/// The sign-in screen part of the elevated install, update and uninstall steps (ADR-0016). A failure
-/// here never fails the installation itself: ZoomIN then only misses the secure desktops.
-/// </summary>
-public static class SecureDesktopInstall
+/// <summary>Registers ZoomIN as assistive technology for the sign-in screen (ADR-0016), as administrator.</summary>
+public sealed class SystemSecureDesktopInstall(ILogger<SystemSecureDesktopInstall> log) : ISecureDesktopInstall
 {
-    /// <param name="choice">The setup's choice, or null for an update (keeps the user's preference, default on).</param>
-    public static void Apply(InstallLayout layout, bool? choice, ILogger log)
+    public void Apply(InstallLayout layout, bool? choice)
     {
-        ArgumentNullException.ThrowIfNull(log);
         try
         {
             var on = SecureDesktopRegistration.Default.Apply(layout, choice);
@@ -24,13 +20,13 @@ public static class SecureDesktopInstall
         }
     }
 
-    /// <summary>Removes the registration, the kept choice and the files of the SYSTEM instance.</summary>
-    public static void Remove(ILogger log)
+    public void Remove()
     {
-        ArgumentNullException.ThrowIfNull(log);
         try
         {
             SecureDesktopRegistration.Default.RemoveAll();
+
+            // The secure instance's files lie in SYSTEM's own profile (WindowsAppFolders as SYSTEM).
             var systemFolder = Path.Combine(Environment.SystemDirectory, "config", "systemprofile", "AppData", "Local", "ZoomIN");
             if (Directory.Exists(systemFolder))
             {

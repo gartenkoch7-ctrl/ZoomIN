@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.App.Localization;
 using ZoomIN.App.Updates;
+using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Folders;
 using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.Localization;
@@ -45,11 +46,29 @@ internal static class ServiceRegistration
         services.AddSingleton<IReleaseFeed, GitHubReleaseFeed>();
         services.AddSingleton<IPackageDownloader, HttpPackageDownloader>();
         services.AddSingleton<ISettingsBackup, FolderSettingsBackup>();
-        services.AddSingleton<ISignatureVerifier, AuthenticodeVerifier>();
+        services.AddInstall();
         services.AddSingleton<IUiAccessProbe, Win32UiAccessProbe>();
         services.AddSingleton<UpdateService>();
+        services.AddSingleton<IDiagnosticsPackage, DiagnosticsPackage>();
         services.AddSingleton<SetupLauncher>();
+        services.AddSingleton<IWatchdogLauncher, ShellWatchdogLauncher>();
         services.AddSingleton<AppShell>();
+        return services.BuildServiceProvider();
+    }
+
+    /// <summary>
+    /// A short-lived role without UI (update step, uninstall): installation services and the
+    /// role's flow only, no engine. Built per process in <see cref="Program"/> (M14 step 7).
+    /// </summary>
+    public static ServiceProvider BuildRole(TelemetryHost telemetry, IAppFolders folders)
+    {
+        var services = new ServiceCollection();
+        services.AddTelemetry(telemetry);
+        services.AddSingleton(folders);
+        services.AddSingleton<ILocalizer>(AppTexts.CreateLocalizer());
+        services.AddInstall();
+        services.AddSingleton<UpdateRunner>();
+        services.AddSingleton<UninstallFlow>();
         return services.BuildServiceProvider();
     }
 
@@ -68,6 +87,7 @@ internal static class ServiceRegistration
         services.AddSingleton<ISettingsStore>(sp => new SecureSettingsStore(
             sp.GetRequiredService<ILogger<SecureSettingsStore>>(), sp.GetRequiredService<SessionUser>(), folders.Local));
         services.AddSingleton<IProfileStore>(sp => new SecureProfileStore(sp.GetRequiredService<SessionUser>()));
+        services.AddSingleton<IWatchdogLauncher, ShellWatchdogLauncher>();
         services.AddEngine();
         return services.BuildServiceProvider();
     }

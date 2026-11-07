@@ -71,6 +71,6 @@ public sealed class OfflineVideoTests
         report.Insert(1, $"worst: inverted {worstInverted * 100:0.00} %, flipped {worstFlips * 100:0.00} %");
         var stem = Path.Combine(Path.GetDirectoryName(input!)!, Path.GetFileNameWithoutExtension(input!));
         File.WriteAllLines(stem + $"-video-pan{Pan}.txt", report);
-        PngWriter.Write(stem + "-video-last.png", renderer.ReadResult());
+        PngFile.Write(stem + "-video-last.png", renderer.ReadResult());
     }
 }

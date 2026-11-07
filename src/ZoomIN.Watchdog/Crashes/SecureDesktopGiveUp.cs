@@ -1,4 +1,5 @@
 using System.Globalization;
+using ZoomIN.Core.Folders;
 using ZoomIN.Core.SecureDesktop;
 
 namespace ZoomIN.Watchdog.Crashes;
@@ -7,27 +8,31 @@ namespace ZoomIN.Watchdog.Crashes;
 /// Remembers that the watchdog gave up on the secure-desktop instance (ADR-0016). Stored next to
 /// the crash log, which for SYSTEM is in SYSTEM's own profile.
 /// </summary>
-public static class SecureDesktopGiveUp
+public sealed class SecureDesktopGiveUp(IAppFolders folders, TimeProvider time)
 {
-    private static string FilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ZoomIN", "secure-gave-up.txt");
-
-    public static void Mark()
+    public SecureDesktopGiveUp(IAppFolders folders)
+        : this(folders, TimeProvider.System)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-        File.WriteAllText(FilePath, DateTimeOffset.Now.ToString("O", CultureInfo.InvariantCulture));
+    }
+
+    public void Mark()
+    {
+        var path = folders.SecureGaveUp();
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, time.GetLocalNow().ToString("O", CultureInfo.InvariantCulture));
     }
 
     /// <summary>True if the watchdog gave up since Windows started.</summary>
-    public static bool IsActive()
+    public bool IsActive()
     {
         try
         {
-            DateTimeOffset? gaveUpAt = File.Exists(FilePath)
-                && DateTimeOffset.TryParse(File.ReadAllText(FilePath), CultureInfo.InvariantCulture, DateTimeStyles.None, out var time)
-                    ? time
+            var path = folders.SecureGaveUp();
+            DateTimeOffset? gaveUpAt = File.Exists(path)
+                && DateTimeOffset.TryParse(File.ReadAllText(path), CultureInfo.InvariantCulture, DateTimeStyles.None, out var at)
+                    ? at
                     : null;
-            var bootTime = DateTimeOffset.Now - TimeSpan.FromMilliseconds(Environment.TickCount64);
+            var bootTime = time.GetLocalNow() - TimeSpan.FromMilliseconds(Environment.TickCount64);
             return SecureDesktopMode.IsDisabledAfterCrashes(gaveUpAt, bootTime);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
