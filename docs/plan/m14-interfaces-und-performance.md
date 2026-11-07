@@ -384,6 +384,10 @@
       nur einmal: ein zweites ginge an eine Thread-Id, die Windows schon neu vergeben haben kann.
 - [x] `TrayIconImage` ist eine Instanz mit dem Icon-Pfad; die Ausnahmeliste von
       `StaticClassTests` ist leer.
+- [x] Testbuild dev.124.m14 (2026-11-07): Sichtprüfung durch den Nutzer „Alles in Ordnung“
+      (Tray-Menü, Fenster und Beenden, Mausrad, Strg antippen, Fokus/Caret, Fensterfilter,
+      Smart-Invertierung, Info-Seite). Start ohne Fehler: `app.start` 880 ms, `app.start.shell`
+      272 ms, `pipeline_start` 152 ms, davon Shader 5,5 ms (mit `SmartWeight.hlsli`).
 - **Telemetrie:** Die Logs bleiben bei ihren Klassen bzw. Feature-Ordnern (EventIds unverändert).
   Die Log-Kategorie der Kürzel folgt jetzt `HotkeyBindings`; die von 1006 (UIAccess) und 1007
   (Update-Prüfungen) folgt `StartupNotices` statt `AppShell`.
