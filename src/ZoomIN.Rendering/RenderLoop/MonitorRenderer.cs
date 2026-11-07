@@ -101,6 +101,7 @@ internal sealed class MonitorRenderer : IDisposable
             {
                 using var session = StartSession();
                 _log.PipelineReady(_deviceName);
+                _metrics.PipelineReady();
                 SetStatus(ZoomStatus.Idle with { IsCaptureExcluded = true });
                 RunSession(session);
             }

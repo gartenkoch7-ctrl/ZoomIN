@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
 using Vortice.Mathematics;
+using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Tracking;
@@ -50,19 +51,36 @@ internal sealed class RenderSession : IDisposable
         _displayGeneration = OverlayWindow.DisplayChangeCount;
         try
         {
-            var factory = Own(DXGI.CreateDXGIFactory2<IDXGIFactory2>(false));
-            _monitor = Own(MonitorOutput.Find(factory, deviceName));
-            _lastCursor = new PhysicalPoint(_monitor.Bounds.X + (_monitor.Width / 2), _monitor.Bounds.Y + (_monitor.Height / 2));
-            _gpu = Own(GpuDevice.CreateForAdapter(_monitor.Adapter));
-            _duplicator = Own(new DesktopDuplicator(_gpu, _monitor));
-            _overlay = Own(new OverlayWindow(_monitor.Bounds));
-            _swapchain = Own(new CompositionSwapchain(_gpu, factory, _overlay.Handle, _monitor.Width, _monitor.Height));
-            var pass = Own(new MagnifyPass(_gpu.Device));
-            var cursorPass = Own(new CursorPass(_gpu.Device));
-            _cursorLayer = new CursorLayer(cursorPass, pointer.Shapes, pointer.SystemCursor);
-            _highlights = new HighlightLayer(cursorPass);
-            var smart = Own(SmartInvertLayer.Create(_gpu.Device, _monitor.Width, _monitor.Height, deviceName, health, log));
-            _desktop = new DesktopLayer(pass, smart);
+            // Phases as child operations of zoomin.render.pipeline_start (startup measurement, M14).
+            IDXGIFactory2 factory;
+            using (Telemetry.Source.StartActivity("zoomin.render.pipeline_start.device"))
+            {
+                factory = Own(DXGI.CreateDXGIFactory2<IDXGIFactory2>(false));
+                _monitor = Own(MonitorOutput.Find(factory, deviceName));
+                _lastCursor = new PhysicalPoint(_monitor.Bounds.X + (_monitor.Width / 2), _monitor.Bounds.Y + (_monitor.Height / 2));
+                _gpu = Own(GpuDevice.CreateForAdapter(_monitor.Adapter));
+            }
+
+            using (Telemetry.Source.StartActivity("zoomin.render.pipeline_start.capture"))
+            {
+                _duplicator = Own(new DesktopDuplicator(_gpu, _monitor));
+            }
+
+            using (Telemetry.Source.StartActivity("zoomin.render.pipeline_start.overlay"))
+            {
+                _overlay = Own(new OverlayWindow(_monitor.Bounds));
+                _swapchain = Own(new CompositionSwapchain(_gpu, factory, _overlay.Handle, _monitor.Width, _monitor.Height));
+            }
+
+            using (Telemetry.Source.StartActivity("zoomin.render.pipeline_start.shaders"))
+            {
+                var pass = Own(new MagnifyPass(_gpu.Device));
+                var cursorPass = Own(new CursorPass(_gpu.Device));
+                _cursorLayer = new CursorLayer(cursorPass, pointer.Shapes, pointer.SystemCursor);
+                _highlights = new HighlightLayer(cursorPass);
+                var smart = Own(SmartInvertLayer.Create(_gpu.Device, _monitor.Width, _monitor.Height, deviceName, health, log));
+                _desktop = new DesktopLayer(pass, smart, Own(new GpuPassTimer(_gpu.Device, deviceName, "magnify")));
+            }
         }
         catch
         {

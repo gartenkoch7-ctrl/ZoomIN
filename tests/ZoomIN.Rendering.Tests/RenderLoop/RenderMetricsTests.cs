@@ -10,9 +10,16 @@ namespace ZoomIN.Rendering.Tests.RenderLoop;
 /// The render loop records every frame: with the OpenTelemetry SDK listening (level "Verbose" with
 /// an export address) that must still allocate nothing (AGENTS.md 2.3, ADR-0019).
 /// </summary>
+[Collection(MeterTests.Name)]
 public sealed class RenderMetricsTests
 {
     private const string Monitor = @"\\.\DISPLAY1";
+
+    private static readonly HashSet<string> s_recorded =
+    [
+        "zoomin.render.frame_interval", "zoomin.render.frames_missed", "zoomin.render.show_latency",
+        "zoomin.render.pipeline_restarts", "zoomin.render.overlay_time",
+    ];
 
     [Fact]
     public void Recording_WithTheSdkListening_AllocatesNothing()
@@ -38,7 +45,8 @@ public sealed class RenderMetricsTests
         {
             InstrumentPublished = (instrument, l) =>
             {
-                if (instrument.Meter.Name == Telemetry.Name && instrument.Name.StartsWith("zoomin.render.", StringComparison.Ordinal))
+                // Only what this test records: other render instruments (GPU time) belong to other tests.
+                if (instrument.Meter.Name == Telemetry.Name && s_recorded.Contains(instrument.Name))
                 {
                     l.EnableMeasurementEvents(instrument);
                 }

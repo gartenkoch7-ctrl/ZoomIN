@@ -20,9 +20,6 @@ internal sealed class SmartInvertLayer : IDisposable
     /// <summary>Budget of the ambient pass per frame (ADR-0024: ≤ 1 ms extra at 1440p on onboard graphics).</summary>
     public const double BudgetMilliseconds = 1.0;
 
-    // Decided on the mean of this many measured frames, so a single slow frame changes nothing.
-    private const int SamplesPerDecision = 120;
-
     // Time constant of the smoothing: after 3 τ (~150 ms) a change is 95 % through.
     private const double SmoothingSeconds = 0.05;
 
@@ -41,8 +38,9 @@ internal sealed class SmartInvertLayer : IDisposable
     private readonly KeyValuePair<string, object?> _monitor;
     private long _lastUpdate;
     private bool _running;
-    private double _sum;
-    private int _samples;
+
+    // Decided on a mean of SampleMean.Count frames, so a single slow frame changes nothing.
+    private SampleMean _mean;
 
     public SmartInvertLayer(AmbientPass? pass, GpuStopwatch? stopwatch, string deviceName, SmartInvertHealth health, ILogger log)
     {
@@ -114,15 +112,11 @@ internal sealed class SmartInvertLayer : IDisposable
     /// <summary>Counts one measured frame; public for tests, which feed times without a GPU.</summary>
     public void AddSample(double milliseconds)
     {
-        _sum += milliseconds;
-        if (++_samples < SamplesPerDecision)
+        if (!_mean.Add(milliseconds, out var mean))
         {
             return;
         }
 
-        var mean = _sum / _samples;
-        _sum = 0;
-        _samples = 0;
         s_gpuTime.Record(mean, _monitor);
         if (mean > BudgetMilliseconds)
         {

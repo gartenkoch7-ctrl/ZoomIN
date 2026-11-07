@@ -12,7 +12,7 @@
 - **Leerlauf:** Bei 2× Vollbild-Zoom auf einem ruhenden Desktop fällt die GPU-Last im
   Task-Manager auf nahe null. Bewegt man die Maus, ist alles sofort flüssig wie vorher.
 - **Start:** Der Start bis zum ersten Zoom ist messbar schneller. Das zeigt das Histogramm
-  `zoomin.render.first_frame_time`; die einzelnen Phasen stehen unter `zoomin.app.start` und
+  `zoomin.render.ready_time`; die einzelnen Phasen stehen unter `zoomin.app.start` und
   `zoomin.render.pipeline_start`.
 - **Tests:** `dotnet test` läuft auch für Deinstallation, Update und Watchdog. Gefälschte Dienste
   ersetzen dabei Registry und Prozesse.
@@ -58,39 +58,58 @@
 ### Teil A – Performance (zuerst)
 
 #### 1 · Messbasis (vorher messen)
-- [ ] Neue Benchmarks:
-  - `ModeGeometry.Compute` (Lupe, Angedockt), `FrameMapping`
-  - `WindowConstants.Fill` (64 Bereiche), `WindowRegions.UsesSmart`
-  - die Builder für `MagnifyConstants`/`CursorConstants`, `PointerStyle.ScaleFor`
-- [ ] Allokationstests mit `0 B` für `CursorLayer`, `HighlightLayer`, `DesktopLayer` und
-      `RenderFrame` (WARP)
-- [ ] GPU-Zeitstempel für den **ganzen** Frame und getrennt für Umgebung und Magnify. Messung
-      1080p/1440p auf der RTX bei Zoom 1×/2×/4×, intelligent an und aus
-- [ ] Startzeit messen:
-  - App-Phasen (Settings, DI, Hooks, Fensterfilter) als Kind-Abläufe von `zoomin.app.start`.
-  - Shader und Device laufen auf den Render-Threads. Sie werden als Kind-Abläufe von
-    `zoomin.render.pipeline_start` gemessen.
-  - Dazu ein neuer Messwert „Prozessstart bis erster Frame“.
-- [ ] Ausgangswerte in `docs/kb/performance.md`. Sie sind die Vergleichsbasis für 2–5.
-- **Telemetrie** (Instrumente beim Start angelegt, Katalog nachziehen):
-  - Kind-Abläufe `zoomin.app.start.<phase>` und `zoomin.render.pipeline_start.<phase>`
-  - Histogramm `zoomin.render.first_frame_time` in ms (Prozessstart bis erster gezeigter
-    Frame, Tag `zoomin.monitor`)
-  - Histogramm `zoomin.render.gpu_time` in ms (Tags `zoomin.monitor` und `zoomin.pass` mit den
-    Werten `frame`, `ambient`, `weights`, `magnify`)
+- [x] Neue Benchmarks (`FrameGeometryBenchmarks`): `ModeGeometry.Compute` (Lupe, Angedockt),
+      `WindowRegions.UsesSmart`, `PointerStyle.ScaleFor`/`DrawsPointer`, alle 0 B.
+  - `FrameMapping`, `WindowConstants.Fill` und die Konstanten-Builder liegen intern in
+    Rendering. Das Benchmark-Projekt kennt nur Core, deshalb decken die WARP-Allokationstests
+    sie ab.
+- [x] Allokationstests mit `0 B` für `CursorLayer` (Zeiger, Fadenkreuz, Locator, beide
+      Zeigerarten), `HighlightLayer` und `DesktopLayer` (Vollbild und Lupe, intelligent) mit
+      GPU-Zeitmessung (`RenderLayersAllocationTests`).
+  - `RenderFrame` selbst braucht Duplication und Swapchain eines echten Monitors und läuft
+    nicht auf WARP. Es ist über seine Ebenen abgedeckt.
+- [x] GPU-Zeitstempel im Betrieb für Magnify (`GpuPassTimer`); die Umgebung misst
+      wie bisher `SmartInvertLayer`. Offscreen-Messung 1080p/1440p, Zoom 1×/2×/4×, intelligent
+      an und aus (`BaselineGpuTimeTests`, nur mit `ZOOMIN_GPU_TIMING=1`).
+- [x] Startzeit messen:
+  - App-Phasen `services` und `shell` als Kind-Abläufe von `zoomin.app.start`.
+  - Gerät, Capture, Overlay und Shader als Kind-Abläufe von `zoomin.render.pipeline_start`.
+  - Statt „bis erster Frame“ gibt es `zoomin.render.ready_time` (Prozessstart bis Pipeline
+    bereit). Den ersten Frame gibt es erst beim ersten Zoom; er misst also den Nutzer, nicht
+    den Start.
+- [x] Ausgangswerte in `docs/kb/performance.md` (Messprotokoll 2026-11-07).
+- [ ] Startzeit-Ausgangswert aus einem echten Start (Diagnosepaket nach Neustart durch den
+      Nutzer: `ready_time`, Phasen). Er ist die Vergleichsbasis für Schritt 4.
+- **Telemetrie** (Instrumente beim Start angelegt, im Katalog):
+  - Kind-Abläufe `zoomin.app.start.services`/`.shell` und
+    `zoomin.render.pipeline_start.device`/`.capture`/`.overlay`/`.shaders`
+  - Histogramm `zoomin.render.ready_time` in ms (Tag `zoomin.monitor`, einmal je Prozess und
+    Monitor)
+  - Histogramm `zoomin.render.gpu_time` in ms (Tags `zoomin.monitor` und `zoomin.pass` mit
+    `magnify`; `weights` kommt mit Schritt 5). Abfragen nur mit Abonnent; kein Gesamt-Frame-Wert,
+    weil verschachtelte Disjoint-Abfragen nicht überall erlaubt sind (Review)
+- **Ergebnis:**
+  - Die Kosten von Smart Invert hängen kaum vom Zoom ab.
+  - 1440p schwankt auf der RTX zwischen den Läufen (+0,095–0,181 ms).
+  - Die Monitor-Suche pro Frame kostet unter 7 ns.
 
 #### 2 · Lock und kleine Arbeit pro Frame
-- [ ] `CursorLayer` merkt sich den zuletzt gesetzten Sichtbarkeitswert und ruft `SetVisible` nur
-      bei einer Änderung auf. Damit fällt der Lock pro Frame weg.
-- [ ] Monitor-Index statt Dictionary-Suche mit Gerätename-String pro Frame
-      (`ZoomModel.TargetFor`, `EffectsSnapshot.For`). Der Index wird beim Bauen des Snapshots
-      aufgelöst.
+- [x] Lock pro Frame entfernt: `MagnifierSystemCursor.SetVisible` prüft den Zustand zuerst ohne
+      Lock und nimmt den Lock nur bei einer echten Änderung.
+  - Der Cache sitzt bewusst in der Implementierung und nicht in `CursorLayer`. Alle
+    Render-Threads teilen den einen Systemzeiger, und ein Cache je Monitor würde veralten,
+    wenn ein anderer Monitor den Zeiger umschaltet.
+- [~] Monitor-Index statt Dictionary-Suche: **entfällt nach Messung** (Schritt 1: unter 7 ns pro
+      Frame, 0 B).
 - [ ] `CursorPass`: letzte Zeigertextur zwischenspeichern; Blend-State einmal pro Ebene statt
       pro Zeichnen
 - [ ] Constant Buffer nur hochladen, wenn sich die Werte geändert haben (`MagnifyPass`,
       `CursorPass`)
-- **Tests:** Benchmarks aus 1 bleiben bei `0 B`. Unit-Test: `SetVisible` wird bei gleichem Wert
-  nicht aufgerufen (gefälschter `ISystemCursor`).
+- **Tests:** Benchmarks aus 1 bleiben bei `0 B`.
+  - `CursorLayer` ruft `SetVisible` weiter jeden Frame auf. Der Test zählt die Aufrufe mit
+    einem gefälschten `ISystemCursor`.
+  - `MagnifierSystemCursor` ist nicht automatisch testbar, weil er den echten Zeiger des Nutzers
+    ausblenden würde. Code-Review und Sichtprüfung decken ihn ab.
 
 #### 3 · Leerlauf-Frames überspringen
 - [ ] Bedingung „nichts geändert“ in Core. Sie ist rein und testbar und hält alles fest, was
@@ -148,7 +167,7 @@
 - [ ] Watchdog-Start, `EaseOfAccessNotifier` und Tray-Menütexte erst nach dem ersten Frame;
       `Process`-Objekt der Startzeitmessung freigeben
 - **Telemetrie:**
-  - Die Abläufe und `first_frame_time` aus 1 zeigen den Gewinn.
+  - Die Abläufe und `ready_time` aus 1 zeigen den Gewinn.
   - Neues Log 3008 (Warnung, einmal je Prozess), falls der Rückfall greift:
     `Shader bytecode for {Shader} missing; compiling at runtime`.
   - Der Eintrag kommt in den Katalog.

@@ -12,7 +12,7 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// Draws the captured desktop of one monitor with zoom, colour filter, filter per window and smart
 /// inversion into the overlay. <see cref="Draw"/> runs every frame and must not allocate (AGENTS.md 2.3).
 /// </summary>
-internal sealed class DesktopLayer(MagnifyPass pass, SmartInvertLayer smart)
+internal sealed class DesktopLayer(MagnifyPass pass, SmartInvertLayer smart, GpuPassTimer magnifyTime)
 {
     // Frame around lens and docked view, in physical pixels.
     private const double FrameThickness = 4;
@@ -45,10 +45,13 @@ internal sealed class DesktopLayer(MagnifyPass pass, SmartInvertLayer smart)
         var matrix = effects.Matrix;
         var weights = smart.Prepare(context, desktop, effects.IsSmart || windows.UsesSmart(monitor), effects.ProtectPhotos);
         var monitorSmart = effects.IsSmart && weights is not null;
+        magnifyTime.Collect(context);
+        magnifyTime.Begin(context);
         if (!frame.HasFrame)
         {
             pass.Draw(context, desktop, target, width, height,
                 MagnifyConstants.Fullscreen(frame.Source, monitor, matrix, effects.Smoothing, monitorSmart), weights);
+            magnifyTime.End(context);
             return weights;
         }
 
@@ -69,6 +72,7 @@ internal sealed class DesktopLayer(MagnifyPass pass, SmartInvertLayer smart)
         var constants = MagnifyConstants.WithFrame(frame.Source, monitor, frame.Target, viewport, FrameColor.Default, matrix, effects.Smoothing, monitorSmart);
         pass.Draw(context, desktop, target, (float)(viewport.X - monitor.X), (float)(viewport.Y - monitor.Y),
             (float)viewport.Width, (float)viewport.Height, constants, weights);
+        magnifyTime.End(context);
         return weights;
     }
 

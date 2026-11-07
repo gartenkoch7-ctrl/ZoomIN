@@ -27,6 +27,15 @@ public sealed class MagnifierSystemCursor : ISystemCursor
 
     public void SetVisible(bool visible)
     {
+        // Every render thread calls this once per frame; nearly always nothing changes. Without the
+        // lock-free check each frame took the lock all monitors share (AGENTS.md 2.3, M14 step 2).
+        // A stale read either takes the lock, which checks again, or skips one change that the
+        // same render thread asks for again in its next frame.
+        if (!_available || Volatile.Read(ref _visible) == visible)
+        {
+            return;
+        }
+
         lock (_gate)
         {
             if (!_available || visible == _visible)
@@ -36,7 +45,7 @@ public sealed class MagnifierSystemCursor : ISystemCursor
 
             if (PInvoke.MagShowSystemCursor(visible))
             {
-                _visible = visible;
+                Volatile.Write(ref _visible, visible);
             }
         }
     }

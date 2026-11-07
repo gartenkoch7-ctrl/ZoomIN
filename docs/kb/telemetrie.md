@@ -86,7 +86,9 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.update.run`, `zoomin.elevated.run`, `zoomin.uninstall.run` | jeweilige Rolle | ganzer Lauf; Exit-Code ≠ 0 → Status Error |
 | `zoomin.setup.install` | setup | Installation im Assistenten (Tag `zoomin.version`) |
 | `zoomin.setup.apply` | setup | Installationsschritt mit Adminrechten |
+| `zoomin.app.start.services`, `zoomin.app.start.shell` | app | Kinder von `zoomin.app.start` (M14): DI-Container, Einstellungen laden, Watchdog starten bzw. Engine, Hooks, Tray und Erststart |
 | `zoomin.render.pipeline_start` | app, secure | Aufbau von Gerät, Duplication und Overlay je Monitor (Tag `zoomin.monitor`; Fehler: Ausnahmetyp) |
+| `zoomin.render.pipeline_start.device`, `.capture`, `.overlay`, `.shaders` | app, secure | Kinder von `zoomin.render.pipeline_start` (M14): D3D-Gerät, Desktop Duplication, Overlay-Fenster und Swapchain, Shader kompilieren und Durchgänge anlegen |
 | `zoomin.render.rebuild` | app, secure | Neuaufbau aller Renderer, z. B. nach Anzeigeänderung (Tag `zoomin.monitors`) |
 | `zoomin.update.check` | app | Release-Liste holen (Tags `zoomin.update.channel`, `zoomin.update.releases`) |
 | `zoomin.update.install` | app | Update per Klick: Download, ggf. Sicherung, Installationsschritt (Tags `zoomin.version`, `zoomin.update.result`) |
@@ -120,6 +122,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.tracking.chromium_nudges` | Fenster | – | Chromium-Inhaltsfenster nach IAccessible2 gefragt |
 | `zoomin.tracking.anchor_switches` | Wechsel | `zoomin.anchor.source` (`mouse`, `focus`, `caret`) | Ansicht folgt jetzt Maus, Fokus oder Caret (Render-Thread, ohne Allokation) |
 | `zoomin.render.smart_invert_gpu_time` | ms | `zoomin.monitor` | Mittlere GPU-Zeit des Umgebungs-Durchgangs über 120 Frames (Zeitstempel-Abfragen, nicht blockierend); > 1 ms → Rückfall (Log 3007) |
+| `zoomin.render.gpu_time` | ms | `zoomin.monitor`, `zoomin.pass` (`magnify`) | Mittlere GPU-Zeit eines Durchgangs über 120 Frames (M14); Zeitstempel-Abfragen laufen nur, solange jemand das Instrument abonniert (Diagnose, OTLP). Durchgänge überlappen nicht: kein Gesamt-Frame-Wert, weil verschachtelte Disjoint-Abfragen nicht überall erlaubt sind |
+| `zoomin.render.ready_time` | ms | `zoomin.monitor` | Prozessstart bis erste fertige Zoom-Pipeline des Monitors (einmal je Prozess und Monitor, nur in der ersten Minute – später angesteckte Monitore zählen nicht, M14) |
 | `zoomin.render.smart_invert_frames` | Frames | `zoomin.monitor` | Frames mit intelligentem Invertieren (Umgebungs-Durchgang, ADR-0024); im Verhältnis zu `frame_interval`-Zählungen der Anteil |
 | `zoomin.render.overlay_time` | s | `zoomin.monitor`, `zoomin.state` (`active`, `paused`) | Zeit, in der der Render-Thread arbeitet bzw. schläft – ergibt den Pausenanteil des Filters pro Fenster |
 | `zoomin.windowfilter.classifications` | Fenster | `process.name`, `zoomin.result` (`light`, `dark`, `unknown`), `zoomin.caption` (Titelleiste: `light`, `dark`, `unknown`, `none`) | Fenster beim Öffnen eingestuft (dazu Log 2701) |

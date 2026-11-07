@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml;
 using ZoomIN.App.Composition;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.App.Settings;
+using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Settings;
 using ZoomIN.Platform.SecureDesktop;
 
@@ -30,26 +31,36 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         var telemetry = Program.Telemetry!;
-        _services = ServiceRegistration.Build(telemetry);
-        _log = _services.GetRequiredService<ILogger<App>>();
 
-        // The user's diagnostics level is known only once the settings are loaded (ADR-0019);
-        // changes on the diagnostics page take effect at once (Apply ignores unrelated changes).
-        telemetry.Apply(_services.GetRequiredService<AppSettings>().Telemetry());
-        var settings = _services.GetRequiredService<SettingsService>();
-        settings.Changed += () => telemetry.Apply(settings.Current.Telemetry());
-        WatchdogStarter.Start(_log);
+        // Phases as child operations of zoomin.app.start (startup measurement, M14). The parent is
+        // passed explicitly: the WinUI dispatcher does not promise to keep Activity.Current.
+        var parent = Program.StartOperation?.Context ?? default;
+        using (Telemetry.Source.StartActivity("zoomin.app.start.services", ActivityKind.Internal, parent))
+        {
+            _services = ServiceRegistration.Build(telemetry);
+            _log = _services.GetRequiredService<ILogger<App>>();
 
-        var shell = _services.GetRequiredService<AppShell>();
-        shell.ExitRequested += ExitApp;
-        shell.Start();
-        Program.Instance?.ListenForOpenRequests(shell.OpenSettings);
-        _easeOfAccess = EaseOfAccessNotifier.Create(_log);
-        _easeOfAccess.NotifyStarted();
+            // The user's diagnostics level is known only once the settings are loaded (ADR-0019);
+            // changes on the diagnostics page take effect at once (Apply ignores unrelated changes).
+            telemetry.Apply(_services.GetRequiredService<AppSettings>().Telemetry());
+            var settings = _services.GetRequiredService<SettingsService>();
+            settings.Changed += () => telemetry.Apply(settings.Current.Telemetry());
+            WatchdogStarter.Start(_log);
+        }
+
+        using (Telemetry.Source.StartActivity("zoomin.app.start.shell", ActivityKind.Internal, parent))
+        {
+            var shell = _services.GetRequiredService<AppShell>();
+            shell.ExitRequested += ExitApp;
+            shell.Start();
+            Program.Instance?.ListenForOpenRequests(shell.OpenSettings);
+            _easeOfAccess = EaseOfAccessNotifier.Create(_log);
+            _easeOfAccess.NotifyStarted();
+        }
 
         Program.StartOperation?.Dispose();
-        var started = (DateTime.Now - Process.GetCurrentProcess().StartTime).TotalMilliseconds;
-        _log.Started(started);
+        using var process = Process.GetCurrentProcess();
+        _log.Started((DateTime.Now - process.StartTime).TotalMilliseconds);
     }
 
     private void ExitApp()
