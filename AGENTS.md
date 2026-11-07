@@ -94,6 +94,20 @@ ZoomIN.App ──► ZoomIN.Rendering ──► ZoomIN.Core
 - Startet ZoomIN einen eigenen Prozess, gibt es den Ablauf mit `TraceParentArgument.Append` weiter.
 - Erzwungen durch `TelemetryConventionTests` und den Analyzer CA1848 (nur `[LoggerMessage]`).
 
+### 2.6 Statische Klassen (ADR-0025)
+- `static` nur für Code **ohne Nebenwirkungen**: reine Logik, Konstanten, `[LoggerMessage]`-Klassen
+  und `Telemetry`, Interop, `Program`, DI-Erweiterungen in `Composition/`, reine Texttabellen.
+  Win32-Rückrufe ohne Kontextzeiger (z. B. Low-Level-Hooks) dürfen einen statischen Einsprung
+  haben, der nur an eine Instanz weiterleitet.
+- Alles mit Dateien, Registry, Prozessen, Dialogen, Netz, Umgebungsvariablen, Pfaden, Uhr oder
+  Sprache ist ein **Dienst** (Interface + Implementierung, registriert in der Composition Root).
+  Zeit über `TimeProvider`, Pfade über `IAppFolders`, Sprache über `ILocalizer` (`Text` ist nur
+  die Fassade für XAML).
+- Im Render-Loop Dienste nur als `readonly`-Feld aus dem Konstruktor, nie pro Frame aus dem Container.
+- Die IO-Teile (Dateien, Registry, Prozesse, Umgebung, Netz) erzwingt ein Architekturtest. Er
+  kommt mit M14 Schritt 6, anfangs mit schrumpfender Ausnahmeliste. Dialoge, Uhr und Sprache
+  prüft das Review.
+
 ---
 
 ## 3. Clean-Room-Regeln (rechtlich verbindlich)
