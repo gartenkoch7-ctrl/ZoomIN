@@ -81,7 +81,8 @@ internal sealed class RenderSession : IDisposable
                 _cursorLayer = new CursorLayer(cursorPass, pointer.Shapes, pointer.SystemCursor);
                 _highlights = new HighlightLayer(cursorPass);
                 var smart = Own(SmartInvertLayer.Create(_gpu.Device, _monitor.Width, _monitor.Height, deviceName, health, log));
-                _desktop = new DesktopLayer(pass, smart, Own(new GpuPassTimer(_gpu.Device, deviceName, "magnify")));
+                _desktop = new DesktopLayer(
+                    pass, smart, Own(new GpuPassTimer(_gpu.Device, deviceName, "magnify")), Own(new SmartCostProbe(_gpu.Device)));
             }
         }
         catch

@@ -27,7 +27,7 @@
 | Sprache | `ILocalizer` als Dienst (App und Setup gemeinsam); `Text` bleibt dünne Fassade für `x:Bind` |
 | Reihenfolge | **Performance zuerst** (Teil A), dann DI (Teil B), dann Aufteilen und Duplikate (Teil C) |
 | Grundsatz | ADR-0025 + Architekturtest + Satz in AGENTS.md Abschnitt 2 |
-| Performance-Umfang | Leerlauf-Frames + Lock pro Frame; Shader vorkompilieren; Smart-Invert-Kosten. **Nicht:** Shader-Varianten (Permutationen) – erst wieder bei Bedarf |
+| Performance-Umfang | Leerlauf-Frames + Lock pro Frame; Shader vorkompilieren; Smart-Invert-Kosten (nach Messung: nur das Budget, kein Umbau der Gewichtung, Grilling 2026-11-07). **Nicht:** Shader-Varianten (Permutationen) – erst wieder bei Bedarf |
 | Tests | neue Projekte `ZoomIN.App.Tests`, `ZoomIN.Watchdog.Tests`, `ZoomIN.Setup.Tests` |
 | Render-Loop | Dienste nur über den Konstruktor als `readonly`-Feld, nie pro Frame aus dem Container; Mathe bleibt static |
 
@@ -203,26 +203,41 @@
   - Veröffentlichung geprüft: weder Werkzeug noch D3DCompiler im Paket.
 
 #### 5 · Smart-Invert-Kosten
-- [ ] Gewichtung (`SmartWeight`) in einem eigenen Durchgang in **Desktop-Auflösung**, begrenzt
-      auf den Quellbereich plus Rand. Sie wird zwischengespeichert, solange sich der Desktop
-      nicht ändert. `Magnify.hlsl` liest danach nur noch einen Wert.
-- [ ] Scissor/Viewport des Umgebungsdurchgangs auf Quellbereich plus Rand begrenzen (beim Zoom
-      1/Z² der Arbeit)
-- [ ] Lupe/Angedockt: Den Lupenbereich nicht doppelt zeichnen (Scissor im 1×-Durchgang)
-- [ ] `GpuStopwatch` misst Umgebung **und** Gewichtung. Der Rückfall auf „Farbton erhalten“
-      greift damit für die echten Kosten.
-- [ ] Ergebnis ohne sichtbare Änderung: Die Offline-Wiedergabe (`OfflineRenderTests`,
-      `SmartInvert*Tests`) bleibt pixelgleich bzw. innerhalb der Toleranz.
-- [ ] `Magnify.hlsl` dabei unter 250 Zeilen bringen (Gewichtung in eigene `.hlsli`/`.hlsl`)
+**Entscheidung (Grilling 2026-11-07): klein und sicher.**
+- Schritt 3 spart den Umgebungsdurchgang bei ruhendem Desktop schon ein.
+- Die Gewichtung in Desktop-Auflösung entfällt. Sie hätte das in M13 abgestimmte Aussehen von
+  gezoomtem Text verändert, denn `SmartWeight` nutzt die *interpolierte* Helligkeit jedes
+  Ausgabe-Pixels.
+- Laut Messbasis hängen die Kosten kaum vom Zoom ab, der Gewinn wäre also klein.
+- [x] Budget misst die echten Kosten: `SmartCostProbe` zeichnet je Pipeline 32 Frames lang
+      den Desktop schlicht und intelligent nacheinander, beide mit GPU-Zeit.
+  - Mehrkosten im Magnify-Durchgang = Differenz der Mittel. Der Rückfall (ADR-0024) prüft jetzt
+    Umgebung plus diese Mehrkosten.
+  - Vorher sah er nur den Umgebungsdurchgang und konnte für den teuren Teil nie greifen.
+  - Gemessen wird erst nach 60 Frames mit Smart Invert (die GPU taktet nach dem Start oft noch
+    niedrig). Wird der ganze Monitor intelligent, misst die Probe neu, denn das ist teurer als
+    einzelne Fenster. Kommen zu wenige Messungen zurück, misst sie einmal erneut.
+  - Die Probe-Zeichnungen überschreibt der echte Frame vollständig (Vollbild-Zeichnung oder
+    Löschen), es ist also nichts davon zu sehen.
+- [~] Gewichtung in Desktop-Auflösung, Scissor auf den Quellbereich: **entfällt** (siehe oben).
+- [~] Lupe/Angedockt nicht doppelt zeichnen: **entfällt**. Es spart nur die Lupenfläche
+      (etwa 12 %) und bräuchte vier beschnittene Zeichnungen statt einer.
+- [ ] `Magnify.hlsl` (285 Zeilen) unter 250 bringen: Die Gewichtung kommt in eine eigene `.hlsli`.
+      Das braucht `#include` im Shader-Werkzeug (Include-Handler, `.hlsli` als Input). Zusammen
+      mit dem nächsten Shader-Umbau, Teil C.
 - **Telemetrie:**
-  - `zoomin.render.smart_invert_gpu_time` misst heute nur den Umgebungsdurchgang (Mittel über
-    120 Frames). Künftig misst es Umgebung **plus** Gewichtung, und das Budget prüft diesen Wert.
-  - Die Aufteilung je Durchgang liefert `zoomin.render.gpu_time` mit dem Tag `zoomin.pass`
-    (aus Schritt 1).
-  - Den Katalogtext anpassen.
+  - `zoomin.render.smart_invert_gpu_time` = Umgebung + Mehrkosten im Magnify-Durchgang; Katalog
+    angepasst.
   - Log 3007 beim Rückfall wie bisher (einmal je Pipeline).
-- **Ziel:** Hochrechnung Onboard bei 1440p und 2× ≤ 0,6 ms (heute etwa 0,9 ms). Die Zahl wird nach der
-  Messbasis aus Schritt 1 bestätigt.
+- **Tests:** `SmartCostBudgetTests`
+  - Umgebung und Mehrkosten zusammen über dem Budget → Rückfall
+  - Mehrkosten allein → sofort Rückfall
+  - beides darunter → bleibt intelligent
+  - die Probe misst auf WARP einmal und hört dann auf
+  - `RenderLayersAllocationTests` mit laufender Probe: 0 B
+- **Ziel:** Die Hochrechnung auf Onboard-Grafik bleibt etwa 0,9 ms. Das Budget greift jetzt aber
+  für die echten Kosten, statt sie zu übersehen. Eine echte Onboard-Messung ist weiter offen
+  (kein Gerät).
 
 ### Teil B – Interfaces und DI (ADR-0025)
 
@@ -315,13 +330,13 @@
       `WatchdogArguments`, plus die Tests aus 8–10
 
 ## Akzeptanzkriterien
-- [ ] Leerlauf: Ruhender Desktop bei 2× → GPU-Last nahe null, `frames_skipped` steigt.
-      Mausbewegung ohne spürbare Verzögerung (Sichtprüfung durch den Nutzer).
-- [ ] Start bis zum ersten Frame gegenüber der Messbasis aus 1 messbar kürzer; keine
-      Laufzeit-Kompilierung der Shader mehr
-- [ ] Kein Lock und keine Allokation im Render-Loop (Benchmarks `0 B`, Code-Review)
-- [ ] Smart Invert: GPU-Messung umfasst Umgebung und Gewichtung; Hochrechnung Onboard ≤ 0,6 ms;
-      Offline-Wiedergabe unverändert
+- [x] Leerlauf: Ruhender Desktop bei 2× → GPU-Last nahe null, `frames_skipped` steigt.
+      Mausbewegung ohne spürbare Verzögerung (Sichtprüfung durch den Nutzer 2026-11-07, dev.120.m14).
+- [ ] Start bis zur fertigen Pipeline (`ready_time`) gegenüber der Messbasis messbar kürzer; keine
+      Laufzeit-Übersetzung der Shader mehr ([x], Schritt 4). Messung an einem echten Start offen
+- [x] Kein Lock und keine Allokation im Render-Loop (Benchmarks und WARP-Tests `0 B`, Code-Review; Teil A)
+- [x] Smart Invert: Das Budget umfasst Umgebung und Mehrkosten im Magnify-Durchgang (Grilling
+      2026-11-07: kein Umbau der Gewichtung, Ziel ≤ 0,6 ms entfällt); Offline-Wiedergabe unverändert
 - [ ] Architekturtest ADR-0025 grün mit leerer bzw. begründeter Ausnahmeliste
 - [ ] App, Watchdog und Setup haben Testprojekte; Deinstallation, Update und Watchdog getestet
 - [ ] `MonitorRenderer.cs` und `Magnify.hlsl` unter 250 Zeilen; `AnchorController.cs` und

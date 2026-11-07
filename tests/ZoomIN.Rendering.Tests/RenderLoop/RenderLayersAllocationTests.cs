@@ -35,7 +35,8 @@ public sealed class RenderLayersAllocationTests
         using var pass = new MagnifyPass(gpu.Device);
         using var smart = SmartInvertLayer.Create(gpu.Device, Size, Size, @"\\.\DISPLAY1", new SmartInvertHealth(), NullLogger.Instance);
         using var timer = new GpuPassTimer(gpu.Device, @"\\.\DISPLAY1", "magnify");
-        var layer = new DesktopLayer(pass, smart, timer);
+        using var probe = new SmartCostProbe(gpu.Device);
+        var layer = new DesktopLayer(pass, smart, timer, probe);
         var effects = new DisplayEffects(new FilterSettings(true, ColorFilter.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default);
         var windows = new WindowRegions([new PhysicalRect(0, 0, 32, 32)], [WindowPalette.Smart]);
         var frame = lens

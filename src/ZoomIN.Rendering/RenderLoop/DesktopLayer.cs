@@ -12,7 +12,7 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// Draws the captured desktop of one monitor with zoom, colour filter, filter per window and smart
 /// inversion into the overlay. <see cref="Draw"/> runs every frame and must not allocate (AGENTS.md 2.3).
 /// </summary>
-internal sealed class DesktopLayer(MagnifyPass pass, SmartInvertLayer smart, GpuPassTimer magnifyTime)
+internal sealed class DesktopLayer(MagnifyPass pass, SmartInvertLayer smart, GpuPassTimer magnifyTime, SmartCostProbe probe)
 {
     // Frame around lens and docked view, in physical pixels.
     private const double FrameThickness = 4;
@@ -23,6 +23,10 @@ internal sealed class DesktopLayer(MagnifyPass pass, SmartInvertLayer smart, Gpu
     private WindowRegions? _uploadedWindows;
     private DisplayEffects? _uploadedEffects;
     private bool _uploadedSmart;
+
+    // Window constants without smart entries, for the plain draw of the cost probe (M14 step 5).
+    private WindowConstants _probeConstants;
+    private bool _probedMonitorSmart;
 
     /// <summary>The smart inversion smoothing still moves: keep drawing frames (M14 step 3).</summary>
     public bool SmartSettling => smart.Settling;
@@ -53,6 +57,12 @@ internal sealed class DesktopLayer(MagnifyPass pass, SmartInvertLayer smart, Gpu
         var weights = smart.Prepare(
             context, desktop, effects.IsSmart || windows.UsesSmart(monitor), effects.ProtectPhotos, newImage || effectsChanged);
         var monitorSmart = effects.IsSmart && weights is not null;
+        if (weights is not null)
+        {
+            ProbeSmartCost(context, desktop, target, width, height, monitor, frame.HasFrame ? monitor : frame.Source,
+                effects, windows, monitorSmart, weights);
+        }
+
         magnifyTime.Collect(context);
         magnifyTime.Begin(context);
         if (!frame.HasFrame)
@@ -82,6 +92,46 @@ internal sealed class DesktopLayer(MagnifyPass pass, SmartInvertLayer smart, Gpu
             (float)viewport.Width, (float)viewport.Height, constants, weights);
         magnifyTime.End(context);
         return weights;
+    }
+
+    // Once per pipeline (SmartCostProbe.Frames frames): the same desktop drawn plain and smart, each
+    // timed, so the budget sees what the smart inversion adds to the magnify pass. The real draw
+    // overwrites the whole target afterwards (fullscreen draw or clear), so nothing of it is seen.
+    private void ProbeSmartCost(
+        ID3D11DeviceContext context, ID3D11ShaderResourceView desktop, ID3D11RenderTargetView target, int width, int height,
+        PhysicalRect monitor, PhysicalRect source, DisplayEffects effects, WindowRegions windows, bool monitorSmart,
+        ID3D11ShaderResourceView weights)
+    {
+        if (probe.Collect(context))
+        {
+            smart.SetMagnifyExtra(probe.ExtraMilliseconds);
+        }
+
+        // A few smart windows cost less than a smart monitor: measure again when that case starts.
+        if (monitorSmart && !_probedMonitorSmart)
+        {
+            _probedMonitorSmart = true;
+            probe.Restart();
+        }
+
+        probe.Tick();
+        if (!probe.Wanted)
+        {
+            return;
+        }
+
+        // Plain: no palette entry is smart and the monitor matrix is applied without weights.
+        WindowConstants.Fill(ref _probeConstants, windows, monitor, effects, smartActive: false);
+        pass.UpdateWindows(context, _probeConstants);
+        probe.BeginPlain(context);
+        pass.Draw(context, desktop, target, width, height, MagnifyConstants.Fullscreen(source, monitor, effects.Matrix, effects.Smoothing), null);
+        probe.EndPlain(context);
+
+        pass.UpdateWindows(context, _windowConstants);
+        probe.BeginSmart(context);
+        pass.Draw(context, desktop, target, width, height,
+            MagnifyConstants.Fullscreen(source, monitor, effects.Matrix, effects.Smoothing, monitorSmart), weights);
+        probe.EndSmart(context);
     }
 
     private static PhysicalRect Expand(PhysicalRect rect, double by, PhysicalRect within)
