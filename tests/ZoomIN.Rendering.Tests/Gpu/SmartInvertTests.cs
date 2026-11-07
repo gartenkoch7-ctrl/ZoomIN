@@ -3,28 +3,21 @@ using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Viewport;
 using ZoomIN.Core.WindowFilters;
 using ZoomIN.Rendering.Gpu;
+using static ZoomIN.Rendering.Tests.Gpu.SmartInvertRender;
 
 namespace ZoomIN.Rendering.Tests.Gpu;
 
 /// <summary>Smart inversion (ADR-0024) on WARP: light surroundings inverted, dark bars and photos kept.</summary>
 public sealed class SmartInvertTests
 {
-    private const int Size = 128;
-
     // A dark bar (like the navigation bar of the Control Panel) with light text over a white page
     // with dark text; the page's text lines are 2 px high every 8 px.
     private const int BarBottom = 48;
-    private static readonly Bgra s_white = new(255, 255, 255, 255);
-    private static readonly Bgra s_black = new(0, 0, 0, 255);
-    private static readonly Bgra s_bar = new(32, 32, 32, 255);
-    private static readonly PhysicalRect s_monitor = new(0, 0, Size, Size);
-    private static readonly DisplayEffects s_smartMonitor =
-        new(new FilterSettings(true, ColorFilter.InvertedSmart, 1, 0), Smoothing.Pixel, PointerStyle.Default);
 
     [Fact]
     public void LightPage_IsInverted_DarkBarStaysDark()
     {
-        var pixels = Render(BarOverPage, s_smartMonitor);
+        var pixels = Render(BarOverPage, SmartMonitor);
 
         Assert.True(Luma(pixels.At(64, 16)) < 60, "the dark bar must stay dark");
         Assert.True(Luma(pixels.At(64, 100)) < 30, "white page must turn dark");
@@ -34,7 +27,7 @@ public sealed class SmartInvertTests
     [Fact]
     public void Photo_StaysOriginal()
     {
-        var pixels = Render(Photo, s_smartMonitor);
+        var pixels = Render(Photo, SmartMonitor);
 
         Assert.Equal(Photo(64, 64), pixels.At(64, 64));
         Assert.Equal(Photo(20, 100), pixels.At(20, 100));
@@ -44,9 +37,9 @@ public sealed class SmartInvertTests
     public void BurntOutWhiteInsideAPhoto_StaysOriginal()
     {
         // Pure white 40 × 40 in the middle of a photo: paper on its own, a hole in the photo by its surroundings.
-        static Bgra Image(int x, int y) => x is >= 44 and < 84 && y is >= 44 and < 84 ? s_white : Photo(x, y);
+        static Bgra Image(int x, int y) => x is >= 44 and < 84 && y is >= 44 and < 84 ? White : Photo(x, y);
 
-        var pixels = Render(Image, s_smartMonitor);
+        var pixels = Render(Image, SmartMonitor);
 
         Assert.True(Luma(pixels.At(64, 64)) > 240, $"the white area must stay white, got {Luma(pixels.At(64, 64))}");
     }
@@ -58,8 +51,8 @@ public sealed class SmartInvertTests
         var pixels = Render(BarOverPage, DisplayEffects.Default, window);
 
         Assert.True(Luma(pixels.At(32, 100)) < 30, "white page inside the window turns dark");
-        Assert.Equal(s_white, pixels.At(100, 100));
-        Assert.Equal(s_bar, pixels.At(32, 16));
+        Assert.Equal(White, pixels.At(100, 100));
+        Assert.Equal(Bar, pixels.At(32, 16));
     }
 
     [Fact]
@@ -76,7 +69,7 @@ public sealed class SmartInvertTests
     public void Smoothing_ClearChangeCountsAtOnce()
     {
         // Dark content replaced by a white page (scrolling, a window moved): no grey ghost.
-        var (first, _) = Fade(s_bar, s_white);
+        var (first, _) = Fade(Bar, White);
 
         Assert.True(first < 10, $"the white page is inverted in the first frame ({first})");
     }
@@ -89,7 +82,7 @@ public sealed class SmartInvertTests
         using var target = RenderTarget.Create(gpu.Device, Size);
         using var pass = new MagnifyPass(gpu.Device);
         using var ambient = new AmbientPass(gpu.Device, Size, Size);
-        Upload(gpu, pass, s_smartMonitor, WindowRegions.Empty);
+        Upload(gpu, pass, SmartMonitor, WindowRegions.Empty);
 
         ambient.Update(gpu.Context, old.View, 1, protectPhotos: true);
         ambient.Update(gpu.Context, next.View, 0.25f, protectPhotos: true);
@@ -110,7 +103,7 @@ public sealed class SmartInvertTests
     {
         // White page left, dark window right; the edge at x = 71 is not on a 16 px texel border.
         const int edge = 71;
-        var pixels = Render((x, _) => x < edge ? s_white : s_bar, s_smartMonitor);
+        var pixels = Render((x, _) => x < edge ? White : Bar, SmartMonitor);
 
         for (var x = 0; x < Size; x++)
         {
@@ -121,7 +114,7 @@ public sealed class SmartInvertTests
             }
             else if (x > edge)
             {
-                Assert.True(Math.Abs(luma - Luma(s_bar)) < 10, $"x={x}: dark must stay as it is, got luma {luma}");
+                Assert.True(Math.Abs(luma - Luma(Bar)) < 10, $"x={x}: dark must stay as it is, got luma {luma}");
             }
         }
     }
@@ -132,10 +125,10 @@ public sealed class SmartInvertTests
         // Dark Windows theme: a 24 px high dark tooltip with light text over a white page.
         static Bgra Image(int x, int y) =>
             x is >= 20 and < 110 && y is >= 50 and < 74
-                ? (y is 60 or 61 && x % 5 < 3 ? s_white : s_bar)
-                : s_white;
+                ? (y is 60 or 61 && x % 5 < 3 ? White : Bar)
+                : White;
 
-        var pixels = Render(Image, s_smartMonitor);
+        var pixels = Render(Image, SmartMonitor);
 
         Assert.True(Luma(pixels.At(64, 54)) < 60, $"tooltip must stay dark, got {Luma(pixels.At(64, 54))}");
         Assert.True(Luma(pixels.At(64, 100)) < 20, "the page around it is inverted");
@@ -145,7 +138,7 @@ public sealed class SmartInvertTests
     public void DenseBoldText_OnWhite_IsStillInverted()
     {
         // Bold 3 px strokes every 6 px both ways: far more ink than normal text.
-        var pixels = Render((x, y) => x % 6 < 3 && y % 8 < 4 ? s_black : s_white, s_smartMonitor);
+        var pixels = Render((x, y) => x % 6 < 3 && y % 8 < 4 ? Black : White, SmartMonitor);
 
         Assert.True(Luma(pixels.At(64, 66)) < 20, $"white between strokes must be inverted, got {Luma(pixels.At(64, 66))}");
         Assert.True(Luma(pixels.At(61, 64)) > 200, $"strokes must turn light, got {Luma(pixels.At(61, 64))}");
@@ -165,13 +158,13 @@ public sealed class SmartInvertTests
     {
         var pixels = Render(BarOverPage, DisplayEffects.Default);
 
-        Assert.Equal(s_white, pixels.At(64, 100));
+        Assert.Equal(White, pixels.At(64, 100));
     }
 
     private static Bgra BarOverPage(int x, int y) =>
         y < BarBottom
-            ? (y % 16 is 7 or 8 && x % 4 < 2 ? s_white : s_bar)
-            : (y % 8 is 0 or 1 && x % 16 < 12 ? s_black : s_white);
+            ? (y % 16 is 7 or 8 && x % 4 < 2 ? White : Bar)
+            : (y % 8 is 0 or 1 && x % 16 < 12 ? Black : White);
 
     // Photo-like: smooth colour gradients plus fine noise, no flat area anywhere (like a real photo).
     private static Bgra Photo(int x, int y)
@@ -185,31 +178,7 @@ public sealed class SmartInvertTests
             255);
     }
 
-    private static int Luma(Bgra c) => (int)((0.2126 * c.R) + (0.7152 * c.G) + (0.0722 * c.B));
-
-    private static PixelBuffer Render(Func<int, int, Bgra> image, DisplayEffects effects, WindowRegions? windows = null)
-    {
-        using var gpu = GpuDevice.CreateWarp();
-        using var texture = TestImage.Create(gpu.Device, Size, image);
-        using var target = RenderTarget.Create(gpu.Device, Size);
-        using var pass = new MagnifyPass(gpu.Device);
-        using var ambient = new AmbientPass(gpu.Device, Size, Size);
-        Upload(gpu, pass, effects, windows ?? WindowRegions.Empty);
-
-        ambient.Update(gpu.Context, texture.View, 1, effects.ProtectPhotos);
-        pass.Draw(gpu.Context, texture.View, target.View, Size, Size,
-            MagnifyConstants.Fullscreen(s_monitor, s_monitor, effects.Matrix, Smoothing.Pixel, effects.IsSmart), ambient.Weights);
-        return target.ReadBack(gpu.Device, gpu.Context);
-    }
-
-    private static void Upload(GpuDevice gpu, MagnifyPass pass, DisplayEffects effects, WindowRegions windows)
-    {
-        var constants = default(WindowConstants);
-        WindowConstants.Fill(ref constants, windows, s_monitor, effects);
-        pass.UpdateWindows(gpu.Context, constants);
-    }
-
     private static void Draw(GpuDevice gpu, MagnifyPass pass, TestImage image, RenderTarget target, AmbientPass ambient) =>
         pass.Draw(gpu.Context, image.View, target.View, Size, Size,
-            MagnifyConstants.Fullscreen(s_monitor, s_monitor, s_smartMonitor.Matrix, Smoothing.Pixel, smart: true), ambient.Weights);
+            MagnifyConstants.Fullscreen(Screen, Screen, SmartMonitor.Matrix, Smoothing.Pixel, smart: true), ambient.Weights);
 }

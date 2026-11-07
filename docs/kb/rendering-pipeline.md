@@ -103,6 +103,19 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   Pixel-Luma und Hintergrund-Luma (σ = 0,12, gemeinsame bilaterale Hochskalierung). Ein heller
   Pixel an der Kante folgt der hellen Kachel, ein dunkler der dunklen – Übergang 1–2 px statt
   16–32. Weich bleibt nur noch die Zeit (Glättung 50 ms).
+- **Schrift an der Kante folgt ihrem Umfeld, nicht ihrer Farbe** (Excel, 2026-11-07): Schrift hat
+  die Farbe der *anderen* Seite. Excel im dunklen Design: helle Zeilennummern auf dunkler Spalte
+  direkt neben dem weißen Blatt passten per eigener Luma zur Blatt-Kachel und wurden mitinvertiert
+  (fast unsichtbar); dunkle Zelltexte 4 px neben der Spalte passten zur dunklen Kachel und blieben
+  dunkel auf Schwarz. Jetzt prüft Magnify **nur wo die vier Kacheln uneins sind** (sonst keine
+  Zusatzkosten) 8 Nachbarn im Abstand 3 px: Weniger als 3 ähnliche (±0,1) → Strich. Ist er auch
+  in 6 px Abstand fast ringsum (≥ 6 von 8) anders, stimmen diese fernen Nachbarn über die Kachel ab
+  statt der eigenen Luma. Abstand 2 px zerfraß Buchstaben (ihr Innenraum galt als Strich); nur
+  3 px Abstimmung machte aus den 1–2 px Lücken fetter Schrift (Blattregister) weiße Punkte – daher
+  der ferne Ring und die „ringsum“-Bedingung. Rest: In der nur ~20 px hohen aktiven
+  Registerkarte („Tabelle1“) bleibt die grüne Schrift teils dunkel und unter der Grundlinie stehen
+  einzelne helle Pixel – die Insel ist kleiner als eine Entscheidungskachel. Test:
+  `SmartInvertTextTests`.
 - **Kachel-Zuordnung:** Pixel → Kachel über `uv · TextureSize / 16`, nicht `uv · Kachelzahl` –
   die Textur hat `ceil(Breite / 16)` Kacheln, das driftete bis zu einer Kachel über den Monitor
   (bei 1121 px: dunkle Pixel neben einer Kante wurden invertiert). `WEIGHT_BLOCK` im Shader =

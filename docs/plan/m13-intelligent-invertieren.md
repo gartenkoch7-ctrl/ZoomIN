@@ -128,6 +128,13 @@ dem Tag `v1.0.0`.
 - Video: Flackern an der Papier-Grenze – behoben mit Hysterese bei gleichem Inhalt.
 - Onboard-Grafik: auf diesem Rechner nicht vorhanden (CPU ohne iGPU).
 
+### Weitere Programme (2026-11-07, selbstständig, verlustfreie Aufnahme + Offline-Wiedergabe)
+- Excel (dunkles Design, neue Mappe mit Testtabelle): Blatt und Gitter sauber invertiert, Menüband
+  und Registerleiste bleiben dunkel. Gefunden und behoben: helle Zeilennummern wurden mitinvertiert,
+  erste Buchstaben neben der Nummernspalte blieben dunkel – Schrift folgt jetzt ihrem Umfeld
+  (`SmartInvertTextTests`). Rest: aktive Registerkarte „Tabelle1“ (Insel < Kachel) nicht ganz rein.
+- Word (dunkles Design, neues Dokument): dunkle Seite bleibt unverändert – richtig.
+
 ## Akzeptanzkriterien
 - [x] Systemsteuerung (dunkles Design): helle Fläche dunkel, dunkle Leisten bleiben dunkel – geprüft
       2026-11-06 vom Nutzer an der Einstellungen-App (dev.113.m13, Automatik-Filter intelligent)
@@ -136,6 +143,8 @@ dem Tag `v1.0.0`.
       Frame): still 0,31 % falsch, 0,03 % Flackern; mit Schwenk 4,6 % am Bildrand
 - [x] Scrollen einer Seite mit hellen und dunklen Teilen: kein Flackern, kein Springen – Scroll-Test
       offline: ≤ 1,0 % abweichende Pixel bei 12 px/Frame (vorher 7,4 % durch Nachziehen)
+- [x] Excel (dunkles Design): Tabelle sauber invertiert, Zeilennummern und Zelltext lesbar – geprüft
+      2026-11-07 selbstständig (verlustfreie Aufnahme, Offline-Wiedergabe)
 - [ ] Monitorfilter, Lupe und Angedockt verhalten sich gleich; Zoomen kippt keine Fläche
 - [ ] Budget: ≤ 1 ms extra GPU (hochgerechnet ≈ 0,9 ms; der Entwicklungsrechner i7-12700KF hat keine
       Onboard-Grafik – Messung braucht ein anderes Gerät); Monitor-Hz gehalten

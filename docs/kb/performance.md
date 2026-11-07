@@ -42,6 +42,7 @@
 | 2026-11-06 | RTX 3060 Ti | 1440p (Offscreen) | M13 intelligent, Foto-Test 64 px | Umgebung 0,048 ms; intelligent inkl. Umgebung 0,222 ms → **+0,083 ms** | Hochrechnung ×10 Onboard ≈ 0,8 ms (Budget 1 ms, Rückfall misst Umgebung ≈ 0,5 ms) |
 | 2026-11-06 | RTX 3060 Ti | 1440p (Offscreen) | M13 intelligent, kantenerhaltend (bilateral) | Magnify 0,140 ms; intelligent inkl. Umgebung 0,204 ms → **+0,064 ms** | Hochrechnung ×10 Onboard ≈ 0,6 ms (Budget 1 ms) |
 | 2026-11-06 | RTX 3060 Ti | 1440p (Offscreen) | M13 intelligent, GPU-Zeitstempel, 300 Frames | Magnify 0,144 ms; Umgebung 0,031 ms; Magnify intelligent inkl. Umgebung 0,189 ms → **+0,046 ms** | 3 Läufe stabil; hochgerechnet ×10 auf Onboard ≈ 0,5 ms (Budget 1 ms), echte Onboard-Messung offen |
+| 2026-11-07 | RTX 3060 Ti | 1440p (Offscreen) | M13 intelligent, Schrift folgt Umfeld (16 Nachbar-Taps) | überall gelesen: **+0,203 ms**; nur wo die 4 Kacheln uneins sind: intelligent inkl. Umgebung 0,223–0,238 ms → **+0,084–0,099 ms** | 3 Läufe; Taps nur an Kanten halten das Budget (≈ 1 ms Onboard hochgerechnet wie zuvor) |
 | 2026-11-06 | RTX 3060 Ti, 20 Threads | 1080p, 60 Hz | M12 Filter pro Fenster, Dev-Build | CPU 0,00–0,05 % aller Kerne (helles Fenster, auch beim Verschieben); Popup → Bereich Median 3,3 ms, 90 % < 4,5 ms; `WindowRegionsCheck` 64 Bereiche 65 ns, 0 B | Bildrate nicht gemessen; vor dem Blick-Thread Popup bis 75 ms (ADR-0022) |
 
 ## Telemetrie-Start (M11)
