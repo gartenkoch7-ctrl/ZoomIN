@@ -1,12 +1,9 @@
-using System.ComponentModel;
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Folders;
 using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Watchdog.Crashes;
-using ZoomIN.Watchdog.Notification;
 
 namespace ZoomIN.Watchdog;
 
@@ -17,24 +14,17 @@ namespace ZoomIN.Watchdog;
 /// </summary>
 /// <param name="folders">Where the crash log and the give-up mark are kept (ADR-0025).</param>
 /// <param name="cleanup">What a crashed ZoomIN leaves behind and the watchdog gives back.</param>
-public sealed class WatchdogRunner(IAppFolders folders, ILogger log, IReadOnlyList<ICleanupStep> cleanup)
+/// <param name="system">Waiting, restarting and the notice; a fake in the tests.</param>
+/// <param name="clock">Time of the crash for the restart limits.</param>
+public sealed class WatchdogRunner(
+    IAppFolders folders, ILogger log, IReadOnlyList<ICleanupStep> cleanup, IWatchdogSystem system, TimeProvider clock)
 {
     /// <param name="secure">Watches the secure-desktop instance (ADR-0016): restarts it with its switch, never notifies.</param>
     public int Run(int processId, string appPath, bool secure = false)
     {
-        int exitCode;
-        try
+        if (!system.TryWaitForExit(processId, out var exitCode, out var reason))
         {
-            using var process = Process.GetProcessById(processId);
-
-            // Touch the handle now: the exit code is only readable through a handle opened before exit.
-            _ = process.Handle;
-            process.WaitForExit();
-            exitCode = process.ExitCode;
-        }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Win32Exception)
-        {
-            log.CannotWatch(processId, ex.Message);
+            log.CannotWatch(processId, reason);
             return 1;
         }
 
@@ -47,19 +37,18 @@ public sealed class WatchdogRunner(IAppFolders folders, ILogger log, IReadOnlyLi
         {
             // Windows ends the whole job (instance and watchdog) on every desktop switch. If this
             // watchdog is still alive a moment later, the instance really crashed.
-            Thread.Sleep(500);
+            system.Pause(TimeSpan.FromMilliseconds(500));
         }
 
         log.UnexpectedExit(exitCode);
         RunCleanup(cleanup, log);
 
-        var crashes = new CrashHistory(folders.CrashLog()).Record(DateTimeOffset.Now);
-        if (RestartPolicy.ShouldRestart(crashes, DateTimeOffset.Now))
+        var now = clock.GetLocalNow();
+        var crashes = new CrashHistory(folders.CrashLog()).Record(now);
+        if (RestartPolicy.ShouldRestart(crashes, now))
         {
             log.Restarting();
-            // Through the shell, as CreateProcess cannot start the uiAccess build (ADR-0012).
-            var arguments = TraceParentArgument.Append(secure ? SecureDesktopMode.Switch : string.Empty);
-            Process.Start(new ProcessStartInfo(appPath, arguments) { UseShellExecute = true })?.Dispose();
+            system.Restart(appPath, TraceParentArgument.Append(secure ? SecureDesktopMode.Switch : string.Empty));
             return 0;
         }
 
@@ -67,11 +56,11 @@ public sealed class WatchdogRunner(IAppFolders folders, ILogger log, IReadOnlyLi
         if (secure)
         {
             // No notification on a secure desktop; stay off there until Windows restarts.
-            new SecureDesktopGiveUp(folders).Mark();
+            new SecureDesktopGiveUp(folders, clock).Mark();
             return 2;
         }
 
-        TrayNotification.Show(
+        system.Notify(
             "ZoomIN wurde beendet",
             "ZoomIN ist wiederholt abgestürzt und wird nicht mehr neu gestartet. Details im Log unter %LocalAppData%\\ZoomIN\\logs.",
             TimeSpan.FromSeconds(10));

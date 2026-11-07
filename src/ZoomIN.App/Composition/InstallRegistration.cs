@@ -18,6 +18,7 @@ internal static class InstallRegistration
         services.AddSingleton<ISecureDesktopInstall, SystemSecureDesktopInstall>();
         services.AddSingleton<IElevatedStep, ShellElevatedStep>();
         services.AddSingleton<ISignatureVerifier, AuthenticodeVerifier>();
+        services.AddSingleton<IRunningInstall, ProcessRunningInstall>();
         services.AddSingleton<IMessageDialog, Win32MessageDialog>();
         return services;
     }

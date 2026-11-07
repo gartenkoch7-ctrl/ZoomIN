@@ -323,14 +323,22 @@
   - `RestartArguments` parst nur noch; das Warten auf die alte Version macht `Program`.
   - Die Ausnahmeliste von `StaticClassTests` hat nur noch einen Eintrag: `Win32TrayIcon`
     (Schritt 10).
-- [ ] Vor den Ablauf-Tests in Schritt 11 fehlen noch Nahtstellen (Review 2026-11-07):
-  - `UninstallFlow` startet die Admin-Entfernung selbst (`Process.Start` mit runas), löscht
-    Ordner direkt, schaltet den Autostart mit `new RegistryAutostart` ab und liest die
-    Installation aus `Environment.ProcessPath`.
-  - `UpdateRunner` liest ebenso `Environment.ProcessPath`.
-  - Für Tests mit gefälschten Diensten (Abbruch, Fehler beim Entfernen) kommen ein Dienst für
-    den Admin-Schritt der Deinstallation, das Autostart-Interface und das `InstallLayout` in
-    den Konstruktor.
+- [x] Nahtstellen für die Ablauf-Tests aus Schritt 11 (Review 2026-11-07):
+  - `IRunningInstall` (Core, `ProcessRunningInstall` in Platform, über `AddInstall`) ersetzt
+    `Environment.ProcessPath` in `UninstallFlow` und `UpdateRunner`.
+  - `IRemovalSteps` (`ProcessRemovalSteps`): Admin-Schritt mit runas, andere ZoomIN beenden,
+    Ordner nach Prozessende löschen lassen.
+  - Den Autostart schaltet `UninstallFlow` über `IAutostart` aus DI ab, jetzt auch nur als
+    Versuch: ein Registry-Fehler bricht die Deinstallation nicht mehr ab.
+  - `WatchdogRunner` bekommt `IWatchdogSystem` (`ProcessWatchdogSystem`: auf den Prozess warten,
+    neu starten, Tray-Hinweis, Pause) und `TimeProvider`.
+  - Noch mit `Environment.ProcessPath` lesen die Installation `SecureDesktopSwitch`,
+    `UpdateService` und `RegistryAutostart`; für diese Abläufe gibt es bisher keine Tests. Den
+    eigenen Pfad zum Starten von Prozessen nutzen `ProcessRemovalSteps`, `ShellWatchdogLauncher`,
+    der Watchdog-Start in `Program` und `SetupInstaller`. Das sind die echten Implementierungen
+    hinter den Nahtstellen.
+  - Log 1206 (`RemovalFailed`) hat jetzt die Kategorie `ProcessRemovalSteps` statt `UninstallFlow`,
+    die EventId bleibt gleich.
 - **Tests:** in den neuen Testprojekten (Schritt 11)
   - Deinstallation: Reihenfolge, Abbruch, Fehler beim Entfernen
   - Update: Rückgabewerte, Adminschritt abgelehnt
@@ -413,9 +421,15 @@
     `WatchdogArguments`
   - Setup: `SetupChoices.ApplyTo` (übernimmt die Wahl, behält den Rest, Filter aus) und die
     `SetupText`-Fassade
-- [ ] Noch offen: Abläufe Deinstallation, Update und Watchdog-Neustart mit gefälschten Diensten.
-      Sie brauchen zuerst die Nahtstellen aus Schritt 8 (Admin-Schritt der Deinstallation,
-      Autostart, `InstallLayout`, Prozess-Warten).
+- [x] Ablauf-Tests mit gefälschten Diensten (19):
+  - `UninstallFlowTests`: nicht installiert, Abbrechen, abgelehnte Admin-Abfrage, Einstellungen
+    behalten oder löschen, Fehler beim Aufräumen beim Nutzer (bricht nicht ab), Admin-Schritt
+  - `UpdateRunnerTests`: nicht installiert, abgelehnte Signatur, installiert mit Apps-Eintrag und
+    Anmeldebildschirm, Fehler beim Apps-Eintrag. Die beiden letzten brauchen Verzeichnis-Links
+    (Admin oder Entwicklermodus) und werden sonst übersprungen.
+  - `WatchdogRunnerTests`: nicht überwachbar, reguläres Ende, Absturz mit Aufräumen und Neustart,
+    vierter Absturz im Fenster mit Hinweis, Abstürze außerhalb des Fensters, Anmeldebildschirm
+    mit Pause, Schalter und stiller Aufgabe
 
 ## Akzeptanzkriterien
 - [x] Leerlauf: Ruhender Desktop bei 2× → GPU-Last nahe null, `frames_skipped` steigt.
@@ -425,10 +439,9 @@
 - [x] Kein Lock und keine Allokation im Render-Loop (Benchmarks und WARP-Tests `0 B`, Code-Review; Teil A)
 - [x] Smart Invert: Das Budget umfasst Umgebung und Mehrkosten im Magnify-Durchgang (Grilling
       2026-11-07: kein Umbau der Gewichtung, Ziel ≤ 0,6 ms entfällt); Offline-Wiedergabe unverändert
-- [ ] Architekturtest ADR-0025 grün mit leerer bzw. begründeter Ausnahmeliste (grün; ein Eintrag offen:
-      `Win32TrayIcon`, Schritt 10)
-- [ ] App, Watchdog und Setup haben Testprojekte ([x], Schritt 11); Deinstallation, Update und
-      Watchdog-Neustart als Ablauf-Tests noch offen (Update im Testbuild echt geprüft)
+- [x] Architekturtest ADR-0025 grün mit leerer Ausnahmeliste (Schritt 10)
+- [x] App, Watchdog und Setup haben Testprojekte mit Ablauf-Tests für Deinstallation, Update und
+      Watchdog-Neustart (Schritt 11; Update zusätzlich im Testbuild echt geprüft)
 - [x] `MonitorRenderer.cs` und `Magnify.hlsl` unter 250 Zeilen; `AnchorController.cs` und
       `Win32WindowFilterSource.cs` ≤ 200; `check-file-length.ps1` grün
 - [x] Telemetrie im Katalog `docs/kb/telemetrie.md`, Messwerte in `docs/kb/performance.md`

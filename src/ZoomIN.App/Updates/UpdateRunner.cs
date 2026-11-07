@@ -11,12 +11,13 @@ namespace ZoomIN.App.Updates;
 /// Program Files; the exit code is the <see cref="UpdateResult"/>.
 /// </summary>
 internal sealed class UpdateRunner(
-    ISignatureVerifier verifier, IInstallRegistration registration, ISecureDesktopInstall secureDesktop, ILogger<UpdateRunner> log)
+    ISignatureVerifier verifier, IInstallRegistration registration, ISecureDesktopInstall secureDesktop, IRunningInstall install,
+    ILogger<UpdateRunner> log)
 {
     public int Run(UpdateCommand command)
     {
         ArgumentNullException.ThrowIfNull(command);
-        if (!InstallLayout.TryFromExecutable(Environment.ProcessPath, out var layout))
+        if (!install.TryGetLayout(out var layout))
         {
             log.NotVersioned();
             return (int)UpdateResult.NotInstalled;

@@ -45,7 +45,8 @@ public static class Program
         if (WatchdogArguments.TryParse(args, out var processId, out var secure))
         {
             return RunRole(TelemetryRole.Watchdog, traceParent, log =>
-                new WatchdogRunner(Folders, log, [new AppBarCleanup(Folders), new SystemCursorCleanup()]).Run(processId, Environment.ProcessPath!, secure));
+                new WatchdogRunner(Folders, log, [new AppBarCleanup(Folders), new SystemCursorCleanup()], new ProcessWatchdogSystem(), TimeProvider.System)
+                    .Run(processId, Environment.ProcessPath!, secure));
         }
 
         // As SYSTEM, ZoomIN is always the secure-desktop instance, whatever the arguments: Windows

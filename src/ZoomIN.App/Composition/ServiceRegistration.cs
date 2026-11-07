@@ -84,6 +84,8 @@ internal static class ServiceRegistration
         services.AddInstall();
         services.AddSingleton<UpdateRunner>();
         services.AddSingleton<UninstallFlow>();
+        services.AddSingleton<IRemovalSteps, ProcessRemovalSteps>();
+        services.AddSingleton<IAutostart, RegistryAutostart>();
         services.AddSingleton<ISecureDesktopSwitch, SecureDesktopSwitch>();
         return services;
     }
