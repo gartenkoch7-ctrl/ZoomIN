@@ -79,6 +79,7 @@ public static class SecureSettingsSanitizer
             LocateHotkey = Hotkey(s.LocateHotkey, d.LocateHotkey),
             CrosshairHotkey = Hotkey(s.CrosshairHotkey, d.CrosshairHotkey),
             TrackingHotkey = Hotkey(s.TrackingHotkey, d.TrackingHotkey),
+            NotificationHotkey = Hotkey(s.NotificationHotkey, d.NotificationHotkey),
             ProfileHotkey = Hotkey(s.ProfileHotkey, d.ProfileHotkey),
             WheelModifiers = Wheel(s.WheelModifiers, d.WheelModifiers),
         };

@@ -5,9 +5,10 @@ using ZoomIN.Core.Viewport;
 namespace ZoomIN.Core.Tracking;
 
 /// <summary>
-/// Decides per monitor and frame which point the view is anchored to: mouse, keyboard focus or
-/// text caret (M6). Moves only when the target is not visible yet, glides there, and hands the
-/// view back to the mouse once it moves. Owned by one render thread; no allocations.
+/// Decides per monitor and frame which point the view is anchored to: mouse, keyboard focus,
+/// text caret (M6) or a Windows notification. Moves only when the target is not visible yet,
+/// glides there, and hands the view back to the mouse once it moves (or the notification closes).
+/// Owned by one render thread; no allocations.
 /// </summary>
 public sealed class AnchorController
 {
@@ -32,6 +33,8 @@ public sealed class AnchorController
     private PhysicalPoint _mouseAtSwitch;
     private long _seenFocusAt;
     private long _seenCaretAt;
+    private long _seenNotificationAt;
+    private long _seenRequestAt;
 
     public AnchorSource Source { get; private set; } = AnchorSource.Mouse;
 
@@ -53,6 +56,8 @@ public sealed class AnchorController
             TrackKeyboard(input);
         }
 
+        // After the keyboard: a toast that just appeared wins over a focus change in the same frame.
+        TrackNotification(input);
         Move(input, delta);
         return _anchor;
     }
@@ -66,6 +71,8 @@ public sealed class AnchorController
         // Focus and caret from before this monitor started rendering are not news.
         _seenFocusAt = input.Tracking.FocusChangedAt;
         _seenCaretAt = input.Tracking.CaretChangedAt;
+        _seenNotificationAt = input.Tracking.NotificationChangedAt;
+        _seenRequestAt = input.NotificationRequestedAt;
         _initialized = true;
     }
 
@@ -87,7 +94,7 @@ public sealed class AnchorController
     private void TrackKeyboard(in AnchorInput input)
     {
         var tracking = input.Tracking;
-        var mouseActive = _lastMouseMoveAt != 0 && Seconds(input.Now - _lastMouseMoveAt) < MouseIntentSeconds;
+        var mouseActive = MouseActive(input);
         var caretNews = tracking.CaretChangedAt > _seenCaretAt;
         var focusNews = tracking.FocusChangedAt > _seenFocusAt;
         _seenCaretAt = tracking.CaretChangedAt;
@@ -105,6 +112,32 @@ public sealed class AnchorController
         else if (focusNews && input.Options.Focus && tracking.Focus is { } focus && Usable(focus, input.Monitor))
         {
             Follow(AnchorSource.Focus, focus, 0, input);
+        }
+    }
+
+    private void TrackNotification(in AnchorInput input)
+    {
+        var toast = input.Tracking.Notification;
+        if (Source == AnchorSource.Notification && toast is null)
+        {
+            // The toast closed: back to the mouse (user decision: stay only while it is visible).
+            Source = AnchorSource.Mouse;
+            _gliding = true;
+        }
+
+        var requested = input.NotificationRequestedAt > _seenRequestAt;
+        _seenRequestAt = input.NotificationRequestedAt;
+        var news = input.Options.Notifications && input.Tracking.NotificationChangedAt > _seenNotificationAt;
+        if (!requested && (!news || MouseActive(input)))
+        {
+            // While the mouse is moving the news stays unread: the view pans once the mouse rests.
+            return;
+        }
+
+        _seenNotificationAt = input.Tracking.NotificationChangedAt;
+        if (toast is { } rect && input.Monitor.Contains(Center(rect)))
+        {
+            Follow(AnchorSource.Notification, rect, 0, input);
         }
     }
 
@@ -161,6 +194,9 @@ public sealed class AnchorController
         _anchor = _target;
         _gliding = false;
     }
+
+    private bool MouseActive(in AnchorInput input) =>
+        _lastMouseMoveAt != 0 && Seconds(input.Now - _lastMouseMoveAt) < MouseIntentSeconds;
 
     private static bool Usable(PhysicalRect focus, PhysicalRect monitor) =>
         monitor.Contains(Center(focus)) && focus.Width * focus.Height <= monitor.Width * monitor.Height * MaxFocusShare;

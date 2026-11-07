@@ -14,7 +14,8 @@ internal readonly record struct FrameRequest(
     long LocateRequestedAt,
     TrackingSnapshot Tracking,
     TrackingOptions TrackingOptions,
-    bool PointerHidden)
+    bool PointerHidden,
+    long NotificationRequestedAt = 0)
 {
     /// <summary>Not magnified and no colour filter: only pointer, crosshair or locator are drawn.</summary>
     public bool OverlayOnly => Zoom <= 1.01 && !Effects.Filter.ChangesColors;

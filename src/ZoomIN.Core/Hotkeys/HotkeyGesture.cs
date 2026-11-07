@@ -32,6 +32,9 @@ public readonly record struct HotkeyGesture(HotkeyModifiers Modifiers, int Virtu
 
     public static HotkeyGesture NextProfile { get; } = new(CtrlAlt, 0x50); // P
 
+    /// <summary>Pans to the visible Windows notification; Shift+N by user decision (N alone is too easy to hit).</summary>
+    public static HotkeyGesture GoToNotification { get; } = new(CtrlAltShift, 0x4E); // Shift+N
+
     /// <summary>Ends ZoomIN on the secure desktop only (ADR-0016); Shift+Z, because Q types @ with AltGr.</summary>
     public static HotkeyGesture ExitSecureDesktop { get; } = new(CtrlAltShift, 0x5A); // Shift+Z
 

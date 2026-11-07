@@ -157,6 +157,7 @@ public sealed class ZoomController : IDisposable
 
         Register(s.CrosshairHotkey, Effects.ToggleCrosshair);
         Register(s.TrackingHotkey, Tracking.ToggleEnabled);
+        Register(s.NotificationHotkey, Tracking.RequestNotification);
         Register(s.ProfileHotkey, _profiles.Next);
         UnavailableHotkeys = unavailable;
     }

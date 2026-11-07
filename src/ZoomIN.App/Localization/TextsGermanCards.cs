@@ -122,6 +122,12 @@ internal static class TextsGermanCards
         ["TrackingGroupMarks"] = "Markierungen",
         ["TrackingFocusFrame.Desc"] = "Magentafarbener Rahmen in der Vergrößerung.",
         ["TrackingCaretMarker.Desc"] = "Gut sichtbarer Balken an der Schreibposition.",
+        ["TrackingGroupNotifications"] = "Benachrichtigungen",
+        ["TrackingNotificationsTitle"] = "Zu Benachrichtigungen schwenken",
+        ["TrackingNotifications.Desc"] = "Erscheint eine Windows-Benachrichtigung (z. B. Teams), schwenkt die Ansicht hin, bis sie verschwindet oder die Maus bewegt wird. Strg+Alt+Umschalt+N springt jederzeit hin.",
+        ["TrackingNotificationColorsTitle"] = "Benachrichtigungen in Originalfarben",
+        ["TrackingNotificationColors.Desc"] = "Im Bereich der Benachrichtigung gilt der Farbfilter nicht.",
+        ["Act.Notification"] = "Zur Benachrichtigung springen",
 
         ["GeneralAutostart.Desc"] = "ZoomIN startet nach der Anmeldung im Infobereich.",
         ["GeneralSecureDesktop"] = "Auf dem Anmeldebildschirm verwenden",

@@ -95,3 +95,46 @@ Globale Kürzel per `RegisterHotKey`, Mausrad per `WH_MOUSE_LL`.
   nicht schon sichtbar ist.
 - Caret mit Randabstand (Standard 20 %).
 - Mausbewegung über Schwellwert → gleitend zurück zum Maus-Fixpunkt.
+
+## Windows-Benachrichtigungen (Toasts)
+Erscheint eine Windows-Benachrichtigung (z. B. Teams mit Stil „Windows-Benachrichtigungen“),
+schwenkt die Ansicht hin und zeigt sie in Originalfarben.
+
+**Entscheidungen (Nutzer, 2026-11-03):**
+- Alle Toasts, nicht nur Teams (keine Absender-Unterscheidung).
+- Automatisch hinschwenken, zusätzlich **Strg+Alt+Umschalt+N** (`GoToNotification`) – springt
+  auch, wenn „Zu Benachrichtigungen schwenken“ aus ist oder der Toast schon im Bild ist.
+- Bleibt dort, solange der Toast sichtbar ist; Mausbewegung (> 8 px) holt die Ansicht sofort
+  zurück, Schließen des Toasts ebenfalls. Bewegt sich die Maus gerade, wenn der Toast erscheint,
+  wird der Schwenk nachgeholt, sobald sie 0,5 s ruht (Toast noch sichtbar).
+- Farbfilter gilt im Toast-Rechteck nicht, der Rest bleibt gefiltert – unabhängig davon, ob die
+  Ansicht gerade dort steht. Abschaltbar („Benachrichtigungen in Originalfarben“).
+- Unabhängig von Strg+Alt+T (Fokus/Caret aus ≠ Toasts aus); eigene Schalter je Profil.
+- Zentriert wird vorerst auf die Rechteckmitte; nach dem Merge von `fix/focus-centering` auf
+  `ViewCentering.AnchorFor` umstellen.
+
+**Erkennung** (`Platform/Automation/ToastWindowFinder`, im 33-ms-Takt von `UiaTrackingSource`):
+Top-Level-Fenster der Klasse `Windows.UI.Core.CoreWindow` aus `ShellExperienceHost.exe`, sichtbar
+und nicht per DWM verhüllt (`DWMWA_CLOAKED` = 0). Derselbe Prozess hält Benachrichtigungscenter
+und Kalender-Flyout; die trennt `Core/Tracking/NotificationRules` über die Größe
+(Breite ≤ 40 %, Höhe ≤ 60 % des Monitors, Mitte auf dem Monitor). Erster Fund je Fenster wird
+geloggt („Notification window found …“).
+
+**Rendering:** Allgemein als *Farbbereich* angelegt (`Core/Filters/ColorRegion`): ein Rechteck
+in Desktop-Koordinaten mit eigener Farbmatrix B, die dort die Monitor-Matrix A ersetzt. Für
+Toasts ist B die Einheitsmatrix (Originalfarben). Genau ein Bereich pro Frame;
+`ColorRegion.For` entscheidet, welche Quelle ihn füllt – vorgesehen für eine zweite Quelle
+(geplanter „Freigabe-Filter“ nur für den beim Teams-Teilen freigegebenen Bereich).
+`Magnify.hlsl`: `RegionMin/RegionMax` (Desktop-UV) und `RegionRow0..2`, Konstantenpuffer 176 B;
+leeres Rechteck (0,0,0,0) = kein Bereich. Hot Path: 0 B (`AnchorWithNotification` ≈ 8 ns/Frame).
+
+**Probe auf dem Entwickler-PC (Win 11 23H2, Build 22631, 2026-11-03):** Test-Toasts per
+`ToastNotificationManager` (AppID PowerShell) landeten im Verlauf (`History.GetHistory` = 4),
+ein Banner erschien aber nicht – auch nicht mit ausgeblendetem Overlay; Teams-Toast kam ebenfalls
+nicht. `SHQueryUserNotificationState` = 5 (`QUNS_ACCEPTS_NOTIFICATIONS`). Banner werden auf diesem
+PC also unterdrückt (vermutlich „Nicht stören“ bzw. Banner-Einstellung). Folge:
+⚠️ **Die Fenstermerkmale oben sind noch nicht am echten Banner gemessen**, sondern aus dem
+bekannten Aufbau der Windows-Shell übernommen. Offener Test: Banner zulassen, Toast auslösen,
+Log-Zeile „Notification window found“ prüfen; falls sie fehlt, mit
+`EnumWindows` (Klasse, Prozess, Cloaked, Rechteck) nachmessen und hier eintragen.
+Zu prüfen ist dabei auch, ob Lautstärke-/Helligkeitsanzeigen fälschlich als Toast gelten.

@@ -4,7 +4,7 @@ using ZoomIN.Core.Tracking;
 
 namespace ZoomIN.App.ViewModels;
 
-/// <summary>Focus and caret tracking options (M6). Applies live.</summary>
+/// <summary>Focus, caret and notification tracking options (M6). Applies live.</summary>
 public sealed partial class TrackingViewModel : ObservableObject
 {
     private readonly PageContext _context;
@@ -21,6 +21,8 @@ public sealed partial class TrackingViewModel : ObservableObject
         Margin = Math.Round(o.CaretMargin * 100);
         FocusFrame = o.FocusFrame;
         CaretMarker = o.CaretMarker;
+        Notifications = o.Notifications;
+        NotificationColors = o.NotificationColors;
         _ready = true;
     }
 
@@ -45,6 +47,12 @@ public sealed partial class TrackingViewModel : ObservableObject
     [ObservableProperty]
     public partial bool CaretMarker { get; set; }
 
+    [ObservableProperty]
+    public partial bool Notifications { get; set; }
+
+    [ObservableProperty]
+    public partial bool NotificationColors { get; set; }
+
     partial void OnTrackingEnabledChanged(bool value) => Apply();
 
     partial void OnFocusChanged(bool value) => Apply();
@@ -59,12 +67,17 @@ public sealed partial class TrackingViewModel : ObservableObject
 
     partial void OnCaretMarkerChanged(bool value) => Apply();
 
+    partial void OnNotificationsChanged(bool value) => Apply();
+
+    partial void OnNotificationColorsChanged(bool value) => Apply();
+
     private void Apply()
     {
         if (_ready)
         {
             _context.Controller.Tracking.SetOptions(
-                new TrackingOptions(TrackingEnabled, Focus, Caret, PanMs / 1000, Margin / 100, FocusFrame, CaretMarker));
+                new TrackingOptions(TrackingEnabled, Focus, Caret, PanMs / 1000, Margin / 100, FocusFrame, CaretMarker,
+                    Notifications, NotificationColors));
         }
     }
 }

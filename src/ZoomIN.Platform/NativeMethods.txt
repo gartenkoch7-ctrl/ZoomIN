@@ -129,3 +129,12 @@ INPUT
 
 // Lifecycle/Win32UiAccessProbe
 GetTokenInformation
+
+// Automation/ToastWindowFinder
+FindWindowEx
+IsWindowVisible
+GetWindowThreadProcessId
+GetWindowRect
+DwmGetWindowAttribute
+DWMWINDOWATTRIBUTE
+MonitorFromWindow

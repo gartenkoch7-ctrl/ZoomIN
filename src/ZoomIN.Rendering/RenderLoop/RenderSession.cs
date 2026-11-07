@@ -121,10 +121,12 @@ internal sealed class RenderSession : IDisposable
             _lastCursor = cursor;
         }
 
-        // The anchor is the mouse, or the focus/caret while the user works with the keyboard (M6).
+        // The anchor is the mouse, the focus/caret while the user works with the keyboard (M6), or a
+        // notification that just appeared.
         var anchor = _anchors.Next(new AnchorInput(
             Stopwatch.GetTimestamp(), hasCursor ? cursor : _lastCursor, _cursorInside, _monitor.Bounds,
-            request.Mode, request.Zoom, request.Lens, request.Dock, request.Tracking, request.TrackingOptions));
+            request.Mode, request.Zoom, request.Lens, request.Dock, request.Tracking, request.TrackingOptions,
+            request.NotificationRequestedAt));
 
         var frame = ModeGeometry.Compute(request.Mode, _monitor.Bounds, anchor, request.Zoom, request.Lens, request.Dock);
         if (request.OverlayOnly)
@@ -133,7 +135,7 @@ internal sealed class RenderSession : IDisposable
         }
         else
         {
-            Draw(frame, request.Effects);
+            Draw(frame, request.Effects, ColorRegion.For(request.Tracking, request.TrackingOptions));
         }
 
         _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions);
@@ -162,21 +164,21 @@ internal sealed class RenderSession : IDisposable
         _owned.Clear();
     }
 
-    private void Draw(in ModeFrame frame, DisplayEffects effects)
+    private void Draw(in ModeFrame frame, DisplayEffects effects, ColorRegion? region)
     {
         var monitor = _monitor.Bounds;
         var matrix = effects.Matrix;
         if (!frame.HasFrame)
         {
             _pass.Draw(_gpu.Context, _duplicator.ShaderResource, _swapchain.RenderTarget, _swapchain.Width, _swapchain.Height,
-                MagnifyConstants.Fullscreen(frame.Source, monitor, matrix, effects.Smoothing));
+                MagnifyConstants.Fullscreen(frame.Source, monitor, matrix, effects.Smoothing, region));
             return;
         }
 
         // Lens/docked: everything outside the target stays transparent (and click-through).
         _gpu.Context.ClearRenderTargetView(_swapchain.RenderTarget, s_transparent);
         var viewport = Expand(frame.Target, FrameThickness, monitor);
-        var constants = MagnifyConstants.WithFrame(frame.Source, monitor, frame.Target, viewport, FrameColor.Default, matrix, effects.Smoothing);
+        var constants = MagnifyConstants.WithFrame(frame.Source, monitor, frame.Target, viewport, FrameColor.Default, matrix, effects.Smoothing, region);
         _pass.Draw(
             _gpu.Context,
             _duplicator.ShaderResource,

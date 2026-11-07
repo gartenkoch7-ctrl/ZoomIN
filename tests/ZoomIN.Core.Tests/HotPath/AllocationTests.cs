@@ -1,4 +1,6 @@
+using ZoomIN.Core.Filters;
 using ZoomIN.Core.Modes;
+using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Viewport;
 using ZoomIN.Core.Zoom;
 
@@ -79,6 +81,34 @@ public sealed class AllocationTests
         Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
         Assert.True(sum >= 0);
     }
+
+    [Fact]
+    public void AnchorAndColorRegion_WithNotification_DoNotAllocate()
+    {
+        var monitor = new PhysicalRect(0, 0, 1920, 1080);
+        var options = TrackingOptions.Default with { PanSeconds = 0.2 };
+        // Snapshots are built by the tracking thread, not the render thread: created up front.
+        var toast = new TrackingSnapshot(null, 0, null, 0, new PhysicalRect(1540, 820, 360, 200), 2);
+        var later = toast with { NotificationChangedAt = 3 };
+        var controller = new AnchorController();
+        var sum = controller.Next(Anchor(1, monitor, TrackingSnapshot.Empty, options)).X; // warm-up / JIT
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < Frames; i++)
+        {
+            // Toast appears and closes again every 100 frames; the hotkey fires in between.
+            var tracking = i % 100 >= 50 ? TrackingSnapshot.Empty : i % 200 < 100 ? toast : later;
+            sum += controller.Next(Anchor(2 + (i * 1000L), monitor, tracking, options, i % 100 == 25 ? i : 0)).X;
+            sum += ColorRegion.For(tracking, options)?.Area.Width ?? 0;
+        }
+
+        Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+        Assert.True(sum >= 0);
+    }
+
+    private static AnchorInput Anchor(long now, PhysicalRect monitor, TrackingSnapshot tracking, TrackingOptions options, long requestedAt = 0) =>
+        new(now, new PhysicalPoint(300, 300), true, monitor, ZoomMode.Fullscreen, 4, LensSize.Default, DockLayout.Default,
+            tracking, options, requestedAt);
 
     // Everything a render thread reads from the model per frame.
     private static double Read(ZoomModel model, string monitor) =>

@@ -159,6 +159,12 @@ public sealed record AppSettings
 
     public bool CaretMarker { get; set; } = true;
 
+    /// <summary>Pan to a Windows notification (toast) when it appears.</summary>
+    public bool FollowNotifications { get; set; } = true;
+
+    /// <summary>No colour filter inside a visible toast: it shows in its original colours.</summary>
+    public bool NotificationColors { get; set; } = true;
+
     /// <summary>Glide duration for zoom changes in milliseconds; 0 = instant.</summary>
     public int AnimationMilliseconds { get; set; } = 150;
 
@@ -184,6 +190,8 @@ public sealed record AppSettings
     public HotkeyGesture CrosshairHotkey { get; set; } = HotkeyGesture.ToggleCrosshair;
 
     public HotkeyGesture TrackingHotkey { get; set; } = HotkeyGesture.ToggleTracking;
+
+    public HotkeyGesture NotificationHotkey { get; set; } = HotkeyGesture.GoToNotification;
 
     public HotkeyGesture ProfileHotkey { get; set; } = HotkeyGesture.NextProfile;
 

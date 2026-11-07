@@ -19,6 +19,7 @@ public sealed record HotkeyBinding(string TextKey, Func<AppSettings, HotkeyGestu
         new("Act.Locate", s => s.LocateHotkey, (s, g) => s with { LocateHotkey = g }),
         new("Act.Crosshair", s => s.CrosshairHotkey, (s, g) => s with { CrosshairHotkey = g }),
         new("Act.Tracking", s => s.TrackingHotkey, (s, g) => s with { TrackingHotkey = g }),
+        new("Act.Notification", s => s.NotificationHotkey, (s, g) => s with { NotificationHotkey = g }),
         new("Act.Profile", s => s.ProfileHotkey, (s, g) => s with { ProfileHotkey = g }),
     ];
 }

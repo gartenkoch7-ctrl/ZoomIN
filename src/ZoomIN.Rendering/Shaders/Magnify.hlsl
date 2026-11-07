@@ -1,5 +1,6 @@
 // Magnifies a rectangle of the captured desktop into the viewport, optionally with a frame,
-// then applies the colour matrix (filter, contrast, brightness). One pass for everything.
+// then applies the colour matrix (filter, contrast, brightness); inside one region of the desktop
+// (e.g. a toast in its original colours) a second matrix replaces it. One pass for everything.
 
 cbuffer MagnifyConstants : register(b0)
 {
@@ -14,6 +15,11 @@ cbuffer MagnifyConstants : register(b0)
     float2 TextureSize;  // desktop texture size in pixels
     uint Smoothing;      // 0 = text (Catmull-Rom), 1 = soft (bilinear), 2 = pixel (nearest)
     float Padding;
+    float2 RegionMin;    // region in desktop texture UV space whose pixels use the Region matrix;
+    float2 RegionMax;    // min == max (empty) when there is no region
+    float4 RegionRow0;   // colour matrix inside the region, same layout as ColorRow0..2
+    float4 RegionRow1;
+    float4 RegionRow2;
 };
 
 Texture2D Desktop : register(t0);
@@ -86,11 +92,16 @@ float4 PSMain(VertexOutput input) : SV_Target
         return FrameColor;
     }
 
-    float3 c = SampleDesktop(SourceOffset + inner * SourceScale);
+    float2 uv = SourceOffset + inner * SourceScale;
+    float3 c = SampleDesktop(uv);
+    bool inRegion = all(uv >= RegionMin) && all(uv < RegionMax);
+    float4 row0 = inRegion ? RegionRow0 : ColorRow0;
+    float4 row1 = inRegion ? RegionRow1 : ColorRow1;
+    float4 row2 = inRegion ? RegionRow2 : ColorRow2;
     float3 filtered = saturate(float3(
-        dot(ColorRow0.xyz, c) + ColorRow0.w,
-        dot(ColorRow1.xyz, c) + ColorRow1.w,
-        dot(ColorRow2.xyz, c) + ColorRow2.w));
+        dot(row0.xyz, c) + row0.w,
+        dot(row1.xyz, c) + row1.w,
+        dot(row2.xyz, c) + row2.w));
 
     // The overlay is premultiplied-alpha; the desktop is opaque.
     return float4(filtered, 1);

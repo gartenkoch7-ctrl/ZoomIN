@@ -6,4 +6,5 @@ public enum AnchorSource
     Mouse,
     Focus,
     Caret,
+    Notification,
 }

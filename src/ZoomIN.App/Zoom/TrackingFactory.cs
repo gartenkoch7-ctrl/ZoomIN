@@ -15,7 +15,9 @@ internal static class TrackingFactory
         Math.Max(0, s.PanMilliseconds) / 1000.0,
         Math.Clamp(s.CaretMargin, 0, 0.4),
         s.FocusFrame,
-        s.CaretMarker);
+        s.CaretMarker,
+        s.FollowNotifications,
+        s.NotificationColors);
 
     public static AppSettings Apply(AppSettings settings, TrackingModel model)
     {
@@ -29,6 +31,8 @@ internal static class TrackingFactory
             CaretMargin = o.CaretMargin,
             FocusFrame = o.FocusFrame,
             CaretMarker = o.CaretMarker,
+            FollowNotifications = o.Notifications,
+            NotificationColors = o.NotificationColors,
         };
     }
 }

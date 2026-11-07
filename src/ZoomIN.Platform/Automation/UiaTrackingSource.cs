@@ -12,9 +12,10 @@ using ZoomIN.Core.Viewport;
 namespace ZoomIN.Platform.Automation;
 
 /// <summary>
-/// Polls keyboard focus (UI Automation) and the text caret (GetGUIThreadInfo) about 30 times per
-/// second on its own thread. Polling instead of event callbacks needs no COM callback objects and
-/// a hanging application can only delay this thread, never the zoom (M6).
+/// Polls keyboard focus (UI Automation), the text caret (GetGUIThreadInfo) and visible toasts
+/// (<see cref="ToastWindowFinder"/>) about 30 times per second on its own thread. Polling instead
+/// of event callbacks needs no COM callback objects and a hanging application can only delay this
+/// thread, never the zoom (M6).
 /// </summary>
 public sealed unsafe class UiaTrackingSource : ITrackingSource
 {
@@ -51,33 +52,30 @@ public sealed unsafe class UiaTrackingSource : ITrackingSource
     private void Run(TrackingModel model)
     {
         var automation = CreateAutomation();
+        var toasts = new ToastWindowFinder(_log);
         PhysicalRect? focus = null;
         PhysicalRect? caret = null;
+        PhysicalRect? toast = null;
         long focusAt = 0;
         long caretAt = 0;
+        long toastAt = 0;
 
         while (!_stop.Wait(Interval))
         {
             var newFocus = automation is null ? null : ReadFocus(automation);
             var newCaret = ReadCaret();
-            if (newFocus == focus && newCaret == caret)
+            var newToast = toasts.Find();
+            if (newFocus == focus && newCaret == caret && newToast == toast)
             {
                 continue;
             }
 
             var now = Stopwatch.GetTimestamp();
-            if (newFocus != focus && newFocus is not null)
-            {
-                focusAt = now;
-            }
-
-            if (newCaret != caret && newCaret is not null)
-            {
-                caretAt = now;
-            }
-
-            (focus, caret) = (newFocus, newCaret);
-            model.Publish(new TrackingSnapshot(focus, focusAt, caret, caretAt));
+            focusAt = Stamp(newFocus, focus, focusAt, now);
+            caretAt = Stamp(newCaret, caret, caretAt, now);
+            toastAt = Stamp(newToast, toast, toastAt, now);
+            (focus, caret, toast) = (newFocus, newCaret, newToast);
+            model.Publish(new TrackingSnapshot(focus, focusAt, caret, caretAt, toast, toastAt));
         }
 
         if (automation is not null)
@@ -85,6 +83,10 @@ public sealed unsafe class UiaTrackingSource : ITrackingSource
             Marshal.ReleaseComObject(automation);
         }
     }
+
+    // A change to a new rectangle is news; disappearing is not (the old timestamp stays).
+    private static long Stamp(PhysicalRect? next, PhysicalRect? previous, long changedAt, long now) =>
+        next != previous && next is not null ? now : changedAt;
 
     private IUIAutomation? CreateAutomation()
     {

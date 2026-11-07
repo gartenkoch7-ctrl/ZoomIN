@@ -122,6 +122,12 @@ internal static class TextsEnglishCards
         ["TrackingGroupMarks"] = "Highlights",
         ["TrackingFocusFrame.Desc"] = "Magenta frame in the magnified view.",
         ["TrackingCaretMarker.Desc"] = "Clearly visible bar at the typing position.",
+        ["TrackingGroupNotifications"] = "Notifications",
+        ["TrackingNotificationsTitle"] = "Pan to notifications",
+        ["TrackingNotifications.Desc"] = "When a Windows notification appears (e.g. Teams), the view pans to it until it closes or the mouse moves. Ctrl+Alt+Shift+N jumps there at any time.",
+        ["TrackingNotificationColorsTitle"] = "Notifications in original colours",
+        ["TrackingNotificationColors.Desc"] = "The colour filter does not apply inside the notification.",
+        ["Act.Notification"] = "Go to notification",
 
         ["GeneralAutostart.Desc"] = "ZoomIN starts in the notification area after sign-in.",
         ["GeneralSecureDesktop"] = "Use on the sign-in screen",

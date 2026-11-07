@@ -56,6 +56,8 @@ public static class ProfileFields
         CaretMargin = profile.CaretMargin,
         FocusFrame = profile.FocusFrame,
         CaretMarker = profile.CaretMarker,
+        FollowNotifications = profile.FollowNotifications,
+        NotificationColors = profile.NotificationColors,
         AnimationMilliseconds = profile.AnimationMilliseconds,
     };
 

@@ -35,6 +35,14 @@
             <c:SettingCard Description="{x:Bind loc:Text.Get('TrackingCaretMarker.Desc')}" Glyph="&#xE8AC;" Header="{x:Bind loc:Text.TrackingCaretMarker}">
                 <ToggleSwitch IsOn="{x:Bind Vm.CaretMarker, Mode=TwoWay}" />
             </c:SettingCard>
+
+            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('TrackingGroupNotifications')}" />
+            <c:SettingCard Description="{x:Bind loc:Text.Get('TrackingNotifications.Desc')}" Glyph="&#xEA8F;" Header="{x:Bind loc:Text.Get('TrackingNotificationsTitle')}">
+                <ToggleSwitch IsOn="{x:Bind Vm.Notifications, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('TrackingNotificationColors.Desc')}" Glyph="&#xE790;" Header="{x:Bind loc:Text.Get('TrackingNotificationColorsTitle')}">
+                <ToggleSwitch IsOn="{x:Bind Vm.NotificationColors, Mode=TwoWay}" />
+            </c:SettingCard>
         </StackPanel>
     </ScrollViewer>
 </Page>
