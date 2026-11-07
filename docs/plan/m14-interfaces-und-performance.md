@@ -359,21 +359,32 @@
 ### Teil C – Struktur und Duplikate
 
 #### 10 · Große Klassen aufteilen
-- [ ] `ZoomController` wird aufgeteilt in:
-  - `HotkeyBindings` (Tabelle Geste → Aktion)
-  - `WindowFilterCommands`
-  - `EngineStarter`
-  - Ziel: höchstens 6 Konstruktor-Parameter
-- [ ] `AppShell` wird aufgeteilt in Tray-Befehle, Fenster/Erststart und Update-Hinweise.
-      `PageContext` entfällt: Seiten und ViewModels kommen aus dem Container und bekommen nur,
-      was sie brauchen.
-- [ ] `MonitorRenderer.cs` (256) unter 250 Zeilen bringen
+- [x] `ZoomController` (12 Konstruktor-Parameter) aufgeteilt:
+  - `ZoomCommands`: Zoom, Modus und Filter für den Monitor unter der Maus
+  - `WindowFilterCommands`: Fenster-Filter-Kürzel, offene Fensterarten
+  - `HotkeyBindings`: Tabelle Geste → Aktion, registrieren/aussetzen, nicht belegbare Kürzel
+  - `InputSources`: Parameterobjekt für Mausrad, Aktivität, Tracking, Fensterfilter
+  - `DockedStripSync` kommt aus DI.
+  - Übrig bleibt `ZoomController` für Engine-Start, Status und Ende mit 6 Parametern.
+- [x] `PageContext` (Record mit 14 Feldern) entfällt.
+  - Seiten bekommen `PageServices` als Navigationsparameter. Es baut jedes View-Model mit genau
+    den Diensten, die sein Konstruktor nennt (`ActivatorUtilities`); Seiten holen wenige
+    Dienste direkt (Zeigerbilder, Status).
+  - Die Rückrufe ins Fenster (Übersicht nach dem Erststart, Beenden fürs Update, Fenster-Handle
+    für Dateidialoge) sind `IShellActions`, umgesetzt von `AppShell`.
+  - `AppShell` sinkt von 14 auf 11 Parameter.
+- [ ] `AppShell` weiter aufteilen (Tray-Befehle, Fenster/Erststart, Update-Hinweise).
+- [x] `MonitorRenderer.cs` unter 250 Zeilen (230, Schritt 3)
 - [ ] `AnchorController.cs` (244) und `Win32WindowFilterSource.cs` (236) nach Verantwortung
       aufteilen, Ziel ≤ 200 Zeilen. Beide stehen kurz vor der Teilungsgrenze.
 - [ ] Gemeinsame `LowLevelHookThread` für `Win32WheelHook` und `Win32InputActivityHook`. Die
       statische Rückruf-Weiterleitung bleibt nach ADR-0025 Punkt 1.
+- [ ] `TrayIconImage` (letzter Eintrag der Ausnahmeliste) liest die Icon-Datei: als Instanz oder
+      über `IAppFolders`-ähnlichen Zugriff auf `AppContext.BaseDirectory`.
 - **Telemetrie:** Die Logs bleiben bei ihren Klassen bzw. Feature-Ordnern (EventIds unverändert).
-- **Tests:** Hotkey-Tabelle, Fensterfilter-Befehle, Tray-Befehle (App.Tests)
+  Die Log-Kategorie der Kürzel folgt jetzt `HotkeyBindings`.
+- **Tests:** Hotkey-Tabelle, Fensterfilter-Befehle, Tray-Befehle und „jedes View-Model lässt
+  sich aus dem Container bauen“ (App.Tests, Schritt 11).
 
 #### 11 · Testprojekte
 - [ ] `tests/ZoomIN.App.Tests`, `tests/ZoomIN.Watchdog.Tests`, `tests/ZoomIN.Setup.Tests`

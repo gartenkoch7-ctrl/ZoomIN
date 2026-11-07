@@ -9,17 +9,17 @@ namespace ZoomIN.App.Views;
 
 /// <summary>
 /// Settings window (M7). Closing hides it to the tray; only "Exit" in the tray closes it for real.
-/// Pages get the <see cref="PageContext"/> as navigation parameter.
+/// Pages get <see cref="PageServices"/> as navigation parameter.
 /// </summary>
 public sealed partial class SettingsWindow : Window
 {
-    private readonly PageContext _context;
+    private readonly PageServices _pages;
     private bool _exiting;
     private Type _currentPage;
 
-    public SettingsWindow(PageContext context)
+    public SettingsWindow(PageServices pages, bool firstRunCompleted)
     {
-        _context = context;
+        _pages = pages;
         InitializeComponent();
         AppWindow.Resize(new SizeInt32(980, 720));
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "ZoomIN.ico"));
@@ -30,7 +30,7 @@ public sealed partial class SettingsWindow : Window
         AppWindow.Closing += OnClosing;
         Text.LanguageChanged += OnLanguageChanged;
 
-        _currentPage = context.Settings.Current.FirstRunCompleted ? typeof(OverviewPage) : typeof(WelcomePage);
+        _currentPage = firstRunCompleted ? typeof(OverviewPage) : typeof(WelcomePage);
         BuildNavigation();
     }
 
@@ -88,7 +88,7 @@ public sealed partial class SettingsWindow : Window
         }
 
         // Always navigate again so the page texts follow a language change.
-        ContentFrame.Navigate(_currentPage, _context);
+        ContentFrame.Navigate(_currentPage, _pages);
     }
 
     private void Add(string text, string glyph, Type page) => Navigation.MenuItems.Add(new NavigationViewItem
@@ -103,7 +103,7 @@ public sealed partial class SettingsWindow : Window
         if (args.SelectedItem is NavigationViewItem { Tag: Type page } && page != ContentFrame.CurrentSourcePageType)
         {
             _currentPage = page;
-            ContentFrame.Navigate(page, _context);
+            ContentFrame.Navigate(page, _pages);
         }
     }
 

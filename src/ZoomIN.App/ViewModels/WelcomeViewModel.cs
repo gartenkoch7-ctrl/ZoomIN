@@ -1,6 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using ZoomIN.App.Localization;
-using ZoomIN.App.Views;
+using ZoomIN.App.Lifecycle;
+using ZoomIN.App.Settings;
+using ZoomIN.App.Zoom;
+using ZoomIN.Core.Lifecycle;
 
 namespace ZoomIN.App.ViewModels;
 
@@ -11,11 +14,17 @@ namespace ZoomIN.App.ViewModels;
 public sealed partial class WelcomeViewModel : ObservableObject
 {
     public const int StepCount = 5;
-    private readonly PageContext _context;
+    private readonly SettingsService _settings;
+    private readonly IAutostart _autostart;
+    private readonly ZoomCommands _zoom;
+    private readonly IShellActions _shell;
 
-    public WelcomeViewModel(PageContext context)
+    public WelcomeViewModel(SettingsService settings, IAutostart autostart, ZoomCommands zoom, IShellActions shell)
     {
-        _context = context;
+        _settings = settings;
+        _autostart = autostart;
+        _zoom = zoom;
+        _shell = shell;
         Autostart = true;
         CheckUpdates = true;
         ShowStep();
@@ -68,12 +77,12 @@ public sealed partial class WelcomeViewModel : ObservableObject
             return;
         }
 
-        _context.Autostart.SetEnabled(Autostart);
-        _context.Settings.Update(s => s with { CheckForUpdates = CheckUpdates, FirstRunCompleted = true });
-        _context.WelcomeFinished();
+        _autostart.SetEnabled(Autostart);
+        _settings.Update(s => s with { CheckForUpdates = CheckUpdates, FirstRunCompleted = true });
+        _shell.ShowOverview();
     }
 
-    public void ToggleFilter() => _context.Controller.ToggleFilter();
+    public void ToggleFilter() => _zoom.ToggleFilter();
 
     private void ShowStep()
     {

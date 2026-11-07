@@ -19,10 +19,10 @@ public sealed partial class GeneralPage : Page
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        var context = (PageContext)e.Parameter;
-        Vm = new GeneralViewModel(context);
-        Diag = new DiagnosticsViewModel(context.Settings, context.Diagnostics);
-        Snapshot = new DebugSnapshotViewModel(context.Settings.Models.Snapshots, context.Settings.Models.SmartInvert, context.Folders);
+        var services = (PageServices)e.Parameter;
+        Vm = services.Create<GeneralViewModel>();
+        Diag = services.Create<DiagnosticsViewModel>();
+        Snapshot = services.Create<DebugSnapshotViewModel>();
         Bindings.Update();
     }
 }

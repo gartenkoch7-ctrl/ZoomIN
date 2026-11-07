@@ -1,20 +1,24 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using ZoomIN.App.Views;
+using ZoomIN.App.Zoom;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Modes;
+using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.App.ViewModels;
 
 /// <summary>Mode, levels per monitor, glide, lens, docked area and smoothing. Applies live.</summary>
 public sealed partial class ZoomViewModel : ObservableObject
 {
-    private readonly PageContext _context;
+    private readonly ZoomModel _model;
+    private readonly EffectsModel _effects;
+    private readonly ZoomCommands _zoom;
     private readonly bool _ready;
 
-    public ZoomViewModel(PageContext context)
+    public ZoomViewModel(ZoomModel model, EffectsModel effects, ZoomCommands zoom)
     {
-        _context = context;
-        var model = context.Controller.Model;
+        _model = model;
+        _effects = effects;
+        _zoom = zoom;
         ModeIndex = (int)model.Mode;
         PerMonitor = model.PerMonitor;
         AnimationMs = Math.Round(model.AnimationSeconds * 1000);
@@ -22,7 +26,7 @@ public sealed partial class ZoomViewModel : ObservableObject
         LensHeight = Math.Round(model.Lens.HeightFraction * 100);
         DockEdgeIndex = (int)model.Dock.Edge;
         DockSize = Math.Round(model.Dock.Fraction * 100);
-        SmoothingIndex = (int)context.Controller.Effects.Current.Smoothing;
+        SmoothingIndex = (int)effects.Current.Smoothing;
         _ready = true;
     }
 
@@ -54,7 +58,7 @@ public sealed partial class ZoomViewModel : ObservableObject
     {
         if (_ready && value >= 0)
         {
-            _context.Controller.SelectMode((ZoomMode)value);
+            _zoom.SelectMode((ZoomMode)value);
         }
     }
 
@@ -62,7 +66,7 @@ public sealed partial class ZoomViewModel : ObservableObject
     {
         if (_ready)
         {
-            _context.Controller.Model.PerMonitor = value;
+            _model.PerMonitor = value;
         }
     }
 
@@ -70,7 +74,7 @@ public sealed partial class ZoomViewModel : ObservableObject
     {
         if (_ready)
         {
-            _context.Controller.Model.AnimationSeconds = value / 1000;
+            _model.AnimationSeconds = value / 1000;
         }
     }
 
@@ -86,7 +90,7 @@ public sealed partial class ZoomViewModel : ObservableObject
     {
         if (_ready && value >= 0)
         {
-            _context.Controller.Effects.SetSmoothing((Smoothing)value);
+            _effects.SetSmoothing((Smoothing)value);
         }
     }
 
@@ -94,7 +98,7 @@ public sealed partial class ZoomViewModel : ObservableObject
     {
         if (_ready)
         {
-            _context.Controller.Model.Lens = new LensSize(LensWidth / 100, LensHeight / 100);
+            _model.Lens = new LensSize(LensWidth / 100, LensHeight / 100);
         }
     }
 
@@ -102,7 +106,7 @@ public sealed partial class ZoomViewModel : ObservableObject
     {
         if (_ready && DockEdgeIndex >= 0)
         {
-            _context.Controller.Model.Dock = new DockLayout((DockEdge)DockEdgeIndex, DockSize / 100);
+            _model.Dock = new DockLayout((DockEdge)DockEdgeIndex, DockSize / 100);
         }
     }
 }

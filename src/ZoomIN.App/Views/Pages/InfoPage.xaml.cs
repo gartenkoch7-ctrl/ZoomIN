@@ -5,6 +5,8 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
+using ZoomIN.App.Zoom;
+using ZoomIN.Core.Zoom;
 using ZoomIN.Core.Folders;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.App.Localization;
@@ -14,7 +16,7 @@ namespace ZoomIN.App.Views.Pages;
 /// <summary>Live status (former M1–M6 diagnostics window), version, logs and licence.</summary>
 public sealed partial class InfoPage : Page
 {
-    private PageContext? _context;
+    private PageServices? _services;
     private DispatcherQueueTimer? _timer;
 
     public InfoPage()
@@ -24,7 +26,7 @@ public sealed partial class InfoPage : Page
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        _context = (PageContext)e.Parameter;
+        _services = (PageServices)e.Parameter;
         // Informational version keeps "-rc1"; the SDK appends "+<commit>", which users do not need.
         var version = typeof(InfoPage).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "?";
         VersionText.Text = version.Split('+')[0];
@@ -41,11 +43,10 @@ public sealed partial class InfoPage : Page
 
     private void Refresh()
     {
-        var controller = _context!.Controller;
-        var model = controller.Model;
-        var status = controller.Status;
+        var model = _services!.Get<ZoomModel>();
+        var status = _services.Get<ZoomController>().Status;
         var mode = model.Mode;
-        var levels = controller.MonitorIds().Select(id => string.Create(
+        var levels = _services.Get<ZoomCommands>().MonitorIds().Select(id => string.Create(
             CultureInfo.CurrentCulture, $"{id.TrimStart('\\', '.')} {(model.IsOn ? model.TargetFor(id) : model.LastLevelFor(mode, id)):0.##}×"));
         ZoomText.Text = $"{AppShell.ModeName(mode)} – {(model.IsOn ? Text.On : Text.Off)}: {string.Join(" · ", levels)}";
         FpsText.Text = status.IsVisible
@@ -58,12 +59,12 @@ public sealed partial class InfoPage : Page
 
     private void OnOpenLogs(object sender, RoutedEventArgs e)
     {
-        if (_context is null)
+        if (_services is null)
         {
             return;
         }
 
-        var folder = _context.Folders.Logs();
+        var folder = _services.Get<IAppFolders>().Logs();
         Directory.CreateDirectory(folder);
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{folder}\"") { UseShellExecute = false })?.Dispose();
     }

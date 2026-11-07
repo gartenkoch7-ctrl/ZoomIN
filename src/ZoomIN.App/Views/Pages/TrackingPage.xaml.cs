@@ -15,7 +15,7 @@ public sealed partial class TrackingPage : Page
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        Vm = new TrackingViewModel((PageContext)e.Parameter);
+        Vm = ((PageServices)e.Parameter).Create<TrackingViewModel>();
         Bindings.Update();
     }
 }

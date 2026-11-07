@@ -18,7 +18,7 @@ public sealed partial class UpdatesPage : Page
 
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
-        Vm = new UpdatesViewModel((PageContext)e.Parameter);
+        Vm = ((PageServices)e.Parameter).Create<UpdatesViewModel>();
         Vm.PropertyChanged += OnViewModelChanged;
         Bindings.Update();
 

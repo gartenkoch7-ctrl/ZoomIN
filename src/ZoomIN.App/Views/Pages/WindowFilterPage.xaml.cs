@@ -16,7 +16,7 @@ public sealed partial class WindowFilterPage : Page
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        Vm = new WindowFilterViewModel((PageContext)e.Parameter);
+        Vm = ((PageServices)e.Parameter).Create<WindowFilterViewModel>();
         Bindings.Update();
     }
 

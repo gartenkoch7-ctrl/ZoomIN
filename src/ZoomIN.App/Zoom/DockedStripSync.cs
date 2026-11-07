@@ -9,7 +9,7 @@ namespace ZoomIN.App.Zoom;
 /// Keeps the AppBar reservation in line with the model: reserved while docked mode is on,
 /// released otherwise. Called after every model change, from any thread.
 /// </summary>
-internal sealed class DockedStripSync
+public sealed class DockedStripSync
 {
     private readonly ZoomModel _model;
     private readonly IMonitorProvider _monitors;

@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using ZoomIN.App.Views;
+using ZoomIN.App.Zoom;
+using ZoomIN.Core.Filters;
 using ZoomIN.Core.Pointer;
 
 namespace ZoomIN.App.ViewModels;
@@ -10,13 +11,15 @@ namespace ZoomIN.App.ViewModels;
 /// </summary>
 public sealed partial class PointerViewModel : ObservableObject
 {
-    private readonly PageContext _context;
+    private readonly EffectsModel _effects;
+    private readonly HotkeyBindings _hotkeys;
     private readonly bool _ready;
 
-    public PointerViewModel(PageContext context)
+    public PointerViewModel(EffectsModel effects, HotkeyBindings hotkeys)
     {
-        _context = context;
-        var p = context.Controller.Effects.Current.Cursor;
+        _effects = effects;
+        _hotkeys = hotkeys;
+        var p = effects.Current.Cursor;
         MaxScale = p.MaxScale;
         UnzoomedScale = p.UnzoomedScale;
         OverrideWindows = p.OverrideWindows;
@@ -44,7 +47,7 @@ public sealed partial class PointerViewModel : ObservableObject
     /// <summary>Raised after every change; the page redraws the preview.</summary>
     public event Action? StyleChanged;
 
-    public PointerStyle Style => _context.Controller.Effects.Current.Cursor;
+    public PointerStyle Style => _effects.Current.Cursor;
 
     public bool UsesColor => ColorModeIndex == (int)PointerColorMode.Tint;
 
@@ -116,12 +119,12 @@ public sealed partial class PointerViewModel : ObservableObject
     public partial bool HideWhileTyping { get; set; }
 
     /// <summary>"Suchhilfe testen": shows the locator ring at the pointer.</summary>
-    public void TestLocator() => _context.Controller.Effects.Locate();
+    public void TestLocator() => _effects.Locate();
 
     public void Reset()
     {
-        _context.Controller.Effects.SetCursor(PointerStyle.Default);
-        _context.Controller.ReloadHotkeys();
+        _effects.SetCursor(PointerStyle.Default);
+        _hotkeys.Register();
     }
 
     // CommunityToolkit calls OnPropertyChanged for every generated property: one place to apply.
@@ -134,10 +137,10 @@ public sealed partial class PointerViewModel : ObservableObject
         }
 
         var hotkeyBefore = Style.LocatorTriggers.HasFlag(LocatorTriggers.Hotkey);
-        _context.Controller.Effects.SetCursor(Build());
+        _effects.SetCursor(Build());
         if (hotkeyBefore != TriggerHotkey)
         {
-            _context.Controller.ReloadHotkeys();
+            _hotkeys.Register();
         }
 
         StyleChanged?.Invoke();

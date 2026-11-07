@@ -2,7 +2,9 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ZoomIN.App.Localization;
-using ZoomIN.App.Views;
+using ZoomIN.App.Lifecycle;
+using ZoomIN.App.Settings;
+using ZoomIN.App.Updates;
 using ZoomIN.Core.Updates;
 
 namespace ZoomIN.App.ViewModels;
@@ -13,23 +15,27 @@ namespace ZoomIN.App.ViewModels;
 /// </summary>
 public sealed partial class UpdatesViewModel : ObservableObject
 {
-    private readonly PageContext _context;
+    private readonly SettingsService _settings;
+    private readonly UpdateService _updates;
+    private readonly IShellActions _shell;
     private readonly bool _ready;
     private IReadOnlyList<ReleaseInfo> _offered = [];
 
-    public UpdatesViewModel(PageContext context)
+    public UpdatesViewModel(SettingsService settings, UpdateService updates, IShellActions shell)
     {
-        _context = context;
-        var s = context.Settings.Current;
+        _settings = settings;
+        _updates = updates;
+        _shell = shell;
+        var s = settings.Current;
         ChannelIndex = (int)s.UpdateChannel;
         CheckUpdates = s.CheckForUpdates;
         _ready = true;
         ShowVersions();
     }
 
-    public string Installed => _context.Updates.CurrentVersion.ToString();
+    public string Installed => _updates.CurrentVersion.ToString();
 
-    public bool NotInstallable => !_context.Updates.CanInstall;
+    public bool NotInstallable => !_updates.CanInstall;
 
     public ObservableCollection<string> Versions { get; } = [];
 
@@ -57,7 +63,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
 
     public bool IsDowngrade => Selected is { } r && Kind(r) == UpdateKind.Downgrade;
 
-    public bool CanInstallSelected => !IsBusy && _context.Updates.CanInstall && Selected is { } r && Kind(r) != UpdateKind.Reinstall;
+    public bool CanInstallSelected => !IsBusy && _updates.CanInstall && Selected is { } r && Kind(r) != UpdateKind.Reinstall;
 
     public string InstallText => Selected is not { } r
         ? Text.Format("Updates.Upgrade", "…")
@@ -74,7 +80,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
     {
         IsBusy = true;
         Status = Text.Get("Updates.Loading");
-        await _context.Updates.RefreshAsync(CancellationToken.None);
+        await _updates.RefreshAsync(CancellationToken.None);
         IsBusy = false;
         ShowVersions();
     }
@@ -98,11 +104,11 @@ public sealed partial class UpdatesViewModel : ObservableObject
             }
         });
 
-        var result = await _context.Updates.InstallAsync(release, progress, CancellationToken.None);
+        var result = await _updates.InstallAsync(release, progress, CancellationToken.None);
         Status = Text.Format("Updates.Result." + result, release.Version);
         if (result == UpdateResult.Installed)
         {
-            _context.ExitForUpdate();
+            _shell.ExitForUpdate();
             return;
         }
 
@@ -113,7 +119,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
     {
         if (_ready && value >= 0)
         {
-            _context.Settings.Update(s => s with { UpdateChannel = (ReleaseChannel)value });
+            _settings.Update(s => s with { UpdateChannel = (ReleaseChannel)value });
             ShowVersions();
         }
     }
@@ -122,20 +128,20 @@ public sealed partial class UpdatesViewModel : ObservableObject
     {
         if (_ready)
         {
-            _context.Settings.Update(s => s with { CheckForUpdates = value });
+            _settings.Update(s => s with { CheckForUpdates = value });
         }
     }
 
     private void ShowVersions()
     {
-        _offered = _context.Updates.Offered;
+        _offered = _updates.Offered;
         Versions.Clear();
         foreach (var release in _offered)
         {
             Versions.Add(Label(release));
         }
 
-        var update = _context.Updates.AvailableUpdate;
+        var update = _updates.AvailableUpdate;
         SelectedIndex = update is not null ? IndexOf(update) : _offered.Count > 0 ? 0 : -1;
         Status = _offered.Count == 0 ? Text.Get("Updates.None")
             : update is not null ? Text.Format("Updates.Available", update.Version)
@@ -155,7 +161,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
         return -1;
     }
 
-    private UpdateKind Kind(ReleaseInfo release) => ReleaseCatalog.Classify(_context.Updates.CurrentVersion, release.Version);
+    private UpdateKind Kind(ReleaseInfo release) => ReleaseCatalog.Classify(_updates.CurrentVersion, release.Version);
 
     private static string Label(ReleaseInfo release)
     {

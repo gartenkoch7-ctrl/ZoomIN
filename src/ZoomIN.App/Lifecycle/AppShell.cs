@@ -20,9 +20,11 @@ namespace ZoomIN.App.Lifecycle;
 /// Runs ZoomIN as a tray application (M7): starts zoom and tray, opens the settings window on
 /// demand, shows the first-run assistant once, checks for updates if allowed, and exits cleanly.
 /// </summary>
-public sealed class AppShell
+public sealed class AppShell : IShellActions
 {
     private readonly ZoomController _controller;
+    private readonly ZoomCommands _zoom;
+    private readonly WindowFilterCommands _windowFilter;
     private readonly SettingsService _settings;
     private readonly ProfileService _profiles;
     private readonly ITrayIcon _tray;
@@ -30,16 +32,18 @@ public sealed class AppShell
     private readonly IUiAccessProbe _uiAccess;
     private readonly ILogger _log;
     private readonly ILocalizer _texts;
-    private readonly PageContext _pages;
+    private readonly PageServices _pages;
     private readonly DispatcherQueue _dispatcher;
     private SettingsWindow? _window;
 
     public AppShell(
-        ZoomController controller, SettingsService settings, ProfileService profiles, ITrayIcon tray,
-        UpdateService updates, IAutostart autostart, ICursorShapeSource cursorShapes, IUiAccessProbe uiAccess,
-        SetupLauncher setup, IAppFolders folders, IDiagnosticsPackage diagnostics,
-        ISecureDesktopSwitch secureDesktopSwitch, ILocalizer texts, ILogger<AppShell> log)
+        ZoomController controller, ZoomCommands zoom, WindowFilterCommands windowFilter, SettingsService settings,
+        ProfileService profiles, ITrayIcon tray, UpdateService updates, IUiAccessProbe uiAccess, PageServices pages,
+        ILocalizer texts, ILogger<AppShell> log)
     {
+        _zoom = zoom;
+        _windowFilter = windowFilter;
+        _pages = pages;
         _texts = texts;
         _controller = controller;
         _settings = settings;
@@ -49,9 +53,6 @@ public sealed class AppShell
         _uiAccess = uiAccess;
         _log = log;
         _dispatcher = DispatcherQueue.GetForCurrentThread();
-        _pages = new PageContext(
-            settings, profiles, controller, autostart, cursorShapes, updates, uiAccess, setup, folders, diagnostics, secureDesktopSwitch,
-            () => _window?.Handle ?? 0, () => _window?.ShowOverview(), ExitForUpdate);
     }
 
     /// <summary>Raised on the UI thread when the user chose "Exit".</summary>
@@ -63,13 +64,13 @@ public sealed class AppShell
         _controller.Initialize();
 
         _tray.Command += command => _dispatcher.TryEnqueue(() => OnTrayCommand(command));
-        _controller.Model.Changed += UpdateTray;
+        _settings.Models.Zoom.Changed += UpdateTray;
         _profiles.Changed += UpdateTray;
         _texts.LanguageChanged += UpdateTray;
         UpdateTray();
 
         // Short status after the window filter shortcut (ADR-0020); the tray works from any thread.
-        _controller.WindowFilterToggled += rule => _tray.Notify(Text.Get("WinFilter.Title"), WindowFilterStatus(rule));
+        _windowFilter.Toggled += rule => _tray.Notify(Text.Get("WinFilter.Title"), WindowFilterStatus(rule));
 
         if (!_settings.Current.FirstRunCompleted)
         {
@@ -96,7 +97,7 @@ public sealed class AppShell
 
     private SettingsWindow CreateWindow()
     {
-        var window = new SettingsWindow(_pages);
+        var window = new SettingsWindow(_pages, _settings.Current.FirstRunCompleted);
         window.HiddenToTray += OnHiddenToTray;
         return window;
     }
@@ -124,10 +125,10 @@ public sealed class AppShell
         switch (command)
         {
             case TrayCommand.Open: OpenSettings(); break;
-            case TrayCommand.ToggleZoom: _controller.Toggle(); break;
-            case TrayCommand.Fullscreen: _controller.Activate(ZoomMode.Fullscreen); break;
-            case TrayCommand.Lens: _controller.Activate(ZoomMode.Lens); break;
-            case TrayCommand.Docked: _controller.Activate(ZoomMode.Docked); break;
+            case TrayCommand.ToggleZoom: _zoom.Toggle(); break;
+            case TrayCommand.Fullscreen: _zoom.Activate(ZoomMode.Fullscreen); break;
+            case TrayCommand.Lens: _zoom.Activate(ZoomMode.Lens); break;
+            case TrayCommand.Docked: _zoom.Activate(ZoomMode.Docked); break;
             case TrayCommand.NextProfile: _profiles.Next(); break;
             case TrayCommand.Exit:
                 _window?.CloseForExit();
@@ -138,7 +139,7 @@ public sealed class AppShell
 
     private void UpdateTray()
     {
-        var model = _controller.Model;
+        var model = _settings.Models.Zoom;
         var mode = model.Mode;
         var on = model.IsOn;
         _tray.Show(new TrayMenu(
@@ -170,8 +171,14 @@ public sealed class AppShell
         }
     }
 
-    /// <summary>After an update: start the new version (it waits for this process), then exit.</summary>
-    private void ExitForUpdate() => _dispatcher.TryEnqueue(() =>
+    /// <inheritdoc/>
+    public nint SettingsWindowHandle => _window?.Handle ?? 0;
+
+    /// <inheritdoc/>
+    public void ShowOverview() => _window?.ShowOverview();
+
+    /// <inheritdoc/>
+    public void ExitForUpdate() => _dispatcher.TryEnqueue(() =>
     {
         _updates.StartNewVersion();
         _window?.CloseForExit();

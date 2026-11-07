@@ -2,7 +2,8 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ZoomIN.App.Hotkeys;
 using ZoomIN.App.Localization;
-using ZoomIN.App.Views;
+using ZoomIN.App.Settings;
+using ZoomIN.App.Zoom;
 using ZoomIN.Core.Hotkeys;
 
 namespace ZoomIN.App.ViewModels;
@@ -13,12 +14,14 @@ namespace ZoomIN.App.ViewModels;
 /// </summary>
 public sealed partial class HotkeysViewModel : ObservableObject
 {
-    private readonly PageContext _context;
+    private readonly SettingsService _settings;
+    private readonly HotkeyBindings _hotkeys;
     private HotkeyRow? _recording;
 
-    public HotkeysViewModel(PageContext context)
+    public HotkeysViewModel(SettingsService settings, HotkeyBindings hotkeys)
     {
-        _context = context;
+        _settings = settings;
+        _hotkeys = hotkeys;
         Refresh();
     }
 
@@ -32,7 +35,7 @@ public sealed partial class HotkeysViewModel : ObservableObject
     public void StartRecording(HotkeyRow row)
     {
         _recording = row;
-        _context.Controller.SuspendHotkeys();
+        _hotkeys.Suspend();
         row.Gesture = Text.Get(row.Binding.Optional ? "HotkeyClearHint" : "HotkeyPress");
         Message = string.Empty;
     }
@@ -80,18 +83,18 @@ public sealed partial class HotkeysViewModel : ObservableObject
     {
         if (change is { } c)
         {
-            _context.Settings.Update(s => c.Binding.Set(s, c.Gesture));
+            _settings.Update(s => c.Binding.Set(s, c.Gesture));
         }
 
         _recording = null;
-        _context.Controller.ReloadHotkeys();
+        _hotkeys.Register();
         Refresh();
     }
 
     private void Refresh()
     {
-        var settings = _context.Settings.Current;
-        var unavailable = _context.Controller.UnavailableHotkeys;
+        var settings = _settings.Current;
+        var unavailable = _hotkeys.Unavailable;
         Rows.Clear();
         foreach (var binding in HotkeyBinding.All)
         {

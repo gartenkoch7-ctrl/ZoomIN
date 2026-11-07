@@ -15,7 +15,7 @@ public sealed partial class ZoomPage : Page
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        Vm = new ZoomViewModel((PageContext)e.Parameter);
+        Vm = ((PageServices)e.Parameter).Create<ZoomViewModel>();
         Bindings.Update();
     }
 }

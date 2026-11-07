@@ -4,6 +4,7 @@ using ZoomIN.App.Lifecycle;
 using ZoomIN.App.SecureDesktop;
 using ZoomIN.App.Localization;
 using ZoomIN.App.Updates;
+using ZoomIN.App.Views;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Folders;
 using ZoomIN.Core.Lifecycle;
@@ -55,6 +56,8 @@ internal static class ServiceRegistration
         services.AddSingleton<ISecureDesktopSwitch, SecureDesktopSwitch>();
         services.AddSingleton<IWatchdogLauncher, ShellWatchdogLauncher>();
         services.AddSingleton<AppShell>();
+        services.AddSingleton<IShellActions>(sp => sp.GetRequiredService<AppShell>());
+        services.AddSingleton<PageServices>();
         return services.BuildServiceProvider();
     }
 

@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using ZoomIN.App.Localization;
-using ZoomIN.App.Views;
+using ZoomIN.App.Zoom;
 using ZoomIN.Core.Filters;
 
 namespace ZoomIN.App.ViewModels;
@@ -11,25 +11,24 @@ namespace ZoomIN.App.ViewModels;
 /// </summary>
 public sealed partial class FilterViewModel : ObservableObject
 {
-    private readonly PageContext _context;
+    private readonly EffectsModel _effects;
     private readonly List<string> _monitorIds;
     private bool _loading = true;
 
-    public FilterViewModel(PageContext context)
+    public FilterViewModel(EffectsModel effects, ZoomCommands zoom)
     {
-        _context = context;
-        var controller = context.Controller;
-        var effects = controller.Effects.Current;
+        _effects = effects;
+        var current = effects.Current;
         FilterNames = ColorFilters.DisplayOrder.Select(f => Text.Get("Filter." + f)).ToList();
-        _monitorIds = [.. controller.MonitorIds().Order(StringComparer.OrdinalIgnoreCase)];
+        _monitorIds = [.. zoom.MonitorIds().Order(StringComparer.OrdinalIgnoreCase)];
         MonitorNames = [Text.Get("FilterMonitor.Shared"), .. _monitorIds.Select(MonitorName)];
-        PerMonitor = effects.PerMonitorFilter;
-        Contrast = Math.Round(effects.Filter.Contrast * 100);
-        Brightness = Math.Round(effects.Filter.Brightness * 100);
-        ProtectPhotos = effects.ProtectPhotos;
+        PerMonitor = current.PerMonitorFilter;
+        Contrast = Math.Round(current.Filter.Contrast * 100);
+        Brightness = Math.Round(current.Filter.Brightness * 100);
+        ProtectPhotos = current.ProtectPhotos;
 
         // Starts on the monitor the user is working on: that is the one they most likely want to change.
-        var underMouse = _monitorIds.IndexOf(controller.MonitorUnderMouse());
+        var underMouse = _monitorIds.IndexOf(zoom.MonitorUnderMouse());
         MonitorIndex = PerMonitor && underMouse >= 0 ? underMouse + 1 : 0;
         LoadChoice();
         _loading = false;
@@ -73,7 +72,7 @@ public sealed partial class FilterViewModel : ObservableObject
     {
         if (!_loading)
         {
-            _context.Controller.Effects.SetPerMonitorFilter(value);
+            _effects.SetPerMonitorFilter(value);
             Reload();
         }
     }
@@ -92,7 +91,7 @@ public sealed partial class FilterViewModel : ObservableObject
     {
         if (!_loading)
         {
-            _context.Controller.Effects.SetProtectPhotos(value);
+            _effects.SetProtectPhotos(value);
         }
     }
 
@@ -117,7 +116,7 @@ public sealed partial class FilterViewModel : ObservableObject
 
     private void LoadChoice()
     {
-        var effects = _context.Controller.Effects.Current;
+        var effects = _effects.Current;
         var choice = SelectedMonitor is { } id ? effects.FilterOf(id) : new MonitorFilter(effects.Filter.Enabled, effects.Filter.Filter);
         FilterOn = choice.Enabled;
         FilterIndex = ColorFilters.DisplayIndexOf(choice.Filter);
@@ -130,7 +129,7 @@ public sealed partial class FilterViewModel : ObservableObject
             return;
         }
 
-        var effects = _context.Controller.Effects;
+        var effects = _effects;
         var choice = new MonitorFilter(FilterOn, ColorFilters.DisplayOrder[FilterIndex]);
         if (SelectedMonitor is { } id)
         {
@@ -146,7 +145,7 @@ public sealed partial class FilterViewModel : ObservableObject
     {
         if (!_loading)
         {
-            var effects = _context.Controller.Effects;
+            var effects = _effects;
             effects.SetFilter(effects.Current.Filter with { Contrast = Contrast / 100, Brightness = Brightness / 100 });
         }
     }

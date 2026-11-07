@@ -75,7 +75,7 @@ internal sealed class SecureDesktopHost(TelemetryHost telemetry, IAppFolders fol
         controller.Initialize();
         if (settings.ZoomOn)
         {
-            controller.Activate(settings.LastMode);
+            services.GetRequiredService<ZoomCommands>().Activate(settings.LastMode);
             _ = Task.Run(() => LogFirstFrame(controller, log, start));
         }
 
