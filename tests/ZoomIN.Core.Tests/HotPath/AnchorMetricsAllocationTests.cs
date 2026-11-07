@@ -14,6 +14,10 @@ public sealed class AnchorMetricsAllocationTests
     public void Switched_WithListener_DoesNotAllocate_AndIsCounted()
     {
         long counted = 0;
+
+        // The meter is shared: anchor tests running in parallel record switches too. The callback
+        // runs on the recording thread, so only this thread's calls are counted.
+        var thread = Environment.CurrentManagedThreadId;
         using var listener = new MeterListener
         {
             InstrumentPublished = (instrument, l) =>
@@ -24,7 +28,13 @@ public sealed class AnchorMetricsAllocationTests
                 }
             },
         };
-        listener.SetMeasurementEventCallback<long>((_, value, _, _) => Interlocked.Add(ref counted, value));
+        listener.SetMeasurementEventCallback<long>((_, value, _, _) =>
+        {
+            if (Environment.CurrentManagedThreadId == thread)
+            {
+                Interlocked.Add(ref counted, value);
+            }
+        });
         listener.Start();
         AnchorMetrics.Switched(AnchorSource.Focus); // warm-up / JIT
 

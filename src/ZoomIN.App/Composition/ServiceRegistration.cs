@@ -27,7 +27,11 @@ namespace ZoomIN.App.Composition;
 internal static class ServiceRegistration
 {
     /// <summary>The tray app on the user's desktop.</summary>
-    public static ServiceProvider Build(TelemetryHost telemetry, IAppFolders folders)
+    public static ServiceProvider Build(TelemetryHost telemetry, IAppFolders folders) =>
+        Tray(telemetry, folders).BuildServiceProvider();
+
+    /// <summary>The tray app's registrations; the container tests validate them without starting it.</summary>
+    internal static ServiceCollection Tray(TelemetryHost telemetry, IAppFolders folders)
     {
         var services = new ServiceCollection();
         services.AddTelemetry(telemetry);
@@ -58,14 +62,18 @@ internal static class ServiceRegistration
         services.AddSingleton<AppShell>();
         services.AddSingleton<IShellActions>(sp => sp.GetRequiredService<AppShell>());
         services.AddSingleton<PageServices>();
-        return services.BuildServiceProvider();
+        return services;
     }
 
     /// <summary>
     /// A short-lived role without UI (update step, uninstall): installation services and the
     /// role's flow only, no engine. Built per process in <see cref="Program"/> (M14 step 7).
     /// </summary>
-    public static ServiceProvider BuildRole(TelemetryHost telemetry, IAppFolders folders)
+    public static ServiceProvider BuildRole(TelemetryHost telemetry, IAppFolders folders) =>
+        Role(telemetry, folders).BuildServiceProvider();
+
+    /// <summary>The short-lived role's registrations.</summary>
+    internal static ServiceCollection Role(TelemetryHost telemetry, IAppFolders folders)
     {
         var services = new ServiceCollection();
         services.AddTelemetry(telemetry);
@@ -75,14 +83,18 @@ internal static class ServiceRegistration
         services.AddSingleton<UpdateRunner>();
         services.AddSingleton<UninstallFlow>();
         services.AddSingleton<ISecureDesktopSwitch, SecureDesktopSwitch>();
-        return services.BuildServiceProvider();
+        return services;
     }
 
     /// <summary>
     /// The secure-desktop instance (ADR-0016): engine only, settings read-only from the session
     /// user, nothing that opens windows, files chosen by the user or the network.
     /// </summary>
-    public static ServiceProvider BuildSecureDesktop(TelemetryHost telemetry, IAppFolders folders)
+    public static ServiceProvider BuildSecureDesktop(TelemetryHost telemetry, IAppFolders folders) =>
+        SecureDesktop(telemetry, folders).BuildServiceProvider();
+
+    /// <summary>The secure-desktop instance's registrations.</summary>
+    internal static ServiceCollection SecureDesktop(TelemetryHost telemetry, IAppFolders folders)
     {
         var services = new ServiceCollection();
         services.AddTelemetry(telemetry);
@@ -95,6 +107,6 @@ internal static class ServiceRegistration
         services.AddSingleton<IProfileStore>(sp => new SecureProfileStore(sp.GetRequiredService<SessionUser>()));
         services.AddSingleton<IWatchdogLauncher, ShellWatchdogLauncher>();
         services.AddEngine();
-        return services.BuildServiceProvider();
+        return services;
     }
 }

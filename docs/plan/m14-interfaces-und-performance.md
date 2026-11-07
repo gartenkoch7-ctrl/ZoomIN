@@ -387,11 +387,27 @@
   sich aus dem Container bauen“ (App.Tests, Schritt 11).
 
 #### 11 · Testprojekte
-- [ ] `tests/ZoomIN.App.Tests`, `tests/ZoomIN.Watchdog.Tests`, `tests/ZoomIN.Setup.Tests`
-      (xUnit, Microsoft.Testing.Platform wie die anderen), in `ZoomIN.slnx` und CI
-- [ ] Architekturtests kennen die neuen Projekte. Testdateien halten die 300-Zeilen-Regel ein.
-- [ ] Erste Tests: `RestartArguments`, `HotkeyFormat`, `SettingsService`, `ProfileService`,
-      `WatchdogArguments`, plus die Tests aus 8–10
+- [x] `tests/ZoomIN.App.Tests`, `tests/ZoomIN.Watchdog.Tests`, `tests/ZoomIN.Setup.Tests`
+      (xUnit v3, Microsoft.Testing.Platform wie die anderen), in `ZoomIN.slnx`; CI testet die
+      ganze Solution.
+  - App und Setup sind eigenständige WinUI-Exes. Die Testprojekte setzen deshalb
+    `ValidateExecutableReferencesMatchSelfContained=false` und schalten die Start-Initialisierer
+    des Windows App SDK ab. Die kollidierten sonst über `InternalsVisibleTo` mit denen der App.
+  - Es wird kein WinUI-Fenster erzeugt.
+- [x] Testdateien halten die 300-Zeilen-Regel ein (`check-file-length.ps1` prüft `tests/` mit).
+      Die Architekturtests prüfen nur `src/`, die Testprojekte brauchen dort nichts.
+- [x] Erste Tests (23):
+  - App: `ContainerTests` (jedes View-Model, jeder Konstruktor-Parameter ist registriert, genau
+    ein Konstruktor; der ganze Graph jeder Rolle mit `ValidateOnBuild`), `HotkeyBindingsTests` (Tabelle, Wiederholung, nicht belegte und vergebene
+    Kürzel, erneutes Registrieren, Aussetzen), `CommandLineTests` (`RestartArguments`,
+    `SecureDesktopSetting`)
+  - Watchdog: „aufgegeben“-Marke bis zum Neustart von Windows, Absturzliste (20 Zeilen),
+    `WatchdogArguments`
+  - Setup: `SetupChoices.ApplyTo` (übernimmt die Wahl, behält den Rest, Filter aus) und die
+    `SetupText`-Fassade
+- [ ] Noch offen: Abläufe Deinstallation, Update und Watchdog-Neustart mit gefälschten Diensten.
+      Sie brauchen zuerst die Nahtstellen aus Schritt 8 (Admin-Schritt der Deinstallation,
+      Autostart, `InstallLayout`, Prozess-Warten).
 
 ## Akzeptanzkriterien
 - [x] Leerlauf: Ruhender Desktop bei 2× → GPU-Last nahe null, `frames_skipped` steigt.
@@ -401,11 +417,13 @@
 - [x] Kein Lock und keine Allokation im Render-Loop (Benchmarks und WARP-Tests `0 B`, Code-Review; Teil A)
 - [x] Smart Invert: Das Budget umfasst Umgebung und Mehrkosten im Magnify-Durchgang (Grilling
       2026-11-07: kein Umbau der Gewichtung, Ziel ≤ 0,6 ms entfällt); Offline-Wiedergabe unverändert
-- [ ] Architekturtest ADR-0025 grün mit leerer bzw. begründeter Ausnahmeliste
-- [ ] App, Watchdog und Setup haben Testprojekte; Deinstallation, Update und Watchdog getestet
+- [ ] Architekturtest ADR-0025 grün mit leerer bzw. begründeter Ausnahmeliste (grün; ein Eintrag offen:
+      `Win32TrayIcon`, Schritt 10)
+- [ ] App, Watchdog und Setup haben Testprojekte ([x], Schritt 11); Deinstallation, Update und
+      Watchdog-Neustart als Ablauf-Tests noch offen (Update im Testbuild echt geprüft)
 - [ ] `MonitorRenderer.cs` und `Magnify.hlsl` unter 250 Zeilen; `AnchorController.cs` und
       `Win32WindowFilterSource.cs` ≤ 200; `check-file-length.ps1` grün
-- [ ] Telemetrie im Katalog `docs/kb/telemetrie.md`, Messwerte in `docs/kb/performance.md`
+- [x] Telemetrie im Katalog `docs/kb/telemetrie.md`, Messwerte in `docs/kb/performance.md`
 
 ## Offene Fragen / Risiken
 - **Leerlauf und Swapchain-Takt:** Ohne `Present` wird die Wartemarke der Swapchain nicht

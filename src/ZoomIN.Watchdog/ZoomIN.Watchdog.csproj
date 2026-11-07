@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZoomIN.Core\ZoomIN.Core.csproj" />
+    <InternalsVisibleTo Include="ZoomIN.Watchdog.Tests" />
   </ItemGroup>
 
   <ItemGroup>
