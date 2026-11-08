@@ -11,11 +11,21 @@ cbuffer CursorConstants : register(b0)
     float RimTexels;      // rim width in pointer image texels
     float RingThickness;  // ring width relative to its radius (0–1)
     float4 RingColor;     // premultiplied
-    float4 Tint;          // rgb = tint colour; w = colour mode: 0 original, 1 tint, 2 inverted
+    float4 Tint;          // rgb = tint colour; w = colour mode: 0 original, 1 tint, 2 inverted, 3 adaptive
+    float4 OnDark;        // adaptive (M15): rgb = body colour on dark ground; w = threshold (background luma)
+    float4 OnLight;       // adaptive: rgb = body colour on light ground
+    float4 BackdropRect;  // adaptive: xy = backdrop origin in target pixels, zw = 1 / backdrop texture size
+    float2 MonitorTexel;  // adaptive: 1 / desktop texture size (= target size)
+    float2 Padding;
 };
 
 Texture2D Pointer : register(t0);
+Texture2D Backdrop : register(t1); // adaptive: copy of the drawn overlay around the pointer (premultiplied)
+Texture2D Desktop : register(t2);  // adaptive: captured desktop of the monitor
 SamplerState BorderSampler : register(s0); // outside the image: transparent
+SamplerState ClampSampler : register(s1);  // desktop: the monitor edge repeats instead of turning black
+
+static const float3 LumaWeights = float3(0.2126, 0.7152, 0.0722);
 
 struct VertexOutput
 {
@@ -48,10 +58,50 @@ float4 Recolor(float4 c)
     return float4(Tint.rgb * luma * c.a, c.a);
 }
 
+// What the user sees at a target pixel: the drawn overlay over the desktop (transparent at 1×,
+// outside the lens), averaged over four bilinear taps 2 px apart so text does not speckle it.
+float BackgroundLuma(float2 pixel)
+{
+    float sum = 0;
+    [unroll] for (int i = 0; i < 4; i++)
+    {
+        // Kept on the monitor: beyond its edge the backdrop texture holds older copies.
+        float2 p = clamp(pixel + float2((i & 1) ? 2 : -2, (i & 2) ? 2 : -2), 0.5, 1 / MonitorTexel - 0.5);
+        float4 shown = Backdrop.Sample(BorderSampler, (p - BackdropRect.xy) * BackdropRect.zw);
+        float3 desktop = Desktop.Sample(ClampSampler, p * MonitorTexel).rgb;
+        sum += dot(shown.rgb + desktop * (1 - shown.a), LumaWeights);
+    }
+
+    return sum * 0.25;
+}
+
+// Same rule as AdaptiveColor (Core): background picks the body colour, the outline takes the
+// other one; the switch is hard with about one pixel of edge smoothing.
+float4 Adaptive(float4 c, float2 pixel)
+{
+    float background = BackgroundLuma(pixel);
+    float edge = max(fwidth(background), 0.0001);
+    float light = smoothstep(OnDark.w - edge, OnDark.w + edge, background);
+    float3 body = lerp(OnDark.rgb, OnLight.rgb, light);
+    float3 outline = lerp(OnLight.rgb, OnDark.rgb, light);
+    float own = c.a > 0 ? saturate(dot(c.rgb, LumaWeights) / c.a) : 0;
+    return float4(lerp(outline, body, own) * c.a, c.a);
+}
+
 float4 PSCursor(VertexOutput input) : SV_Target
 {
     float2 uv = (input.Uv - InnerOffset) / InnerScale;
-    float4 color = Recolor(Pointer.Sample(BorderSampler, uv));
+    float4 sampled = Pointer.Sample(BorderSampler, uv);
+    // A real branch (uniform per draw): ?: would run the eight background taps for every mode.
+    float4 color;
+    [branch] if (Tint.w > 2.5)
+    {
+        color = Adaptive(sampled, input.Position.xy);
+    }
+    else
+    {
+        color = Recolor(sampled);
+    }
     if (RimColor.a == 0)
     {
         return color;

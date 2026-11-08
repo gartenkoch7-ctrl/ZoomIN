@@ -18,6 +18,9 @@ internal sealed class RenderTarget : IDisposable
 
     public ID3D11RenderTargetView View { get; }
 
+    /// <summary>The texture behind <see cref="View"/> (the adaptive pointer copies from it).</summary>
+    public ID3D11Texture2D Texture => _texture;
+
     public static RenderTarget Create(ID3D11Device device, int size)
     {
         var texture = device.CreateTexture2D(new Texture2DDescription(

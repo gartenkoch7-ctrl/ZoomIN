@@ -35,6 +35,8 @@ internal sealed class RenderSession : IDisposable
     private readonly CursorLayer _cursorLayer;
     private readonly HighlightLayer _highlights;
     private readonly DesktopLayer _desktop;
+    private readonly DesktopFeed _feed;
+    private readonly GpuPassTimer _cursorTime;
     private readonly SnapshotTaker _snapshots;
     private readonly AnchorController _anchors = new();
     private readonly FrameChangeTracker _changes = new();
@@ -66,6 +68,7 @@ internal sealed class RenderSession : IDisposable
             using (Telemetry.Source.StartActivity("zoomin.render.pipeline_start.capture"))
             {
                 _duplicator = Own(new DesktopDuplicator(_gpu, _monitor));
+                _feed = new DesktopFeed(_duplicator, deviceName, log);
             }
 
             using (Telemetry.Source.StartActivity("zoomin.render.pipeline_start.overlay"))
@@ -78,7 +81,8 @@ internal sealed class RenderSession : IDisposable
             {
                 var pass = Own(new MagnifyPass(_gpu.Device));
                 var cursorPass = Own(new CursorPass(_gpu.Device));
-                _cursorLayer = new CursorLayer(cursorPass, pointer.Shapes, pointer.SystemCursor);
+                _cursorLayer = new CursorLayer(cursorPass, Own(new PointerBackdrop(_gpu.Device)), pointer.Shapes, pointer.SystemCursor);
+                _cursorTime = Own(new GpuPassTimer(_gpu.Device, deviceName, "cursor"));
                 _highlights = new HighlightLayer(cursorPass);
                 var smart = Own(SmartInvertLayer.Create(_gpu.Device, _monitor.Width, _monitor.Height, deviceName, health, log));
                 _desktop = new DesktopLayer(
@@ -137,29 +141,25 @@ internal sealed class RenderSession : IDisposable
             _holdsFrameSlot = true;
         }
 
-        // Without zoom or filter the desktop is not copied at all: Windows shows it, ZoomIN only
-        // draws on a transparent overlay (pointer page: pointer at 1×, crosshair, locator).
-        var newImage = false;
-        if (!request.OverlayOnly)
-        {
-            newImage = _duplicator.Update();
-
-            // Nothing captured yet: draw nothing and keep the overlay hidden instead of showing black.
-            if (!_duplicator.HasImage)
-            {
-                _gpu.Context.ClearRenderTargetView(_swapchain.RenderTarget, s_transparent);
-                Present();
-                return FrameOutcome.Presented;
-            }
-        }
-
-        // Read the cursor as late as possible: it decides what is shown under the pointer.
+        // Read the cursor as late as possible: it decides what is shown under the pointer. Read once,
+        // before the capture: the adaptive pointer captures only where the mouse is (M15), and a
+        // second read could disagree. The capture does not wait (timeout 0).
         // A monitor without the mouse keeps its last view (M3 decision).
         var hasCursor = _pointer.Position.TryGetPosition(out var cursor);
         _cursorInside = hasCursor && _monitor.Bounds.Contains(cursor);
         if (_cursorInside)
         {
             _lastCursor = cursor;
+        }
+
+        // Without zoom or filter the desktop is usually not copied at all: Windows shows it, ZoomIN
+        // only draws on a transparent overlay (pointer at 1×, crosshair, locator). Nothing captured
+        // yet: draw nothing and keep the overlay hidden instead of showing black.
+        if (!_feed.Update(request, _cursorInside, out var newImage))
+        {
+            _gpu.Context.ClearRenderTargetView(_swapchain.RenderTarget, s_transparent);
+            Present();
+            return FrameOutcome.Presented;
         }
 
         // The anchor is the mouse, or the focus/caret while the user works with the keyboard (M6).
@@ -198,10 +198,14 @@ internal sealed class RenderSession : IDisposable
         }
 
         _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions);
+        _cursorTime.Collect(_gpu.Context);
+        _cursorTime.Begin(_gpu.Context);
+        var target = new LayerTarget(_swapchain.RenderTarget, _swapchain.BackBuffer, _swapchain.Width, _swapchain.Height, _feed.Desktop);
         LocatorActive = _cursorInside && _cursorLayer.Draw(
-            _gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Mode, request.Zoom, _lastCursor,
+            _gpu.Context, target, _monitor.Bounds, frame, request.Mode, request.Zoom, _lastCursor,
             request.Effects, request.LocateRequestedAt, request.PointerHidden);
-        _snapshots.TakeIfRequested(_gpu.Device, _gpu.Context, request.OverlayOnly ? null : _duplicator.ShaderResource,
+        _cursorTime.End(_gpu.Context);
+        _snapshots.TakeIfRequested(_gpu.Device, _gpu.Context, _feed.Desktop,
             _swapchain.RenderTarget, weights, _monitor.Bounds, frame.Source, request);
         Present();
         _changes.Presented(request, frame, _cursorInside, _lastCursor, shape);

@@ -20,6 +20,9 @@ public static class PointerMapping
             GrowWithZoom = settings.CursorGrowWithZoom,
             ColorMode = settings.CursorColorMode,
             Color = RgbColor.ParseOrDefault(settings.CursorColor, d.Color),
+            AdaptiveOnDark = RgbColor.ParseOrDefault(settings.CursorAdaptiveOnDark, d.AdaptiveOnDark),
+            AdaptiveOnLight = RgbColor.ParseOrDefault(settings.CursorAdaptiveOnLight, d.AdaptiveOnLight),
+            AdaptiveThreshold = settings.CursorAdaptiveThreshold,
             Rim = settings.CursorRim,
             RimColor = RgbColor.ParseOrDefault(settings.CursorRimColor, d.RimColor),
             RimWidth = settings.CursorRimWidth,
@@ -33,7 +36,7 @@ public static class PointerMapping
             CrosshairWidth = settings.CrosshairWidth,
             CrosshairOpacity = settings.CrosshairOpacity,
             HideWhileTyping = settings.HideCursorWhileTyping,
-        };
+        }.Normalized(); // hand-edited files: e.g. a threshold outside 0.1–0.9 would never switch
     }
 
     public static AppSettings Apply(AppSettings settings, PointerStyle p)
@@ -48,6 +51,9 @@ public static class PointerMapping
             CursorGrowWithZoom = p.GrowWithZoom,
             CursorColorMode = p.ColorMode,
             CursorColor = p.Color.ToHex(),
+            CursorAdaptiveOnDark = p.AdaptiveOnDark.ToHex(),
+            CursorAdaptiveOnLight = p.AdaptiveOnLight.ToHex(),
+            CursorAdaptiveThreshold = p.AdaptiveThreshold,
             CursorRim = p.Rim,
             CursorRimColor = p.RimColor.ToHex(),
             CursorRimWidth = p.RimWidth,

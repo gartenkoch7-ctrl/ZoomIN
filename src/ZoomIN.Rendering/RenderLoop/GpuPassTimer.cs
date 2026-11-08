@@ -25,7 +25,7 @@ internal sealed class GpuPassTimer : IDisposable
     private SampleMean _mean;
     private bool _timing;
 
-    /// <param name="pass">"magnify" (zoom and filter pass).</param>
+    /// <param name="pass">"magnify" (zoom and filter pass) or "cursor" (pointer layer, M15).</param>
     public GpuPassTimer(ID3D11Device device, string deviceName, string pass)
     {
         _stopwatch = new GpuStopwatch(device);

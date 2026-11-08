@@ -51,6 +51,20 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   danach wird das Blending wieder abgeschaltet.
 - Bei Zoom 1× mit aktivem Filter rendert das Overlay weiter (Vollbild-Geometrie).
 
+## Anpassender Zeiger (M15, ADR-0026)
+- Der Shader kann sein eigenes Renderziel nicht lesen. Deshalb kopiert `PointerBackdrop` vor dem
+  Zeiger den Bereich darunter (Zeigergröße + 4 px) per `CopySubresourceRegion` aus dem Back Buffer
+  (`CompositionSwapchain.BackBuffer`, Puffer 0 ist in D3D11 immer der aktuelle). Die Textur wächst in
+  128-px-Schritten und wird wiederverwendet.
+- `Cursor.hlsl` Modus 3: gesehen = Kopie (vormultipliziert) + Desktop · (1 − α). Das stimmt bei 1×
+  (Overlay durchsichtig), außerhalb der Lupe und über Zoom, Filtern und intelligentem Invertieren.
+  Vier bilineare Proben ±2 px (auf den Monitor begrenzt, dahinter liegt Alt-Inhalt der Kopie),
+  harte Schwelle mit `smoothstep` über `fwidth` (≈ 1 px). Echte Verzweigung (`[branch]`), sonst
+  liefe `?:` die acht Proben in jedem Farbmodus.
+- Reihenfolge: Fadenkreuz vor dem Zeiger, also richtet sich der Zeiger auch nach dem Fadenkreuz.
+- Kosten (RTX 3060 Ti, 1440p, `CursorGpuTimeTests`): Zeigerebene 0,000/0,004 ms (Original 1×/4×)
+  gegen 0,007/0,008 ms (anpassend) – Budget 0,05 ms.
+
 ## Filter pro Fenster (M12, ADR-0020/0021)
 - **Tracker-Thread** (`Platform/WindowFilters/Win32WindowFilterSource`): WinEvents (Vordergrund,
   Verschieben, Minimieren, Anzeigen/Verbergen/Z-Reihenfolge, Ort, Cloaking) → `WindowTracker.Update`

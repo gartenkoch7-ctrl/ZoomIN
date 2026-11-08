@@ -63,7 +63,8 @@ public sealed unsafe class Win32CursorShapeSource : ICursorShapeSource
             {
                 var height = maskHeight / 2;
                 return new CursorShape(handle, maskWidth, height, (int)icon.xHotspot, (int)icon.yHotspot,
-                    CursorPixels.FromMonochrome(mask, maskWidth, height));
+                    CursorPixels.FromMonochrome(mask, maskWidth, height),
+                    AdaptivePixels: CursorPixels.FromMonochromeAdaptive(mask, maskWidth, height));
             }
 
             var color = ReadBitmap(icon.hbmColor, out var width, out var colorHeight);

@@ -8,7 +8,27 @@ internal static class CursorPixels
     /// AND 0 / XOR 1 = white, AND 1 / XOR 0 = transparent, AND 1 / XOR 1 = "invert screen",
     /// which an overlay cannot do – drawn black; the contrast rim keeps it visible on dark areas.
     /// </summary>
-    public static byte[] FromMonochrome(byte[] mask, int width, int height)
+    public static byte[] FromMonochrome(byte[] mask, int width, int height) => Monochrome(mask, width, height, invertAs: 0);
+
+    /// <summary>
+    /// The same monochrome pointer for the adaptive mode (M15): "invert screen" pixels are white, so
+    /// they become the body and contrast with the background like the Windows original does.
+    /// Null if the pointer has no such pixels.
+    /// </summary>
+    public static byte[]? FromMonochromeAdaptive(byte[] mask, int width, int height)
+    {
+        for (var i = 0; i < width * height; i++)
+        {
+            if (mask[i * 4] != 0 && mask[(i + (width * height)) * 4] != 0)
+            {
+                return Monochrome(mask, width, height, invertAs: 255);
+            }
+        }
+
+        return null;
+    }
+
+    private static byte[] Monochrome(byte[] mask, int width, int height, byte invertAs)
     {
         var result = new byte[width * height * 4];
         for (var i = 0; i < width * height; i++)
@@ -20,7 +40,7 @@ internal static class CursorPixels
                 continue;
             }
 
-            var value = (byte)(!and && xor ? 255 : 0);
+            var value = and ? invertAs : (byte)(xor ? 255 : 0);
             Set(result, i, value, value, value, 255);
         }
 

@@ -58,11 +58,14 @@ internal sealed class CompositionSwapchain : IDisposable
         _compositionDevice.Commit();
 
         // In D3D11 buffer 0 always refers to the current back buffer, even with flip model.
-        using var backBuffer = _swapChain.GetBuffer<ID3D11Texture2D>(0);
-        RenderTarget = gpu.Device.CreateRenderTargetView(backBuffer);
+        BackBuffer = _swapChain.GetBuffer<ID3D11Texture2D>(0);
+        RenderTarget = gpu.Device.CreateRenderTargetView(BackBuffer);
     }
 
     public ID3D11RenderTargetView RenderTarget { get; }
+
+    /// <summary>The texture behind <see cref="RenderTarget"/>; the adaptive pointer copies from it (M15).</summary>
+    public ID3D11Texture2D BackBuffer { get; }
 
     public int Width { get; }
 
@@ -79,6 +82,7 @@ internal sealed class CompositionSwapchain : IDisposable
     public void Dispose()
     {
         RenderTarget.Dispose();
+        BackBuffer.Dispose();
         _visual.Dispose();
         _target.Dispose();
         _compositionDevice.Dispose();

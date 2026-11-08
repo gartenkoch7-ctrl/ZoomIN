@@ -25,4 +25,7 @@ internal static partial class RenderLog
 
     [LoggerMessage(EventId = 3007, Level = LogLevel.Warning, Message = "Smart inversion on {Monitor} falls back to keep hue: {Reason} ({Milliseconds} ms)")]
     public static partial void SmartInvertFallback(this ILogger logger, string monitor, string reason, double milliseconds);
+
+    [LoggerMessage(EventId = 3008, Level = LogLevel.Information, Message = "Adaptive pointer on {Monitor} keeps the desktop copy running without zoom")]
+    public static partial void AdaptivePointerCapture(this ILogger logger, string monitor);
 }

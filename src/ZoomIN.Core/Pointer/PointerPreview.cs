@@ -8,19 +8,23 @@ namespace ZoomIN.Core.Pointer;
 /// </summary>
 public static class PointerPreview
 {
-    // Rec. 709 luma weights, as in the colour filters.
-    private const double Lr = 0.2126;
-    private const double Lg = 0.7152;
-    private const double Lb = 0.0722;
-
     /// <summary>Returns premultiplied BGRA pixels of the scaled pointer plus rim.</summary>
-    public static (byte[] Pixels, int Width, int Height) Render(CursorShape shape, PointerStyle style, double scale)
+    /// <param name="shape">Pointer image.</param>
+    /// <param name="style">Pointer settings.</param>
+    /// <param name="scale">Pointer size.</param>
+    /// <param name="leftLuma">Brightness 0–1 of the background under the left half (adaptive mode).</param>
+    /// <param name="rightLuma">Brightness 0–1 under the right half: a light/dark edge in the middle.</param>
+    public static (byte[] Pixels, int Width, int Height) Render(
+        CursorShape shape, PointerStyle style, double scale, double leftLuma = 1, double rightLuma = 1)
     {
+        ArgumentNullException.ThrowIfNull(shape);
+        ArgumentNullException.ThrowIfNull(style);
         var rim = style.RimPixelsFor(scale);
         var texel = scale / shape.Density; // screen pixels per image pixel
         var width = (int)Math.Ceiling((shape.Width * texel) + (2 * rim));
         var height = (int)Math.Ceiling((shape.Height * texel) + (2 * rim));
         var pixels = new byte[width * height * 4];
+        var image = shape.PixelsFor(style.ColorMode);
 
         for (var y = 0; y < height; y++)
         {
@@ -28,7 +32,8 @@ public static class PointerPreview
             {
                 var sx = (x - rim) / texel;
                 var sy = (y - rim) / texel;
-                var (b, g, r, a) = Colored(Sample(shape, sx, sy), style);
+                var background = x < width / 2 ? leftLuma : rightLuma;
+                var (b, g, r, a) = Colored(Sample(shape, image, sx, sy), style, background);
                 if (rim > 0 && a < 255)
                 {
                     var near = NearAlpha(shape, sx, sy, rim / texel);
@@ -46,11 +51,23 @@ public static class PointerPreview
     }
 
     /// <summary>Applies the colour mode to one premultiplied pixel.</summary>
-    public static (double B, double G, double R, double A) Colored((double B, double G, double R, double A) p, PointerStyle style)
+    /// <param name="p">Premultiplied pixel.</param>
+    /// <param name="style">Pointer settings.</param>
+    /// <param name="backgroundLuma">Brightness 0–1 shown under the pixel; only the adaptive mode uses it.</param>
+    public static (double B, double G, double R, double A) Colored(
+        (double B, double G, double R, double A) p, PointerStyle style, double backgroundLuma = 1)
     {
+        ArgumentNullException.ThrowIfNull(style);
         if (p.A <= 0 || style.ColorMode == PointerColorMode.Original)
         {
             return p;
+        }
+
+        if (style.ColorMode == PointerColorMode.Adaptive)
+        {
+            var own = AdaptiveColor.Luma(p.R, p.G, p.B) * 255 / p.A;
+            var (cr, cg, cb) = AdaptiveColor.Pick(own, backgroundLuma, style);
+            return (cb * p.A / 255, cg * p.A / 255, cr * p.A / 255, p.A);
         }
 
         if (style.ColorMode == PointerColorMode.Inverted)
@@ -59,12 +76,15 @@ public static class PointerPreview
         }
 
         // Tint: brightness decides how much of the colour shows; black outlines stay black.
-        var luma = ((Lr * p.R) + (Lg * p.G) + (Lb * p.B)) / p.A;
+        var luma = AdaptiveColor.Luma(p.R, p.G, p.B) * 255 / p.A;
         var c = style.Color;
         return (c.B * luma * p.A / 255, c.G * luma * p.A / 255, c.R * luma * p.A / 255, p.A);
     }
 
-    private static (double B, double G, double R, double A) Sample(CursorShape shape, double x, double y)
+    private static (double B, double G, double R, double A) Sample(CursorShape shape, double x, double y) =>
+        Sample(shape, shape.Pixels, x, y);
+
+    private static (double B, double G, double R, double A) Sample(CursorShape shape, byte[] pixels, double x, double y)
     {
         var ix = (int)Math.Floor(x);
         var iy = (int)Math.Floor(y);
@@ -74,7 +94,7 @@ public static class PointerPreview
         }
 
         var i = ((iy * shape.Width) + ix) * 4;
-        return (shape.Pixels[i], shape.Pixels[i + 1], shape.Pixels[i + 2], shape.Pixels[i + 3]);
+        return (pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3]);
     }
 
     private static double NearAlpha(CursorShape shape, double x, double y, double radius)

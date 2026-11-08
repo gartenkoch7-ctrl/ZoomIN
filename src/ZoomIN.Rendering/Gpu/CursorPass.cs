@@ -33,8 +33,11 @@ internal sealed class CursorPass : IDisposable
     private (nint Handle, int Sharp) _lastStandardKey;
     private PointerTexture? _lastStandard;
 
+    private readonly ID3D11SamplerState _clampSampler;
+
     private ConstantUpload<CursorConstants> _uploaded;
     private ID3D11RenderTargetView? _bound;
+    private bool _backgroundBound;
 
     public CursorPass(ID3D11Device device)
     {
@@ -46,6 +49,7 @@ internal sealed class CursorPass : IDisposable
         _sampler = device.CreateSamplerState(new SamplerDescription(
             Filter.MinMagMipLinear, TextureAddressMode.Border, TextureAddressMode.Border, TextureAddressMode.Border,
             0, 1, ComparisonFunction.Never, new Color4(0, 0, 0, 0)));
+        _clampSampler = device.CreateSamplerState(SamplerDescription.LinearClamp);
         // Premultiplied alpha: result = source + destination · (1 − source alpha).
         _blend = device.CreateBlendState(new BlendDescription(Blend.One, Blend.InverseSourceAlpha));
         _constants = device.CreateBuffer(new BufferDescription(CursorConstants.SizeInBytes, BindFlags.ConstantBuffer, ResourceUsage.Default));
@@ -91,6 +95,23 @@ internal sealed class CursorPass : IDisposable
         float x, float y, float width, float height, in CursorConstants constants) =>
         Draw(context, target, _pointerShader, pointer.View, x, y, width, height, constants);
 
+    /// <summary>Adaptive pointer (M15): coloured by the backdrop copy over the captured desktop.</summary>
+    /// <param name="constants">Pointer constants made with <see cref="CursorConstants.WithAdaptive"/>.</param>
+    public void DrawAdaptivePointer(ID3D11DeviceContext context, ID3D11RenderTargetView target, PointerTexture pointer,
+        ID3D11ShaderResourceView backdrop, ID3D11ShaderResourceView desktop, float x, float y, float width, float height,
+        in CursorConstants constants)
+    {
+        if (!ReferenceEquals(_bound, target))
+        {
+            Bind(context, target);
+        }
+
+        context.PSSetShaderResource(1, backdrop);
+        context.PSSetShaderResource(2, desktop);
+        _backgroundBound = true;
+        Draw(context, target, _pointerShader, pointer.AdaptiveView, x, y, width, height, constants);
+    }
+
     public void DrawRing(ID3D11DeviceContext context, ID3D11RenderTargetView target, float centerX, float centerY,
         float radius, in CursorConstants constants) =>
         Draw(context, target, _ringShader, null, centerX - radius, centerY - radius, radius * 2, radius * 2, constants);
@@ -108,6 +129,14 @@ internal sealed class CursorPass : IDisposable
         }
 
         context.OMSetBlendState(null);
+        if (_backgroundBound)
+        {
+            // The backdrop is a copy target and the desktop is written by the next capture.
+            context.PSUnsetShaderResource(1);
+            context.PSUnsetShaderResource(2);
+            _backgroundBound = false;
+        }
+
         _bound = null;
     }
 
@@ -120,6 +149,7 @@ internal sealed class CursorPass : IDisposable
 
         _constants.Dispose();
         _blend.Dispose();
+        _clampSampler.Dispose();
         _sampler.Dispose();
         _rectShader.Dispose();
         _ringShader.Dispose();
@@ -151,6 +181,7 @@ internal sealed class CursorPass : IDisposable
         context.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
         context.VSSetShader(_vertexShader);
         context.PSSetSampler(0, _sampler);
+        context.PSSetSampler(1, _clampSampler);
         context.PSSetConstantBuffer(0, _constants);
         _bound = target;
     }

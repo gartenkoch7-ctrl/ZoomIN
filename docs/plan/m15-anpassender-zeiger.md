@@ -88,6 +88,18 @@ nimmt jeweils die Gegenfarbe.
 - KB: `rendering-pipeline.md` (Hintergrund-Kopie, Modus 3), `performance.md` (Messprotokoll),
   `telemetrie.md` (3008, Tag `cursor`), `eingabe-und-tracking.md` (Zeiger bei 1×).
 
+## Stand der Umsetzung (2026-11-08)
+Schritte 1–5 umgesetzt, Plan freigegeben. Abweichungen vom Plan:
+- **Nur eine Kopie:** Der Desktop wird nicht kopiert, der Shader liest die vorhandene Desktop-Kopie
+  der Duplication direkt (t2). Kopiert wird nur der Back Buffer (`PointerBackdrop`), in einer
+  Textur, die in 128-px-Schritten wächst statt fest 256 × 256 (große Zeiger bei 8× passen sonst nicht).
+- **Kein Dirty-Rect-Abgleich:** Bei 1× zeichnet jede Desktop-Änderung auf dem Maus-Monitor das
+  Overlay neu (nur Löschen + Zeiger). Ruhender Desktop = keine neuen Bilder = Leerlauf wie M14.
+  Ob sich der Abgleich lohnt, zeigt erst die Leerlauf-Messung bei 1×.
+- **Back Buffer als Kopierquelle** funktioniert (WARP-Tests, RTX 3060 Ti); das Risiko ist erledigt.
+- Gemessen: Zeigerebene anpassend 0,007–0,008 ms GPU (1440p, RTX 3060 Ti), Budget 0,05 ms.
+- Offen: Sichtprüfung durch den Nutzer, Leerlauf-Messung bei 1×, sichere Bildschirme (M10).
+
 ## Akzeptanzkriterien
 - [ ] Zeiger über Schwarz → Körper Farbe A, Umriss Farbe B; über Weiß umgekehrt; über Grau knapp
       unter/über der Schwelle sauber eine der beiden Farben, nie ein Mischton.
@@ -95,9 +107,9 @@ nimmt jeweils die Gegenfarbe.
 - [ ] Funktioniert mit 1×, Vollbild-Zoom, Lupe, Angedockt; auf jedem Monitor.
 - [ ] Mit Filter „Invertiert“ und „Invertiert (intelligent)“ richtet er sich nach dem gefilterten Bild.
 - [ ] Farbpaar, Schwelle, Tausch-Knopf wirken sofort; Vorschau zeigt dasselbe wie der Shader.
-- [ ] Alte `settings.json` ohne die neuen Felder lädt unverändert.
-- [ ] Render-Loop 0 B; GPU-Budget eingehalten und im Messprotokoll eingetragen.
-- [ ] Overlay bleibt aus Aufnahmen ausgeschlossen (keine neuen Fenster).
+- [x] Alte `settings.json` ohne die neuen Felder lädt unverändert.
+- [x] Render-Loop 0 B; GPU-Budget eingehalten und im Messprotokoll eingetragen.
+- [x] Overlay bleibt aus Aufnahmen ausgeschlossen (keine neuen Fenster).
 - [ ] Sichtprüfung durch den Nutzer (das Overlay ist aus Screenshots ausgenommen; vorher
       Debug-Schnappschuss, der den Back Buffer samt Zeiger enthält).
 

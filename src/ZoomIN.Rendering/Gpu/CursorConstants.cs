@@ -2,11 +2,11 @@ using System.Runtime.InteropServices;
 
 namespace ZoomIN.Rendering.Gpu;
 
-/// <summary>Constant buffer of Cursor.hlsl. 80 bytes, matching the HLSL cbuffer layout.</summary>
+/// <summary>Constant buffer of Cursor.hlsl. 144 bytes, matching the HLSL cbuffer layout.</summary>
 [StructLayout(LayoutKind.Sequential)]
 internal readonly struct CursorConstants
 {
-    public const int SizeInBytes = 80;
+    public const int SizeInBytes = 144;
 
     public readonly float InnerOffsetU;
     public readonly float InnerOffsetV;
@@ -19,8 +19,26 @@ internal readonly struct CursorConstants
     public readonly float RingThickness;
     public readonly FrameColor Ring;
 
-    /// <summary>rgb = tint colour, a = colour mode (0 original, 1 tint, 2 inverted).</summary>
+    /// <summary>rgb = tint colour, a = colour mode (0 original, 1 tint, 2 inverted, 3 adaptive).</summary>
     public readonly FrameColor Tint;
+
+    /// <summary>Adaptive (M15): body colour on dark ground; a = threshold.</summary>
+    public readonly FrameColor OnDark;
+
+    /// <summary>Adaptive: body colour on light ground.</summary>
+    public readonly FrameColor OnLight;
+
+    /// <summary>Adaptive: backdrop origin in target pixels and 1 / backdrop texture size.</summary>
+    public readonly float BackdropX;
+    public readonly float BackdropY;
+    public readonly float BackdropInverseWidth;
+    public readonly float BackdropInverseHeight;
+
+    /// <summary>Adaptive: 1 / desktop texture size.</summary>
+    public readonly float MonitorTexelU;
+    public readonly float MonitorTexelV;
+    private readonly float _padding0;
+    private readonly float _padding1;
 
     private CursorConstants(
         float marginU, float marginV, FrameColor rim, float texelU, float texelV, float rimTexels, float ringThickness, FrameColor ring,
@@ -41,6 +59,23 @@ internal readonly struct CursorConstants
         Tint = tint;
     }
 
+    private CursorConstants(in CursorConstants pointer, in AdaptiveBackground background)
+    {
+        this = pointer;
+        Tint = pointer.Tint with { A = AdaptiveMode };
+        OnDark = background.OnDark with { A = background.Threshold };
+        OnLight = background.OnLight;
+        BackdropX = background.BackdropX;
+        BackdropY = background.BackdropY;
+        BackdropInverseWidth = background.BackdropInverseWidth;
+        BackdropInverseHeight = background.BackdropInverseHeight;
+        MonitorTexelU = background.MonitorTexelU;
+        MonitorTexelV = background.MonitorTexelV;
+    }
+
+    /// <summary>Colour mode number of the adaptive pointer in the shader.</summary>
+    public const float AdaptiveMode = 3;
+
     /// <param name="marginU">Rim room on the left/right, as a fraction of the viewport width.</param>
     /// <param name="marginV">Rim room on top/bottom, as a fraction of the viewport height.</param>
     /// <param name="width">Pointer image width in texels.</param>
@@ -54,6 +89,9 @@ internal readonly struct CursorConstants
         float marginU, float marginV, int width, int height, float rimTexels, FrameColor rim, FrameColor tint,
         bool flipU = false, bool flipV = false) =>
         new(marginU, marginV, rimTexels > 0 ? rim : default, 1f / width, 1f / height, rimTexels, 0, default, tint, flipU, flipV);
+
+    /// <summary>The same pointer, coloured by the background (M15).</summary>
+    public CursorConstants WithAdaptive(in AdaptiveBackground background) => new(this, background);
 
     public static CursorConstants ForRing(float thickness, FrameColor color) =>
         new(0, 0, default, 0, 0, 0, thickness, color, default);

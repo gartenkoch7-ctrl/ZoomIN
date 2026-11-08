@@ -140,6 +140,15 @@ public sealed record AppSettings
 
     public string CursorColor { get; set; } = PointerStyle.Default.Color.ToHex();
 
+    /// <summary>Adaptive pointer (M15): body colour on dark ground.</summary>
+    public string CursorAdaptiveOnDark { get; set; } = PointerStyle.Default.AdaptiveOnDark.ToHex();
+
+    /// <summary>Adaptive pointer (M15): body colour on light ground.</summary>
+    public string CursorAdaptiveOnLight { get; set; } = PointerStyle.Default.AdaptiveOnLight.ToHex();
+
+    /// <summary>Adaptive pointer: background brightness 0.1–0.9 from which the ground counts as light.</summary>
+    public double CursorAdaptiveThreshold { get; set; } = PointerStyle.Default.AdaptiveThreshold;
+
     public bool CursorRim { get; set; } = PointerStyle.Default.Rim;
 
     public string CursorRimColor { get; set; } = PointerStyle.Default.RimColor.ToHex();

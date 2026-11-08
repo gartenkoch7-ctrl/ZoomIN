@@ -26,6 +26,9 @@ public sealed partial class PointerViewModel : ObservableObject
         GrowWithZoom = p.GrowWithZoom;
         ColorModeIndex = (int)p.ColorMode;
         Color = p.Color.ToHex();
+        AdaptiveOnDark = p.AdaptiveOnDark.ToHex();
+        AdaptiveOnLight = p.AdaptiveOnLight.ToHex();
+        AdaptiveThreshold = Math.Round(p.AdaptiveThreshold * 100);
         Rim = p.Rim;
         RimColor = p.RimColor.ToHex();
         RimWidth = p.RimWidth;
@@ -51,6 +54,9 @@ public sealed partial class PointerViewModel : ObservableObject
 
     public bool UsesColor => ColorModeIndex == (int)PointerColorMode.Tint;
 
+    /// <summary>The pointer follows the background (M15): colour pair and threshold apply.</summary>
+    public bool IsAdaptive => ColorModeIndex == (int)PointerColorMode.Adaptive;
+
     public bool CrosshairOn => CrosshairIndex > 0;
 
     [ObservableProperty]
@@ -67,10 +73,21 @@ public sealed partial class PointerViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UsesColor))]
+    [NotifyPropertyChangedFor(nameof(IsAdaptive))]
     public partial int ColorModeIndex { get; set; }
 
     [ObservableProperty]
     public partial string Color { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string AdaptiveOnDark { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string AdaptiveOnLight { get; set; } = string.Empty;
+
+    /// <summary>Threshold in percent (10–90).</summary>
+    [ObservableProperty]
+    public partial double AdaptiveThreshold { get; set; }
 
     [ObservableProperty]
     public partial bool Rim { get; set; }
@@ -121,6 +138,9 @@ public sealed partial class PointerViewModel : ObservableObject
     /// <summary>"Suchhilfe testen": shows the locator ring at the pointer.</summary>
     public void TestLocator() => _effects.Locate();
 
+    /// <summary>"Farben tauschen": the colour for dark ground becomes the one for light ground and back.</summary>
+    public void SwapAdaptiveColors() => (AdaptiveOnDark, AdaptiveOnLight) = (AdaptiveOnLight, AdaptiveOnDark);
+
     public void Reset()
     {
         _effects.SetCursor(PointerStyle.Default);
@@ -131,7 +151,7 @@ public sealed partial class PointerViewModel : ObservableObject
     protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
-        if (!_ready || e.PropertyName is nameof(UsesColor) or nameof(CrosshairOn))
+        if (!_ready || e.PropertyName is nameof(UsesColor) or nameof(IsAdaptive) or nameof(CrosshairOn))
         {
             return;
         }
@@ -161,6 +181,9 @@ public sealed partial class PointerViewModel : ObservableObject
             GrowWithZoom = GrowWithZoom,
             ColorMode = ColorModeIndex >= 0 ? (PointerColorMode)ColorModeIndex : d.ColorMode,
             Color = RgbColor.ParseOrDefault(Color, d.Color),
+            AdaptiveOnDark = RgbColor.ParseOrDefault(AdaptiveOnDark, d.AdaptiveOnDark),
+            AdaptiveOnLight = RgbColor.ParseOrDefault(AdaptiveOnLight, d.AdaptiveOnLight),
+            AdaptiveThreshold = AdaptiveThreshold / 100,
             Rim = Rim,
             RimColor = RgbColor.ParseOrDefault(RimColor, d.RimColor),
             RimWidth = RimWidth,

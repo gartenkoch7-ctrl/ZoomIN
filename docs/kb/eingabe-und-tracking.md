@@ -163,6 +163,23 @@ Zeiger genau auf der Grenze nicht flackert. Zeiger mit mittigem Hotspot (I-Balke
   `uv = (Uv − InnerOffset) / InnerScale`; Offset am fernen Rand + negative Skala ergibt `1 − uv`
   (`CursorConstants.ForPointer(..., flipU, flipV)`, GPU-Test auf WARP in `CursorPassTests`).
 
+## Anpassender Zeiger (M15, ADR-0026)
+Farbmodus `PointerColorMode.Adaptive` („Passt sich dem Hintergrund an“): Jeder Zeigerpixel nimmt
+nach der Helligkeit darunter eine Farbe eines Paars (Standard Weiß auf Dunkel, Schwarz auf Hell);
+helle Zeigerpixel sind Körper, dunkle Umriss mit der Gegenfarbe. Regel in `Core/Pointer/AdaptiveColor`
+(Vorschau) und gleich in `Cursor.hlsl`.
+- **Vorbild** ist die Windows-Zeigerart „Invertiert“ (öffentliche Einstellung), nicht SuperNova.
+  Echte Invertierung wurde verworfen: Auf Mittelgrau wird der Zeiger grau.
+- **Auch ohne Zoom:** `PointerStyle.NeedsDesktop` → `DesktopFeed` lässt die Duplication bei 1× nur
+  auf dem Monitor mit der Maus laufen (Log 3008 einmal je Pipeline). Ein ruhender Desktop liefert
+  keine neuen Bilder, der Leerlauf (M14) greift weiter; jede Desktop-Änderung auf dem Maus-Monitor
+  zeichnet aber das (fast leere) Overlay neu.
+- **Angedockt:** Außerhalb des Docks zeichnet ZoomIN den anpassenden Zeiger an der echten Position
+  (eigene `PointerPlacement` für die Spiegelung), der Systemzeiger bleibt verborgen.
+- **Monochrome Zeiger** (I-Balken `beam_r.cur`, Fadenkreuz `cross_r.cur`): Ihre Invertier-Pixel
+  sind im Bild für diesen Modus weiß (`CursorShape.AdaptivePixels`, `CursorPixels.FromMonochromeAdaptive`),
+  werden also Körper und heben sich wie im Windows-Original vom Hintergrund ab.
+
 ## Tastenkürzel
 Schema und Standardbelegung: [ADR-0008](../adr/0008-tastenkuerzel-strg-alt.md)
 (Strg+Alt+Taste ohne AltGr-Belegung, Strg+Mausrad mit Vorrang vor Anwendungen).

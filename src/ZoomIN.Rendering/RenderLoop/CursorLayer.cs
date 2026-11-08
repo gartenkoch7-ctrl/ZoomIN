@@ -19,21 +19,24 @@ internal sealed class CursorLayer
     private const double LocatorEndRadius = 40;
 
     private readonly CursorPass _pass;
+    private readonly PointerBackdrop _backdrop;
     private readonly ICursorShapeSource _shapes;
     private readonly ISystemCursor _systemCursor;
     private PointerPlacement _placement;
+    private PointerPlacement _realPlacement;
     private bool _systemVisible = true;
 
-    public CursorLayer(CursorPass pass, ICursorShapeSource shapes, ISystemCursor systemCursor)
+    public CursorLayer(CursorPass pass, PointerBackdrop backdrop, ICursorShapeSource shapes, ISystemCursor systemCursor)
     {
         _pass = pass;
+        _backdrop = backdrop;
         _shapes = shapes;
         _systemCursor = systemCursor;
     }
 
     /// <summary>Draws crosshair, pointer and locator; returns true while the locator is still animating.</summary>
     /// <param name="hidden">The user is typing and the pointer should disappear.</param>
-    public bool Draw(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor, in ModeFrame frame,
+    public bool Draw(ID3D11DeviceContext context, in LayerTarget target, PhysicalRect monitor, in ModeFrame frame,
         ZoomMode mode, double zoom, PhysicalPoint cursor, DisplayEffects effects, long locateRequestedAt, bool hidden)
     {
         try
@@ -52,7 +55,7 @@ internal sealed class CursorLayer
     /// <summary>Called when this monitor stops drawing while the pointer is on it.</summary>
     public void ShowSystemCursor() => _systemCursor.SetVisible(true);
 
-    private bool DrawLayer(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor, in ModeFrame frame,
+    private bool DrawLayer(ID3D11DeviceContext context, in LayerTarget target, PhysicalRect monitor, in ModeFrame frame,
         ZoomMode mode, double zoom, PhysicalPoint cursor, PointerStyle style, long locateRequestedAt, bool hidden)
     {
         // The pointer appears where its desktop position is shown. Around the mouse (fixpoint)
@@ -63,24 +66,31 @@ internal sealed class CursorLayer
         var inView = frame.Source.Contains(cursor);
         if (!hidden && inView && style.CrosshairVisible(zoom))
         {
-            DrawCrosshair(context, target, monitor, frame, shown, style);
+            DrawCrosshair(context, target.View, monitor, frame, shown, style);
         }
 
         if (!hidden && drawn && inView)
         {
-            DrawPointer(context, target, monitor, shown, zoom, style);
+            DrawPointer(context, target, monitor, shown, zoom, style, ref _placement);
         }
 
-        // ZoomIN draws the pointer: the real one would sit somewhere else in the image, so it is
-        // hidden. Docked: the real pointer works in the rest of the screen and stays visible.
-        _systemVisible = !hidden && (!drawn || docked);
+        // Docked: the real pointer works in the rest of the screen and over the strip. The adaptive
+        // pointer (M15) replaces it at the real position, so it looks the same everywhere.
+        var everywhere = style.NeedsDesktop;
+        if (!hidden && drawn && docked && everywhere)
+        {
+            DrawPointer(context, target, monitor, cursor, zoom, style, ref _realPlacement);
+        }
+
+        // ZoomIN draws the pointer: the real one would sit somewhere else in the image, so it is hidden.
+        _systemVisible = !hidden && (!drawn || (docked && !everywhere));
         _systemCursor.SetVisible(_systemVisible);
 
-        return DrawLocator(context, target, monitor, shown, Stopwatch.GetTimestamp(), locateRequestedAt, style);
+        return DrawLocator(context, target.View, monitor, shown, Stopwatch.GetTimestamp(), locateRequestedAt, style);
     }
 
-    private void DrawPointer(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor,
-        PhysicalPoint shown, double zoom, PointerStyle style)
+    private void DrawPointer(ID3D11DeviceContext context, in LayerTarget target, PhysicalRect monitor,
+        PhysicalPoint shown, double zoom, PointerStyle style, ref PointerPlacement placement)
     {
         var scale = style.ScaleFor(zoom);
         if (!_shapes.TryGetCurrent(out var handle))
@@ -101,25 +111,41 @@ internal sealed class CursorLayer
         var rim = style.RimPixelsFor(scale);
         var width = (pointer.Width * texel) + (2 * rim);
         var height = (pointer.Height * texel) + (2 * rim);
-        var tint = FrameColor.From(style.Color) with { A = (float)style.ColorMode };
+        var adaptive = style.NeedsDesktop && target.Desktop is not null;
+
+        // Without a captured desktop the adaptive pointer cannot see its background: drawn as is.
+        var mode = style.ColorMode == PointerColorMode.Adaptive && !adaptive ? PointerColorMode.Original : style.ColorMode;
+        var tint = FrameColor.From(style.Color) with { A = (float)mode };
 
         // Near the bottom/right edge the image is mirrored so it stays on screen; the tip keeps
         // marking the real click point.
-        _placement = PointerPlacement.Place(
-            shown, width, height, (pointer.HotspotX * texel) + rim, (pointer.HotspotY * texel) + rim, monitor, _placement);
+        placement = PointerPlacement.Place(
+            shown, width, height, (pointer.HotspotX * texel) + rim, (pointer.HotspotY * texel) + rim, monitor, placement);
         var constants = CursorConstants.ForPointer(
             (float)(rim / width), (float)(rim / height), pointer.Width, pointer.Height, (float)(rim / texel),
-            FrameColor.From(style.RimColor), tint, _placement.FlipX, _placement.FlipY);
+            FrameColor.From(style.RimColor), tint, placement.FlipX, placement.FlipY);
+        var x = placement.X - monitor.X;
+        var y = placement.Y - monitor.Y;
 
-        _pass.DrawPointer(
-            context,
-            target,
-            pointer,
-            (float)(_placement.X - monitor.X),
-            (float)(_placement.Y - monitor.Y),
-            (float)width,
-            (float)height,
-            constants);
+        if (!adaptive)
+        {
+            _pass.DrawPointer(context, target.View, pointer, (float)x, (float)y, (float)width, (float)height, constants);
+            return;
+        }
+
+        // What is drawn under the pointer so far (zoom, filters, crosshair) is copied first: the
+        // shader cannot read the target it draws into (ADR-0026).
+        if (!_backdrop.Capture(context, target.Texture, target.Width, target.Height, x, y, width, height)
+            || _backdrop.View is not { } copy)
+        {
+            return; // nothing of the pointer lies on the target
+        }
+
+        var background = new AdaptiveBackground(
+            FrameColor.From(style.AdaptiveOnDark), FrameColor.From(style.AdaptiveOnLight), (float)style.AdaptiveThreshold,
+            _backdrop.X, _backdrop.Y, _backdrop.InverseWidth, _backdrop.InverseHeight, 1f / target.Width, 1f / target.Height);
+        _pass.DrawAdaptivePointer(context, target.View, pointer, copy, target.Desktop!,
+            (float)x, (float)y, (float)width, (float)height, constants.WithAdaptive(background));
     }
 
     // Two lines through the pointer across the visible view (lens/strip or the whole monitor).

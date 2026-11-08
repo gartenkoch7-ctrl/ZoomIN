@@ -15,6 +15,10 @@ public sealed partial class PointerPage : Page
     // The large preview shows the pointer as it looks at this zoom level.
     private const double PreviewZoom = 3;
 
+    // Brightness of the preview backgrounds #F3F3F3 and #202020 in PointerPage.xaml.
+    private static readonly double s_lightLuma = AdaptiveColor.Luma(0xF3, 0xF3, 0xF3);
+    private static readonly double s_darkLuma = AdaptiveColor.Luma(0x20, 0x20, 0x20);
+
     private PageServices? _services;
     private CursorShape? _arrow;
 
@@ -61,15 +65,18 @@ public sealed partial class PointerPage : Page
             return;
         }
 
+        // The adaptive pointer (M15) differs per background, the other modes do not.
         var style = Vm.Style;
-        var small = Bitmap(style, style.ScaleFor(1));
-        var large = Bitmap(style, style.ScaleFor(PreviewZoom));
-        (LightSmall.Source, DarkSmall.Source) = (small, small);
-        (LightLarge.Source, DarkLarge.Source) = (large, large);
+        var (small, large) = (style.ScaleFor(1), style.ScaleFor(PreviewZoom));
+        LightSmall.Source = Bitmap(style, small, s_lightLuma, s_lightLuma);
+        LightLarge.Source = Bitmap(style, large, s_lightLuma, s_lightLuma);
+        DarkSmall.Source = Bitmap(style, small, s_darkLuma, s_darkLuma);
+        DarkLarge.Source = Bitmap(style, large, s_darkLuma, s_darkLuma);
+        EdgeLarge.Source = style.ColorMode == PointerColorMode.Adaptive ? Bitmap(style, large, s_darkLuma, s_lightLuma) : null;
     }
 
     // Overriding Windows: the standard arrow, loaded sharp for exactly this size.
-    private WriteableBitmap? Bitmap(PointerStyle style, double scale)
+    private WriteableBitmap? Bitmap(PointerStyle style, double scale, double leftLuma, double rightLuma)
     {
         var shapes = _services!.Get<ICursorShapeSource>();
         var shape = style.OverrideWindows ? shapes.LoadStandard(shapes.ArrowHandle(), scale) : _arrow;
@@ -78,7 +85,7 @@ public sealed partial class PointerPage : Page
             return null;
         }
 
-        var (pixels, width, height) = PointerPreview.Render(shape, style, scale);
+        var (pixels, width, height) = PointerPreview.Render(shape, style, scale, leftLuma, rightLuma);
         var bitmap = new WriteableBitmap(width, height);
         using (var stream = bitmap.PixelBuffer.AsStream())
         {
@@ -90,6 +97,8 @@ public sealed partial class PointerPage : Page
     }
 
     private void OnTestLocator(object sender, RoutedEventArgs e) => Vm?.TestLocator();
+
+    private void OnSwapAdaptive(object sender, RoutedEventArgs e) => Vm?.SwapAdaptiveColors();
 
     private void OnReset(object sender, RoutedEventArgs e)
     {

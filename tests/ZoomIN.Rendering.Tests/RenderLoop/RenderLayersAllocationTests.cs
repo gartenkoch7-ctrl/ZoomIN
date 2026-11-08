@@ -95,22 +95,30 @@ public sealed class RenderLayersAllocationTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void CursorLayer_PointerCrosshairAndLocator_DoNotAllocate(bool overrideWindows)
+    [InlineData(false, PointerColorMode.Original)]
+    [InlineData(true, PointerColorMode.Original)]
+    [InlineData(false, PointerColorMode.Adaptive)]
+    [InlineData(true, PointerColorMode.Adaptive)]
+    public void CursorLayer_PointerCrosshairAndLocator_DoNotAllocate(bool overrideWindows, PointerColorMode colorMode)
     {
         using var gpu = GpuDevice.CreateWarp();
         using var target = RenderTarget.Create(gpu.Device, Size);
+        using var desktop = TestImage.Create(gpu.Device, Size);
         using var pass = new CursorPass(gpu.Device);
+        using var backdrop = new PointerBackdrop(gpu.Device);
         var systemCursor = new CountingSystemCursor();
-        var layer = new CursorLayer(pass, new OneShapeSource(), systemCursor);
-        var style = PointerStyle.Default with { OverrideWindows = overrideWindows, CrosshairEnabled = true, CrosshairAlways = true };
+        var layer = new CursorLayer(pass, backdrop, new OneShapeSource(), systemCursor);
+        var style = PointerStyle.Default with
+        {
+            OverrideWindows = overrideWindows, ColorMode = colorMode, CrosshairEnabled = true, CrosshairAlways = true,
+        };
         var effects = new DisplayEffects(FilterSettings.Default, Smoothing.Text, style);
         var frame = ModeGeometry.Compute(ZoomMode.Fullscreen, s_monitor, new PhysicalPoint(32, 32), 2, LensSize.Default, DockLayout.Default);
+        var layerTarget = new LayerTarget(target.View, target.Texture, Size, Size, desktop.View);
 
         // The locator was just requested, so the ring animates in every measured frame.
         var locate = Stopwatch.GetTimestamp();
-        bool Draw(int i) => layer.Draw(gpu.Context, target.View, s_monitor, frame, ZoomMode.Fullscreen, 2,
+        bool Draw(int i) => layer.Draw(gpu.Context, layerTarget, s_monitor, frame, ZoomMode.Fullscreen, 2,
             new PhysicalPoint(30 + (i % 4), 32), effects, locate, hidden: false);
 
         // Warm-up: JIT and every pointer position of the loop once.

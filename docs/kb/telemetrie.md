@@ -124,7 +124,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.tracking.chromium_nudges` | Fenster | – | Chromium-Inhaltsfenster nach IAccessible2 gefragt |
 | `zoomin.tracking.anchor_switches` | Wechsel | `zoomin.anchor.source` (`mouse`, `focus`, `caret`) | Ansicht folgt jetzt Maus, Fokus oder Caret (Render-Thread, ohne Allokation) |
 | `zoomin.render.smart_invert_gpu_time` | ms | `zoomin.monitor` | Mittlere Zusatz-GPU-Zeit des intelligenten Invertierens: Umgebungs-Durchgang (Mittel über 120 Läufe) plus Mehrkosten im Magnify-Durchgang (seit M14 je Pipeline gemessen, 32 Frames schlicht gegen intelligent nach 60 Frames Aufwärmen, erneut wenn der ganze Monitor intelligent wird); > 1 ms → Rückfall (Log 3007) |
-| `zoomin.render.gpu_time` | ms | `zoomin.monitor`, `zoomin.pass` (`magnify`) | Mittlere GPU-Zeit eines Durchgangs über 120 Frames (M14); Zeitstempel-Abfragen laufen nur, solange jemand das Instrument abonniert (Diagnose, OTLP). Durchgänge überlappen nicht: kein Gesamt-Frame-Wert, weil verschachtelte Disjoint-Abfragen nicht überall erlaubt sind |
+| `zoomin.render.gpu_time` | ms | `zoomin.monitor`, `zoomin.pass` (`magnify`, `cursor` seit M15: Zeiger, Fadenkreuz, Suchring samt Hintergrund-Kopie des anpassenden Zeigers) | Mittlere GPU-Zeit eines Durchgangs über 120 Frames (M14); Zeitstempel-Abfragen laufen nur, solange jemand das Instrument abonniert (Diagnose, OTLP). Durchgänge überlappen nicht: kein Gesamt-Frame-Wert, weil verschachtelte Disjoint-Abfragen nicht überall erlaubt sind |
 | `zoomin.render.ready_time` | ms | `zoomin.monitor` | Prozessstart bis erste fertige Zoom-Pipeline des Monitors (einmal je Prozess und Monitor, nur in der ersten Minute – später angesteckte Monitore zählen nicht, M14) |
 | `zoomin.render.smart_invert_frames` | Frames | `zoomin.monitor` | Frames, in denen der Umgebungs-Durchgang lief (ADR-0024); seit M14 nur bei neuem Desktop-Bild und bis die Glättung eingeschwungen ist |
 | `zoomin.render.overlay_time` | s | `zoomin.monitor`, `zoomin.state` (`active`, `paused`) | Zeit, in der der Render-Thread arbeitet bzw. schläft – ergibt den Pausenanteil des Filters pro Fenster |
@@ -221,6 +221,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 3005 | Kritisch | A render thread does not stop; restarting ZoomIN via the watchdog |
 | 3006 | Fehler | Render thread without progress for over {Seconds} s; rebuilding the zoom pipeline |
 | 3007 | Warnung | Smart inversion on {Monitor} falls back to keep hue: {Reason} ({Milliseconds} ms) – `gpu_feature` oder `budget`, einmal je Pipeline |
+| 3008 | Info | Adaptive pointer on {Monitor} keeps the desktop copy running without zoom – anpassender Zeiger (M15, ADR-0026) lässt die Desktop Duplication bei 1× laufen; einmal je Pipeline, sobald die Maus auf dem Monitor ist |
 | 3050 | Info | Debug snapshot of {Monitor} saved to {Folder} (nur der Ordnername) |
 | 3051 | Warnung | Debug snapshot of {Monitor} failed |
 | 4001 | Warnung | Cannot watch process {ProcessId}: {Reason} |

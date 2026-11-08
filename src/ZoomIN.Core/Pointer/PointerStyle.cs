@@ -27,6 +27,15 @@ public sealed record PointerStyle
 
     public RgbColor Color { get; init; } = RgbColor.Yellow;
 
+    /// <summary>Adaptive mode (M15): body colour on dark ground; the outline there takes the other colour.</summary>
+    public RgbColor AdaptiveOnDark { get; init; } = RgbColor.White;
+
+    /// <summary>Adaptive mode (M15): body colour on light ground.</summary>
+    public RgbColor AdaptiveOnLight { get; init; } = RgbColor.Black;
+
+    /// <summary>Adaptive mode: background brightness (0–1) from which the ground counts as light.</summary>
+    public double AdaptiveThreshold { get; init; } = 0.5;
+
     public bool Rim { get; init; } = true;
 
     public RgbColor RimColor { get; init; } = RgbColor.Amber;
@@ -88,6 +97,12 @@ public sealed record PointerStyle
 
     public bool CrosshairVisible(double zoom) => CrosshairEnabled && (CrosshairAlways || zoom > 1.01);
 
+    /// <summary>
+    /// The pointer needs the desktop under it, also without zoom: the adaptive pointer reads what is
+    /// shown below (ADR-0026), so Desktop Duplication runs on the monitor with the mouse.
+    /// </summary>
+    public bool NeedsDesktop => ColorMode == PointerColorMode.Adaptive;
+
     /// <summary>Without zoom an overlay is still needed for the pointer or the crosshair.</summary>
     public bool NeedsOverlayUnzoomed => DrawsPointer(1.0) || CrosshairVisible(1.0);
 
@@ -100,6 +115,8 @@ public sealed record PointerStyle
         MaxScale = Math.Clamp(MaxScale, 1, 8),
         UnzoomedScale = Math.Clamp(UnzoomedScale, 1, 4),
         RimWidth = Math.Clamp(RimWidth, 1, 8),
+        AdaptiveThreshold = Math.Clamp(AdaptiveThreshold, 0.1, 0.9),
+        ColorMode = Enum.IsDefined(ColorMode) ? ColorMode : PointerColorMode.Original,
         LocatorSize = Math.Clamp(LocatorSize, 60, 400),
         LocatorSeconds = Math.Clamp(LocatorSeconds, 0.3, 3),
         CrosshairWidth = Math.Clamp(CrosshairWidth, 1, 10),

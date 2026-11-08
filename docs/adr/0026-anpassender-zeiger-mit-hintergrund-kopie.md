@@ -1,6 +1,6 @@
 # ADR-0026: Anpassender Zeiger – Farbpaar nach sichtbarem Hintergrund, auch bei 1×
 
-- **Status:** Vorgeschlagen (Umsetzung in [M15](../plan/m15-anpassender-zeiger.md))
+- **Status:** Angenommen (Plan freigegeben 2026-11-08, Umsetzung in [M15](../plan/m15-anpassender-zeiger.md))
 - **Datum:** 2026-11-08
 
 ## Kontext
