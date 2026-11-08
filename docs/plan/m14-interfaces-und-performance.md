@@ -163,9 +163,15 @@
   - Auch beim Bewegen der Maus über einem ruhenden Desktop fällt er damit weg.
   - Die erste Änderung nach einer Ruhepause wird wie ein Frame geglättet, nicht auf einmal
     übernommen (gegen Flackern).
-- [ ] Prüfen, ob sich das Kopieren nur der geänderten Bereiche lohnt (`GetFrameDirtyRects`/
-      `MoveRects`) statt der ganzen Textur. Erst nach der Sichtprüfung; vermutlich klein,
-      weil ruhende Frames jetzt gar nicht mehr kopieren.
+- [~] Prüfen, ob sich das Kopieren nur der geänderten Bereiche lohnt (`GetFrameDirtyRects`/
+      `MoveRects`) statt der ganzen Textur: **entfällt nach Messung** (2026-11-08,
+      `CopyGpuTimeTests`, RTX 3060 Ti).
+  - Ganze Textur pro neuem Bild: 1080p 0,033 ms, 1440p 0,048 ms, 4K 0,090 ms.
+  - Ein Viertel der Fläche: 1440p 0,013 ms. Der Gewinn läge also unter 0,04 ms je neuem Bild.
+  - Ruhende Frames kopieren seit Schritt 3 gar nicht mehr. Der Umbau brächte dagegen ein
+    Fehlerrisiko: Reihenfolge der Move-Rects, ein veraltetes Bild bei fehlenden Bereichen.
+  - Onboard-GPUs haben weniger Bandbreite. Dieser PC hat keine (i7-12700KF). Liegt die Kopie
+    dort bei einer echten Messung über rund 0,3 ms, wird das neu bewertet.
 - [x] Sichtprüfung durch den Nutzer (2026-11-07, dev.120.m14): „Alles in Ordnung“.
   - GPU-Last im Task-Manager bei ruhendem 2×-Zoom nahe null
   - Maus, Tippen, Scrollen und Video flüssig wie vorher
