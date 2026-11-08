@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Updates;
@@ -13,16 +12,10 @@ namespace ZoomIN.Platform.Updates;
 public sealed class HttpPackageDownloader : IPackageDownloader
 {
     private const int BufferSize = 81920;
-    private static readonly HttpClient s_http = CreateClient();
     private readonly HttpClient _http;
     private readonly ILogger _log;
 
-    public HttpPackageDownloader(ILogger<HttpPackageDownloader> log)
-        : this(log, s_http)
-    {
-    }
-
-    internal HttpPackageDownloader(ILogger<HttpPackageDownloader> log, HttpClient http)
+    public HttpPackageDownloader(ILogger<HttpPackageDownloader> log, HttpClient http)
     {
         _log = log;
         _http = http;
@@ -128,13 +121,5 @@ public sealed class HttpPackageDownloader : IPackageDownloader
         {
             // The next download overwrites it; the ".partial" name keeps it from being installed.
         }
-    }
-
-    private static HttpClient CreateClient()
-    {
-        // No overall timeout: a 70 MB package on a slow line may take minutes; the caller cancels.
-        var client = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("ZoomIN", "1.0"));
-        return client;
     }
 }

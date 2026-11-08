@@ -28,6 +28,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ZoomIN.Core\ZoomIN.Core.csproj" />
     <ProjectReference Include="..\ZoomIN.Platform\ZoomIN.Platform.csproj" />
+    <InternalsVisibleTo Include="ZoomIN.Setup.Tests" />
   </ItemGroup>
 
   <ItemGroup>

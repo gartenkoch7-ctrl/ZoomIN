@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ZoomIN.App.Localization;
-using ZoomIN.App.Views;
+using ZoomIN.App.Zoom;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.WindowFilters;
 
@@ -13,15 +13,17 @@ namespace ZoomIN.App.ViewModels;
 /// </summary>
 public sealed partial class WindowFilterViewModel : ObservableObject
 {
-    private readonly PageContext _context;
+    private readonly WindowFilterModel _windows;
+    private readonly WindowFilterCommands _commands;
     private readonly IReadOnlyList<string> _choices = WindowRuleRow.AllChoices();
     private readonly IReadOnlyList<string> _titleBarChoices = WindowRuleRow.AllTitleBarChoices();
     private List<WindowKind> _addable = [];
     private bool _loading = true;
 
-    public WindowFilterViewModel(PageContext context)
+    public WindowFilterViewModel(WindowFilterModel windows, WindowFilterCommands commands)
     {
-        _context = context;
+        _windows = windows;
+        _commands = commands;
         var options = Model.Options;
         FilterNames = ColorFilters.DisplayOrder.Select(f => Text.Get("Filter." + f)).ToList();
         SensitivityNames = [Text.Get("WinFilter.Low"), Text.Get("WinFilter.Medium"), Text.Get("WinFilter.High"), Text.Get("WinFilter.Custom")];
@@ -67,7 +69,7 @@ public sealed partial class WindowFilterViewModel : ObservableObject
 
     public bool NoRules => !HasRules;
 
-    private WindowFilterModel Model => _context.Controller.Windows;
+    private WindowFilterModel Model => _windows;
 
     public void Add()
     {
@@ -151,7 +153,7 @@ public sealed partial class WindowFilterViewModel : ObservableObject
     private void LoadAddable()
     {
         var options = Model.Options;
-        _addable = _context.Controller.OpenWindowKinds().Where(k => options.RuleFor(k) is null).ToList();
+        _addable = _commands.OpenWindowKinds().Where(k => options.RuleFor(k) is null).ToList();
         AddableNames.Clear();
         foreach (var kind in _addable)
         {

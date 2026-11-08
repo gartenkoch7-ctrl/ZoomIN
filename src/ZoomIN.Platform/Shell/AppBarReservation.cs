@@ -5,7 +5,7 @@ using Windows.Win32.Foundation;
 using Windows.Win32.UI.Shell;
 using Windows.Win32.UI.WindowsAndMessaging;
 using Microsoft.Extensions.Logging;
-using ZoomIN.Core.Lifecycle;
+using ZoomIN.Core.Folders;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Viewport;
 
@@ -14,7 +14,7 @@ namespace ZoomIN.Platform.Shell;
 /// <summary>
 /// Reserves the docked strip as a Windows AppBar. The shell talks to AppBars with messages, so
 /// the AppBar window lives on its own thread with a message loop; calls are queued to it.
-/// The window handle is written to <see cref="RecoveryFiles.AppBarWindow"/> so the watchdog can
+/// The window handle is written to <see cref="AppFiles.AppBarWindow"/> so the watchdog can
 /// give the space back after a crash.
 /// </summary>
 public sealed unsafe class AppBarReservation : IScreenReservation
@@ -25,15 +25,17 @@ public sealed unsafe class AppBarReservation : IScreenReservation
     private const uint AbmSetPos = 3;
 
     private readonly ILogger _log;
+    private readonly IAppFolders _folders;
     private readonly Thread _thread;
     private readonly ManualResetEventSlim _ready = new();
     private readonly BlockingCollection<Action> _work = [];
     private HWND _window;
     private bool _registered;
 
-    public AppBarReservation(ILogger<AppBarReservation> log)
+    public AppBarReservation(ILogger<AppBarReservation> log, IAppFolders folders)
     {
         _log = log;
+        _folders = folders;
         _thread = new Thread(Run) { IsBackground = true, Name = "ZoomIN AppBar" };
         _thread.Start();
         _ready.Wait();
@@ -123,7 +125,7 @@ public sealed unsafe class AppBarReservation : IScreenReservation
         PInvoke.SHAppBarMessage(AbmRemove, ref data);
         PInvoke.ShowWindow(_window, SHOW_WINDOW_CMD.SW_HIDE);
         _registered = false;
-        File.Delete(RecoveryFiles.AppBarWindow);
+        File.Delete(_folders.AppBarWindow());
         _log.StripReleased();
     }
 
@@ -131,8 +133,8 @@ public sealed unsafe class AppBarReservation : IScreenReservation
 
     private void WriteRecoveryFile()
     {
-        Directory.CreateDirectory(RecoveryFiles.Directory);
-        File.WriteAllText(RecoveryFiles.AppBarWindow, ((nint)_window.Value).ToString(CultureInfo.InvariantCulture));
+        Directory.CreateDirectory(_folders.Local);
+        File.WriteAllText(_folders.AppBarWindow(), ((nint)_window.Value).ToString(CultureInfo.InvariantCulture));
     }
 
     private static void KeepThickness(ref RECT rc, DockEdge edge, PhysicalRect area)

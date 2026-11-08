@@ -12,15 +12,23 @@
     <Project Path="src/ZoomIN.Watchdog/ZoomIN.Watchdog.csproj" />
   </Folder>
   <Folder Name="/tools/">
+    <Project Path="tools/ZoomIN.ShaderCompiler/ZoomIN.ShaderCompiler.csproj" />
     <Project Path="tools/ZoomIN.TrackingProbe/ZoomIN.TrackingProbe.csproj">
       <Platform Project="x64" />
     </Project>
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/ZoomIN.App.Tests/ZoomIN.App.Tests.csproj">
+      <Platform Project="x64" />
+    </Project>
     <Project Path="tests/ZoomIN.Architecture.Tests/ZoomIN.Architecture.Tests.csproj" />
     <Project Path="tests/ZoomIN.Benchmarks/ZoomIN.Benchmarks.csproj" />
     <Project Path="tests/ZoomIN.Core.Tests/ZoomIN.Core.Tests.csproj" />
     <Project Path="tests/ZoomIN.Platform.Tests/ZoomIN.Platform.Tests.csproj" />
     <Project Path="tests/ZoomIN.Rendering.Tests/ZoomIN.Rendering.Tests.csproj" />
+    <Project Path="tests/ZoomIN.Setup.Tests/ZoomIN.Setup.Tests.csproj">
+      <Platform Project="x64" />
+    </Project>
+    <Project Path="tests/ZoomIN.Watchdog.Tests/ZoomIN.Watchdog.Tests.csproj" />
   </Folder>
 </Solution>

@@ -17,21 +17,24 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// </summary>
 internal sealed class SmartInvertLayer : IDisposable
 {
-    /// <summary>Budget of the ambient pass per frame (ADR-0024: ≤ 1 ms extra at 1440p on onboard graphics).</summary>
+    /// <summary>Budget of all smart inversion extra GPU time per frame (ADR-0024: ≤ 1 ms at 1440p on onboard graphics).</summary>
     public const double BudgetMilliseconds = 1.0;
-
-    // Decided on the mean of this many measured frames, so a single slow frame changes nothing.
-    private const int SamplesPerDecision = 120;
 
     // Time constant of the smoothing: after 3 τ (~150 ms) a change is 95 % through.
     private const double SmoothingSeconds = 0.05;
+
+    // After 6 τ less than 0.3 % of the old weights is left: the weights are final until the next change.
+    private const double SettleSeconds = 6 * SmoothingSeconds;
+
+    // One frame at 60 Hz: the step the smoothing takes for the first change after a settled pause.
+    private const double OneFrameSeconds = 1.0 / 60;
 
     // Frames with the smart inversion vs all frames (zoomin.render.frame_interval) shows how often it runs.
     private static readonly Counter<long> s_frames = Telemetry.Meter.CreateCounter<long>(
         "zoomin.render.smart_invert_frames", "{frame}", "Frames that decided the smart inversion (ADR-0024)");
 
     private static readonly Histogram<double> s_gpuTime = Telemetry.Meter.CreateHistogram<double>(
-        "zoomin.render.smart_invert_gpu_time", "ms", "Mean GPU time of the smart inversion ambient pass over 120 frames");
+        "zoomin.render.smart_invert_gpu_time", "ms", "Mean extra GPU time of the smart inversion: ambient pass over 120 frames plus magnify extra");
 
     private readonly AmbientPass? _pass;
     private readonly GpuStopwatch? _stopwatch;
@@ -41,8 +44,13 @@ internal sealed class SmartInvertLayer : IDisposable
     private readonly KeyValuePair<string, object?> _monitor;
     private long _lastUpdate;
     private bool _running;
-    private double _sum;
-    private int _samples;
+    private long _changedAt;
+    private double _ambientMean;
+    private double _magnifyExtra;
+    private bool _settled;
+
+    // Decided on a mean of SampleMean.Count frames, so a single slow frame changes nothing.
+    private SampleMean _mean;
 
     public SmartInvertLayer(AmbientPass? pass, GpuStopwatch? stopwatch, string deviceName, SmartInvertHealth health, ILogger log)
     {
@@ -60,6 +68,12 @@ internal sealed class SmartInvertLayer : IDisposable
 
     /// <summary>False after a fall-back: the smart filter then shows "keep hue" on this monitor.</summary>
     public bool Active { get; private set; } = true;
+
+    /// <summary>The smoothing still moves the weights: the monitor keeps drawing frames (M14 step 3).</summary>
+    public bool Settling { get; private set; }
+
+    /// <summary>The cost probe delivered the magnify extra at least once (for tests).</summary>
+    public bool MagnifyExtraReported { get; private set; }
 
     /// <summary>Sets up the weights and the timing; without them the layer starts in fall-back.</summary>
     public static SmartInvertLayer Create(ID3D11Device device, int width, int height, string deviceName, SmartInvertHealth health, ILogger log)
@@ -85,17 +99,45 @@ internal sealed class SmartInvertLayer : IDisposable
     /// Updates the weights from <paramref name="desktop"/> when <paramref name="needed"/>;
     /// returns them for the magnify pass, or null when nothing on the monitor is smart or after a fall-back.
     /// </summary>
-    public ID3D11ShaderResourceView? Prepare(ID3D11DeviceContext context, ID3D11ShaderResourceView desktop, bool needed, bool protectPhotos)
+    /// <param name="inputChanged">
+    /// A new desktop image or other options came in. Without one the weights stop changing once the
+    /// smoothing has settled, and the ambient pass is skipped (M14 step 3).
+    /// </param>
+    public ID3D11ShaderResourceView? Prepare(
+        ID3D11DeviceContext context, ID3D11ShaderResourceView desktop, bool needed, bool protectPhotos, bool inputChanged = true)
     {
         if (!needed || !Active || _pass is null)
         {
             _running = false;
+            Settling = false;
             return null;
         }
 
         var now = Stopwatch.GetTimestamp();
+        if (inputChanged || !_running)
+        {
+            _changedAt = now;
+        }
+
+        Settling = Stopwatch.GetElapsedTime(_changedAt, now).TotalSeconds < SettleSeconds;
+        if (_running && !Settling)
+        {
+            _settled = true;
+            CheckBudget(context);
+            return _pass.Weights;
+        }
+
+        // After a settled pause (no updates, maybe idle frames) the time since the last update says
+        // nothing about the change: it starts now. Smooth it like one frame, never jump at once.
+        var elapsed = Stopwatch.GetElapsedTime(_lastUpdate, now).TotalSeconds;
+        if (_settled)
+        {
+            elapsed = Math.Min(elapsed, OneFrameSeconds);
+            _settled = false;
+        }
+
         var timed = _stopwatch?.Begin(context) == true;
-        _pass.Update(context, desktop, AlphaAfter(Stopwatch.GetElapsedTime(_lastUpdate, now).TotalSeconds, _running), protectPhotos);
+        _pass.Update(context, desktop, AlphaAfter(elapsed, _running), protectPhotos);
         if (timed)
         {
             _stopwatch!.End(context);
@@ -114,19 +156,34 @@ internal sealed class SmartInvertLayer : IDisposable
     /// <summary>Counts one measured frame; public for tests, which feed times without a GPU.</summary>
     public void AddSample(double milliseconds)
     {
-        _sum += milliseconds;
-        if (++_samples < SamplesPerDecision)
+        if (!_mean.Add(milliseconds, out var mean))
         {
             return;
         }
 
-        var mean = _sum / _samples;
-        _sum = 0;
-        _samples = 0;
-        s_gpuTime.Record(mean, _monitor);
-        if (mean > BudgetMilliseconds)
+        _ambientMean = mean;
+        s_gpuTime.Record(mean + _magnifyExtra, _monitor);
+        CheckTotal();
+    }
+
+    /// <summary>
+    /// What the smart inversion adds to the magnify pass (SmartCostProbe, M14 step 5). Before, the
+    /// budget saw only the ambient pass, although the edge-aware weight in Magnify.hlsl costs as much.
+    /// </summary>
+    public void SetMagnifyExtra(double milliseconds)
+    {
+        MagnifyExtraReported = true;
+        _magnifyExtra = milliseconds;
+        CheckTotal();
+    }
+
+    // The budget covers everything the smart inversion adds: ambient pass plus magnify extra.
+    private void CheckTotal()
+    {
+        var total = _ambientMean + _magnifyExtra;
+        if (Active && total > BudgetMilliseconds)
         {
-            FallBack("budget", mean);
+            FallBack("budget", total);
         }
     }
 
@@ -149,6 +206,9 @@ internal sealed class SmartInvertLayer : IDisposable
     {
         Active = false;
         _running = false;
+
+        // One more frame shows the fall-back even when nothing else changes (M14 step 3).
+        Settling = true;
         _log.SmartInvertFallback(_deviceName, reason, milliseconds);
         _health.Report(new SmartInvertFallback(_deviceName, reason, milliseconds));
     }

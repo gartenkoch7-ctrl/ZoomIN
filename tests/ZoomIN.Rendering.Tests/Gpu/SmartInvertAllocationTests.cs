@@ -5,10 +5,12 @@ using ZoomIN.Core.Viewport;
 using ZoomIN.Core.WindowFilters;
 using ZoomIN.Rendering.Gpu;
 using ZoomIN.Rendering.RenderLoop;
+using ZoomIN.Rendering.Tests.RenderLoop;
 
 namespace ZoomIN.Rendering.Tests.Gpu;
 
 /// <summary>Smart inversion runs every frame: weights, check and draw must not allocate (AGENTS.md 2.3).</summary>
+[Collection(MeterTests.Name)]
 public sealed class SmartInvertAllocationTests
 {
     private const int Size = 64;

@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
-using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Updates;
-using ZoomIN.Platform.SecureDesktop;
 using ZoomIN.Platform.Updates;
 
 namespace ZoomIN.App.Updates;
@@ -11,30 +10,33 @@ namespace ZoomIN.App.Updates;
 /// installed, signed ZoomIN.exe itself, because Windows only starts UIAccess executables from
 /// Program Files; the exit code is the <see cref="UpdateResult"/>.
 /// </summary>
-internal static class UpdateRunner
+internal sealed class UpdateRunner(
+    ISignatureVerifier verifier, IInstallRegistration registration, ISecureDesktopInstall secureDesktop, IRunningInstall install,
+    ILogger<UpdateRunner> log)
 {
-    public static int Run(UpdateCommand command, ILogger log)
+    public int Run(UpdateCommand command)
     {
-        if (!InstallLayout.TryFromExecutable(Environment.ProcessPath, out var layout))
+        ArgumentNullException.ThrowIfNull(command);
+        if (!install.TryGetLayout(out var layout))
         {
             log.NotVersioned();
             return (int)UpdateResult.NotInstalled;
         }
 
-        var result = new UpdateApplier(new AuthenticodeVerifier(), log).Apply(layout, command);
+        var result = new UpdateApplier(verifier, log).Apply(layout, command);
         if (result == UpdateResult.Installed)
         {
             try
             {
                 // Windows "Apps" shows the version from the registry; the shortcut is refreshed too.
-                InstallRegistration.Register(layout, command.Version);
+                registration.Register(layout, command.Version);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
             {
                 log.AppsEntryFailed(ex);
             }
 
-            SecureDesktopInstall.Apply(layout, command.SecureDesktop, log);
+            secureDesktop.Apply(layout, command.SecureDesktop);
         }
 
         return (int)result;

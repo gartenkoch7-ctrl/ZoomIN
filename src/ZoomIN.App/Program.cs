@@ -1,15 +1,19 @@
 using System.Diagnostics;
 using System.Globalization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using ZoomIN.App.Composition;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.App.SecureDesktop;
 using ZoomIN.App.Updates;
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Folders;
 using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Diagnostics;
+using ZoomIN.Platform.Folders;
 using ZoomIN.Platform.SecureDesktop;
 using ZoomIN.Watchdog;
 using ZoomIN.Watchdog.Crashes;
@@ -25,6 +29,9 @@ public static class Program
 {
     internal static SingleInstance? Instance { get; private set; }
 
+    /// <summary>The ZoomIN folders of this account, for every role and the DI container (ADR-0025).</summary>
+    internal static IAppFolders Folders { get; } = new WindowsAppFolders();
+
     /// <summary>Telemetry of the tray app; set before the WinUI app starts.</summary>
     internal static TelemetryHost? Telemetry { get; private set; }
 
@@ -38,7 +45,8 @@ public static class Program
         if (WatchdogArguments.TryParse(args, out var processId, out var secure))
         {
             return RunRole(TelemetryRole.Watchdog, traceParent, log =>
-                WatchdogRunner.Run(processId, Environment.ProcessPath!, log, cleanup: [new AppBarCleanup(), new SystemCursorCleanup()], secure));
+                new WatchdogRunner(Folders, log, [new AppBarCleanup(Folders), new SystemCursorCleanup()], new ProcessWatchdogSystem(), TimeProvider.System)
+                    .Run(processId, Environment.ProcessPath!, secure));
         }
 
         // As SYSTEM, ZoomIN is always the secure-desktop instance, whatever the arguments: Windows
@@ -47,30 +55,34 @@ public static class Program
         if (args is [SecureDesktopMode.Switch] || SessionUserFolders.IsSystem)
         {
             using var telemetry = Start(TelemetryRole.Secure, traceParent);
-            return SecureDesktopHost.Run(telemetry);
+            return new SecureDesktopHost(telemetry, Folders).Run();
         }
 
         if (SecureDesktopSetting.TryParse(args, out var secureDesktopOn))
         {
-            return RunRole(TelemetryRole.Elevated, traceParent, log => SecureDesktopSetting.RunElevated(secureDesktopOn, log));
+            return RunFlow(TelemetryRole.Elevated, traceParent, services => services.GetRequiredService<ISecureDesktopSwitch>().ApplyElevated(secureDesktopOn));
         }
 
         if (UpdateCommand.TryParse(args, out var update))
         {
-            return RunRole(TelemetryRole.Update, traceParent, log => UpdateRunner.Run(update, log));
+            return RunFlow(TelemetryRole.Update, traceParent, services => services.GetRequiredService<UpdateRunner>().Run(update));
         }
 
         if (args is [UninstallEntry.UninstallSwitch])
         {
-            return RunRole(TelemetryRole.Uninstall, traceParent, UninstallFlow.Run);
+            return RunFlow(TelemetryRole.Uninstall, traceParent, services => services.GetRequiredService<UninstallFlow>().Run());
         }
 
         if (args is [UninstallEntry.RemoveSwitch, var pid] && int.TryParse(pid, NumberStyles.None, CultureInfo.InvariantCulture, out var asker))
         {
-            return RunRole(TelemetryRole.Uninstall, traceParent, log => UninstallFlow.RemoveElevated(asker, log));
+            return RunFlow(TelemetryRole.Uninstall, traceParent, services => services.GetRequiredService<UninstallFlow>().RemoveElevated(asker));
         }
 
-        RestartArguments.WaitIfRequested(args);
+        if (RestartArguments.TryParse(args, out var oldProcess))
+        {
+            WaitForExit(oldProcess);
+        }
+
         using var instance = SingleInstance.TryAcquire();
         if (instance is null)
         {
@@ -91,12 +103,23 @@ public static class Program
         return 0;
     }
 
+    /// <summary>A short-lived role with its own small container (installation services, its flow).</summary>
+    private static int RunFlow(TelemetryRole role, string? traceParent, Func<IServiceProvider, int> run) =>
+        RunRole(role, traceParent, (telemetry, _) =>
+        {
+            using var services = ServiceRegistration.BuildRole(telemetry, Folders);
+            return run(services);
+        });
+
+    private static int RunRole(TelemetryRole role, string? traceParent, Func<ILogger, int> run) =>
+        RunRole(role, traceParent, (_, log) => run(log));
+
     /// <summary>A short-lived role: one operation from start to exit; a non-zero exit code marks it failed.</summary>
-    private static int RunRole(TelemetryRole role, string? traceParent, Func<ILogger, int> run)
+    private static int RunRole(TelemetryRole role, string? traceParent, Func<TelemetryHost, ILogger, int> run)
     {
         using var telemetry = Start(role, traceParent);
         using var operation = telemetry.StartOperation($"zoomin.{role.ToString().ToLowerInvariant()}.run");
-        var exitCode = run(telemetry.Loggers.CreateLogger("ZoomIN." + role));
+        var exitCode = run(telemetry, telemetry.Loggers.CreateLogger("ZoomIN." + role));
         if (exitCode != 0)
         {
             operation?.SetStatus(ActivityStatusCode.Error, string.Create(CultureInfo.InvariantCulture, $"exit code {exitCode}"));
@@ -105,9 +128,23 @@ public static class Program
         return exitCode;
     }
 
+    // After an update: the old version must be gone before the single-instance check (ADR-0015).
+    private static void WaitForExit(int processId)
+    {
+        try
+        {
+            using var process = Process.GetProcessById(processId);
+            process.WaitForExit(TimeSpan.FromSeconds(15));
+        }
+        catch (ArgumentException)
+        {
+            // Already gone.
+        }
+    }
+
     private static TelemetryHost Start(TelemetryRole role, string? traceParent)
     {
-        var telemetry = TelemetryHost.Start(role, traceParent);
+        var telemetry = TelemetryHost.Start(role, Folders, traceParent);
         Core.Diagnostics.Telemetry.OnFlush(telemetry.Flush);
         LogBackgroundFailures(telemetry);
         return telemetry;

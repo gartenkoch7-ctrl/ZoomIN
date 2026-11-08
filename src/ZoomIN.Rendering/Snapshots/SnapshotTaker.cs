@@ -16,6 +16,9 @@ internal sealed class SnapshotTaker(DebugSnapshots snapshots, string deviceName,
 {
     private long _taken;
 
+    /// <summary>A snapshot is waiting: the next frame must be drawn even if nothing changed (M14 step 3).</summary>
+    public bool IsRequested => snapshots.Pending is { } pending && pending.Generation != _taken;
+
     /// <param name="desktop">The captured desktop; null if nothing was captured this frame.</param>
     /// <param name="result">What ZoomIN drew, before Present (the back buffer is still intact).</param>
     /// <param name="weights">Smart inversion weights of this frame, or null.</param>
@@ -77,11 +80,11 @@ internal sealed class SnapshotTaker(DebugSnapshots snapshots, string deviceName,
         {
             Directory.CreateDirectory(request.Folder);
             var prefix = Path.Combine(request.Folder, SafeName(deviceName));
-            PngWriter.Write(prefix + "-original.png", original);
-            PngWriter.Write(prefix + "-result.png", drawn);
+            WritePng(prefix + "-original.png", original);
+            WritePng(prefix + "-result.png", drawn);
             if (weights is not null)
             {
-                PngWriter.Write(prefix + "-weights.png", weights);
+                WritePng(prefix + "-weights.png", weights);
             }
 
             File.WriteAllText(prefix + "-info.txt", info);
@@ -95,6 +98,12 @@ internal sealed class SnapshotTaker(DebugSnapshots snapshots, string deviceName,
             activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, ex.GetType().Name);
             snapshots.Report(new DebugSnapshotResult(request.Generation, deviceName, false, ex.GetType().Name));
         }
+    }
+
+    private static void WritePng(string path, SnapshotImage image)
+    {
+        using var file = File.Create(path);
+        PngWriter.Write(file, image);
     }
 
     // "\\.\DISPLAY1" -> "DISPLAY1"

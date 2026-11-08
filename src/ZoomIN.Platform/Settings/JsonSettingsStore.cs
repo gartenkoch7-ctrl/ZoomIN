@@ -1,3 +1,4 @@
+using ZoomIN.Core.Folders;
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -21,9 +22,8 @@ public sealed class JsonSettingsStore : ISettingsStore
     private readonly string _path;
     private readonly Lock _gate = new();
 
-    public JsonSettingsStore(ILogger<JsonSettingsStore> log)
-        : this(log, Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ZoomIN", "settings.json"))
+    public JsonSettingsStore(ILogger<JsonSettingsStore> log, IAppFolders folders)
+        : this(log, folders.Settings())
     {
     }
 

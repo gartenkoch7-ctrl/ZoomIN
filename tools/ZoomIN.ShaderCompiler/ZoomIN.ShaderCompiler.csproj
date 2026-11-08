@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Build tool, not shipped: compiles the HLSL shaders of ZoomIN.Rendering to bytecode during the
+       build, so ZoomIN does not compile ~570 ms of shaders per monitor at startup (M14 step 4).
+       Same compiler (d3dcompiler_47 via Vortice) and flags as the former runtime compilation. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Vortice.D3DCompiler" />
+  </ItemGroup>
+</Project>

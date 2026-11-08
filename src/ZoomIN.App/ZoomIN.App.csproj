@@ -35,6 +35,7 @@
     <ProjectReference Include="..\ZoomIN.Platform\ZoomIN.Platform.csproj" />
     <ProjectReference Include="..\ZoomIN.Rendering\ZoomIN.Rendering.csproj" />
     <ProjectReference Include="..\ZoomIN.Watchdog\ZoomIN.Watchdog.csproj" />
+    <InternalsVisibleTo Include="ZoomIN.App.Tests" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using ZoomIN.App.Localization;
 using ZoomIN.App.Updates;
-using ZoomIN.App.Views;
+using ZoomIN.Core.Lifecycle;
 
 namespace ZoomIN.App.ViewModels;
 
@@ -11,12 +11,12 @@ namespace ZoomIN.App.ViewModels;
 /// </summary>
 public sealed partial class UiAccessBannerViewModel : ObservableObject
 {
-    private readonly PageContext _context;
+    private readonly SetupLauncher _setup;
 
-    public UiAccessBannerViewModel(PageContext context)
+    public UiAccessBannerViewModel(IUiAccessProbe uiAccess, SetupLauncher setup)
     {
-        _context = context;
-        IsOpen = !context.UiAccess.IsActive;
+        _setup = setup;
+        IsOpen = !uiAccess.IsActive;
     }
 
     public bool IsOpen { get; }
@@ -36,7 +36,7 @@ public sealed partial class UiAccessBannerViewModel : ObservableObject
         Status = Text.Get("UiAccess.Downloading");
         try
         {
-            var result = await _context.Setup.LaunchAsync(null, CancellationToken.None);
+            var result = await _setup.LaunchAsync(null, CancellationToken.None);
             Status = Text.Get($"UiAccess.Result.{result}");
         }
         finally

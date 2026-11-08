@@ -1,5 +1,4 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using ZoomIN.App.Views;
 using ZoomIN.Core.Tracking;
 
 namespace ZoomIN.App.ViewModels;
@@ -7,13 +6,13 @@ namespace ZoomIN.App.ViewModels;
 /// <summary>Focus and caret tracking options (M6). Applies live.</summary>
 public sealed partial class TrackingViewModel : ObservableObject
 {
-    private readonly PageContext _context;
+    private readonly TrackingModel _tracking;
     private readonly bool _ready;
 
-    public TrackingViewModel(PageContext context)
+    public TrackingViewModel(TrackingModel tracking)
     {
-        _context = context;
-        var o = context.Controller.Tracking.Options;
+        _tracking = tracking;
+        var o = tracking.Options;
         TrackingEnabled = o.Enabled;
         Focus = o.Focus;
         Caret = o.Caret;
@@ -69,7 +68,7 @@ public sealed partial class TrackingViewModel : ObservableObject
     {
         if (_ready)
         {
-            _context.Controller.Tracking.SetOptions(
+            _tracking.SetOptions(
                 new TrackingOptions(TrackingEnabled, Focus, Caret, PanMs / 1000, Margin / 100, FocusFrame, CaretMarker, CenterMouse));
         }
     }

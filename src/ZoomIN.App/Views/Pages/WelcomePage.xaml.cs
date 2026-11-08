@@ -16,7 +16,7 @@ public sealed partial class WelcomePage : Page
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        Vm = new WelcomeViewModel((PageContext)e.Parameter);
+        Vm = ((PageServices)e.Parameter).Create<WelcomeViewModel>();
         Bindings.Update();
     }
 

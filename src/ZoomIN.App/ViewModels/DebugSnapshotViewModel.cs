@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ZoomIN.App.Localization;
+using ZoomIN.Core.Folders;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Platform.Shell;
@@ -13,16 +14,12 @@ namespace ZoomIN.App.ViewModels;
 /// window to the front – every monitor saves original, result and smart inversion weights to
 /// %LocalAppData%\ZoomIN\debug. Contains screen content, so only ever on this button.
 /// </summary>
-public sealed partial class DebugSnapshotViewModel(DebugSnapshots snapshots, SmartInvertHealth smartInvert) : ObservableObject
+public sealed partial class DebugSnapshotViewModel(DebugSnapshots snapshots, SmartInvertHealth smartInvert, IAppFolders folders) : ObservableObject
 {
     private const int CountdownSeconds = 5;
 
     // Renderers answer within a frame or two; a paused one (nothing filtered) never answers.
     private static readonly TimeSpan s_answerWait = TimeSpan.FromSeconds(2);
-
-    /// <summary>Root folder of all debug snapshots.</summary>
-    public static string Folder { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ZoomIN", "debug");
 
     /// <summary>Whether the smart inversion runs, or why a monitor fell back to "keep hue" (ADR-0024).</summary>
     public string SmartInvertStatus { get; } = Describe(smartInvert.Fallbacks);
@@ -44,7 +41,7 @@ public sealed partial class DebugSnapshotViewModel(DebugSnapshots snapshots, Sma
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
 
-            var folder = Path.Combine(Folder, "snapshot-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture));
+            var folder = Path.Combine(folders.Debug(), "snapshot-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture));
             // Collected first and filtered afterwards: a renderer may answer before Request returns.
             var results = new ConcurrentBag<DebugSnapshotResult>();
             void OnCompleted(DebugSnapshotResult result) => results.Add(result);

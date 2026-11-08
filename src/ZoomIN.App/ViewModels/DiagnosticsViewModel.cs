@@ -22,10 +22,12 @@ public sealed partial class DiagnosticsViewModel : ObservableObject
 
     private readonly SettingsService _settings;
     private readonly bool _ready;
+    private readonly IDiagnosticsPackage _package;
 
-    public DiagnosticsViewModel(SettingsService settings)
+    public DiagnosticsViewModel(SettingsService settings, IDiagnosticsPackage package)
     {
         _settings = settings;
+        _package = package;
         var options = settings.Current.Telemetry().Effective(DateTimeOffset.Now);
         LevelIndex = (int)options.Level;
         Logs = options.Logs;
@@ -98,17 +100,12 @@ public sealed partial class DiagnosticsViewModel : ObservableObject
 
     public async void CreatePackage()
     {
-        if (Program.Telemetry is not { } telemetry)
-        {
-            return;
-        }
-
         CanCreatePackage = false;
         PackageStatus = Text.Get("Diag.Creating");
         var options = _settings.Current.Telemetry();
         try
         {
-            var path = await Task.Run(() => DiagnosticsPackage.Create(telemetry, options, DiagnosticsPackage.DefaultFolder));
+            var path = await Task.Run(() => _package.Create(options));
             PackageStatus = Text.Format("Diag.Created", Path.GetFileName(path));
             FileReveal.Reveal(path);
         }

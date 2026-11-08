@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Diagnostics;
+using ZoomIN.Platform.Folders;
 using ZoomIN.Setup.Install;
 
 namespace ZoomIN.Setup;
@@ -14,22 +15,25 @@ namespace ZoomIN.Setup;
 /// </summary>
 public static class Program
 {
-    /// <summary>Telemetry of the wizard; set before the WinUI app starts.</summary>
-    internal static TelemetryHost? Telemetry { get; private set; }
+    /// <summary>Services of the wizard (composition root); set before the WinUI app starts.</summary>
+    internal static SetupServices? Services { get; private set; }
 
     [STAThread]
     public static int Main(string[] args)
     {
         args = TraceParentArgument.Extract(args, out var traceParent);
-        using var telemetry = TelemetryHost.Start(TelemetryRole.Setup, traceParent);
+        using var telemetry = TelemetryHost.Start(TelemetryRole.Setup, new WindowsAppFolders(), traceParent);
         Core.Diagnostics.Telemetry.OnFlush(telemetry.Flush);
+        using var services = new SetupServices(telemetry);
         if (UpdateCommand.TryParse(args, out var command))
         {
             using var operation = telemetry.StartOperation("zoomin.setup.apply");
-            return (int)ElevatedInstall.Run(command, telemetry.Logger<SetupProgramCategory>());
+            var install = new ElevatedInstall(
+                services.Layout, services.Verifier, services.Registration, services.SecureDesktop, telemetry.Logger<SetupProgramCategory>());
+            return (int)install.Run(command);
         }
 
-        Telemetry = telemetry;
+        Services = services;
         WinRT.ComWrappersSupport.InitializeComWrappers();
         Application.Start(callbackParams =>
         {

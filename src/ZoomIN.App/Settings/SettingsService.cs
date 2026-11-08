@@ -1,5 +1,8 @@
 using ZoomIN.App.Zoom;
+using ZoomIN.Core.Filters;
 using ZoomIN.Core.Settings;
+using ZoomIN.Core.Tracking;
+using ZoomIN.Core.Zoom;
 using ZoomIN.Rendering.RenderLoop;
 
 namespace ZoomIN.App.Settings;
@@ -51,9 +54,9 @@ public sealed class SettingsService : IDisposable
                 shared = _shared;
             }
 
-            var settings = ZoomModelFactory.Apply(shared, _models.Zoom);
-            settings = EffectsFactory.Apply(settings, _models.Effects);
-            settings = TrackingFactory.Apply(settings, _models.Tracking);
+            var settings = ZoomMapping.Apply(shared, _models.Zoom);
+            settings = EffectsMapping.Apply(settings, _models.Effects);
+            settings = TrackingMapping.Apply(settings, _models.Tracking);
 
             // Shared by all profiles (ADR-0020): ApplyDisplay never takes it from a profile.
             return settings with { WindowFilter = _models.Windows.Options };
@@ -74,9 +77,9 @@ public sealed class SettingsService : IDisposable
     /// <summary>Applies the display part of <paramref name="profile"/> to the running models.</summary>
     public void ApplyDisplay(AppSettings profile)
     {
-        ZoomModelFactory.ApplyTo(_models.Zoom, profile);
-        _models.Effects.Replace(EffectsFactory.Effects(profile));
-        _models.Tracking.SetOptions(TrackingFactory.Options(profile));
+        ZoomMapping.ApplyTo(_models.Zoom, profile);
+        _models.Effects.Replace(EffectsMapping.Effects(profile));
+        _models.Tracking.SetOptions(TrackingMapping.Options(profile));
     }
 
     public void SaveNow()

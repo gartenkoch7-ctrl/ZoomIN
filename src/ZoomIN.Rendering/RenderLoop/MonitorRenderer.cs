@@ -28,6 +28,7 @@ internal sealed class MonitorRenderer : IDisposable
     private readonly ILogger _log;
     private readonly Action _requestRebuild;
     private readonly RenderMetrics _metrics;
+    private readonly FrameStatistics _stats;
     private readonly AutoResetEvent _wake = new(false);
     private readonly Thread _thread;
     private readonly Lock _statusGate = new();
@@ -49,6 +50,7 @@ internal sealed class MonitorRenderer : IDisposable
         _log = log;
         _requestRebuild = requestRebuild;
         _metrics = new RenderMetrics(deviceName);
+        _stats = new FrameStatistics(_metrics);
         _thread = new Thread(Run) { IsBackground = true, Name = "ZoomIN Render " + deviceName, Priority = ThreadPriority.Highest };
     }
 
@@ -101,6 +103,7 @@ internal sealed class MonitorRenderer : IDisposable
             {
                 using var session = StartSession();
                 _log.PipelineReady(_deviceName);
+                _metrics.PipelineReady();
                 SetStatus(ZoomStatus.Idle with { IsCaptureExcluded = true });
                 RunSession(session);
             }
@@ -127,14 +130,8 @@ internal sealed class MonitorRenderer : IDisposable
     private void RunSession(RenderSession session)
     {
         var animator = new ZoomAnimator();
-        var frames = 0;
         var lastFrame = Stopwatch.GetTimestamp();
-        var secondStart = lastFrame;
-
-        // Measurements (RenderMetrics): when the thread woke up without a visible overlay, and
-        // when the last frame was presented (0 = none since waking).
-        var wokeAt = lastFrame;
-        var lastPresented = 0L;
+        _stats.Woke(lastFrame);
 
         while (!_stopRequested)
         {
@@ -159,14 +156,11 @@ internal sealed class MonitorRenderer : IDisposable
 
                 // Not zoomed: sleep without capturing or rendering until the model changes.
                 var sleptAt = Stopwatch.GetTimestamp();
-                _metrics.Active(Stopwatch.GetElapsedTime(wokeAt, sleptAt).TotalSeconds);
+                _metrics.Active(Stopwatch.GetElapsedTime(_stats.WokeAt, sleptAt).TotalSeconds);
                 Sleep(Timeout.InfiniteTimeSpan);
                 _metrics.Paused(Stopwatch.GetElapsedTime(sleptAt).TotalSeconds);
                 lastFrame = Stopwatch.GetTimestamp();
-                secondStart = lastFrame;
-                wokeAt = lastFrame;
-                lastPresented = 0;
-                frames = 0;
+                _stats.Woke(lastFrame);
                 continue;
             }
 
@@ -181,32 +175,12 @@ internal sealed class MonitorRenderer : IDisposable
                 _effects.LocateRequestedAt, _tracking.Snapshot, _tracking.Options, _effects.PointerHiddenByTyping,
                 windows, windowsFiltered);
             var wasVisible = session.IsVisible;
-            if (session.RenderFrame(request))
-            {
-                frames++;
-                var presented = Stopwatch.GetTimestamp();
-                if (lastPresented != 0)
-                {
-                    _metrics.FramePresented(Stopwatch.GetElapsedTime(lastPresented, presented).TotalMilliseconds);
-                }
-
-                lastPresented = presented;
-                if (!wasVisible && session.IsVisible)
-                {
-                    _metrics.Shown(Stopwatch.GetElapsedTime(wokeAt, presented).TotalMilliseconds);
-                }
-            }
-            else
-            {
-                _metrics.FrameMissed();
-            }
+            _stats.Record(session.RenderFrame(request), !wasVisible && session.IsVisible);
 
             // Status is published once per second; the per-frame path stays lock-free.
-            if (Stopwatch.GetElapsedTime(secondStart).TotalSeconds >= 1)
+            if (_stats.SecondElapsed(out var frames))
             {
                 SetStatus(new ZoomStatus(session.IsVisible, true, frames, null));
-                frames = 0;
-                secondStart = Stopwatch.GetTimestamp();
             }
         }
     }

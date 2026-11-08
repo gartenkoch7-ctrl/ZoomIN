@@ -55,7 +55,7 @@ public sealed class OfflineScrollTests
 
         var stem = Path.Combine(Path.GetDirectoryName(input!)!, Path.GetFileNameWithoutExtension(input!));
         File.WriteAllLines(stem + $"-scroll{step}.txt", report);
-        PngWriter.Write(stem + $"-scroll{step}-worst.png", worstFrame!);
+        PngFile.Write(stem + $"-scroll{step}-worst.png", worstFrame!);
     }
 
     private static double DifferingShare(SnapshotImage a, SnapshotImage b)

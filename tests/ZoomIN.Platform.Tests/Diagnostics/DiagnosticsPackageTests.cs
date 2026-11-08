@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Platform.Diagnostics;
+using ZoomIN.Platform.Tests.Folders;
 
 namespace ZoomIN.Platform.Tests.Diagnostics;
 
@@ -23,7 +24,7 @@ public sealed class DiagnosticsPackageTests : IDisposable
         using var host = TelemetryHost.Start(TelemetryRole.App, null, Path.Combine(_root, "logs"), TimeProvider.System);
         host.Logger<DiagnosticsPackageTests>().Warning("written before packing");
 
-        var path = DiagnosticsPackage.Create(host, options, Path.Combine(_root, "packages"));
+        var path = new DiagnosticsPackage(host, new TestFolders(_root)).Create(options);
 
         using var zip = ZipFile.OpenRead(path);
         var log = Assert.Single(zip.Entries, entry => entry.Name.EndsWith(".log", StringComparison.Ordinal));
@@ -37,14 +38,14 @@ public sealed class DiagnosticsPackageTests : IDisposable
     [Fact]
     public void OnlyTheNewestPackages_AreKept()
     {
-        var packages = Directory.CreateDirectory(Path.Combine(_root, "packages")).FullName;
+        var packages = Directory.CreateDirectory(Path.Combine(_root, "diagnostics")).FullName;
         for (var i = 0; i < 5; i++)
         {
             File.WriteAllText(Path.Combine(packages, $"ZoomIN-Diagnose-2026010{i}-120000.zip"), "old");
         }
 
         using var host = TelemetryHost.Start(TelemetryRole.App, null, Path.Combine(_root, "logs"), TimeProvider.System);
-        var path = DiagnosticsPackage.Create(host, TelemetryOptions.Default, packages);
+        var path = new DiagnosticsPackage(host, new TestFolders(_root)).Create(TelemetryOptions.Default);
 
         var left = Directory.GetFiles(packages).Select(Path.GetFileName).Order(StringComparer.Ordinal).ToList();
         Assert.Equal(DiagnosticsPackage.Kept, left.Count);

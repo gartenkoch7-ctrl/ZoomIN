@@ -58,9 +58,9 @@ internal sealed class AmbientPass : IDisposable
             bindFlags: BindFlags.RenderTarget | BindFlags.ShaderResource));
         _rawTarget = device.CreateRenderTargetView(_raw);
         _rawView = device.CreateShaderResourceView(_raw);
-        _vertexShader = device.CreateVertexShader(ShaderSource.Compile("Ambient.hlsl", "VSMain", "vs_4_0").Span);
-        _pixelShader = device.CreatePixelShader(ShaderSource.Compile("Ambient.hlsl", "PSMain", "ps_4_0").Span);
-        _fillShader = device.CreatePixelShader(ShaderSource.Compile("PhotoFill.hlsl", "PSMain", "ps_4_0").Span);
+        _vertexShader = device.CreateVertexShader(ShaderSource.Load("Ambient.hlsl", "VSMain", "vs_4_0"));
+        _pixelShader = device.CreatePixelShader(ShaderSource.Load("Ambient.hlsl", "PSMain", "ps_4_0"));
+        _fillShader = device.CreatePixelShader(ShaderSource.Load("PhotoFill.hlsl", "PSMain", "ps_4_0"));
         _sampler = device.CreateSamplerState(SamplerDescription.LinearClamp);
         _constants = device.CreateBuffer(new BufferDescription(AmbientConstants.SizeInBytes, BindFlags.ConstantBuffer, ResourceUsage.Default));
     }

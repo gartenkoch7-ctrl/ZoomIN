@@ -16,13 +16,65 @@
     <!-- Direct, so the [LoggerMessage] source generator runs here too (ADR-0019). -->
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Vortice.DXGI" />
-    <PackageReference Include="Vortice.D3DCompiler" />
     <PackageReference Include="Vortice.DirectComposition" />
     <PackageReference Include="Microsoft.Windows.CsWin32" PrivateAssets="all" />
   </ItemGroup>
 
-  <!-- Shaders are compiled at startup from embedded sources (docs/kb/rendering-pipeline.md). -->
+  <!--
+    Shaders are compiled during the build and embedded as bytecode (M14 step 4,
+    docs/kb/rendering-pipeline.md): at runtime that saved ~570 ms CPU per monitor and pipeline start.
+    Every ShaderSource.Load in the code needs its entry here (ShaderBytecodeTests checks it).
+  -->
   <ItemGroup>
-    <EmbeddedResource Include="Shaders\*.hlsl" LogicalName="ZoomIN.Shaders.%(Filename)%(Extension)" />
+    <ShaderEntry Include="Magnify.hlsl" Entry="VSMain" Profile="vs_4_0" />
+    <ShaderEntry Include="Magnify.hlsl" Entry="PSMain" Profile="ps_4_0" />
+    <ShaderEntry Include="Ambient.hlsl" Entry="VSMain" Profile="vs_4_0" />
+    <ShaderEntry Include="Ambient.hlsl" Entry="PSMain" Profile="ps_4_0" />
+    <ShaderEntry Include="PhotoFill.hlsl" Entry="PSMain" Profile="ps_4_0" />
+    <ShaderEntry Include="Cursor.hlsl" Entry="VSMain" Profile="vs_4_0" />
+    <ShaderEntry Include="Cursor.hlsl" Entry="PSCursor" Profile="ps_4_0" />
+    <ShaderEntry Include="Cursor.hlsl" Entry="PSRing" Profile="ps_4_0" />
+    <ShaderEntry Include="Cursor.hlsl" Entry="PSRect" Profile="ps_4_0" />
+    <ShaderInclude Include="Shaders\*.hlsli" />
   </ItemGroup>
+
+  <!-- Build tool only: no assembly reference, its output path arrives as item ShaderCompilerTool. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\tools\ZoomIN.ShaderCompiler\ZoomIN.ShaderCompiler.csproj"
+                      ReferenceOutputAssembly="false" Private="false" OutputItemType="ShaderCompilerTool"
+                      GlobalPropertiesToRemove="RuntimeIdentifier;SelfContained;Platform" />
+  </ItemGroup>
+
+  <!-- IntermediateOutputPath is only set by the SDK targets, after this file: so inside a target. -->
+  <Target Name="ShaderPaths">
+    <PropertyGroup>
+      <ShaderOutputDir>$(ProjectDir)$(IntermediateOutputPath)compiled-shaders\</ShaderOutputDir>
+    </PropertyGroup>
+  </Target>
+
+  <!--
+    After ResolveReferences (the tool is built then), before resources are embedded. Not in design-time
+    builds of VS/Rider: they do not build the tool and must not race a real build on the .cso files.
+    #include "X.hlsli" is inlined by the tool; every .hlsli is an input, so changing one recompiles.
+  -->
+  <PropertyGroup>
+    <ShaderDotnet Condition="'$(DOTNET_HOST_PATH)' != ''">$(DOTNET_HOST_PATH)</ShaderDotnet>
+    <ShaderDotnet Condition="'$(DOTNET_HOST_PATH)' == ''">dotnet</ShaderDotnet>
+  </PropertyGroup>
+  <Target Name="CompileShaders" DependsOnTargets="ShaderPaths" AfterTargets="ResolveReferences" BeforeTargets="PrepareResources"
+          Condition="'$(DesignTimeBuild)' != 'true' and '$(BuildingProject)' == 'true'"
+          Inputs="@(ShaderEntry->'Shaders\%(Identity)');@(ShaderInclude);$(MSBuildProjectFullPath);@(ShaderCompilerTool)"
+          Outputs="@(ShaderEntry->'$(ShaderOutputDir)%(Identity).%(Entry).%(Profile).cso')">
+    <Exec Command="&quot;$(ShaderDotnet)&quot; &quot;@(ShaderCompilerTool->'%(FullPath)')&quot; &quot;$(MSBuildProjectDirectory)\Shaders&quot; &quot;$(ShaderOutputDir.TrimEnd('\'))&quot; @(ShaderEntry->'&quot;%(Identity)|%(Entry)|%(Profile)&quot;', ' ')" />
+  </Target>
+
+  <Target Name="EmbedShaders" DependsOnTargets="ShaderPaths" AfterTargets="CompileShaders" BeforeTargets="PrepareResources">
+    <ItemGroup>
+      <!-- Batched per ShaderEntry; the name must match ShaderSource.ResourceName. -->
+      <EmbeddedResource Include="$(ShaderOutputDir)%(ShaderEntry.Identity).%(ShaderEntry.Entry).%(ShaderEntry.Profile).cso"
+                        LogicalName="ZoomIN.Shaders.%(ShaderEntry.Identity).%(ShaderEntry.Entry).%(ShaderEntry.Profile).cso" />
+      <!-- So that "dotnet clean" removes them as well. -->
+      <FileWrites Include="$(ShaderOutputDir)*.cso" />
+    </ItemGroup>
+  </Target>
 </Project>

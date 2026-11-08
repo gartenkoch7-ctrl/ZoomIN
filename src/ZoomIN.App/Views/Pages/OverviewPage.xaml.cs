@@ -22,9 +22,9 @@ public sealed partial class OverviewPage : Page
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        var context = (PageContext)e.Parameter;
-        Vm = new OverviewViewModel(context);
-        Banner = new UiAccessBannerViewModel(context);
+        var services = (PageServices)e.Parameter;
+        Vm = services.Create<OverviewViewModel>();
+        Banner = services.Create<UiAccessBannerViewModel>();
         Bindings.Update();
 
         // Hotkeys and the tray change the state too; the render threads never call into the UI.

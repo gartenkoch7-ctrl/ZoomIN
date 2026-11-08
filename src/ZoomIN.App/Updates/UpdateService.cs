@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Reflection;
 using ZoomIN.App.Settings;
 using Microsoft.Extensions.Logging;
+using ZoomIN.Core.Folders;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Updates;
@@ -22,6 +23,8 @@ public sealed class UpdateService
     private readonly ISettingsBackup _backup;
     private readonly SettingsService _settings;
     private readonly ILogger _log;
+    private readonly IAppFolders _folders;
+    private readonly IElevatedStep _elevated;
     private readonly InstallLayout? _layout;
     private AppVersion? _notified;
 
@@ -29,8 +32,11 @@ public sealed class UpdateService
     private ActivityContext _installed;
 
     public UpdateService(
-        IReleaseFeed feed, IPackageDownloader downloader, ISettingsBackup backup, SettingsService settings, ILogger<UpdateService> log)
+        IReleaseFeed feed, IPackageDownloader downloader, ISettingsBackup backup, SettingsService settings, IAppFolders folders,
+        IElevatedStep elevated, ILogger<UpdateService> log)
     {
+        _folders = folders;
+        _elevated = elevated;
         _feed = feed;
         _downloader = downloader;
         _backup = backup;
@@ -100,7 +106,7 @@ public sealed class UpdateService
             return UpdateResult.NotInstalled;
         }
 
-        var folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ZoomIN", "updates");
+        var folder = _folders.Updates();
         var download = await _downloader.DownloadAsync(release, folder, progress, cancellationToken).ConfigureAwait(false);
         if (download.Path is null)
         {
@@ -117,9 +123,9 @@ public sealed class UpdateService
                 _backup.Backup(CurrentVersion);
             }
 
-            var hash = await Task.Run(() => ElevatedStep.HashOf(download.Path), cancellationToken).ConfigureAwait(false);
+            var hash = await Task.Run(() => _elevated.HashOf(download.Path), cancellationToken).ConfigureAwait(false);
             var command = new UpdateCommand(download.Path, hash, release.Version);
-            return await Task.Run(() => ElevatedStep.Run(_layout.CurrentExecutable, command, _log), cancellationToken).ConfigureAwait(false);
+            return await Task.Run(() => _elevated.Run(_layout.CurrentExecutable, command), cancellationToken).ConfigureAwait(false);
         }
         finally
         {

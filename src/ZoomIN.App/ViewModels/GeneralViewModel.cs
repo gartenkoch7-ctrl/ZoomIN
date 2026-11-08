@@ -1,7 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using ZoomIN.App.Localization;
 using ZoomIN.App.SecureDesktop;
-using ZoomIN.App.Views;
+using ZoomIN.App.Settings;
+using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.Settings;
 
 namespace ZoomIN.App.ViewModels;
@@ -12,18 +13,22 @@ namespace ZoomIN.App.ViewModels;
 /// </summary>
 public sealed partial class GeneralViewModel : ObservableObject
 {
-    private readonly PageContext _context;
+    private readonly SettingsService _settings;
+    private readonly IAutostart _autostart;
+    private readonly ISecureDesktopSwitch _secureDesktop;
     private readonly bool _ready;
     private bool _reverting;
 
-    public GeneralViewModel(PageContext context)
+    public GeneralViewModel(SettingsService settings, IAutostart autostart, ISecureDesktopSwitch secureDesktop)
     {
-        _context = context;
-        var s = context.Settings.Current;
+        _settings = settings;
+        _autostart = autostart;
+        _secureDesktop = secureDesktop;
+        var s = settings.Current;
         LanguageIndex = (int)s.Language;
-        Autostart = context.Autostart.IsEnabled;
-        SecureDesktopAvailable = SecureDesktopSetting.IsAvailable;
-        SecureDesktop = SecureDesktopSetting.IsEnabled;
+        Autostart = autostart.IsEnabled;
+        SecureDesktopAvailable = secureDesktop.IsAvailable;
+        SecureDesktop = secureDesktop.IsEnabled;
         _ready = true;
     }
 
@@ -47,7 +52,7 @@ public sealed partial class GeneralViewModel : ObservableObject
         }
 
         var language = (AppLanguage)value;
-        _context.Settings.Update(s => s with { Language = language });
+        _settings.Update(s => s with { Language = language });
         Text.SetLanguage(language);
     }
 
@@ -55,7 +60,7 @@ public sealed partial class GeneralViewModel : ObservableObject
     {
         if (_ready)
         {
-            _context.Autostart.SetEnabled(value);
+            _autostart.SetEnabled(value);
         }
     }
 
@@ -70,11 +75,10 @@ public sealed partial class GeneralViewModel : ObservableObject
     private async Task ChangeSecureDesktopAsync(bool value)
     {
         // The administrator prompt blocks until answered; keep the UI responsive meanwhile.
-        var log = Program.Telemetry!.Logger<GeneralViewModel>();
-        await Task.Run(() => SecureDesktopSetting.RequestChange(value, log));
+        await Task.Run(() => _secureDesktop.RequestChange(value));
 
         // "No" at the prompt or a failure: show the real state again.
-        var actual = SecureDesktopSetting.IsEnabled;
+        var actual = _secureDesktop.IsEnabled;
         if (actual != value)
         {
             _reverting = true;

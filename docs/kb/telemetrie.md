@@ -86,7 +86,10 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.update.run`, `zoomin.elevated.run`, `zoomin.uninstall.run` | jeweilige Rolle | ganzer Lauf; Exit-Code ≠ 0 → Status Error |
 | `zoomin.setup.install` | setup | Installation im Assistenten (Tag `zoomin.version`) |
 | `zoomin.setup.apply` | setup | Installationsschritt mit Adminrechten |
+| `zoomin.app.start.services`, `zoomin.app.start.shell` | app | Kinder von `zoomin.app.start` (M14): DI-Container, Einstellungen laden, Watchdog starten bzw. Engine, Hooks, Tray und Erststart |
+| `zoomin.app.start.shell.resolve`, `.engine`, `.tray`, `.notify` | app | Kinder von `zoomin.app.start.shell` (M14): Objektgraph von `AppShell` bauen, Engine starten (Kürzel, Hooks, Ausgabe, Tracking, Fensterfilter), Tray-Menü/Erststart/Hinweise, zweiter Start und Erleichterte Bedienung |
 | `zoomin.render.pipeline_start` | app, secure | Aufbau von Gerät, Duplication und Overlay je Monitor (Tag `zoomin.monitor`; Fehler: Ausnahmetyp) |
+| `zoomin.render.pipeline_start.device`, `.capture`, `.overlay`, `.shaders` | app, secure | Kinder von `zoomin.render.pipeline_start` (M14): D3D-Gerät, Desktop Duplication, Overlay-Fenster und Swapchain, Shader kompilieren und Durchgänge anlegen |
 | `zoomin.render.rebuild` | app, secure | Neuaufbau aller Renderer, z. B. nach Anzeigeänderung (Tag `zoomin.monitors`) |
 | `zoomin.update.check` | app | Release-Liste holen (Tags `zoomin.update.channel`, `zoomin.update.releases`) |
 | `zoomin.update.install` | app | Update per Klick: Download, ggf. Sicherung, Installationsschritt (Tags `zoomin.version`, `zoomin.update.result`) |
@@ -111,16 +114,19 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 
 | Name | Einheit | Tags | Bedeutung |
 |---|---|---|---|
-| `zoomin.render.frame_interval` | ms | `zoomin.monitor` | Abstand zwischen zwei gezeigten Frames; Ausreißer = Ruckler |
-| `zoomin.render.frames_missed` | Frames | `zoomin.monitor` | Compositor hat keinen Frame rechtzeitig (100 ms) angefordert |
+| `zoomin.render.frame_interval` | ms | `zoomin.monitor` | Abstand zwischen zwei gezeigten Frames; Ausreißer = Ruckler. Über eine Leerlauf-Lücke (M14) hinweg nicht erfasst |
+| `zoomin.render.frames_missed` | Frames | `zoomin.monitor` | Compositor hat keinen Frame rechtzeitig (100 ms) angefordert; Leerlauf-Durchgänge zählen nicht |
+| `zoomin.render.frames_skipped` | Frames | `zoomin.monitor`, `zoomin.reason` (`idle`) | Durchgänge ohne Änderung (M14): nichts gezeichnet, kein Present, der letzte Frame bleibt stehen |
 | `zoomin.render.show_latency` | ms | `zoomin.monitor` | Aufwachen (Zoom/Filter an) bis erster sichtbarer Frame |
 | `zoomin.render.pipeline_restarts` | Neustarts | `zoomin.monitor`, `zoomin.reason` (`failure`, `display_changed`) | Pipeline neu aufgebaut |
 | `zoomin.tracking.read_duration` | ms | – | Eine Abfrage von Fokus und Caret; lange Werte = App antwortet langsam |
 | `zoomin.tracking.caret_sources` | Quellen | `process.name`, `zoomin.caret.source` (`system`, `msaa`, `uia`, `estimated`, `cell`) | Caret-Quelle zum ersten Mal in einem Prozess gesehen (dazu Log 2002) |
 | `zoomin.tracking.chromium_nudges` | Fenster | – | Chromium-Inhaltsfenster nach IAccessible2 gefragt |
 | `zoomin.tracking.anchor_switches` | Wechsel | `zoomin.anchor.source` (`mouse`, `focus`, `caret`) | Ansicht folgt jetzt Maus, Fokus oder Caret (Render-Thread, ohne Allokation) |
-| `zoomin.render.smart_invert_gpu_time` | ms | `zoomin.monitor` | Mittlere GPU-Zeit des Umgebungs-Durchgangs über 120 Frames (Zeitstempel-Abfragen, nicht blockierend); > 1 ms → Rückfall (Log 3007) |
-| `zoomin.render.smart_invert_frames` | Frames | `zoomin.monitor` | Frames mit intelligentem Invertieren (Umgebungs-Durchgang, ADR-0024); im Verhältnis zu `frame_interval`-Zählungen der Anteil |
+| `zoomin.render.smart_invert_gpu_time` | ms | `zoomin.monitor` | Mittlere Zusatz-GPU-Zeit des intelligenten Invertierens: Umgebungs-Durchgang (Mittel über 120 Läufe) plus Mehrkosten im Magnify-Durchgang (seit M14 je Pipeline gemessen, 32 Frames schlicht gegen intelligent nach 60 Frames Aufwärmen, erneut wenn der ganze Monitor intelligent wird); > 1 ms → Rückfall (Log 3007) |
+| `zoomin.render.gpu_time` | ms | `zoomin.monitor`, `zoomin.pass` (`magnify`) | Mittlere GPU-Zeit eines Durchgangs über 120 Frames (M14); Zeitstempel-Abfragen laufen nur, solange jemand das Instrument abonniert (Diagnose, OTLP). Durchgänge überlappen nicht: kein Gesamt-Frame-Wert, weil verschachtelte Disjoint-Abfragen nicht überall erlaubt sind |
+| `zoomin.render.ready_time` | ms | `zoomin.monitor` | Prozessstart bis erste fertige Zoom-Pipeline des Monitors (einmal je Prozess und Monitor, nur in der ersten Minute – später angesteckte Monitore zählen nicht, M14) |
+| `zoomin.render.smart_invert_frames` | Frames | `zoomin.monitor` | Frames, in denen der Umgebungs-Durchgang lief (ADR-0024); seit M14 nur bei neuem Desktop-Bild und bis die Glättung eingeschwungen ist |
 | `zoomin.render.overlay_time` | s | `zoomin.monitor`, `zoomin.state` (`active`, `paused`) | Zeit, in der der Render-Thread arbeitet bzw. schläft – ergibt den Pausenanteil des Filters pro Fenster |
 | `zoomin.windowfilter.classifications` | Fenster | `process.name`, `zoomin.result` (`light`, `dark`, `unknown`), `zoomin.caption` (Titelleiste: `light`, `dark`, `unknown`, `none`) | Fenster beim Öffnen eingestuft (dazu Log 2701) |
 | `zoomin.windowfilter.look_duration` | ms | – | Ein Blick auf ein Fenster (GDI-Kopie 64×256 und Zählen) |

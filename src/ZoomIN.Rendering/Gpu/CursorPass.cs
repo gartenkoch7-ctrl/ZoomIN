@@ -9,6 +9,8 @@ namespace ZoomIN.Rendering.Gpu;
 /// <summary>
 /// Draws pointer images and the locator ring with premultiplied alpha blending. Pointer textures
 /// are created once per Windows cursor handle and cached, so drawing does not allocate.
+/// The shared pipeline state is set by the first draw of a layer; the layer ends with
+/// <see cref="End"/>, before any other pass draws (M14 step 2).
 /// </summary>
 internal sealed class CursorPass : IDisposable
 {
@@ -25,13 +27,22 @@ internal sealed class CursorPass : IDisposable
     // Standard pointers (Windows settings overridden) per handle and sharp size (1, 2, 4, 8).
     private readonly Dictionary<(nint Handle, int Sharp), PointerTexture?> _standard = [];
 
+    // Last lookups: the pointer shape rarely changes, so most frames skip the dictionary.
+    private nint _lastHandle;
+    private PointerTexture? _lastTexture;
+    private (nint Handle, int Sharp) _lastStandardKey;
+    private PointerTexture? _lastStandard;
+
+    private ConstantUpload<CursorConstants> _uploaded;
+    private ID3D11RenderTargetView? _bound;
+
     public CursorPass(ID3D11Device device)
     {
         _device = device;
-        _vertexShader = device.CreateVertexShader(ShaderSource.Compile("Cursor.hlsl", "VSMain", "vs_4_0").Span);
-        _pointerShader = device.CreatePixelShader(ShaderSource.Compile("Cursor.hlsl", "PSCursor", "ps_4_0").Span);
-        _ringShader = device.CreatePixelShader(ShaderSource.Compile("Cursor.hlsl", "PSRing", "ps_4_0").Span);
-        _rectShader = device.CreatePixelShader(ShaderSource.Compile("Cursor.hlsl", "PSRect", "ps_4_0").Span);
+        _vertexShader = device.CreateVertexShader(ShaderSource.Load("Cursor.hlsl", "VSMain", "vs_4_0"));
+        _pointerShader = device.CreatePixelShader(ShaderSource.Load("Cursor.hlsl", "PSCursor", "ps_4_0"));
+        _ringShader = device.CreatePixelShader(ShaderSource.Load("Cursor.hlsl", "PSRing", "ps_4_0"));
+        _rectShader = device.CreatePixelShader(ShaderSource.Load("Cursor.hlsl", "PSRect", "ps_4_0"));
         _sampler = device.CreateSamplerState(new SamplerDescription(
             Filter.MinMagMipLinear, TextureAddressMode.Border, TextureAddressMode.Border, TextureAddressMode.Border,
             0, 1, ComparisonFunction.Never, new Color4(0, 0, 0, 0)));
@@ -43,24 +54,36 @@ internal sealed class CursorPass : IDisposable
     /// <summary>Texture for a pointer handle; loads it on first use. Null if the shape is unreadable.</summary>
     public PointerTexture? Texture(nint handle, ICursorShapeSource source)
     {
+        if (handle == _lastHandle && handle != 0)
+        {
+            return _lastTexture;
+        }
+
         if (!_textures.TryGetValue(handle, out var texture))
         {
             texture = source.Load(handle) is { } shape ? PointerTexture.Create(_device, shape) : null;
             _textures[handle] = texture;
         }
 
+        (_lastHandle, _lastTexture) = (handle, texture);
         return texture;
     }
 
     /// <summary>Standard Windows pointer for a handle, sharp up to pointer size <paramref name="sharp"/>; loaded on first use.</summary>
     public PointerTexture? StandardTexture(nint handle, int sharp, ICursorShapeSource source)
     {
+        if (_lastStandardKey == (handle, sharp) && handle != 0)
+        {
+            return _lastStandard;
+        }
+
         if (!_standard.TryGetValue((handle, sharp), out var texture))
         {
             texture = source.LoadStandard(handle, sharp) is { } shape ? PointerTexture.Create(_device, shape) : null;
             _standard[(handle, sharp)] = texture;
         }
 
+        (_lastStandardKey, _lastStandard) = ((handle, sharp), texture);
         return texture;
     }
 
@@ -75,6 +98,18 @@ internal sealed class CursorPass : IDisposable
     public void DrawRect(ID3D11DeviceContext context, ID3D11RenderTargetView target, float x, float y,
         float width, float height, in CursorConstants constants) =>
         Draw(context, target, _rectShader, null, x, y, width, height, constants);
+
+    /// <summary>Ends a layer: blending off again, which the magnify pass of the next frame expects.</summary>
+    public void End(ID3D11DeviceContext context)
+    {
+        if (_bound is null)
+        {
+            return;
+        }
+
+        context.OMSetBlendState(null);
+        _bound = null;
+    }
 
     public void Dispose()
     {
@@ -95,20 +130,28 @@ internal sealed class CursorPass : IDisposable
     private void Draw(ID3D11DeviceContext context, ID3D11RenderTargetView target, ID3D11PixelShader shader,
         ID3D11ShaderResourceView? texture, float x, float y, float width, float height, in CursorConstants constants)
     {
-        context.UpdateSubresource(constants, _constants);
+        if (!ReferenceEquals(_bound, target))
+        {
+            Bind(context, target);
+        }
+
+        _uploaded.Update(context, _constants, constants);
+        context.RSSetViewport(x, y, width, height);
+        context.PSSetShader(shader);
+        context.PSSetShaderResource(0, texture!);
+        context.Draw(3, 0);
+    }
+
+    // State that stays the same for every draw of a layer.
+    private void Bind(ID3D11DeviceContext context, ID3D11RenderTargetView target)
+    {
         context.OMSetRenderTargets(target);
         context.OMSetBlendState(_blend);
-        context.RSSetViewport(x, y, width, height);
         context.IASetInputLayout(null);
         context.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
         context.VSSetShader(_vertexShader);
-        context.PSSetShader(shader);
-        context.PSSetShaderResource(0, texture!);
         context.PSSetSampler(0, _sampler);
         context.PSSetConstantBuffer(0, _constants);
-        context.Draw(3, 0);
-
-        // The magnify pass of the next frame expects blending off.
-        context.OMSetBlendState(null);
+        _bound = target;
     }
 }

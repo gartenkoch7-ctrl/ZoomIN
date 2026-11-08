@@ -33,17 +33,19 @@ internal static class EngineRegistration
     {
         // Settings and models
         services.AddSingleton(sp => sp.GetRequiredService<ISettingsStore>().Load());
-        services.AddSingleton(sp => ZoomModelFactory.Create(sp.GetRequiredService<AppSettings>()));
-        services.AddSingleton(sp => EffectsFactory.Create(sp.GetRequiredService<AppSettings>()));
-        services.AddSingleton(sp => TrackingFactory.Create(sp.GetRequiredService<AppSettings>()));
+        services.AddSingleton(sp => ZoomMapping.Create(sp.GetRequiredService<AppSettings>()));
+        services.AddSingleton(sp => EffectsMapping.Create(sp.GetRequiredService<AppSettings>()));
+        services.AddSingleton(sp => TrackingMapping.Create(sp.GetRequiredService<AppSettings>()));
         services.AddSingleton(sp => new WindowFilterModel(sp.GetRequiredService<AppSettings>().WindowFilter ?? WindowFilterOptions.Default));
         services.AddSingleton(sp => new RenderModels(
             sp.GetRequiredService<ZoomModel>(),
             sp.GetRequiredService<EffectsModel>(),
             sp.GetRequiredService<TrackingModel>(),
             sp.GetRequiredService<WindowFilterModel>(),
-            new DebugSnapshots(),
-            new SmartInvertHealth()));
+            sp.GetRequiredService<DebugSnapshots>(),
+            sp.GetRequiredService<SmartInvertHealth>()));
+        services.AddSingleton<DebugSnapshots>();
+        services.AddSingleton<SmartInvertHealth>();
         services.AddSingleton<SettingsService>();
         services.AddSingleton<ProfileService>();
 
@@ -65,6 +67,12 @@ internal static class EngineRegistration
 
         // Rendering
         services.AddSingleton<IZoomOutput, ZoomEngine>();
+        // Commands and the engine start (M14 step 10: split out of ZoomController).
+        services.AddSingleton<ZoomCommands>();
+        services.AddSingleton<WindowFilterCommands>();
+        services.AddSingleton<HotkeyBindings>();
+        services.AddSingleton<InputSources>();
+        services.AddSingleton<DockedStripSync>();
         services.AddSingleton<ZoomController>();
         return services;
     }

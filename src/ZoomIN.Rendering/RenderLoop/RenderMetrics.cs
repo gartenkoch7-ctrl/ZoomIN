@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using ZoomIN.Core.Diagnostics;
 
@@ -31,9 +32,24 @@ internal sealed class RenderMetrics
     private static readonly Counter<double> s_overlayTime = Telemetry.Meter.CreateCounter<double>(
         "zoomin.render.overlay_time", "s", "Time the render thread worked (active) or slept (paused)");
 
+    // Idle frames (M14 step 3): nothing changed, nothing drawn or presented.
+    private static readonly Counter<long> s_framesSkipped = Telemetry.Meter.CreateCounter<long>(
+        "zoomin.render.frames_skipped", "{frame}", "Render passes without a change: nothing drawn or presented");
+
+    // Startup measurement (M14): how long after the process start each monitor could zoom.
+    private static readonly Histogram<double> s_readyTime = Telemetry.Meter.CreateHistogram<double>(
+        "zoomin.render.ready_time", "ms", "From process start to the first ready zoom pipeline of a monitor");
+
+    // Rebuilds later in the session are not startup; only the first pipeline per monitor counts,
+    // and only within the first minute: a monitor plugged in hours later is not a slow start.
+    private static readonly TimeSpan s_startupWindow = TimeSpan.FromMinutes(1);
+    private static readonly HashSet<string> s_readyMonitors = new(StringComparer.Ordinal);
+    private static readonly Lock s_readyGate = new();
+
     private readonly KeyValuePair<string, object?> _monitor;
     private readonly KeyValuePair<string, object?> _active = new(StateTag, "active");
     private readonly KeyValuePair<string, object?> _paused = new(StateTag, "paused");
+    private readonly KeyValuePair<string, object?> _idle = new(ReasonTag, "idle");
 
     public RenderMetrics(string deviceName)
     {
@@ -46,7 +62,29 @@ internal sealed class RenderMetrics
     /// <summary>Render loop: the compositor did not request a frame in time.</summary>
     public void FrameMissed() => s_framesMissed.Add(1, _monitor);
 
+    /// <summary>Render loop: nothing changed, the pass drew nothing (tag zoomin.reason = idle).</summary>
+    public void FrameSkipped() => s_framesSkipped.Add(1, _monitor, _idle);
+
     public void Shown(double latencyMs) => s_showLatency.Record(latencyMs, _monitor);
+
+    /// <summary>A pipeline is ready (not per frame); records the time since process start once per monitor.</summary>
+    public void PipelineReady()
+    {
+        lock (s_readyGate)
+        {
+            if (!s_readyMonitors.Add((string)_monitor.Value!))
+            {
+                return;
+            }
+        }
+
+        using var process = Process.GetCurrentProcess();
+        var sinceStart = DateTime.Now - process.StartTime;
+        if (sinceStart < s_startupWindow)
+        {
+            s_readyTime.Record(sinceStart.TotalMilliseconds, _monitor);
+        }
+    }
 
     /// <summary>The thread worked for <paramref name="seconds"/> before going to sleep.</summary>
     public void Active(double seconds) => s_overlayTime.Add(seconds, _monitor, _active);

@@ -16,10 +16,13 @@ internal sealed class MagnifyPass : IDisposable
     private readonly ID3D11Buffer _constants;
     private readonly ID3D11Buffer _windows;
 
+    // Not readonly: it remembers the last upload. A resting zoom draws the same values each frame.
+    private ConstantUpload<MagnifyConstants> _uploaded;
+
     public MagnifyPass(ID3D11Device device)
     {
-        _vertexShader = device.CreateVertexShader(ShaderSource.Compile("Magnify.hlsl", "VSMain", "vs_4_0").Span);
-        _pixelShader = device.CreatePixelShader(ShaderSource.Compile("Magnify.hlsl", "PSMain", "ps_4_0").Span);
+        _vertexShader = device.CreateVertexShader(ShaderSource.Load("Magnify.hlsl", "VSMain", "vs_4_0"));
+        _pixelShader = device.CreatePixelShader(ShaderSource.Load("Magnify.hlsl", "PSMain", "ps_4_0"));
         _sampler = device.CreateSamplerState(SamplerDescription.LinearClamp);
         _pointSampler = device.CreateSamplerState(SamplerDescription.PointClamp);
         _constants = device.CreateBuffer(new BufferDescription(MagnifyConstants.SizeInBytes, BindFlags.ConstantBuffer, ResourceUsage.Default));
@@ -57,7 +60,7 @@ internal sealed class MagnifyPass : IDisposable
         in MagnifyConstants constants,
         ID3D11ShaderResourceView? weights = null)
     {
-        context.UpdateSubresource(constants, _constants);
+        _uploaded.Update(context, _constants, constants);
 
         context.OMSetRenderTargets(target);
         context.RSSetViewport(x, y, width, height);

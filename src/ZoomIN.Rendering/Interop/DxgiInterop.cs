@@ -16,6 +16,10 @@ internal static unsafe class DxgiInterop
     private const int AcquireNextFrameSlot = 8;
     private const int ReleaseFrameSlot = 14;
 
+    // IUnknown (0–2), IDXGIObject (3–6), IDXGIOutput: GetDesc 7, GetDisplayModeList 8,
+    // FindClosestMatchingMode 9, WaitForVBlank 10 (also in IDXGIOutput1 and later).
+    private const int WaitForVBlankSlot = 10;
+
     // IUnknown (0–2), ID3D11DeviceChild (3–6), ID3D11DeviceContext methods from 7; CopyResource is 47.
     private const int CopyResourceSlot = 47;
 
@@ -38,6 +42,13 @@ internal static unsafe class DxgiInterop
     {
         var fn = (delegate* unmanaged[Stdcall]<nint, int>)VTable(duplication)[ReleaseFrameSlot];
         return fn(duplication);
+    }
+
+    /// <summary>IDXGIOutput::WaitForVBlank as HRESULT: Vortice throws on failure, which would allocate per idle pass.</summary>
+    public static int WaitForVBlank(nint output)
+    {
+        var fn = (delegate* unmanaged[Stdcall]<nint, int>)VTable(output)[WaitForVBlankSlot];
+        return fn(output);
     }
 
     public static void CopyResource(nint context, nint destination, nint source)

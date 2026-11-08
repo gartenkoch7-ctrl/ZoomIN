@@ -11,12 +11,16 @@ namespace ZoomIN.Platform.Updates;
 /// </summary>
 public sealed class GitHubReleaseFeed : IReleaseFeed
 {
-    private static readonly HttpClient s_http = CreateClient();
-    private readonly ILogger _log;
+    // A release list that takes longer is skipped; the next check tries again.
+    private static readonly TimeSpan s_timeout = TimeSpan.FromSeconds(15);
 
-    public GitHubReleaseFeed(ILogger<GitHubReleaseFeed> log)
+    private readonly ILogger _log;
+    private readonly HttpClient _http;
+
+    public GitHubReleaseFeed(ILogger<GitHubReleaseFeed> log, HttpClient http)
     {
         _log = log;
+        _http = http;
     }
 
     public async Task<IReadOnlyList<ReleaseInfo>> ReleasesAsync(Uri feed, CancellationToken cancellationToken)
@@ -29,26 +33,21 @@ public sealed class GitHubReleaseFeed : IReleaseFeed
 
         try
         {
-            using var response = await s_http.GetAsync(feed, cancellationToken).ConfigureAwait(false);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(s_timeout);
+            using var request = new HttpRequestMessage(HttpMethod.Get, feed);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+            using var response = await _http.SendAsync(request, timeout.Token).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+            await using var stream = await response.Content.ReadAsStreamAsync(timeout.Token).ConfigureAwait(false);
+            using var json = await JsonDocument.ParseAsync(stream, cancellationToken: timeout.Token).ConfigureAwait(false);
             return GitHubReleaseParser.Parse(json.RootElement);
         }
-        catch (Exception ex) when (ex is HttpRequestException or JsonException or TaskCanceledException)
+        // ObjectDisposedException: ZoomIN exits while a check runs (the client belongs to the DI container).
+        catch (Exception ex) when (ex is HttpRequestException or JsonException or TaskCanceledException or ObjectDisposedException)
         {
             _log.ReleaseListSkipped(ex.Message);
             return [];
         }
-    }
-
-    private static HttpClient CreateClient()
-    {
-        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-
-        // GitHub's API rejects requests without a User-Agent.
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("ZoomIN", "1.0"));
-        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-        return client;
     }
 }

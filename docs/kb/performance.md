@@ -17,6 +17,12 @@
   keine String-Interpolation, kein Logging außer über vorab allokierte Ringpuffer.
 - `struct`s für Werte (Punkte, Rechtecke, Snapshots-Inhalte), `readonly` wo möglich.
 - GPU-Ressourcen werden nur bei Start/Resize/Monitorwechsel erstellt.
+- Constant Buffer über `ConstantUpload<T>` füllen: Er vergleicht die Bytes mit dem letzten
+  Upload und lässt gleiche Werte aus (M14). Das gilt nur, solange niemand anderes in den
+  Puffer schreibt. Das Feld darf nicht `readonly` sein, sonst arbeitet es auf einer Kopie.
+- `CursorPass` setzt den gemeinsamen Zustand einmal pro Ebene. Jede Ebene endet mit
+  `End` (im `finally`), bevor ein anderer Durchgang zeichnet. Sonst übernimmt der nächste
+  Zeichenaufruf auf dasselbe Ziel fremde Shader und fremdes Blending.
 - Kein `lock`, kein `Task`/`async` im Frame. Zustand per `Volatile.Read` eines Snapshots.
 - GC: `<ServerGarbageCollector>false</ServerGarbageCollector>`,
   `<ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>`; Render-Thread mit
@@ -25,6 +31,9 @@
 ## Messen
 - **BenchmarkDotNet** mit `[MemoryDiagnoser]` für Core-Hot-Path (Viewport, Easing, Arbiter).
 - **In-App-Overlay** (Debug-Build): Frame-Zeit, verpasste Frames, Duplication-Latenz.
+- **Startzeit** nie aus dem ersten Start nach einer Installation messen. Dort kosten kalter
+  Dateicache und der erste Scan der neuen Dateien ein Vielfaches, bei `shell` z. B. 255 statt
+  47 ms (M14, 2026-11-08). Den zweiten Start nehmen.
 - **PresentMon** / GPUView für echte Ende-zu-Ende-Messungen.
 - Messergebnisse mit Hardware hier eintragen.
 - Liegen Kopien des Repos unter `.claude/worktrees/`, bricht BenchmarkDotNet ab („more than one
@@ -44,6 +53,14 @@
 | 2026-11-06 | RTX 3060 Ti | 1440p (Offscreen) | M13 intelligent, GPU-Zeitstempel, 300 Frames | Magnify 0,144 ms; Umgebung 0,031 ms; Magnify intelligent inkl. Umgebung 0,189 ms → **+0,046 ms** | 3 Läufe stabil; hochgerechnet ×10 auf Onboard ≈ 0,5 ms (Budget 1 ms), echte Onboard-Messung offen |
 | 2026-11-07 | RTX 3060 Ti | 1440p (Offscreen) | M13 intelligent, Schrift folgt Umfeld (16 Nachbar-Taps) | überall gelesen: **+0,203 ms**; nur wo die 4 Kacheln uneins sind: intelligent inkl. Umgebung 0,223–0,238 ms → **+0,084–0,099 ms** | 3 Läufe; Taps nur an Kanten halten das Budget (≈ 1 ms Onboard hochgerechnet wie zuvor) |
 | 2026-11-06 | RTX 3060 Ti, 20 Threads | 1080p, 60 Hz | M12 Filter pro Fenster, Dev-Build | CPU 0,00–0,05 % aller Kerne (helles Fenster, auch beim Verschieben); Popup → Bereich Median 3,3 ms, 90 % < 4,5 ms; `WindowRegionsCheck` 64 Bereiche 65 ns, 0 B | Bildrate nicht gemessen; vor dem Blick-Thread Popup bis 75 ms (ADR-0022) |
+| 2026-11-07 | RTX 3060 Ti | 1080p/1440p (Offscreen), Zoom 1×/2×/4× | **M14 Messbasis** (`BaselineGpuTimeTests`, 200 Frames, 3 Läufe) | 1080p: Magnify 0,080 ms, Umgebung 0,035 ms, intelligent +0,053 ms – unabhängig vom Zoom. 1440p: Magnify 0,125–0,226 ms, Umgebung 0,067–0,100 ms, intelligent +0,095–0,181 ms | 1440p schwankt zwischen den Läufen (GPU-Takt); ein Ausreißerlauf (1,5 ms) verworfen. Kosten hängen kaum vom Zoom ab: Die Gewichtung läuft pro Ausgabe-Pixel |
+| 2026-11-07 | i7-12700KF | – | **M14 Messbasis** CPU (BenchmarkDotNet, Release) | `LensFrame` 1,5 ns, `DockedFrame` 6,4 ns, `SmartRegionsCheck` (64 Bereiche) 22 ns, `PointerScale` 1,2 ns, `ModelRead` 0,5 ns, `EffectsRead` (2 Monitore) 6,7 ns – alle 0 B | Monitor-Suche per Name kostet < 7 ns pro Frame: der in M14 Schritt 2 geplante Monitor-Index lohnt nicht und entfällt |
+| 2026-11-07 | i7-12700KF, RTX 3060 Ti | 1 Monitor 1440p | **M14 Start-Ausgangswert** (Trace des Nutzers, dev.119.m13) und Shader-Übersetzung (`ShaderSource` zur Laufzeit, 3 Runden) | `zoomin.app.start` 903 ms (darin `zoomin.settings.load` 109 ms); `zoomin.render.pipeline_start` 664 ms; davon Shader 570 ms (`PhotoFill` 347, `Magnify` PS 125, `Ambient` PS 81 ms) | Shader seit M14 Schritt 4 im Build übersetzt: die ~570 ms je Monitor und Pipeline-Start entfallen. Nachher-Wert aus einem echten Start offen |
+| 2026-11-07 | i7-12700KF, RTX 3060 Ti | 1 Monitor 1440p | **M14 Startphasen** (Trace des Nutzers, dev.120.m14, Shader noch zur Laufzeit) | `zoomin.app.start` 565 ms: `services` 189 ms (davon Einstellungen 92 ms), `shell` 115 ms. `pipeline_start` 697 ms: `device` 18, `capture` 2, `overlay` 59, **`shaders` 617 ms** | Die Shader sind 89 % des Pipeline-Starts; mit Schritt 4 (dev.121) entfallen sie. Fensterfilter und Watchdog sind mit zusammen < 115 ms (`shell`) kein lohnendes Ziel mehr |
+| 2026-11-07 | i7-12700KF, RTX 3060 Ti | 1 Monitor 1440p | **M14 Startphasen nachher** (Trace des Nutzers, dev.123.m14, Shader im Build übersetzt) | `pipeline_start` **184 ms** (vorher 697): `device` 41, `capture` 2, `overlay` 86, **`shaders` 6 ms** (vorher 617). `zoomin.app.start` 840 ms: `services` 198 (Einstellungen 92), `shell` 376 | Pipeline 3,8× schneller. `shell` lag in diesem einen Lauf höher als vorher (115 ms); er folgte direkt auf einen Update-Schritt, ein Einzelwert, beim nächsten Start gegenprüfen |
+| 2026-11-08 | i7-12700KF, RTX 3060 Ti | 1 Monitor 1440p | **M14 Startphasen Gegenprobe** (Traces des Nutzers, zwei normale Starts: dev.124.m14 und dev.125.m14) | `pipeline_start` 146 / 123 ms: `device` 36 / 29, `capture` 2 / 2, `overlay` 57 / 42, `shaders` 5 / 7. `zoomin.app.start` 861 / 806 ms: `services` 244 / 242 (Einstellungen 105 / 104), `shell` 267 / 255 | Pipeline bleibt rund 5× schneller als vor Schritt 4. Die 376 ms `shell` von dev.123 waren ein Ausreißer, aber `shell` liegt stabil über den 115 ms von dev.120; `app.start` schwankt zwischen den Messungen stark (565–903 ms) |
+| 2026-11-08 | i7-12700KF, RTX 3060 Ti | 1 Monitor 1440p | **M14 Shell-Phase aufgeteilt** (installierte dev.126.m14, zweiter Start nach der Installation, aus dem Terminal) | `zoomin.app.start` **354 ms**: `services` 191 (Einstellungen 93), `shell` **47**: `resolve` 15, `engine` 19, `tray` 4, `notify` 6. `pipeline_start` 43 ms: `device` 19, `capture` 2, `overlay` 14, `shaders` 6 | Die 255–376 ms `shell` der Messungen davor waren erste Starts direkt nach der Installation (kalter Cache, erster Scan). Kein Rückschritt durch DI; Startzeiten nur aus späteren Starts vergleichen |
+| 2026-11-08 | i7-12700KF, RTX 3060 Ti | offscreen | **M14 Desktop-Kopie** (`CopyGpuTimeTests`, `ZOOMIN_GPU_TIMING=1`) | Ganze Textur (`CopyResource`): 1080p 0,033 ms, 1440p 0,048 ms, 4K 0,090 ms. Teilbereich (`CopySubresourceRegion`) 25 %: 0,010 / 0,013 / 0,025 ms; 5 %: 0,005 / 0,005 / 0,007 ms | Kopieren nur der Dirty Rects spart unter 0,04 ms je neuem Bild – entfällt. Onboard-Messung offen |
 
 ## Telemetrie-Start (M11)
 Gemessen mit einem Wegwerf-Programm, das `TelemetryHost` in einem frischen Prozess startet:

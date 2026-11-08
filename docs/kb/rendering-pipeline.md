@@ -220,8 +220,28 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
 - PNG ohne Bibliothek: `PngWriter` (RGBA8, Filter 0, ein zlib-IDAT, CRC-32).
 
 ## Shader-Regeln
-- HLSL-Dateien in `ZoomIN.Rendering/Shaders/`, als Embedded Resource eingebettet und beim
-  Start mit dem in Windows enthaltenen D3DCompiler übersetzt (Entscheidung M1: kein SDK-Tool
-  im Build/CI nötig). Vorkompilieren erst, falls die Startzeit es verlangt.
+- HLSL-Dateien in `ZoomIN.Rendering/Shaders/`. Seit M14 Schritt 4 übersetzt sie der Build mit
+  `tools/ZoomIN.ShaderCompiler` (derselbe d3dcompiler_47 aus Windows über Vortice, `O3`, also
+  ebenfalls kein SDK-Tool in Build oder CI). Eingebettet wird nur der Bytecode
+  (`ZoomIN.Shaders.<Datei>.<Einstieg>.<Profil>.cso`).
+  - Grund: Die Übersetzung zur Laufzeit kostete etwa 570 ms CPU je Monitor und Pipeline-Start,
+    also auch nach jeder Anzeigeänderung. Allein `PhotoFill.hlsl` brauchte 347 ms und
+    `Magnify.hlsl` 125 ms (2026-11-07, i7-12700KF).
+  - Jeder Einstieg braucht einen `ShaderEntry` in `ZoomIN.Rendering.csproj`.
+    `ShaderBytecodeTests` prüft, dass jedes `ShaderSource.Load` im Code eingebettet ist.
+  - `#include "X.hlsli"` setzt das Werkzeug selbst ein (`IncludeExpander`, M14 Schritt 10), mit
+    `#line`-Marken, damit Fehlermeldungen Datei und Zeile der `.hlsli` nennen. Nur Dateien im
+    Ordner `Shaders/`, jede einmal je Shader. Alle `*.hlsli` stehen in den `Inputs` des Targets;
+    eine Änderung übersetzt neu. Beispiel: `SmartWeight.hlsli` (randtreues Gewicht der
+    Smart-Invertierung), eingebunden von `Magnify.hlsl` nach dessen Ressourcen.
+  - In Design-Time-Builds (VS, Rider) übersetzt das Target nicht.
+  - Fehlt einer, schlägt der Pipeline-Start mit Log 3003 fehl. Es gibt bewusst keinen Rückfall
+    auf Laufzeit-Übersetzung.
+  - MSBuild-Falle: `IntermediateOutputPath` steht erst nach dem Projektkörper fest. Ein
+    Ausgabepfad daraus muss in einem Target gesetzt werden, sonst landen die `.cso` im
+    Quellordner `Shaders/`.
+  - Das Werkzeug ist eine `ProjectReference` mit `ReferenceOutputAssembly="false"`,
+    `Private="false"` und `OutputItemType`. Ohne `Private="false"` landet es in der
+    Veröffentlichung der App.
 - Shader werden auf WARP getestet (`tests/ZoomIN.Rendering.Tests`).
 - Max. 300 Zeilen pro Shader-Datei; Gemeinsames in `*.hlsli`.

@@ -4,6 +4,7 @@ using ZoomIN.Core.Diagnostics;
 using ZoomIN.Platform.Diagnostics;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Lifecycle;
+using ZoomIN.Platform.Folders;
 using ZoomIN.Platform.Settings;
 using ZoomIN.Platform.Shell;
 using ZoomIN.Platform.Updates;
@@ -17,15 +18,15 @@ namespace ZoomIN.Setup.Install;
 /// </summary>
 internal sealed class SetupInstaller
 {
-    private readonly TelemetryHost _telemetry;
+    private readonly SetupServices _services;
     private readonly ILogger _log;
     private readonly HttpPackageDownloader _downloader;
 
-    public SetupInstaller(TelemetryHost telemetry)
+    public SetupInstaller(SetupServices services)
     {
-        _telemetry = telemetry;
-        _log = telemetry.Logger<SetupInstaller>();
-        _downloader = new HttpPackageDownloader(telemetry.Logger<HttpPackageDownloader>());
+        _services = services;
+        _log = services.Telemetry.Logger<SetupInstaller>();
+        _downloader = new HttpPackageDownloader(services.Telemetry.Logger<HttpPackageDownloader>(), services.Http);
     }
 
     /// <param name="steps">Ticked step by step; the caller marks the running step failed on an error result.</param>
@@ -38,7 +39,7 @@ internal sealed class SetupInstaller
         // One trace from the wizard through the elevated step to the first start (ADR-0019).
         using var operation = Telemetry.Source.StartActivity("zoomin.setup.install")?.SetTag("zoomin.version", release.Version.ToString());
         steps.Begin(InstallStep.RemoveOld);
-        if (await Task.Run(() => InstallRegistration.RemoveLegacyInstall(TimeSpan.FromSeconds(60)), cancellationToken))
+        if (await Task.Run(() => _services.Registration.RemoveLegacyInstall(TimeSpan.FromSeconds(60)), cancellationToken))
         {
             _log.InnoRemoved();
         }
@@ -56,9 +57,9 @@ internal sealed class SetupInstaller
         try
         {
             steps.Begin(InstallStep.Install);
-            var hash = await Task.Run(() => ElevatedStep.HashOf(download.Path), cancellationToken);
+            var hash = await Task.Run(() => _services.Elevated.HashOf(download.Path), cancellationToken);
             var command = new UpdateCommand(download.Path, hash, release.Version, choices.SecureDesktop);
-            var result = await Task.Run(() => ElevatedStep.Run(Environment.ProcessPath!, command, _log), cancellationToken);
+            var result = await Task.Run(() => _services.Elevated.Run(Environment.ProcessPath!, command), cancellationToken);
             if (result is not (UpdateResult.Installed or UpdateResult.AlreadyActive))
             {
                 return result;
@@ -76,28 +77,29 @@ internal sealed class SetupInstaller
     }
 
     /// <summary>Starts the installed ZoomIN as the signed-in user.</summary>
-    public static void StartZoomIN()
+    public void StartZoomIN()
     {
         // Through the shell: CreateProcess refuses UIAccess executables (ADR-0012).
-        using var _ = Process.Start(new ProcessStartInfo(ElevatedInstall.Layout.CurrentExecutable, TraceParentArgument.Append(string.Empty)) { UseShellExecute = true });
+        using var _ = Process.Start(new ProcessStartInfo(_services.Layout.CurrentExecutable, TraceParentArgument.Append(string.Empty)) { UseShellExecute = true });
     }
 
     // Per-user parts run here, not in the elevated step: with "over the shoulder" elevation the
     // administrator may be another account, whose registry and AppData would get the settings.
     private void ApplyUserChoices(SetupChoices choices)
     {
-        var exe = ElevatedInstall.Layout.CurrentExecutable;
+        var exe = _services.Layout.CurrentExecutable;
         new RegistryAutostart(RegistryAutostart.RunKey, $"\"{exe}\"").SetEnabled(choices.Autostart);
         if (choices.DesktopShortcut)
         {
-            ShellShortcut.Create(ShellShortcut.UserDesktop, exe);
+            _services.Shortcuts.Create(_services.Shortcuts.UserDesktop, exe);
         }
         else
         {
-            ShellShortcut.Remove(ShellShortcut.UserDesktop);
+            _services.Shortcuts.Remove(_services.Shortcuts.UserDesktop);
         }
 
-        var store = new JsonSettingsStore(_telemetry.Logger<JsonSettingsStore>());
+        // The setup runs as the user who installs: that user's %AppData%ZoomIN.
+        var store = new JsonSettingsStore(_services.Telemetry.Logger<JsonSettingsStore>(), _services.Folders);
         store.Save(choices.ApplyTo(store.Load()));
     }
 }

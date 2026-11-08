@@ -1,41 +1,48 @@
-using System.Globalization;
+using ZoomIN.Core.Localization;
 using ZoomIN.Core.Settings;
 
 namespace ZoomIN.App.Localization;
 
 /// <summary>
-/// UI texts in German and English (M7). Own dictionaries instead of .resw/MRT, because switching
-/// the language of an unpackaged WinUI app at runtime is unreliable with MRT.
+/// Static facade over the app's <see cref="ILocalizer"/> for <c>x:Bind</c> in XAML, which can
+/// only bind to static members without a view model (ADR-0025 decision 3). Code with a
+/// constructor takes <see cref="ILocalizer"/> from DI instead.
 /// </summary>
 public static class Text
 {
-    private static readonly IReadOnlyDictionary<string, string> s_german = Merge(TextsGerman.All, TextsGermanCards.All, TextsGermanUpdates.All, TextsGermanDiagnostics.All, TextsGermanWindowFilter.All);
-    private static readonly IReadOnlyDictionary<string, string> s_english = Merge(TextsEnglish.All, TextsEnglishCards.All, TextsEnglishUpdates.All, TextsEnglishDiagnostics.All, TextsEnglishWindowFilter.All);
-    private static IReadOnlyDictionary<string, string> s_current = s_english;
+    // Until the composition root hands over the app's instance (roles without DI, tests): English.
+    private static ILocalizer s_localizer = AppTexts.CreateLocalizer();
 
-    public static event Action? LanguageChanged;
-
-    public static bool IsGerman { get; private set; }
-
-    public static void SetLanguage(AppLanguage language)
+    public static event Action? LanguageChanged
     {
-        IsGerman = language == AppLanguage.German
-            || (language == AppLanguage.System && CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "de");
-        s_current = IsGerman ? s_german : s_english;
-        LanguageChanged?.Invoke();
+        add => s_localizer.LanguageChanged += value;
+        remove => s_localizer.LanguageChanged -= value;
     }
 
-    public static string Get(string key) => s_current.TryGetValue(key, out var value) ? value : key;
+    public static bool IsGerman => s_localizer.IsGerman;
 
-    public static string Format(string key, params object[] args) => string.Format(CultureInfo.CurrentCulture, Get(key), args);
+    /// <summary>Composition root only, before any page or subscriber exists.</summary>
+    public static void Use(ILocalizer localizer) => s_localizer = localizer;
 
-    private static Dictionary<string, string> Merge(params IReadOnlyDictionary<string, string>[] parts) =>
-        parts.SelectMany(part => part).ToDictionary(p => p.Key, p => p.Value);
+    public static void SetLanguage(AppLanguage language) => s_localizer.SetLanguage(language);
+
+    public static string Get(string key) => s_localizer.Get(key);
+
+    public static string Format(string key, params object[] args) => s_localizer.Format(key, args);
 
     // Modes, states
     public static string ModeFullscreen => Get(nameof(ModeFullscreen));
     public static string ModeLens => Get(nameof(ModeLens));
     public static string ModeDocked => Get(nameof(ModeDocked));
+
+    // Fully qualified: the text ZoomMode below hides the enum inside this class.
+    public static string ModeName(Core.Modes.ZoomMode mode) => mode switch
+    {
+        Core.Modes.ZoomMode.Lens => ModeLens,
+        Core.Modes.ZoomMode.Docked => ModeDocked,
+        _ => ModeFullscreen,
+    };
+
     public static string On => Get(nameof(On));
     public static string Off => Get(nameof(Off));
 

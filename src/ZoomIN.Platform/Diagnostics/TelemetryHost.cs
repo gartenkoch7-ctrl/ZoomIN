@@ -1,3 +1,4 @@
+using ZoomIN.Core.Folders;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Metrics;
@@ -62,8 +63,9 @@ public sealed class TelemetryHost : IDisposable
     /// <summary>The kept log and operations files, oldest first (diagnostics package).</summary>
     public IReadOnlyList<string> KeptFiles() => _files.KeptFiles();
 
-    public static TelemetryHost Start(TelemetryRole role, string? traceParent = null) =>
-        new(role, traceParent, TelemetryFiles.DefaultFolder, TimeProvider.System);
+    /// <param name="folders">Logs go to its Local folder; on the secure desktop SYSTEM's profile (ADR-0016).</param>
+    public static TelemetryHost Start(TelemetryRole role, IAppFolders folders, string? traceParent = null) =>
+        new(role, traceParent, folders.Logs(), TimeProvider.System);
 
     /// <summary>For tests: own folder and clock.</summary>
     internal static TelemetryHost Start(TelemetryRole role, string? traceParent, string folder, TimeProvider time) =>

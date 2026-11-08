@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Text;
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Folders;
 
 namespace ZoomIN.Platform.Diagnostics;
 
@@ -12,20 +13,16 @@ namespace ZoomIN.Platform.Diagnostics;
 /// beyond file names, no window contents. Files still being written by other ZoomIN processes are
 /// read with shared access. The last <see cref="Kept"/> packages are kept, older ones removed.
 /// </summary>
-public static class DiagnosticsPackage
+public sealed class DiagnosticsPackage(TelemetryHost telemetry, IAppFolders folders) : IDiagnosticsPackage
 {
     public const int Kept = 3;
 
     private const string Prefix = "ZoomIN-Diagnose-";
 
-    public static string DefaultFolder { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ZoomIN", "diagnostics");
-
-    /// <summary>Writes the package into <paramref name="folder"/> and returns its path.</summary>
-    public static string Create(TelemetryHost telemetry, TelemetryOptions options, string folder)
+    public string Create(TelemetryOptions options)
     {
-        ArgumentNullException.ThrowIfNull(telemetry);
         ArgumentNullException.ThrowIfNull(options);
+        var folder = folders.Diagnostics();
         using var operation = Telemetry.Source.StartActivity("zoomin.diagnostics.package");
 
         // Everything still buffered belongs in the package.
