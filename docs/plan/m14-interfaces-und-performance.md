@@ -78,8 +78,15 @@
     bereit). Den ersten Frame gibt es erst beim ersten Zoom; er misst also den Nutzer, nicht
     den Start.
 - [x] Ausgangswerte in `docs/kb/performance.md` (Messprotokoll 2026-11-07).
-- [ ] Startzeit-Ausgangswert aus einem echten Start (Diagnosepaket nach Neustart durch den
+- [x] Startzeit-Ausgangswert aus einem echten Start (Diagnosepaket nach Neustart durch den
       Nutzer: `ready_time`, Phasen). Er ist die Vergleichsbasis für Schritt 4.
+  - Ausgangswert: Trace von dev.120.m14 (Messprotokoll 2026-11-07, `pipeline_start` 697 ms).
+  - Gegenprobe 2026-11-08 mit zwei echten Starts (dev.124 und dev.125, Traces):
+    `pipeline_start` 146 und 123 ms, Shader 5–7 ms. `app.start.shell` 267 und 255 ms:
+    Die 376 ms nach dem Update waren ein Ausreißer. Die Phase bleibt aber über den 115 ms von
+    dev.120 (siehe Offene Fragen).
+  - `ready_time` ist ein Histogramm und steht nicht in den Traces. Es fehlt hier, die Phasen
+    reichen als Vergleich.
 - **Telemetrie** (Instrumente beim Start angelegt, im Katalog):
   - Kind-Abläufe `zoomin.app.start.services`/`.shell` und
     `zoomin.render.pipeline_start.device`/`.capture`/`.overlay`/`.shaders`
@@ -476,5 +483,8 @@
   Laufzeit muss weiter alle Seiten neu laden (heute über `LanguageChanged`).
 - **Zeitpunkt:** Teil A ist vor `v1.0.0` sinnvoll, weil das Budget von M13 knapp ist. Teil B
   und C blockieren 1.0 nicht. Die Entscheidung trifft der Nutzer beim Start von Teil B.
+- **`app.start.shell` langsamer als bei dev.120:** 255–272 ms (dev.124, dev.125) statt 115 ms.
+  Gesamtstart `app.start` 806–880 ms statt 565 ms. Ursache noch nicht untersucht; Kandidaten
+  sind die Aufteilung in Schritt 10 und die Dienste aus Schritt 6–8 (DI-Graph beim Start).
 - **Nicht im Umfang:** Shader-Varianten (Permutationen) von `Magnify.hlsl`. Erst wieder, wenn
   die Messung nach Schritt 5 es verlangt.
