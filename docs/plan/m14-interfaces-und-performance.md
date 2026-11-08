@@ -115,6 +115,9 @@
   - `CursorPassStateTests` (WARP): mehrere Zeichenaufrufe einer Ebene mit eigenen Konstanten,
     Ebene nach Magnify bindet neu, Zeigertextur-Cache beim Wechsel der Form.
   - `RenderLayersAllocationTests` bleiben bei `0 B`.
+- [x] Sichtprüfung durch den Nutzer (2026-11-08, dev.125.m14): „Alles in Ordnung“ (Zeiger und
+      Zeigerformen, Fadenkreuz, Locator, Fokusrahmen, Caret, Zoom, Lupe, Angedockt,
+      intelligentes Invertieren, GPU-Last im Leerlauf).
   - `CursorLayer` ruft `SetVisible` weiter jeden Frame auf. Der Test zählt die Aufrufe mit
     einem gefälschten `ISystemCursor`.
   - `MagnifierSystemCursor` ist nicht automatisch testbar, weil er den echten Zeiger des Nutzers
