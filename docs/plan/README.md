@@ -24,6 +24,7 @@ Jeder Meilenstein endet mit etwas, das man **starten und vorführen** kann.
 | M12 | [Farbfilter pro Fenster](m12-filter-pro-fenster.md) | Helle Fenster automatisch invertiert, dunkle bleiben dunkel; Regeln pro App + Fensterart | L | Code fertig (Branch `feat/m12-filter-pro-fenster`), Sichtprüfung offen – **vor** dem ersten Release |
 | M13 | [Intelligentes Invertieren](m13-intelligent-invertieren.md) | Nur helle Flächen invertiert, dunkle Leisten bleiben dunkel, Fotos original – live, ohne Flackern | L | Design freigegeben (ADR-0024), Spike offen – **vor** dem ersten Release |
 | M14 | [Interfaces, DI & Performance](m14-interfaces-und-performance.md) | GPU im Leerlauf nahe null, schnellerer Start, Smart Invert sicher im Budget; Dienste statt statischer Klassen, Tests für App/Watchdog/Setup | L | umgesetzt – in `develop` gemergt (2026-11-08, ADR-0025), Testbuild dev.126 geprüft; echte Deinstallation mit den neuen Nahtstellen offen |
+| M15 | [Anpassender Mauszeiger](m15-anpassender-zeiger.md) | Zeiger wechselt pro Pixel zwischen zwei wählbaren Farben nach dem sichtbaren Hintergrund, mit und ohne Zoom | M | Plan zur Freigabe (Grilling 2026-11-08, ADR-0026), Branch `feat/m15-anpassender-zeiger` |
 
 Größen: **S** ≈ wenige Tage · **M** ≈ 1–2 Wochen · **L** ≈ 2–4 Wochen (eine Person, Teilzeit-Schätzung, grob).
 
@@ -45,6 +46,7 @@ M0 ─► M1 ─► M2 ─┬─► M3 ─┬─► M4 ─┐
   Glättung, GPU-Zeit ≤ 1 ms Onboard) entscheidet über die Werte.
 - M14 baut auf M13 auf. Teil A (Performance) ist vor `v1.0.0` sinnvoll, weil das Smart-Invert-Budget
   knapp ist. Teil B/C (Interfaces und DI nach ADR-0025, Aufteilen, Testprojekte) blockieren 1.0 nicht.
+- M15 baut auf M14 auf (CursorPass je Ebene, Leerlauf-Frames) und blockiert 1.0 nicht.
 - M7 setzt alle Features voraus, weil es deren Einstellungen bündelt.
   Einfache Einstellungen (Hotkeys, Zoomstufe) werden vorher per JSON-Datei gepflegt.
 
