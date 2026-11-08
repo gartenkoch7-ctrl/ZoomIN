@@ -17,6 +17,12 @@
   keine String-Interpolation, kein Logging außer über vorab allokierte Ringpuffer.
 - `struct`s für Werte (Punkte, Rechtecke, Snapshots-Inhalte), `readonly` wo möglich.
 - GPU-Ressourcen werden nur bei Start/Resize/Monitorwechsel erstellt.
+- Constant Buffer über `ConstantUpload<T>` füllen: Er vergleicht die Bytes mit dem letzten
+  Upload und lässt gleiche Werte aus (M14). Das gilt nur, solange niemand anderes in den
+  Puffer schreibt. Das Feld darf nicht `readonly` sein, sonst arbeitet es auf einer Kopie.
+- `CursorPass` setzt den gemeinsamen Zustand einmal pro Ebene. Jede Ebene endet mit
+  `End` (im `finally`), bevor ein anderer Durchgang zeichnet. Sonst übernimmt der nächste
+  Zeichenaufruf auf dasselbe Ziel fremde Shader und fremdes Blending.
 - Kein `lock`, kein `Task`/`async` im Frame. Zustand per `Volatile.Read` eines Snapshots.
 - GC: `<ServerGarbageCollector>false</ServerGarbageCollector>`,
   `<ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>`; Render-Thread mit

@@ -36,8 +36,25 @@ internal sealed class CursorLayer
     public bool Draw(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor, in ModeFrame frame,
         ZoomMode mode, double zoom, PhysicalPoint cursor, DisplayEffects effects, long locateRequestedAt, bool hidden)
     {
-        var style = effects.Cursor;
+        try
+        {
+            return DrawLayer(context, target, monitor, frame, mode, zoom, cursor, effects.Cursor, locateRequestedAt, hidden);
+        }
+        finally
+        {
+            _pass.End(context);
+        }
+    }
 
+    /// <summary>Idle frame (M14 step 3): repeats the last wanted system pointer visibility.</summary>
+    public void KeepSystemCursor() => _systemCursor.SetVisible(_systemVisible);
+
+    /// <summary>Called when this monitor stops drawing while the pointer is on it.</summary>
+    public void ShowSystemCursor() => _systemCursor.SetVisible(true);
+
+    private bool DrawLayer(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor, in ModeFrame frame,
+        ZoomMode mode, double zoom, PhysicalPoint cursor, PointerStyle style, long locateRequestedAt, bool hidden)
+    {
         // The pointer appears where its desktop position is shown. Around the mouse (fixpoint)
         // that is the real position; while the view follows focus/caret it is mapped (M6).
         var docked = mode == ZoomMode.Docked && frame.HasFrame;
@@ -61,12 +78,6 @@ internal sealed class CursorLayer
 
         return DrawLocator(context, target, monitor, shown, Stopwatch.GetTimestamp(), locateRequestedAt, style);
     }
-
-    /// <summary>Idle frame (M14 step 3): repeats the last wanted system pointer visibility.</summary>
-    public void KeepSystemCursor() => _systemCursor.SetVisible(_systemVisible);
-
-    /// <summary>Called when this monitor stops drawing while the pointer is on it.</summary>
-    public void ShowSystemCursor() => _systemCursor.SetVisible(true);
 
     private void DrawPointer(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor,
         PhysicalPoint shown, double zoom, PointerStyle style)

@@ -30,6 +30,19 @@ internal sealed class HighlightLayer
             return;
         }
 
+        try
+        {
+            DrawMarks(context, target, monitor, frame, tracking, options);
+        }
+        finally
+        {
+            _pass.End(context);
+        }
+    }
+
+    private void DrawMarks(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor,
+        in ModeFrame frame, TrackingSnapshot tracking, TrackingOptions options)
+    {
         if (options.FocusFrame && tracking.Focus is { } focus && FrameMapping.Intersects(focus, frame.Source))
         {
             var r = Expand(FrameMapping.Map(frame, focus), FrameGap + FrameWidth);

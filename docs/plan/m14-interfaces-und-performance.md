@@ -101,11 +101,20 @@
     wenn ein anderer Monitor den Zeiger umschaltet.
 - [~] Monitor-Index statt Dictionary-Suche: **entfällt nach Messung** (Schritt 1: unter 7 ns pro
       Frame, 0 B).
-- [ ] `CursorPass`: letzte Zeigertextur zwischenspeichern; Blend-State einmal pro Ebene statt
-      pro Zeichnen
-- [ ] Constant Buffer nur hochladen, wenn sich die Werte geändert haben (`MagnifyPass`,
-      `CursorPass`)
+- [x] `CursorPass`: letzte Zeigertextur zwischenspeichern; Blend-State einmal pro Ebene statt
+      pro Zeichnen (2026-11-08)
+  - Die letzte Suche (Handle bzw. Handle + Schärfe) spart meist das Dictionary.
+  - Der erste Zeichenaufruf einer Ebene setzt den gemeinsamen Zustand (Ziel, Blend, Shader,
+    Sampler, Puffer). `End` schaltet das Blending wieder aus. `HighlightLayer` und
+    `CursorLayer` rufen es im `finally` auf, bevor ein anderer Durchgang zeichnet.
+- [x] Constant Buffer nur hochladen, wenn sich die Werte geändert haben (`MagnifyPass`,
+      `CursorPass`): `ConstantUpload<T>` vergleicht die Bytes mit dem letzten Upload (0 B).
+      Ein ruhender Zoom lädt damit keine Magnify-Konstanten mehr hoch.
 - **Tests:** Benchmarks aus 1 bleiben bei `0 B`.
+  - `ConstantUploadTests`: erster Wert, gleicher Wert, Wechsel und zurück.
+  - `CursorPassStateTests` (WARP): mehrere Zeichenaufrufe einer Ebene mit eigenen Konstanten,
+    Ebene nach Magnify bindet neu, Zeigertextur-Cache beim Wechsel der Form.
+  - `RenderLayersAllocationTests` bleiben bei `0 B`.
   - `CursorLayer` ruft `SetVisible` weiter jeden Frame auf. Der Test zählt die Aufrufe mit
     einem gefälschten `ISystemCursor`.
   - `MagnifierSystemCursor` ist nicht automatisch testbar, weil er den echten Zeiger des Nutzers
