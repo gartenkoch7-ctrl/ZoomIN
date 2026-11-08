@@ -87,6 +87,7 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.setup.install` | setup | Installation im Assistenten (Tag `zoomin.version`) |
 | `zoomin.setup.apply` | setup | Installationsschritt mit Adminrechten |
 | `zoomin.app.start.services`, `zoomin.app.start.shell` | app | Kinder von `zoomin.app.start` (M14): DI-Container, Einstellungen laden, Watchdog starten bzw. Engine, Hooks, Tray und Erststart |
+| `zoomin.app.start.shell.resolve`, `.engine`, `.tray`, `.notify` | app | Kinder von `zoomin.app.start.shell` (M14): Objektgraph von `AppShell` bauen, Engine starten (Kürzel, Hooks, Ausgabe, Tracking, Fensterfilter), Tray-Menü/Erststart/Hinweise, zweiter Start und Erleichterte Bedienung |
 | `zoomin.render.pipeline_start` | app, secure | Aufbau von Gerät, Duplication und Overlay je Monitor (Tag `zoomin.monitor`; Fehler: Ausnahmetyp) |
 | `zoomin.render.pipeline_start.device`, `.capture`, `.overlay`, `.shaders` | app, secure | Kinder von `zoomin.render.pipeline_start` (M14): D3D-Gerät, Desktop Duplication, Overlay-Fenster und Swapchain, Shader kompilieren und Durchgänge anlegen |
 | `zoomin.render.rebuild` | app, secure | Neuaufbau aller Renderer, z. B. nach Anzeigeänderung (Tag `zoomin.monitors`) |

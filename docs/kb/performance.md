@@ -31,6 +31,9 @@
 ## Messen
 - **BenchmarkDotNet** mit `[MemoryDiagnoser]` für Core-Hot-Path (Viewport, Easing, Arbiter).
 - **In-App-Overlay** (Debug-Build): Frame-Zeit, verpasste Frames, Duplication-Latenz.
+- **Startzeit** nie aus dem ersten Start nach einer Installation messen. Dort kosten kalter
+  Dateicache und der erste Scan der neuen Dateien ein Vielfaches, bei `shell` z. B. 255 statt
+  47 ms (M14, 2026-11-08). Den zweiten Start nehmen.
 - **PresentMon** / GPUView für echte Ende-zu-Ende-Messungen.
 - Messergebnisse mit Hardware hier eintragen.
 - Liegen Kopien des Repos unter `.claude/worktrees/`, bricht BenchmarkDotNet ab („more than one
@@ -56,6 +59,7 @@
 | 2026-11-07 | i7-12700KF, RTX 3060 Ti | 1 Monitor 1440p | **M14 Startphasen** (Trace des Nutzers, dev.120.m14, Shader noch zur Laufzeit) | `zoomin.app.start` 565 ms: `services` 189 ms (davon Einstellungen 92 ms), `shell` 115 ms. `pipeline_start` 697 ms: `device` 18, `capture` 2, `overlay` 59, **`shaders` 617 ms** | Die Shader sind 89 % des Pipeline-Starts; mit Schritt 4 (dev.121) entfallen sie. Fensterfilter und Watchdog sind mit zusammen < 115 ms (`shell`) kein lohnendes Ziel mehr |
 | 2026-11-07 | i7-12700KF, RTX 3060 Ti | 1 Monitor 1440p | **M14 Startphasen nachher** (Trace des Nutzers, dev.123.m14, Shader im Build übersetzt) | `pipeline_start` **184 ms** (vorher 697): `device` 41, `capture` 2, `overlay` 86, **`shaders` 6 ms** (vorher 617). `zoomin.app.start` 840 ms: `services` 198 (Einstellungen 92), `shell` 376 | Pipeline 3,8× schneller. `shell` lag in diesem einen Lauf höher als vorher (115 ms); er folgte direkt auf einen Update-Schritt, ein Einzelwert, beim nächsten Start gegenprüfen |
 | 2026-11-08 | i7-12700KF, RTX 3060 Ti | 1 Monitor 1440p | **M14 Startphasen Gegenprobe** (Traces des Nutzers, zwei normale Starts: dev.124.m14 und dev.125.m14) | `pipeline_start` 146 / 123 ms: `device` 36 / 29, `capture` 2 / 2, `overlay` 57 / 42, `shaders` 5 / 7. `zoomin.app.start` 861 / 806 ms: `services` 244 / 242 (Einstellungen 105 / 104), `shell` 267 / 255 | Pipeline bleibt rund 5× schneller als vor Schritt 4. Die 376 ms `shell` von dev.123 waren ein Ausreißer, aber `shell` liegt stabil über den 115 ms von dev.120; `app.start` schwankt zwischen den Messungen stark (565–903 ms) |
+| 2026-11-08 | i7-12700KF, RTX 3060 Ti | 1 Monitor 1440p | **M14 Shell-Phase aufgeteilt** (installierte dev.126.m14, zweiter Start nach der Installation, aus dem Terminal) | `zoomin.app.start` **354 ms**: `services` 191 (Einstellungen 93), `shell` **47**: `resolve` 15, `engine` 19, `tray` 4, `notify` 6. `pipeline_start` 43 ms: `device` 19, `capture` 2, `overlay` 14, `shaders` 6 | Die 255–376 ms `shell` der Messungen davor waren erste Starts direkt nach der Installation (kalter Cache, erster Scan). Kein Rückschritt durch DI; Startzeiten nur aus späteren Starts vergleichen |
 
 ## Telemetrie-Start (M11)
 Gemessen mit einem Wegwerf-Programm, das `TelemetryHost` in einem frischen Prozess startet:

@@ -4,6 +4,7 @@ using ZoomIN.App.Settings;
 using ZoomIN.App.Updates;
 using ZoomIN.App.Views;
 using ZoomIN.App.Zoom;
+using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.Localization;
 
@@ -48,17 +49,25 @@ public sealed class AppShell : IShellActions
     public void Start()
     {
         _texts.SetLanguage(_settings.Current.Language);
-        _controller.Initialize();
 
-        _tray.Command += command => _dispatcher.TryEnqueue(() => OnTrayCommand(command));
-        _trayMenu.Start();
-
-        if (!_settings.Current.FirstRunCompleted)
+        // Children of zoomin.app.start.shell (M14): the start runs synchronously on this thread.
+        using (Telemetry.Source.StartActivity("zoomin.app.start.shell.engine"))
         {
-            OpenSettings();
+            _controller.Initialize();
         }
 
-        _notices.Start();
+        using (Telemetry.Source.StartActivity("zoomin.app.start.shell.tray"))
+        {
+            _tray.Command += command => _dispatcher.TryEnqueue(() => OnTrayCommand(command));
+            _trayMenu.Start();
+
+            if (!_settings.Current.FirstRunCompleted)
+            {
+                OpenSettings();
+            }
+
+            _notices.Start();
+        }
     }
 
     /// <summary>Thread-safe: e.g. called when a second ZoomIN start asks for the settings.</summary>

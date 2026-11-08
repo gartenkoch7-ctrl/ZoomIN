@@ -50,12 +50,21 @@ public partial class App : Application
 
         using (Telemetry.Source.StartActivity("zoomin.app.start.shell", ActivityKind.Internal, parent))
         {
-            var shell = _services.GetRequiredService<AppShell>();
+            // Finer phases (M14): building the object graph vs. starting engine, tray and notices.
+            AppShell shell;
+            using (Telemetry.Source.StartActivity("zoomin.app.start.shell.resolve"))
+            {
+                shell = _services.GetRequiredService<AppShell>();
+            }
+
             shell.ExitRequested += ExitApp;
             shell.Start();
-            Program.Instance?.ListenForOpenRequests(shell.OpenSettings);
-            _easeOfAccess = EaseOfAccessNotifier.Create(_log);
-            _easeOfAccess.NotifyStarted();
+            using (Telemetry.Source.StartActivity("zoomin.app.start.shell.notify"))
+            {
+                Program.Instance?.ListenForOpenRequests(shell.OpenSettings);
+                _easeOfAccess = EaseOfAccessNotifier.Create(_log);
+                _easeOfAccess.NotifyStarted();
+            }
         }
 
         Program.StartOperation?.Dispose();

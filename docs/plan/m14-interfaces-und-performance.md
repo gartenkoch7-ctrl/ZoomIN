@@ -483,8 +483,19 @@
   Laufzeit muss weiter alle Seiten neu laden (heute über `LanguageChanged`).
 - **Zeitpunkt:** Teil A ist vor `v1.0.0` sinnvoll, weil das Budget von M13 knapp ist. Teil B
   und C blockieren 1.0 nicht. Die Entscheidung trifft der Nutzer beim Start von Teil B.
-- **`app.start.shell` langsamer als bei dev.120:** 255–272 ms (dev.124, dev.125) statt 115 ms.
-  Gesamtstart `app.start` 806–880 ms statt 565 ms. Ursache noch nicht untersucht; Kandidaten
-  sind die Aufteilung in Schritt 10 und die Dienste aus Schritt 6–8 (DI-Graph beim Start).
+- **`app.start.shell` langsamer als bei dev.120 – geklärt (2026-11-08): kein Rückschritt.**
+  - Die 255–272 ms (dev.124, dev.125) waren jeweils der erste Start direkt nach der
+    Installation: Die Dateien des neuen Versionsordners waren nicht im Cache und wurden zum
+    ersten Mal gescannt.
+  - Ein zweiter Start derselben installierten dev.126 (Kind-Abläufe neu): `shell` 47 ms
+    (`resolve` 15, `engine` 19, `tray` 4, `notify` 6). `app.start` 354 ms, `pipeline_start` 43 ms.
+  - Startzeiten deshalb nie aus dem ersten Start nach einer Installation vergleichen.
+- **Start über das Startmenü ohne Wirkung (dev.126, 2026-11-08):**
+  - Zweimal kein Prozess, keine Meldung und kein Ereignis in Windows. Ein Beobachter hat alle
+    100 ms nach ZoomIN-Prozessen gesucht.
+  - Aus dem Terminal gestartet, lief dieselbe Datei sofort. Die Verknüpfung zeigt richtig auf
+    `current\ZoomIN.exe`.
+  - Bei dev.125 ging derselbe Weg kurz davor. Ursache offen; beim nächsten Testbuild wieder
+    beobachten.
 - **Nicht im Umfang:** Shader-Varianten (Permutationen) von `Magnify.hlsl`. Erst wieder, wenn
   die Messung nach Schritt 5 es verlangt.
