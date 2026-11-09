@@ -38,6 +38,24 @@ public sealed class TrackingTelemetryTests
         Assert.Empty(log.Lines);
     }
 
+    [Fact]
+    public void RepeatedReadFailures_AreLoggedOncePerExceptionType()
+    {
+        var log = new CapturingLogger();
+        var telemetry = new TrackingTelemetry(log);
+
+        // The same failing window is read 30 times a second.
+        for (var i = 0; i < 30; i++)
+        {
+            telemetry.ReadFailed(new InvalidOperationException());
+        }
+
+        telemetry.ReadFailed(new KeyNotFoundException());
+
+        Assert.Equal(2, log.Lines.Count);
+        Assert.All(log.Lines, line => Assert.StartsWith("Reading focus and caret failed", line, StringComparison.Ordinal));
+    }
+
     private sealed class CapturingLogger : ILogger
     {
         public List<string> Lines { get; } = [];

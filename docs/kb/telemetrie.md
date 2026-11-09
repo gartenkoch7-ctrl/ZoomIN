@@ -122,6 +122,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.tracking.read_duration` | ms | – | Eine Abfrage von Fokus und Caret; lange Werte = App antwortet langsam |
 | `zoomin.tracking.caret_sources` | Quellen | `process.name`, `zoomin.caret.source` (`system`, `msaa`, `uia`, `estimated`, `cell`) | Caret-Quelle zum ersten Mal in einem Prozess gesehen (dazu Log 2002) |
 | `zoomin.tracking.chromium_nudges` | Fenster | – | Chromium-Inhaltsfenster nach IAccessible2 gefragt |
+| `zoomin.tracking.read_failures` | Abfragen | `exception.type` | Abfrage von Fokus und Caret mit unerwarteter Ausnahme abgebrochen; Tracking läuft mit Systemcaret weiter (dazu Log 2003, einmal je Ausnahmetyp) |
 | `zoomin.tracking.anchor_switches` | Wechsel | `zoomin.anchor.source` (`mouse`, `focus`, `caret`) | Ansicht folgt jetzt Maus, Fokus oder Caret (Render-Thread, ohne Allokation) |
 | `zoomin.render.smart_invert_gpu_time` | ms | `zoomin.monitor` | Mittlere Zusatz-GPU-Zeit des intelligenten Invertierens: Umgebungs-Durchgang (Mittel über 120 Läufe) plus Mehrkosten im Magnify-Durchgang (seit M14 je Pipeline gemessen, 32 Frames schlicht gegen intelligent nach 60 Frames Aufwärmen, erneut wenn der ganze Monitor intelligent wird); > 1 ms → Rückfall (Log 3007) |
 | `zoomin.render.gpu_time` | ms | `zoomin.monitor`, `zoomin.pass` (`magnify`) | Mittlere GPU-Zeit eines Durchgangs über 120 Frames (M14); Zeitstempel-Abfragen laufen nur, solange jemand das Instrument abonniert (Diagnose, OTLP). Durchgänge überlappen nicht: kein Gesamt-Frame-Wert, weil verschachtelte Disjoint-Abfragen nicht überall erlaubt sind |
@@ -169,6 +170,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1301 | Debug | Hotkey {Gesture} registered |
 | 2001 | Fehler | UI Automation is unavailable; focus tracking is off |
 | 2002 | Info | Caret source in {Process}: {Source} |
+| 2003 | Fehler | Reading focus and caret failed; tracking goes on with the system caret |
 | 2101 | Warnung | MagInitialize failed: the system pointer stays visible while zoomed |
 | 2201 | Warnung | Hotkey {Gesture} is already in use by another application |
 | 2202 | Fehler | Hotkey handler failed |

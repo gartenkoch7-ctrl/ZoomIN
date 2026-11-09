@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using Windows.Win32;
 using Windows.Win32.System.Com;
 using Windows.Win32.UI.Accessibility;
@@ -58,7 +57,7 @@ public sealed unsafe class UiaTrackingSource : ITrackingSource
         while (!_stop.Wait(Interval))
         {
             var readStart = Stopwatch.GetTimestamp();
-            var next = reader?.Read() ?? new FocusReading(null, GuiThreadCaret.Read(out _), CaretEstimated: false);
+            var next = Read(reader, telemetry);
             if (reader is not null)
             {
                 telemetry.Observe(reader.LastProcessId, reader.LastSource, Stopwatch.GetElapsedTime(readStart).TotalMilliseconds);
@@ -95,13 +94,32 @@ public sealed unsafe class UiaTrackingSource : ITrackingSource
         }
     }
 
+    private static FocusReading Read(FocusReader? reader, TrackingTelemetry telemetry)
+    {
+        if (reader is not null)
+        {
+            try
+            {
+                return reader.Read();
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                // Readings go into other applications; an exception escaping this thread would end
+                // ZoomIN, and the watchdog restart would meet the same window again.
+                telemetry.ReadFailed(ex);
+            }
+        }
+
+        return new FocusReading(null, GuiThreadCaret.Read(out _), CaretEstimated: false);
+    }
+
     private FocusReader? CreateReader()
     {
         try
         {
             return new FocusReader((IUIAutomation)new CUIAutomation());
         }
-        catch (COMException ex)
+        catch (Exception ex) when (ComFailure.IsAnswer(ex))
         {
             _log.AutomationUnavailable(ex);
             return null;

@@ -35,6 +35,8 @@ internal sealed class FocusReader : IDisposable
 
     public FocusReading Read()
     {
+        // Reset first: a reading that throws must not leave the previous window's source behind.
+        LastSource = CaretSource.None;
         var caret = GuiThreadCaret.Read(out var window);
         var source = caret is null ? CaretSource.None : CaretSource.System;
         LastProcessId = ProcessOf(window);
@@ -65,7 +67,7 @@ internal sealed class FocusReader : IDisposable
             LastSource = IsCell(caret) ? CaretSource.Cell : source;
             return new FocusReading(focus, caret, IsCell(caret));
         }
-        catch (Exception ex) when (ex is COMException or InvalidCastException)
+        catch (Exception ex) when (ComFailure.IsAnswer(ex))
         {
             // Focus in a window that does not answer (or just closed): only the caret this time.
             LastSource = IsCell(caret) ? CaretSource.Cell : source;

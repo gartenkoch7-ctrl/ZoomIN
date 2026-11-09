@@ -62,7 +62,7 @@ internal static unsafe class UiaTextCaret
                 ? LastSelection(pattern)
                 : null;
         }
-        catch (Exception ex) when (ex is COMException or InvalidCastException)
+        catch (Exception ex) when (ComFailure.IsAnswer(ex))
         {
             return null;
         }

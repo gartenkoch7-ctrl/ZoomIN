@@ -98,9 +98,10 @@ internal sealed unsafe class ChromiumAccessibility
                 Marshal.Release((nint)result);
             }
         }
-        catch (Exception ex) when (ex is COMException or InvalidCastException)
+        catch (Exception ex) when (ComFailure.IsAnswer(ex))
         {
-            // Older Chromium without IAccessible2 or a window that just closed: nothing to switch on.
+            // Older Chromium without IAccessible2, a window that just closed, or one that answers
+            // E_INVALIDARG: nothing to switch on.
         }
         finally
         {

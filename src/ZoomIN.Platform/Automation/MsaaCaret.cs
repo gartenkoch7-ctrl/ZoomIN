@@ -42,7 +42,7 @@ internal static class MsaaCaret
                 ? null
                 : new PhysicalRect(left, top, Math.Max(width, 1), Math.Max(height, 1));
         }
-        catch (Exception ex) when (ex is COMException or InvalidCastException or ArgumentException)
+        catch (Exception ex) when (ComFailure.IsAnswer(ex))
         {
             // No caret object, or the window just closed.
             return null;
