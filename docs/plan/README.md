@@ -76,4 +76,4 @@ Vorgemerkt sind diese Features, nach Wichtigkeit geordnet (Priorisierung vom 202
 10. Ausschnitt einfrieren und Monitor wechseln
 
 Empfohlener nächster Meilenstein: **„Ruhige Ansicht & Orientierung“** mit den Features 1, 2 und 6.
-Punkte, Begründung und Bündel stehen im Abschnitt „Priorisierung“ der Ideenliste.
+Punkte, Potenzial, Bündel und Empfehlung: [../kb/feature-priorisierung.md](../kb/feature-priorisierung.md).
