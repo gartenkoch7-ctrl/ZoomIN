@@ -12,7 +12,8 @@ Thematisch aufgeteilt, damit Agents nur laden, was sie brauchen. Jede Datei blei
 | [eingabe-und-tracking.md](eingabe-und-tracking.md) | Maus, Fokus, Textcursor, Klick-Mapping, Hotkeys |
 | [performance.md](performance.md) | Budgets, Messung, Regeln für den Hot Path |
 | [supernova-analyse.md](supernova-analyse.md) | Black-Box-Beobachtungen zum Vorbild |
-| [feature-ideen-magnifier.md](feature-ideen-magnifier.md) | Recherche: was andere Lupen können und ZoomIN fehlt; bewertet und nach Wichtigkeit priorisiert |
+| [feature-ideen-magnifier.md](feature-ideen-magnifier.md) | Recherche: was andere Lupen können und ZoomIN fehlt (Nutzen, Größe, Machbarkeit, Quellen) |
+| [feature-priorisierung.md](feature-priorisierung.md) | Vorgemerkte Features nach Wichtigkeit und Potenzial bewertet, Empfehlung |
 | [testumgebung.md](testumgebung.md) | Vorhandene Hardware, Teststrategie, was ungetestet bleibt |
 | [build-und-tooling.md](build-und-tooling.md) | .NET-10-Tests (MTP), WinUI 3 unpackaged, Analyzer |
 | [telemetrie.md](telemetrie.md) | Logs, Abläufe, Messwerte: Ablage, Stufen, EventId-Bereiche, Katalog |

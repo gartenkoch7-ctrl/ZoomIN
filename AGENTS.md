@@ -216,3 +216,42 @@ git config core.hooksPath .githooks           # Pre-Commit-Hook aktivieren (einm
   (UAC-Abfrage). Nicht darum herumarbeiten und nicht ohne Bestätigung erhöhen.
 - **Was ein Mensch sehen muss** (das Overlay ist aus Aufnahmen ausgenommen): erst den
   Debug-Schnappschuss nutzen; nur wenn das nicht reicht, den Nutzer um eine Sichtprüfung bitten.
+
+---
+
+## 11. Parallel arbeiten (Zeit sparen)
+
+Bei **jedem** Plan und vor jeder Umsetzung prüfen: Was davon kann gleichzeitig laufen?
+
+### Im Plan
+- Jede Meilensteindatei hat einen Abschnitt **„Parallelisierung“** mit:
+  - **Spuren:** je Spur Inhalt, Branch, Start, worauf sie wartet, EventId-Bereich
+  - einem kleinen Ablaufbild
+  - **Schritt 0:** gemeinsame Bausteine, die mehrere Spuren brauchen. Sie kommen zuerst und
+    nacheinander.
+  - **Exklusiv-Dateien:** gehören genau einer Spur
+  - **Hotspots:** Dateien, die alle Spuren nur ergänzend ändern, etwa Einstellungen, Texte,
+    Kürzel, Telemetrie-Katalog
+  - **Merge-Reihenfolge**
+- Zwei Spuren, die dieselbe Exklusiv-Datei ändern müssen, werden **eine** Spur, die nacheinander
+  arbeitet.
+- **EventId-Bereiche** werden im Plan je Spur vergeben, damit es keine Doppelbelegung gibt.
+
+### In der Umsetzung
+1. **Integrationsbranch** je Meilenstein (`feat/mNN-…` von `develop`). Die steuernde Sitzung
+   setzt dort Schritt 0 um, mit Review-Schleife nach §9.
+2. **Spuren** laufen als Subagenten mit eigenem Worktree (`isolation: worktree`) oder als eigene
+   Sitzungen. Jede Spur:
+   - hat einen eigenen Branch vom Integrationsbranch (`feat/mNN-<id>-…`)
+   - hält Build, Tests, `check-file-length.ps1` und ihre eigene Review-Schleife (§9) ein
+   - committet und pusht nur auf ihren Branch
+   - hakt nur ihre eigene Feature-Datei ab
+3. **Zusammenführen an einem Strang:** Die steuernde Sitzung mergt die Spuren in der
+   Merge-Reihenfolge in den Integrationsbranch. Nach jedem Merge laufen Build und Tests, Konflikte
+   in Hotspots löst sie dort.
+4. Danach **Gesamt-Review** des ganzen Meilensteins (§9) und Akzeptanzprüfung. Der Merge nach
+   `develop` braucht die Freigabe des Nutzers (§9.5).
+5. Gleichzeitig laufen nur Spuren mit **getrennten Exklusiv-Dateien**. Im Zweifel nacheinander:
+   Ein Merge-Konflikt kostet mehr als die gesparte Zeit.
+6. Spuren des **nächsten** Meilensteins dürfen früher starten, wenn ihre Exklusiv-Dateien frei
+   sind. Gemergt wird trotzdem erst in dessen Integrationsbranch.
