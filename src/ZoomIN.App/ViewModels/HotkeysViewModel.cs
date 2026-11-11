@@ -5,6 +5,7 @@ using ZoomIN.App.Localization;
 using ZoomIN.App.Settings;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Hotkeys;
+using ZoomIN.Core.Tracking;
 
 namespace ZoomIN.App.ViewModels;
 
@@ -16,14 +17,22 @@ public sealed partial class HotkeysViewModel : ObservableObject
 {
     private readonly SettingsService _settings;
     private readonly HotkeyBindings _hotkeys;
+    private readonly bool _ready;
     private HotkeyRow? _recording;
 
     public HotkeysViewModel(SettingsService settings, HotkeyBindings hotkeys)
     {
         _settings = settings;
         _hotkeys = hotkeys;
+        var key = settings.Current.MarkerHoldKey;
+        HoldKeyIndex = Enum.IsDefined(key) ? (int)key : 0;
+        _ready = true;
         Refresh();
     }
+
+    /// <summary>Key that shows highlights set to "only while held" (E1); shared by all profiles.</summary>
+    [ObservableProperty]
+    public partial int HoldKeyIndex { get; set; }
 
     public ObservableCollection<HotkeyRow> Rows { get; } = [];
 
@@ -77,6 +86,16 @@ public sealed partial class HotkeysViewModel : ObservableObject
 
         Finish((row.Binding, gesture));
         return true;
+    }
+
+    // −1 = no selection (the ComboBox unloads): not a choice. The constructor only shows the setting.
+    partial void OnHoldKeyIndexChanged(int value)
+    {
+        var key = (MarkerHoldKey)value;
+        if (_ready && value >= 0 && Enum.IsDefined(key) && key != _settings.Current.MarkerHoldKey)
+        {
+            _settings.Update(s => s with { MarkerHoldKey = key });
+        }
     }
 
     private void Finish((HotkeyBinding Binding, HotkeyGesture Gesture)? change)

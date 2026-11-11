@@ -1,5 +1,6 @@
 using Vortice.Direct3D11;
 using ZoomIN.Core.Modes;
+using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Viewport;
 using ZoomIN.Rendering.Gpu;
@@ -8,13 +9,13 @@ namespace ZoomIN.Rendering.RenderLoop;
 
 /// <summary>
 /// Focus frame (magenta, M6) and caret marker (shape, colour and thickness from the profile, E2),
-/// drawn on the magnified image. Runs every frame: no allocations.
+/// drawn on the magnified image and faded under their show conditions (E1). Runs every frame: no
+/// allocations.
 /// </summary>
 internal sealed class HighlightLayer
 {
     private const double FrameWidth = 3;
     private const double FrameGap = 2;
-    private static readonly FrameColor s_magenta = new(1.0f, 0.0f, 1.0f, 1.0f);
 
     private readonly CursorPass _pass;
     private readonly HighlightMetrics _metrics;
@@ -25,8 +26,9 @@ internal sealed class HighlightLayer
         _metrics = metrics;
     }
 
+    /// <param name="alphas">Opacity per highlight from its show condition (E1).</param>
     public void Draw(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor,
-        in ModeFrame frame, TrackingSnapshot tracking, TrackingOptions options)
+        in ModeFrame frame, TrackingSnapshot tracking, TrackingOptions options, MarkerAlphas alphas)
     {
         if (!options.Enabled)
         {
@@ -35,7 +37,7 @@ internal sealed class HighlightLayer
 
         try
         {
-            DrawMarks(context, target, monitor, frame, tracking, options);
+            DrawMarks(context, target, monitor, frame, tracking, options, alphas.Focus, alphas.Caret);
         }
         finally
         {
@@ -44,23 +46,23 @@ internal sealed class HighlightLayer
     }
 
     private void DrawMarks(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor,
-        in ModeFrame frame, TrackingSnapshot tracking, TrackingOptions options)
+        in ModeFrame frame, TrackingSnapshot tracking, TrackingOptions options, double focusAlpha, double caretAlpha)
     {
-        if (options.FocusFrame && tracking.Focus is { } focus && FrameMapping.Intersects(focus, frame.Source))
+        if (options.FocusFrame && focusAlpha > 0 && tracking.Focus is { } focus && FrameMapping.Intersects(focus, frame.Source))
         {
             var r = Expand(FrameMapping.Map(frame, focus), FrameGap + FrameWidth);
             _pass.DrawRect(context, target, (float)(r.X - monitor.X), (float)(r.Y - monitor.Y), (float)r.Width, (float)r.Height,
-                CursorConstants.ForRect((float)(FrameWidth / r.Width), (float)(FrameWidth / r.Height), s_magenta));
+                CursorConstants.ForRect((float)(FrameWidth / r.Width), (float)(FrameWidth / r.Height), FrameColor.From(RgbColor.Magenta, focusAlpha)));
         }
 
-        if (CaretMarkerGeometry.TryGetCaret(tracking, options, out var caret))
+        if (caretAlpha > 0 && CaretMarkerGeometry.TryGetCaret(tracking, options, out var caret))
         {
-            DrawCaret(context, target, monitor, frame, caret, options.CaretStyle);
+            DrawCaret(context, target, monitor, frame, caret, options.CaretStyle, caretAlpha);
         }
     }
 
     private void DrawCaret(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor,
-        in ModeFrame frame, PhysicalRect caret, CaretMarkerStyle style)
+        in ModeFrame frame, PhysicalRect caret, CaretMarkerStyle style, double alpha)
     {
         // The visible area: the whole monitor in fullscreen, otherwise lens or strip.
         var shown = FrameMapping.Map(frame, caret);
@@ -70,7 +72,7 @@ internal sealed class HighlightLayer
         }
 
         var parts = CaretMarkerGeometry.Compute(shown, FrameMapping.Scale(frame), style.Shape, style.Thickness, frame.Target);
-        var color = FrameColor.From(style.Color, CaretMarkerStyle.Opacity);
+        var color = FrameColor.From(style.Color, CaretMarkerStyle.Opacity * alpha);
         var a = parts.First;
         var x = (float)(a.X - monitor.X);
         var y = (float)(a.Y - monitor.Y);

@@ -116,10 +116,18 @@ public sealed class CaretMarkerShapeTests
         gpu.Context.ClearRenderTargetView(target.View, new Color4(0, 0, 0, 0));
 
         layer.Draw(gpu.Context, target.View, s_monitor, Frame(), new TrackingSnapshot(null, 0, s_caret, 1, CaretEstimated: true),
-            TrackingOptions.Default);
+            TrackingOptions.Default, Shown());
         var pixels = target.ReadBack(gpu.Device, gpu.Context);
 
         Assert.Equal(0, pixels.At(31, 30).A);
+    }
+
+    // Every highlight fully shown (show condition "always", E1).
+    private static MarkerAlphas Shown()
+    {
+        var alphas = new MarkerAlphas();
+        alphas.Update(ShowCondition.Always, ShowCondition.Always, ShowCondition.Always, default, 0, 1);
+        return alphas;
     }
 
     private static ModeFrame Frame() =>
@@ -135,7 +143,7 @@ public sealed class CaretMarkerShapeTests
         gpu.Context.ClearRenderTargetView(target.View, new Color4(0, 0, 0, 0));
 
         layer.Draw(gpu.Context, target.View, s_monitor, Frame(), new TrackingSnapshot(null, 0, caret, 1),
-            TrackingOptions.Default with { CaretStyle = style });
+            TrackingOptions.Default with { CaretStyle = style }, Shown());
         return target.ReadBack(gpu.Device, gpu.Context);
     }
 

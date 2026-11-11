@@ -89,6 +89,8 @@ public sealed class RenderLayersAllocationTests
         var frame = ModeGeometry.Compute(ZoomMode.Fullscreen, s_monitor, new PhysicalPoint(32, 32), 2, LensSize.Default, DockLayout.Default);
         var tracking = new TrackingSnapshot(new PhysicalRect(20, 20, 20, 10), 1, new PhysicalRect(30, 22, 1, 8), 1);
         var options = TrackingOptions.Default with { CaretStyle = CaretMarkerStyle.Default with { Shape = shape } };
+        var alphas = new MarkerAlphas(); // E1: drawn with the opacities of the show conditions
+        alphas.Update(ShowCondition.Always, ShowCondition.Always, ShowCondition.Always, default, 0, 1);
 
         // The caret shape counter records with someone listening (OTLP on), as the render loop would.
         // Only this layer's monitor counts: other tests may draw carets at the same time.
@@ -115,11 +117,11 @@ public sealed class RenderLayersAllocationTests
         });
         listener.Start();
 
-        layer.Draw(gpu.Context, target.View, s_monitor, frame, tracking, options);
+        layer.Draw(gpu.Context, target.View, s_monitor, frame, tracking, options, alphas);
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var i = 0; i < Frames; i++)
         {
-            layer.Draw(gpu.Context, target.View, s_monitor, frame, tracking, options);
+            layer.Draw(gpu.Context, target.View, s_monitor, frame, tracking, options, alphas);
         }
 
         Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
@@ -143,7 +145,7 @@ public sealed class RenderLayersAllocationTests
         // The locator was just requested, so the ring animates in every measured frame.
         var locate = Stopwatch.GetTimestamp();
         bool Draw(int i) => layer.Draw(gpu.Context, target.View, s_monitor, frame, ZoomMode.Fullscreen, 2,
-            new PhysicalPoint(30 + (i % 4), 32), effects, locate, hidden: false);
+            new PhysicalPoint(30 + (i % 4), 32), effects, locate, hidden: false, crosshairAlpha: 1);
 
         // Warm-up: JIT and every pointer position of the loop once.
         for (var i = 0; i < 4; i++)

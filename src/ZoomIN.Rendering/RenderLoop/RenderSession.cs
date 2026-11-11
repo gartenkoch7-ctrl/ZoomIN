@@ -38,6 +38,7 @@ internal sealed class RenderSession : IDisposable
     private readonly SnapshotTaker _snapshots;
     private readonly AnchorController _anchors = new();
     private readonly FrameChangeTracker _changes = new();
+    private readonly MarkerAlphas _alphas = new();
     private readonly int _displayGeneration;
     private PhysicalPoint _lastCursor;
     private bool _cursorInside;
@@ -169,8 +170,11 @@ internal sealed class RenderSession : IDisposable
 
         var frame = ModeGeometry.Compute(request.Mode, _monitor.Bounds, anchor, request.Zoom, request.Lens, request.Dock);
         var shape = _pointer.Shapes.TryGetCurrent(out var handle) ? handle : 0;
-        // The desktop layer (and its smoothing) only runs while the desktop is drawn.
-        var animating = LocatorActive || (!request.OverlayOnly && _desktop.SmartSettling);
+        // The desktop layer (and its smoothing) only runs while the desktop is drawn. A highlight
+        // fading in or out under its show condition (E1) also needs the frame drawn.
+        var fading = _alphas.Update(request.Effects.Cursor, request.Zoom, request.TrackingOptions, request.Activity,
+            Stopwatch.GetTimestamp(), Stopwatch.Frequency);
+        var animating = LocatorActive || fading || (!request.OverlayOnly && _desktop.SmartSettling);
         var changes = _changes.Compare(newImage, request, frame, _cursorInside, _lastCursor, shape,
             animating, _snapshots.IsRequested, _shown);
         if (!changes.NeedsRedraw)
@@ -197,10 +201,10 @@ internal sealed class RenderSession : IDisposable
                 _monitor.Bounds, frame, request.Effects, request.Windows, request.WindowsFiltered, newImage);
         }
 
-        _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions);
+        _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions, _alphas);
         LocatorActive = _cursorInside && _cursorLayer.Draw(
             _gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Mode, request.Zoom, _lastCursor,
-            request.Effects, request.LocateRequestedAt, request.PointerHidden);
+            request.Effects, request.LocateRequestedAt, request.PointerHidden, _alphas.Crosshair);
         _snapshots.TakeIfRequested(_gpu.Device, _gpu.Context, request.OverlayOnly ? null : _duplicator.ShaderResource,
             _swapchain.RenderTarget, weights, _monitor.Bounds, frame.Source, request);
         Present();

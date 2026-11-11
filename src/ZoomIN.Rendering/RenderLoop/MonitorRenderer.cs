@@ -173,7 +173,7 @@ internal sealed class MonitorRenderer : IDisposable
             var mode = unzoomed ? ZoomMode.Fullscreen : _model.Mode;
             var request = new FrameRequest(mode, animator.Current, _model.Lens, _model.Dock, effects,
                 _effects.LocateRequestedAt, _tracking.Snapshot, _tracking.Options, _effects.PointerHiddenByTyping,
-                windows, windowsFiltered);
+                windows, windowsFiltered, _models.Markers.Sample);
             var wasVisible = session.IsVisible;
             _stats.Record(session.RenderFrame(request), !wasVisible && session.IsVisible);
 

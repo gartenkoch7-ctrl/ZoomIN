@@ -14,6 +14,20 @@ public class MarkerBenchmarks
         CaretStyle = CaretMarkerStyle.Default with { Shape = CaretMarkerShape.Wedges },
     };
 
+    private readonly MarkerActivity _activity = new();
+    private readonly MarkerAlphas _alphas = new();
+    private readonly Core.Pointer.PointerStyle _cursor = Core.Pointer.PointerStyle.Default with
+    {
+        CrosshairEnabled = true,
+        CrosshairShow = ShowCondition.Idle,
+    };
+
+    private readonly TrackingOptions _conditions = TrackingOptions.Default with
+    {
+        CaretShow = ShowCondition.Moving,
+        FocusFrameShow = ShowCondition.HoldKey,
+    };
+
     private int _frame;
 
     /// <summary>Snapshot read and geometry of every caret shape (HighlightLayer, E2).</summary>
@@ -29,5 +43,21 @@ public class MarkerBenchmarks
         var shape = (CaretMarkerShape)(_frame % 4);
         var zoom = 1 + (_frame % 16);
         return CaretMarkerGeometry.Compute(caret, zoom, shape, _options.CaretStyle.Thickness, _monitor).First.X;
+    }
+
+    /// <summary>Activity read and the show-condition decision with fading for all three highlights (RenderSession, E1).</summary>
+    [Benchmark]
+    public double ShowConditions()
+    {
+        _frame++;
+        if (_frame % 8 == 0)
+        {
+            _activity.Moved();
+        }
+
+        // The overload RenderSession calls, with every highlight on and a different condition each.
+        _alphas.Update(_cursor, 4, _conditions, _activity.Sample,
+            System.Diagnostics.Stopwatch.GetTimestamp(), System.Diagnostics.Stopwatch.Frequency);
+        return _alphas.Crosshair + _alphas.Caret + _alphas.Focus;
     }
 }

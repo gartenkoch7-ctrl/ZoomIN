@@ -4,6 +4,7 @@ using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Settings;
+using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Updates;
 using ZoomIN.Core.WindowFilters;
 using ZoomIN.Core.Zoom;
@@ -81,6 +82,13 @@ public static class SecureSettingsSanitizer
             CaretMarkerShape = Defined(s.CaretMarkerShape, d.CaretMarkerShape),
             CaretMarkerColor = Color(s.CaretMarkerColor, d.CaretMarkerColor),
             CaretMarkerThickness = Defined(s.CaretMarkerThickness, d.CaretMarkerThickness),
+
+            // Show conditions (E1) need the input hooks, which see little on the secure desktop:
+            // there every highlight is simply always shown (plan decision).
+            CrosshairShow = ShowCondition.Always,
+            CaretMarkerShow = ShowCondition.Always,
+            FocusFrameShow = ShowCondition.Always,
+            MarkerHoldKey = Defined(s.MarkerHoldKey, d.MarkerHoldKey),
             AnimationMilliseconds = Math.Clamp(s.AnimationMilliseconds, 0, 500),
             ToggleHotkey = Hotkey(s.ToggleHotkey, d.ToggleHotkey),
             ZoomInHotkey = Hotkey(s.ZoomInHotkey, d.ZoomInHotkey),

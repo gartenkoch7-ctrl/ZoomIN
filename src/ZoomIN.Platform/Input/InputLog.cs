@@ -1,9 +1,10 @@
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Hotkeys;
+using ZoomIN.Core.Tracking;
 
 namespace ZoomIN.Platform.Input;
 
-/// <summary>Log messages of hotkeys and input hooks (event ids 2200–2299); never per key or mouse move.</summary>
+/// <summary>Log messages of hotkeys and input hooks (event ids 2200–2299, hold key 2950–2959); never per key or mouse move.</summary>
 internal static partial class InputLog
 {
     [LoggerMessage(EventId = 2201, Level = LogLevel.Warning, Message = "Hotkey {Gesture} is already in use by another application")]
@@ -23,4 +24,20 @@ internal static partial class InputLog
 
     [LoggerMessage(EventId = 2206, Level = LogLevel.Error, Message = "Wheel zoom handler failed")]
     public static partial void WheelHandlerFailed(this ILogger logger, Exception exception);
+
+    // Hold key of the highlights (E1, M18 lane C: 2950–2959).
+    [LoggerMessage(EventId = 2950, Level = LogLevel.Information, Message = "Hold key hook started for {Key}")]
+    public static partial void HoldKeyHookStarted(this ILogger logger, MarkerHoldKey key);
+
+    [LoggerMessage(EventId = 2951, Level = LogLevel.Information, Message = "Hold key hook stopped")]
+    public static partial void HoldKeyHookStopped(this ILogger logger);
+
+    [LoggerMessage(EventId = 2952, Level = LogLevel.Error, Message = "Installing the hold key hook failed; highlights shown only while a key is held stay hidden")]
+    public static partial void HoldKeyHookUnavailable(this ILogger logger);
+
+    [LoggerMessage(EventId = 2953, Level = LogLevel.Error, Message = "Hold key handler failed")]
+    public static partial void HoldKeyHandlerFailed(this ILogger logger, Exception exception);
+
+    [LoggerMessage(EventId = 2954, Level = LogLevel.Warning, Message = "Hold key is down but the hook saw no press; following the key state instead")]
+    public static partial void HoldKeyHookMissedPress(this ILogger logger);
 }

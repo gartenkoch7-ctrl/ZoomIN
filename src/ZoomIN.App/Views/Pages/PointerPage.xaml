@@ -124,6 +124,18 @@
                     <ComboBoxItem Content="{x:Bind loc:Text.Get('Crosshair.Always')}" />
                 </ComboBox>
             </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('MarkerShow.Crosshair.Desc')}" Glyph="&#xE7B3;" Header="{x:Bind loc:Text.Get('MarkerShow')}">
+                <ComboBox
+                    MinWidth="200"
+                    AutomationProperties.Name="{x:Bind loc:Text.Get('MarkerShow.Crosshair')}"
+                    IsEnabled="{x:Bind Vm.CrosshairOn, Mode=OneWay}"
+                    SelectedIndex="{x:Bind Vm.CrosshairShowIndex, Mode=TwoWay}">
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Show.Always')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Show.Idle')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Show.Moving')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Show.HoldKey')}" />
+                </ComboBox>
+            </c:SettingCard>
             <c:SettingCard Glyph="&#xE2B1;" Header="{x:Bind loc:Text.Get('PointerCrosshairColor')}">
                 <c:ColorChooser Color="{x:Bind Vm.CrosshairColor, Mode=TwoWay}" IsEnabled="{x:Bind Vm.CrosshairOn, Mode=OneWay}" />
             </c:SettingCard>

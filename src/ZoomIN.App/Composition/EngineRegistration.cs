@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using ZoomIN.App.Markers;
 using ZoomIN.App.Settings;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Diagnostics;
@@ -62,6 +63,8 @@ internal static class EngineRegistration
         services.AddSingleton<IHotkeyService, Win32HotkeyService>();
         services.AddSingleton<IMouseWheelHook, Win32WheelHook>();
         services.AddSingleton<IInputActivitySource, Win32InputActivityHook>();
+        services.AddSingleton<IHoldKeySource, Win32HoldKeyHook>();
+        services.AddSingleton<MarkerInput>();
         services.AddSingleton<ITrackingSource, UiaTrackingSource>();
         services.AddSingleton<IWindowFilterSource, Win32WindowFilterSource>();
 

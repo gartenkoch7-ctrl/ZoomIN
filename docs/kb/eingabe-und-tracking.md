@@ -211,6 +211,52 @@ Globale Kürzel per `RegisterHotKey`, Mausrad per `WH_MOUSE_LL`.
   UIA-Anbieter) wird jetzt mit dem Zoom breiter (8× → 8 px statt 4 px).
 - Geschätzter Caret (`CaretEstimated`) wird weiter nicht markiert (`CaretMarkerGeometry.TryGetCaret`).
 
+### Anzeige-Bedingungen und Haltetaste (E1, M18)
+- Fadenkreuz, Caret-Markierung und Fokusrahmen haben je eine Bedingung (Profil): **immer** (Werk),
+  **nur in Ruhe**, **nur in Bewegung**, **nur bei gehaltener Taste**.
+- „In Ruhe“ = seit 1 s keine Mausbewegung und kein Tippen (Grenze: genau 1 s gilt als Ruhe).
+  „In Bewegung“ ist das Gegenteil – Tippen zählt auch, nicht nur die Maus.
+- Haltetaste (für alle Profile, Seite „Tastenkürzel“): Strg, Umschalt oder Alt, links oder rechts,
+  Werk **Umschalt rechts**. Der LL-Hook meldet seitenspezifische Codes (`VK_RSHIFT` usw.), nie
+  das allgemeine `VK_SHIFT`.
+- Gegen Aufblitzen beim Großschreiben: Die Taste zählt erst nach **250 ms**, und wird während des
+  Haltens eine andere (Nicht-Modifier-)Taste gedrückt, zählt dieses Halten gar nicht mehr, bis die
+  Taste losgelassen wird. Modifier zählen nicht als Tippen: Alt Gr schickt ein linkes Strg mit,
+  auch bei Tastenwiederholung, und würde sonst „Alt rechts halten“ abbrechen.
+- Eigener Hook `Platform/Input/Win32HoldKeyHook` (WH_KEYBOARD_LL, eigener Thread), getrennt vom
+  Aktivitäts-Hook, damit beide unabhängig geändert werden können. Er läuft nur, solange eine
+  Markierung auf „Haltetaste“ steht (`App/Markers/MarkerInput`), und lässt jede Taste unverändert
+  durch. Mausbewegung und Tippen kommen aus dem bestehenden Aktivitäts-Hook (`PointerActivity`).
+- Render-Thread: `MarkerActivity.Sample` (drei `long`: letzte Aktivität, Haltebeginn, letztes Haltesignal; ohne Lock) und `MarkerAlphas` entscheiden je
+  Frame. Statt eines veröffentlichten Sichtbarkeits-Snapshots (Plan) rechnet der Render-Thread
+  selbst – sonst bräuchte der Wechsel nach 1 s Ruhe einen eigenen Timer-Thread. Der Leerlauf-Pfad
+  (M14) läuft ohnehin jede Bildwiederholung, eine laufende Überblendung (100 ms) zählt als
+  Animation und erzwingt das Zeichnen.
+- Tastenwiederholung allein reicht nicht (Wiederholung aus bei „Filtertasten“, ein zweiter Modifier
+  übernimmt die Wiederholung) und ein Loslassen kann verloren gehen (Win+L, Fenster mit höheren
+  Rechten). Darum prüft der Hook während des Haltens alle 400 ms den echten Tastenzustand
+  (`GetAsyncKeyState`): gedrückt = Halten bestätigt, los = Halten beendet. Kommt 1,5 s gar kein
+  Signal (Hook entfernt), zählt das Halten nicht mehr; der nächste Druck beginnt neu. Ein Wechsel
+  der Haltetaste vergisst ein laufendes Halten. Schlägt das Setzen des Hooks fehl, versucht es die
+  nächste Änderung einer Bedingung erneut (nicht jeder Schieberegler-Schritt). Entfernt Windows den
+  Hook still (zu langsam unter Last), merkt die Zustandsprüfung „Taste unten, Hook sah nichts“
+  (Log 2954) und folgt dann dem Tastenzustand – nur die Tipp-Erkennung fehlt dann.
+- Offen: „In Ruhe/In Bewegung“ zählen nur Mausbewegung und Tippen ohne Strg/Alt; Mausrad, Klicks
+  und Tastenkürzel zählen nicht als Aktivität.
+- Offen: Mausklicks und Mausrad beenden ein Halten nicht. Strg als Haltetaste + Strg+Mausrad-Zoom
+  oder Umschalt + Klick zeigt die Markierungen nach 250 ms – mit Nutzern prüfen.
+- Alt Gr schickt ein linkes Strg mit Scan-Code 0x21D; das zählt nie als Haltetaste „Strg links“.
+- Strg als Haltetaste: Das Loslassen nach einem echten Halten (≥ 250 ms) löst nicht zusätzlich die
+  Zeiger-Suchhilfe „Strg allein“ aus (`MarkerActivity.ConsumeHoldEnd`, 500 ms, einmalig) – egal,
+  welcher der beiden LL-Hooks das Loslassen zuerst sieht.
+- Alt als Haltetaste: Weil die Taste nie verschluckt wird, öffnet Alt allein beim Loslassen in vielen
+  Programmen das Menü. Steht im Hilfetext; Abhilfe nur durch Verschlucken, was ausgeschlossen ist.
+- Eine Markierung, die aus ist (oder Tracking aus, Fadenkreuz bei 1× nicht gezeigt), steht auf
+  Deckkraft 0: Ihre Bedingung startet keinen Hook und erzwingt keine Frames. Eingeschaltet blendet
+  sie in 100 ms ein, statt kurz voll aufzublitzen.
+- Sicherer Bildschirm: Der Sanitizer setzt alle drei Bedingungen auf „immer“ – dort sehen die
+  Hooks zu wenig.
+
 ### Fixpunkt ≠ Bildmitte (Ursache „Fokus landet am Rand“, behoben 2026-11-03)
 Die Geometrie (`ModeGeometry`) vergrößert um einen **Fixpunkt**, und der wird dort gezeigt, wo er
 auf dem Desktop liegt (ADR-0003). Bis dahin wurde die Fokusmitte direkt als Fixpunkt benutzt –

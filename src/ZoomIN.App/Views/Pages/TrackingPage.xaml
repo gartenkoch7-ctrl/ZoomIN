@@ -35,8 +35,32 @@
             <c:SettingCard Description="{x:Bind loc:Text.Get('TrackingFocusFrame.Desc')}" Glyph="&#xE91F;" Header="{x:Bind loc:Text.TrackingFocusFrame}">
                 <ToggleSwitch IsOn="{x:Bind Vm.FocusFrame, Mode=TwoWay}" />
             </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('MarkerShow.Desc')}" Glyph="&#xE7B3;" Header="{x:Bind loc:Text.Get('MarkerShow.FocusFrame')}">
+                <ComboBox
+                    MinWidth="200"
+                    AutomationProperties.Name="{x:Bind loc:Text.Get('MarkerShow.FocusFrame')}"
+                    IsEnabled="{x:Bind Vm.FocusFrame, Mode=OneWay}"
+                    SelectedIndex="{x:Bind Vm.FocusFrameShowIndex, Mode=TwoWay}">
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Show.Always')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Show.Idle')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Show.Moving')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Show.HoldKey')}" />
+                </ComboBox>
+            </c:SettingCard>
             <c:SettingCard Description="{x:Bind loc:Text.Get('TrackingCaretMarker.Desc')}" Glyph="&#xE8AC;" Header="{x:Bind loc:Text.TrackingCaretMarker}">
                 <ToggleSwitch IsOn="{x:Bind Vm.CaretMarker, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('MarkerShow.Desc')}" Glyph="&#xE7B3;" Header="{x:Bind loc:Text.Get('MarkerShow.Caret')}">
+                <ComboBox
+                    MinWidth="200"
+                    AutomationProperties.Name="{x:Bind loc:Text.Get('MarkerShow.Caret')}"
+                    IsEnabled="{x:Bind Vm.CaretMarker, Mode=OneWay}"
+                    SelectedIndex="{x:Bind Vm.CaretShowIndex, Mode=TwoWay}">
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Show.Always')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Show.Idle')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Show.Moving')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Show.HoldKey')}" />
+                </ComboBox>
             </c:SettingCard>
 
             <!-- E2: caret marker look with a small preview; the preview's name describes it for screen readers. -->

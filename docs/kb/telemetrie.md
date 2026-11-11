@@ -70,7 +70,7 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | Bereich | Projekt |
 |---|---|
 | 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1640–1659 Markierungen M18) |
-| 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe) |
+| 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe, 2950–2959 Haltetaste M18) |
 | 3000–3999 | Rendering (3240–3259 Markierungen M18) |
 | 4000–4999 | Watchdog |
 | 5000–5999 | Setup |
@@ -136,6 +136,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.windowfilter.regions` | Bereiche | – | Bereiche, die der Shader nach einer Änderung bekommt (höchstens 64) |
 | `zoomin.windowfilter.regions_dropped` | Fenster | – | Fenster über dem Limit von 64 Bereichen, die den Monitorfilter zeigen (je Aktualisierung; dazu Log 2705) |
 | `zoomin.highlight.caret_frames` | Frames | `zoomin.monitor`, `zoomin.highlight.caret_shape` (`bar`, `wedges`, `frame`, `circle`) | Gezeichnete Frames mit Caret-Markierung je Form (E2): welche Form im Einsatz ist. Zählt gezeichnete, nicht sichtbare Frames – Leerlauf-Frames (M14) fehlen, viel Bewegung zählt mehr. Render-Thread, Tags beim Start angelegt, ohne Allokation (`RenderLayersAllocationTests`) |
+| `zoomin.highlight.hold_key_presses` | Drücke | – | Haltetaste für Markierungen gedrückt (E1; Tastenwiederholung zählt nicht, keine Tasteninhalte). Nur solange der Haltetasten-Hook läuft |
 
 ## Katalog: Logmeldungen
 | Id | Stufe | Meldung |
@@ -176,6 +177,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1404 | Info | MCP server started |
 | 1405 | Info | MCP server ended |
 | 1640 | Info | Caret marker changed: {Shape}, {Thickness} – Form oder Dicke auf der Seite „Fokus & Textcursor“ geändert (E2) |
+| 1650 | Info | Show condition of {Marker} changed: {Condition} – `crosshair`, `caret`, `focus_frame`; auch beim Profilwechsel (E1) |
+| 1651 | Info | Hold key changed: {Key} (E1) |
 | 2001 | Fehler | UI Automation is unavailable; focus tracking is off |
 | 2002 | Info | Caret source in {Process}: {Source} |
 | 2003 | Fehler | Reading focus and caret failed; tracking goes on with the system caret |
@@ -228,6 +231,11 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2802 | Info | KI-Debug pipe closed |
 | 2803 | Warnung | KI-Debug connection failed |
 | 2804 | Info | KI-Debug: ZoomIN not reachable ({Reason}) |
+| 2950 | Info | Hold key hook started for {Key} – nur solange eine Markierung „Nur bei gehaltener Taste“ nutzt (E1) |
+| 2951 | Info | Hold key hook stopped (E1) |
+| 2952 | Fehler | Installing the hold key hook failed; highlights shown only while a key is held stay hidden (E1) |
+| 2953 | Fehler | Hold key handler failed (E1) |
+| 2954 | Warnung | Hold key is down but the hook saw no press; following the key state instead – Hook von Windows entfernt oder Taste schon vor dem Start gehalten; einmal je Hook-Start (E1) |
 | 3001 | Info | Zoom pipeline ready for {Monitor} |
 | 3002 | Info | Display changed on {Monitor}: {Reason} |
 | 3003 | Fehler | Zoom pipeline for {Monitor} failed |

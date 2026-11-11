@@ -20,5 +20,26 @@ internal static class TextsGermanMarkers
         ["CaretThickness.Thin"] = "Dünn",
         ["CaretThickness.Medium"] = "Mittel",
         ["CaretThickness.Thick"] = "Dick",
+
+        // E1: show conditions and hold key.
+        ["MarkerShow"] = "Anzeigen",
+        ["MarkerShow.Crosshair"] = "Fadenkreuz anzeigen",
+        ["MarkerShow.Crosshair.Desc"] = "Wann das Fadenkreuz erscheint. In Ruhe: eine Sekunde ohne Mausbewegung und Tippen.",
+        ["MarkerShow.FocusFrame"] = "Fokusrahmen anzeigen",
+        ["MarkerShow.Caret"] = "Textcursor-Markierung anzeigen",
+        ["MarkerShow.Desc"] = "Wann die Markierung erscheint. In Ruhe: eine Sekunde ohne Mausbewegung und Tippen. Die Haltetaste stellen Sie unter „Tastenkürzel“ ein.",
+        ["Show.Always"] = "Immer",
+        ["Show.Idle"] = "Nur in Ruhe",
+        ["Show.Moving"] = "Nur in Bewegung",
+        ["Show.HoldKey"] = "Nur bei gehaltener Taste",
+        ["HoldKey.Group"] = "Markierungen",
+        ["HoldKey"] = "Haltetaste für Markierungen",
+        ["HoldKey.Desc"] = "Solange Sie diese Taste halten, erscheinen Fadenkreuz, Textcursor-Markierung und Fokusrahmen, die auf „Nur bei gehaltener Taste“ stehen. Die Taste wirkt in Programmen weiter wie immer – Alt allein loslassen öffnet daher in vielen Programmen das Menü. Gilt für alle Profile.",
+        ["HoldKey.RightShift"] = "Umschalt rechts",
+        ["HoldKey.LeftShift"] = "Umschalt links",
+        ["HoldKey.RightCtrl"] = "Strg rechts",
+        ["HoldKey.LeftCtrl"] = "Strg links",
+        ["HoldKey.RightAlt"] = "Alt Gr (Alt rechts)",
+        ["HoldKey.LeftAlt"] = "Alt links",
     };
 }

@@ -34,6 +34,8 @@ public sealed partial class TrackingViewModel : ObservableObject
         CaretShapeIndex = (int)o.CaretStyle.Shape;
         CaretColor = o.CaretStyle.Color.ToHex();
         CaretThicknessIndex = (int)o.CaretStyle.Thickness;
+        FocusFrameShowIndex = (int)o.FocusFrameShow;
+        CaretShowIndex = (int)o.CaretShow;
         _ready = true;
     }
 
@@ -79,6 +81,14 @@ public sealed partial class TrackingViewModel : ObservableObject
     [ObservableProperty]
     public partial int CaretThicknessIndex { get; set; }
 
+    /// <summary>When the focus frame is shown (E1).</summary>
+    [ObservableProperty]
+    public partial int FocusFrameShowIndex { get; set; }
+
+    /// <summary>When the caret marker is shown (E1).</summary>
+    [ObservableProperty]
+    public partial int CaretShowIndex { get; set; }
+
     partial void OnTrackingEnabledChanged(bool value) => Apply();
 
     partial void OnFocusChanged(bool value) => Apply();
@@ -115,6 +125,22 @@ public sealed partial class TrackingViewModel : ObservableObject
 
     partial void OnCaretColorChanged(string value) => Apply();
 
+    partial void OnFocusFrameShowIndexChanged(int value)
+    {
+        if (value >= 0)
+        {
+            Apply();
+        }
+    }
+
+    partial void OnCaretShowIndexChanged(int value)
+    {
+        if (value >= 0)
+        {
+            Apply();
+        }
+    }
+
     partial void OnCaretThicknessIndexChanged(int value)
     {
         if (value >= 0)
@@ -133,8 +159,14 @@ public sealed partial class TrackingViewModel : ObservableObject
         // Values that cannot be used (no selection, unreadable colour) keep the current look.
         var before = _style;
         _style = CaretMarkerStyle.From((CaretMarkerShape)CaretShapeIndex, CaretColor, (CaretMarkerThickness)CaretThicknessIndex, before);
+        var current = _tracking.Options;
         _tracking.SetOptions(new TrackingOptions(
-            TrackingEnabled, Focus, Caret, PanMs / 1000, Margin / 100, FocusFrame, CaretMarker, CenterMouse) { CaretStyle = _style });
+            TrackingEnabled, Focus, Caret, PanMs / 1000, Margin / 100, FocusFrame, CaretMarker, CenterMouse)
+        {
+            CaretStyle = _style,
+            FocusFrameShow = Condition(FocusFrameShowIndex, current.FocusFrameShow),
+            CaretShow = Condition(CaretShowIndex, current.CaretShow),
+        });
         if (before.Shape != _style.Shape || before.Thickness != _style.Thickness)
         {
             _log.CaretStyleChanged(_style.Shape, _style.Thickness);
@@ -146,6 +178,9 @@ public sealed partial class TrackingViewModel : ObservableObject
             CaretStyleChanged?.Invoke();
         }
     }
+
+    private static ShowCondition Condition(int index, ShowCondition current) =>
+        index >= 0 && Enum.IsDefined((ShowCondition)index) ? (ShowCondition)index : current;
 
     private string Describe(CaretMarkerStyle style)
     {

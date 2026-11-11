@@ -17,4 +17,10 @@ public sealed record TrackingOptions(
 
     /// <summary>Shape, colour and thickness of the caret marker (E2).</summary>
     public CaretMarkerStyle CaretStyle { get; init; } = CaretMarkerStyle.Default;
+
+    /// <summary>When the focus frame is shown (E1).</summary>
+    public ShowCondition FocusFrameShow { get; init; }
+
+    /// <summary>When the caret marker is shown (E1).</summary>
+    public ShowCondition CaretShow { get; init; }
 }
