@@ -123,7 +123,7 @@ internal static class TextsEnglishCards
         ["TrackingMargin.Desc"] = "The view follows when the text cursor gets this close to the edge.",
         ["TrackingGroupMarks"] = "Highlights",
         ["TrackingFocusFrame.Desc"] = "Magenta frame in the magnified view.",
-        ["TrackingCaretMarker.Desc"] = "Clearly visible bar at the typing position.",
+        ["TrackingCaretMarker.Desc"] = "Clearly visible mark at the typing position; shape, colour and thickness below.",
         ["TrackingCenterMouse.Desc"] = "The magnified view moves with the mouse so the pointer stays in the middle. Off: the pointer is shown where it is on the desktop.",
 
         ["GeneralAutostart.Desc"] = "ZoomIN starts in the notification area after sign-in.",

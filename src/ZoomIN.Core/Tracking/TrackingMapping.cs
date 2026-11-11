@@ -15,7 +15,10 @@ public static class TrackingMapping
         Math.Clamp(s.CaretMargin, 0, 0.4),
         s.FocusFrame,
         s.CaretMarker,
-        s.CenterMouse);
+        s.CenterMouse)
+    {
+        CaretStyle = CaretMarkerStyle.From(s.CaretMarkerShape, s.CaretMarkerColor, s.CaretMarkerThickness),
+    };
 
     public static AppSettings Apply(AppSettings settings, TrackingModel model)
     {
@@ -31,6 +34,9 @@ public static class TrackingMapping
             FocusFrame = o.FocusFrame,
             CaretMarker = o.CaretMarker,
             CenterMouse = o.CenterMouse,
+            CaretMarkerShape = o.CaretStyle.Shape,
+            CaretMarkerColor = o.CaretStyle.Color.ToHex(),
+            CaretMarkerThickness = o.CaretStyle.Thickness,
         };
     }
 }

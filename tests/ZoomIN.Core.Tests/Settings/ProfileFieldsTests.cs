@@ -2,6 +2,7 @@ using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Settings;
+using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.Core.Tests.Settings;
@@ -36,6 +37,23 @@ public sealed class ProfileFieldsTests
         Assert.Equal(AppLanguage.English, result.Language);
         Assert.Equal(current.ToggleHotkey, result.ToggleHotkey);
         Assert.True(result.CheckForUpdates);
+    }
+
+    [Fact]
+    public void ApplyDisplay_TakesTheCaretMarkerLook()
+    {
+        var profile = new AppSettings
+        {
+            CaretMarkerShape = CaretMarkerShape.Circle,
+            CaretMarkerColor = "#00E676",
+            CaretMarkerThickness = CaretMarkerThickness.Thin,
+        };
+
+        var result = ProfileFields.ApplyDisplay(new AppSettings(), profile);
+
+        Assert.Equal(CaretMarkerShape.Circle, result.CaretMarkerShape);
+        Assert.Equal("#00E676", result.CaretMarkerColor);
+        Assert.Equal(CaretMarkerThickness.Thin, result.CaretMarkerThickness);
     }
 
     [Theory]

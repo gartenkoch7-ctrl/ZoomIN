@@ -69,7 +69,7 @@ internal static class TextsEnglish
         ["TrackingPan"] = "Panning (ms, 0 = jump)",
         ["TrackingMargin"] = "Edge margin for the text cursor (%)",
         ["TrackingFocusFrame"] = "Frame around the focused element",
-        ["TrackingCaretMarker"] = "Bar over the text cursor",
+        ["TrackingCaretMarker"] = "Mark the text cursor",
         ["TrackingCenterMouse"] = "Keep the mouse pointer centred",
 
         ["HotkeysIntro"] = "All shortcuts work system-wide. Zoom with the wheel: Ctrl+wheel (ZoomIN takes precedence over the applications' own zoom).",

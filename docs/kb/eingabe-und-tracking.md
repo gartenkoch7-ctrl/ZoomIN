@@ -186,6 +186,31 @@ Globale Kürzel per `RegisterHotKey`, Mausrad per `WH_MOUSE_LL`.
   dann außermittig, aber sichtbar.
 - Mausbewegung über Schwellwert → gleitend zurück zum Maus-Fixpunkt.
 
+### Caret-Formen (E2, M18)
+- Formen: **Balken** (Werk, wie bis M17), **Keile** über und unter dem Caret, **Rahmen** um das
+  Zeichen, **Kreis** (Ring). Farbe wie auf der Zeigerseite (sechs Vorgaben + Farbwähler), Deckkraft
+  fest 85 %. Dicke dünn/mittel/dick, gehört zum Profil.
+- Geometrie rein in `Core/Tracking/CaretMarkerGeometry` (je Frame, ohne Allokation): Linienstärke
+  = Grundwert × Zoom (Zoom gedeckelt bei 8× wie beim Zeiger), Mindestwerte 2/4/8 px. „Mittel“ =
+  `max(4, Zoom)` – zusammen mit `max(Linie, Caretbreite)` sieht der Balken aus wie vor E2.
+- Keile: Höhe `2 × Linie + 0,2 × Caret-Höhe` (so wirkt die Dicke bei jedem Zoom), Breite doppelt so
+  groß, Spitze berührt den Caret. Shader `PSWedge` (Dreieck per Abstandsfunktion, gespiegelt wie der
+  Zeiger über `InnerOffset/InnerScale`). Kein Rückfall auf den Balken: Shader sind beim Build
+  kompiliert und durch `ShaderBytecodeTests` geprüft – ein Rückfall wäre toter Code und würde einen
+  echten Geräteverlust beim Start verdecken.
+- Rahmen: Die Caret-Kette liefert meist nur eine Linie. Ist der Caret mindestens 0,3 × so breit wie
+  hoch, gilt er als Zeichenzelle; sonst wird ein Zeichen von 0,5 × Höhe rechts vom Caret
+  angenommen.
+- Kreis: bestehender `PSRing`, Radius halbe Caret-Höhe + 2 Linien.
+- Am Rand der sichtbaren Fläche (Monitor, Lupe, Streifen) wird jedes Teil **verschoben, nicht
+  beschnitten** – Keile über der ersten Zeile bleiben ganz sichtbar (liegen dann aber über der
+  Zeile; Sichtprüfung offen). Gezeichnet wird nur, solange die Caret-Mitte in der Fläche liegt
+  (`InView`): Knapp jenseits des Lupenrands würde die Markierung sonst auf andere Buchstaben
+  geschoben oder über den unvergrößerten Desktop neben der Lupe gemalt.
+- „Mittel“ entspricht dem alten Balken für Carets ab 1 px Breite; ein Caret mit Breite 0 (manche
+  UIA-Anbieter) wird jetzt mit dem Zoom breiter (8× → 8 px statt 4 px).
+- Geschätzter Caret (`CaretEstimated`) wird weiter nicht markiert (`CaretMarkerGeometry.TryGetCaret`).
+
 ### Fixpunkt ≠ Bildmitte (Ursache „Fokus landet am Rand“, behoben 2026-11-03)
 Die Geometrie (`ModeGeometry`) vergrößert um einen **Fixpunkt**, und der wird dort gezeigt, wo er
 auf dem Desktop liegt (ADR-0003). Bis dahin wurde die Fokusmitte direkt als Fixpunkt benutzt –

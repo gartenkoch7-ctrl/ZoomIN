@@ -4,6 +4,7 @@ using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
+using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Updates;
 using ZoomIN.Core.WindowFilters;
 using ZoomIN.Core.Zoom;
@@ -190,6 +191,13 @@ public sealed record AppSettings
     public bool FocusFrame { get; set; } = true;
 
     public bool CaretMarker { get; set; } = true;
+
+    /// <summary>Caret marker look (E2); the factory setting looks like the bar before E2.</summary>
+    public CaretMarkerShape CaretMarkerShape { get; set; } = CaretMarkerStyle.Default.Shape;
+
+    public string CaretMarkerColor { get; set; } = CaretMarkerStyle.Default.Color.ToHex();
+
+    public CaretMarkerThickness CaretMarkerThickness { get; set; } = CaretMarkerStyle.Default.Thickness;
 
     /// <summary>Keep the pointer in the middle of the view (ADR-0018); off = fixpoint at the mouse (ADR-0003).</summary>
     public bool CenterMouse { get; set; } = true;

@@ -53,6 +53,9 @@ public sealed class SettingsMappingRoundTripTests
         FocusFrame = false,
         CaretMarker = false,
         CenterMouse = false,
+        CaretMarkerShape = CaretMarkerShape.Wedges,
+        CaretMarkerColor = "#00E5FF",
+        CaretMarkerThickness = CaretMarkerThickness.Thick,
         LastMode = ZoomMode.Lens,
         PerMonitorZoom = false,
         AnimationMilliseconds = 250,
@@ -86,7 +89,7 @@ public sealed class SettingsMappingRoundTripTests
         var back = TrackingMapping.Apply(new AppSettings(), TrackingMapping.Create(s_settings));
 
         AssertSame(s_settings, back, "TrackingEnabled", "TrackFocus", "TrackCaret", "PanMilliseconds", "CaretMargin", "FocusFrame",
-            "CaretMarker", "CenterMouse");
+            "CaretMarker", "CenterMouse", "CaretMarkerShape", "CaretMarkerColor", "CaretMarkerThickness");
     }
 
     [Fact]

@@ -56,6 +56,9 @@ public static class ProfileFields
         CaretMargin = profile.CaretMargin,
         FocusFrame = profile.FocusFrame,
         CaretMarker = profile.CaretMarker,
+        CaretMarkerShape = profile.CaretMarkerShape,
+        CaretMarkerColor = profile.CaretMarkerColor,
+        CaretMarkerThickness = profile.CaretMarkerThickness,
         CenterMouse = profile.CenterMouse,
         AnimationMilliseconds = profile.AnimationMilliseconds,
     };

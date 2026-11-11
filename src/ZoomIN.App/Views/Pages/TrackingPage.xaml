@@ -38,6 +38,72 @@
             <c:SettingCard Description="{x:Bind loc:Text.Get('TrackingCaretMarker.Desc')}" Glyph="&#xE8AC;" Header="{x:Bind loc:Text.TrackingCaretMarker}">
                 <ToggleSwitch IsOn="{x:Bind Vm.CaretMarker, Mode=TwoWay}" />
             </c:SettingCard>
+
+            <!-- E2: caret marker look with a small preview; the preview's name describes it for screen readers. -->
+            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('CaretMarker.Group')}" />
+            <Border
+                Padding="16"
+                HorizontalAlignment="Stretch"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource OverlayCornerRadius}">
+                <StackPanel Spacing="8">
+                    <!-- Decorative sample text: screen readers get the description below instead. -->
+                    <StackPanel
+                        Height="110"
+                        HorizontalAlignment="Center"
+                        AutomationProperties.AccessibilityView="Raw"
+                        Orientation="Horizontal">
+                        <TextBlock VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" FontSize="32" Text="Ab" />
+                        <!-- Above both sample words, like the marker above the text in the magnified view. -->
+                        <Grid
+                            Canvas.ZIndex="1"
+                            Width="2"
+                            Height="40"
+                            Margin="4,0"
+                            VerticalAlignment="Center">
+                            <Rectangle Fill="{ThemeResource TextFillColorPrimaryBrush}" />
+                            <Canvas x:Name="CaretCanvas" />
+                        </Grid>
+                        <TextBlock VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" FontSize="32" Text="cd" />
+                    </StackPanel>
+                    <TextBlock
+                        x:Name="CaretPreviewText"
+                        HorizontalAlignment="Center"
+                        AutomationProperties.LiveSetting="Polite"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="{x:Bind Vm.CaretDescription, Mode=OneWay}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('CaretMarker.Shape.Desc')}" Glyph="&#xE8AC;" Header="{x:Bind loc:Text.Get('CaretMarker.Shape')}">
+                <ComboBox
+                    MinWidth="200"
+                    AutomationProperties.Name="{x:Bind loc:Text.Get('CaretMarker.Shape')}"
+                    IsEnabled="{x:Bind Vm.CaretMarker, Mode=OneWay}"
+                    SelectedIndex="{x:Bind Vm.CaretShapeIndex, Mode=TwoWay}">
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('CaretShape.Bar')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('CaretShape.Wedges')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('CaretShape.Frame')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('CaretShape.Circle')}" />
+                </ComboBox>
+            </c:SettingCard>
+            <c:SettingCard Glyph="&#xE2B1;" Header="{x:Bind loc:Text.Get('CaretMarker.Color')}">
+                <c:ColorChooser Color="{x:Bind Vm.CaretColor, Mode=TwoWay}" IsEnabled="{x:Bind Vm.CaretMarker, Mode=OneWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('CaretMarker.Thickness.Desc')}" Glyph="&#xE7A8;" Header="{x:Bind loc:Text.Get('CaretMarker.Thickness')}">
+                <ComboBox
+                    MinWidth="200"
+                    AutomationProperties.Name="{x:Bind loc:Text.Get('CaretMarker.Thickness')}"
+                    IsEnabled="{x:Bind Vm.CaretMarker, Mode=OneWay}"
+                    SelectedIndex="{x:Bind Vm.CaretThicknessIndex, Mode=TwoWay}">
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('CaretThickness.Thin')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('CaretThickness.Medium')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('CaretThickness.Thick')}" />
+                </ComboBox>
+            </c:SettingCard>
         </StackPanel>
     </ScrollViewer>
 </Page>

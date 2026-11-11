@@ -69,9 +69,9 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 ## EventId-Bereiche
 | Bereich | Projekt |
 |---|---|
-| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug) |
+| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1640–1659 Markierungen M18) |
 | 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe) |
-| 3000–3999 | Rendering |
+| 3000–3999 | Rendering (3240–3259 Markierungen M18) |
 | 4000–4999 | Watchdog |
 | 5000–5999 | Setup |
 | 6000–6999 | Core (noch keine) |
@@ -135,6 +135,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.windowfilter.update_duration` | ms | – | Fenster auflisten und Bereiche bauen nach einer Fensteränderung |
 | `zoomin.windowfilter.regions` | Bereiche | – | Bereiche, die der Shader nach einer Änderung bekommt (höchstens 64) |
 | `zoomin.windowfilter.regions_dropped` | Fenster | – | Fenster über dem Limit von 64 Bereichen, die den Monitorfilter zeigen (je Aktualisierung; dazu Log 2705) |
+| `zoomin.highlight.caret_frames` | Frames | `zoomin.monitor`, `zoomin.highlight.caret_shape` (`bar`, `wedges`, `frame`, `circle`) | Gezeichnete Frames mit Caret-Markierung je Form (E2): welche Form im Einsatz ist. Zählt gezeichnete, nicht sichtbare Frames – Leerlauf-Frames (M14) fehlen, viel Bewegung zählt mehr. Render-Thread, Tags beim Start angelegt, ohne Allokation (`RenderLayersAllocationTests`) |
 
 ## Katalog: Logmeldungen
 | Id | Stufe | Meldung |
@@ -174,6 +175,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1403 | Fehler | KI-Debug command {Tool} failed |
 | 1404 | Info | MCP server started |
 | 1405 | Info | MCP server ended |
+| 1640 | Info | Caret marker changed: {Shape}, {Thickness} – Form oder Dicke auf der Seite „Fokus & Textcursor“ geändert (E2) |
 | 2001 | Fehler | UI Automation is unavailable; focus tracking is off |
 | 2002 | Info | Caret source in {Process}: {Source} |
 | 2003 | Fehler | Reading focus and caret failed; tracking goes on with the system caret |

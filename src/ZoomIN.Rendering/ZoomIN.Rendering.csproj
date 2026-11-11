@@ -35,6 +35,7 @@
     <ShaderEntry Include="Cursor.hlsl" Entry="PSCursor" Profile="ps_4_0" />
     <ShaderEntry Include="Cursor.hlsl" Entry="PSRing" Profile="ps_4_0" />
     <ShaderEntry Include="Cursor.hlsl" Entry="PSRect" Profile="ps_4_0" />
+    <ShaderEntry Include="Cursor.hlsl" Entry="PSWedge" Profile="ps_4_0" />
     <ShaderInclude Include="Shaders\*.hlsli" />
   </ItemGroup>
 
