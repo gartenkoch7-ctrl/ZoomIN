@@ -31,6 +31,19 @@ public sealed class WindowDragViewModelTests
     }
 
     [Fact]
+    public void ComboBoxWithoutSelection_KeepsTheStoredActionsCards()
+    {
+        using var drag = Create(new WindowDragOptions { Action = WindowDragAction.Lower });
+        var vm = new WindowDragViewModel(drag);
+
+        vm.ActionIndex = -1;
+
+        Assert.Equal((int)WindowDragAction.Lower, vm.ActionIndex); // shown again
+        Assert.True(vm.IsLower && vm.Acts);
+        Assert.Equal(WindowDragAction.Lower, drag.Options.Action);
+    }
+
+    [Fact]
     public void Change_KeepsTheOtherFields_OfANewerProfile()
     {
         using var drag = Create(WindowDragOptions.Default);

@@ -73,6 +73,21 @@ public sealed class WindowDragZoomEdgeTests
     }
 
     [Fact]
+    public void CanAct_OnlyWithZoomOnOutsideDocked_AndActingOptions()
+    {
+        var off = new ZoomModel(new ZoomLevels(), ZoomMode.Fullscreen, perMonitor: true, 0.15);
+        using var offDrag = new WindowDragZoom(off, WindowDragOptions.Default);
+        using var docked = new WindowDragZoom(ZoomedAt(4, ZoomMode.Docked), WindowDragOptions.Default);
+        using var on = new WindowDragZoom(ZoomedAt(4, ZoomMode.Fullscreen), WindowDragOptions.Default);
+        using var unchanged = new WindowDragZoom(ZoomedAt(4, ZoomMode.Fullscreen), WindowDragOptions.Default with { Action = WindowDragAction.Unchanged });
+
+        Assert.False(offDrag.CanAct);
+        Assert.False(docked.CanAct);
+        Assert.True(on.CanAct);
+        Assert.False(unchanged.CanAct);
+    }
+
+    [Fact]
     public void Dispose_EndsTheDrag_AndStopsListening()
     {
         var model = ZoomedAt(4, ZoomMode.Fullscreen);

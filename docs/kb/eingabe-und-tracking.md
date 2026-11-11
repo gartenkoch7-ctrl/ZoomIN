@@ -303,6 +303,12 @@ während der Schleife `GUI_INMOVESIZE` und `hwndMoveSize` = Fenster, danach nich
   dem Fensterrechteck. Gemeldet wird nur ein Wechsel.
 - **Sicherung:** Ein Fenster, das beim Ziehen abstürzt, sendet kein END. Ein Timer (250 ms, nur
   während des Ziehens) prüft `GUI_INMOVESIZE` und beendet sonst das Ziehen („lost“).
+- **Nur wenn es etwas bewirkt:** Bei Zoom aus, Modus Angedockt, Aktion „unverändert“ oder beiden
+  Schaltern aus wird kein Fenster geprüft (keine Trefferzone, kein Standort-Hook, kein Timer, kein
+  Ablauf); nur der globale MOVESIZE-Hook bleibt.
+- **Monitoranordnung:** Ein Wechsel fällt nur auf, wenn der Zeiger eine beim Start unbekannte
+  Monitor-ID erreicht (Gerätenamen bleiben oft gleich). Reicht, weil Stufen nur während des Ziehens
+  leben und das Ende alle freigibt.
 - Eigener Thread `ZoomIN Window Drag` (`Platform/WindowDrag`), nicht die Hooks des Filters pro
   Fenster (`WindowEventHooks` hat eine statische Instanz für seinen Thread und listet nach jedem
   Ereignis alle Fenster).

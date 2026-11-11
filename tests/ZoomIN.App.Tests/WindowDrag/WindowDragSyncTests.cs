@@ -62,6 +62,18 @@ public sealed class WindowDragSyncTests
     }
 
     [Fact]
+    public void ZoomOff_WindowsAreNotProbed()
+    {
+        var (sync, model, source, _) = Create();
+        sync.Start();
+
+        Assert.True(source.Active!());
+        model.Toggle(Left, [Left, Right]); // off
+
+        Assert.False(source.Active!());
+    }
+
+    [Fact]
     public void WithoutThePointer_TheDragIsLeftAlone()
     {
         var cursor = new FakeCursor { Available = false };

@@ -103,8 +103,11 @@ public sealed class WindowDragPolicyTests
         Assert.Equal(WindowDragAction.Lift, WindowDragOptions.Default.Action);
         Assert.True(WindowDragOptions.Default.OnMove && WindowDragOptions.Default.OnResize);
         Assert.Equal(2, WindowDragOptions.Default.LowerLevel);
-        Assert.True(WindowDragOptions.Default.CanAct);
-        Assert.False((WindowDragOptions.Default with { Action = WindowDragAction.Unchanged }).CanAct);
-        Assert.False((WindowDragOptions.Default with { OnMove = false, OnResize = false }).CanAct);
+        Assert.True(WindowDragPolicy.CanAct(ZoomMode.Lens, true, WindowDragOptions.Default));
+        Assert.False(WindowDragPolicy.CanAct(ZoomMode.Fullscreen, false, WindowDragOptions.Default));
+        Assert.False(WindowDragPolicy.CanAct(ZoomMode.Docked, true, WindowDragOptions.Default));
+        Assert.False(WindowDragPolicy.CanAct(ZoomMode.Fullscreen, true, WindowDragOptions.Default with { Action = WindowDragAction.Unchanged }));
+        Assert.False(WindowDragPolicy.CanAct(ZoomMode.Fullscreen, true, WindowDragOptions.Default with { OnMove = false, OnResize = false }));
+        Assert.True(WindowDragPolicy.CanAct(ZoomMode.Fullscreen, true, WindowDragOptions.Default with { OnMove = false }));
     }
 }

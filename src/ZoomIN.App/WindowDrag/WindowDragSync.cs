@@ -20,7 +20,7 @@ public sealed class WindowDragSync(
     private IReadOnlyList<string> _monitorIds = [];
     private bool _monitorSetChanged;
 
-    public void Start() => source.Start(OnSignal, () => zoom.Options.CanAct);
+    public void Start() => source.Start(OnSignal, () => zoom.CanAct);
 
     /// <summary>One step of a drag; internal for tests, which pass the steps by hand.</summary>
     internal void OnSignal(WindowDragSignal signal)
@@ -65,8 +65,9 @@ public sealed class WindowDragSync(
         zoom.Start(kind, monitor);
     }
 
-    // A monitor set change is noticed only when the pointer reaches an id unknown at the start.
-    // That suffices: levels live only during a drag, and its end gives them all back.
+    // A monitor set change is noticed only when the pointer reaches an id unknown at the start
+    // (device names are often kept or reused, so a rearrangement may go unnoticed). That suffices:
+    // levels live only during a drag, and its end gives them all back.
     private void MonitorChanged()
     {
         if (MonitorUnderPointer() is not { } monitor)

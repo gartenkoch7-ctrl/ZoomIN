@@ -29,9 +29,6 @@ public sealed record WindowDragOptions
     /// <summary>Act while a window is resized (decision: on).</summary>
     public bool OnResize { get; set; } = true;
 
-    /// <summary>True if a drag can change the zoom at all: an action other than "unchanged" and a switch on.</summary>
-    public bool CanAct => Action != WindowDragAction.Unchanged && (OnMove || OnResize);
-
     /// <summary>
     /// Undefined action values (e.g. a number set by hand) become Lift; the level is put on the
     /// page's steps, so the slider never has to change a loaded value (it would be saved unasked).

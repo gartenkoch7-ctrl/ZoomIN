@@ -41,10 +41,14 @@ public sealed partial class WindowDragViewModel : ObservableObject
 
     partial void OnActionIndexChanged(int value)
     {
-        // The combo box reports -1 while its items are replaced.
-        if (value >= 0)
+        if (Enum.IsDefined((WindowDragAction)value))
         {
             Apply(options => options with { Action = (WindowDragAction)value });
+        }
+        else if (_ready)
+        {
+            // The combo box reports -1 while its items are replaced: show the stored action again.
+            ActionIndex = (int)_drag.Options.Action;
         }
     }
 

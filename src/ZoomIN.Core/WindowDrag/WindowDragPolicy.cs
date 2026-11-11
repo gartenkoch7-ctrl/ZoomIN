@@ -29,6 +29,13 @@ public static class WindowDragPolicy
     }
 
     /// <summary>
+    /// True if some drag could change the zoom now (zoom on and a level for moving or resizing).
+    /// Derived from <see cref="LevelFor"/>, so both always agree.
+    /// </summary>
+    public static bool CanAct(ZoomMode mode, bool zoomOn, WindowDragOptions options) =>
+        zoomOn && (LevelFor(WindowDragKind.Move, mode, options) is not null || LevelFor(WindowDragKind.Resize, mode, options) is not null);
+
+    /// <summary>
     /// True if this kind of drag is switched on. An unknown kind (the source normally tells it)
     /// counts only if both switches are on.
     /// </summary>

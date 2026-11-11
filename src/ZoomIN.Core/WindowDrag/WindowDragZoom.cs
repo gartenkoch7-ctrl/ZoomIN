@@ -57,6 +57,12 @@ public sealed class WindowDragZoom : IDisposable
     }
 
     /// <summary>
+    /// True if a drag could change the zoom now: the options act, zoom is on and the mode is not
+    /// Docked. Lock-free; the drag source asks it at every move/size start and skips probing otherwise.
+    /// </summary>
+    public bool CanAct => WindowDragPolicy.CanAct(_model.Mode, _model.IsOn, Options);
+
+    /// <summary>
     /// Changes the options from their current value in one atomic step, so a profile switch on
     /// another thread at the same moment is not overwritten with older values.
     /// </summary>
@@ -68,6 +74,10 @@ public sealed class WindowDragZoom : IDisposable
         {
             current = Volatile.Read(ref _options);
             next = change(current).Normalized();
+            if (next == current)
+            {
+                return; // nothing changed: no save
+            }
         }
         while (!ReferenceEquals(Interlocked.CompareExchange(ref _options, next, current), current)); // records compare by value
 
@@ -91,9 +101,10 @@ public sealed class WindowDragZoom : IDisposable
             _crossed = false;
             _cleared = false;
 
-            // The level is set only here. Without one (zoom off, Docked, "unchanged", kind switched
-            // off) the drag leaves the zoom alone to its end, even if the user switches zoom on or
-            // changes the mode meanwhile; once cleared by a command, it is not set again either.
+            // The level is set only here. The source skips drags that cannot act (CanAct, at the
+            // press); this check covers the rest, e.g. a kind whose switch is off or a change since
+            // the press. Without a level the drag leaves the zoom alone to its end; once cleared by
+            // a command, it is not set again either.
             if (_model.IsOn && WindowDragPolicy.LevelFor(kind, _model.Mode, _dragOptions) is { } level)
             {
                 HoldLocked(level);

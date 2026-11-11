@@ -5,7 +5,6 @@ using Windows.Win32.Graphics.Gdi;
 using Windows.Win32.UI.Accessibility;
 using Windows.Win32.UI.WindowsAndMessaging;
 using ZoomIN.Core.WindowDrag;
-using ZoomIN.Platform.WindowFilters;
 
 namespace ZoomIN.Platform.WindowDrag;
 
@@ -40,6 +39,7 @@ internal sealed unsafe class WindowDragWatcher : IDisposable
     private readonly TimeProvider _time;
     private readonly HWINEVENTHOOK _moveSizeHook;
     private readonly DragStartProbe _probe = new();
+    private readonly DragStartReport _startLog;
     private HWINEVENTHOOK _locationHook;
     private HWND _window;
     private uint _windowThread;
@@ -60,6 +60,7 @@ internal sealed unsafe class WindowDragWatcher : IDisposable
         _active = active;
         _log = log;
         _time = time;
+        _startLog = new DragStartReport(log);
         s_current = this;
         _moveSizeHook = PInvoke.SetWinEventHook(EventMoveSizeStart, EventMoveSizeEnd, HMODULE.Null, s_callback, 0, 0, 0);
     }
@@ -152,7 +153,8 @@ internal sealed unsafe class WindowDragWatcher : IDisposable
             End("restarted");
         }
 
-        // Feature off ("unchanged" or both switches off): no hit test, hooks or timers at all.
+        // Nothing to do (zoom off, Docked, "unchanged", both switches off): no hit test, location
+        // hook or timer. Decided at the press: switching zoom on while holding it skips this drag.
         if (!_active())
         {
             return;
@@ -191,7 +193,7 @@ internal sealed unsafe class WindowDragWatcher : IDisposable
             _startedAt = _time.GetTimestamp(); // the drag counts from its first change
             _monitor = MoveSizeLoop.MonitorUnderPointer();
             _signal(new WindowDragSignal(WindowDragStage.Started, kind)); // first: the log reads names
-            LogStart(kind);
+            _startLog.Started(_window, _windowProcess, kind, _probe);
             return;
         }
 
@@ -229,24 +231,4 @@ internal sealed unsafe class WindowDragWatcher : IDisposable
         }
     }
 
-    private void LogStart(WindowDragKind kind)
-    {
-        if (!_log.IsEnabled(LogLevel.Debug))
-        {
-            return;
-        }
-
-        // Program file and class only (ADR-0019), read once per drag. A fresh WindowNames on
-        // purpose: its process cache is never pruned here, and reused process ids would keep a stale name.
-        var names = new WindowNames().KindOf(_window, _windowProcess);
-        _log.DragStarted(names.Process, names.WindowClass, kind);
-        if (_probe.HitKind == WindowDragKind.Unknown)
-        {
-            _log.KindUnclear(_probe.HitTest);
-            if (kind != WindowDragKind.Unknown)
-            {
-                _log.KindResolved(kind); // outline dragging has no size change to tell it
-            }
-        }
-    }
 }
