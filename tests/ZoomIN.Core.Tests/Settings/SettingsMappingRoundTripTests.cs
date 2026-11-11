@@ -26,6 +26,8 @@ public sealed class SettingsMappingRoundTripTests
         Brightness = -0.1,
         Smoothing = Smoothing.Pixel,
         ProtectPhotos = false,
+        TextSharpness = 0.6,
+        TextBold = 1.5,
         CursorMaxScale = 6,
         CursorUnzoomedScale = 2,
         CursorOverrideWindows = true,
@@ -74,7 +76,7 @@ public sealed class SettingsMappingRoundTripTests
         var back = EffectsMapping.Apply(new AppSettings(), EffectsMapping.Create(s_settings));
 
         AssertSame(s_settings, back, "FilterEnabled", "ColorFilter", "PerMonitorFilter", "MonitorFilters", "Contrast", "Brightness",
-            "Smoothing", "ProtectPhotos", "CursorMaxScale", "CursorUnzoomedScale", "CursorOverrideWindows", "CursorGrowWithZoom",
+            "Smoothing", "ProtectPhotos", "TextSharpness", "TextBold", "CursorMaxScale", "CursorUnzoomedScale", "CursorOverrideWindows", "CursorGrowWithZoom",
             "CursorColorMode", "CursorColor", "CursorRim", "CursorRimColor", "CursorRimWidth", "LocatorColor", "LocatorSize",
             "LocatorSeconds", "LocatorTriggers", "CrosshairEnabled", "CrosshairAlways", "CrosshairColor", "CrosshairWidth",
             "CrosshairOpacity", "HideCursorWhileTyping");

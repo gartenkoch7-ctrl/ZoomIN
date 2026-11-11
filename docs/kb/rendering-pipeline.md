@@ -242,6 +242,69 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   (32 B/Frame) – der teure Teil steht deshalb in einer eigenen Methode.
 - PNG ohne Bibliothek: `PngWriter` (RGBA8, Filter 0, ein zlib-IDAT, CRC-32).
 
+## Schärfen und Fett (M18, D1)
+Plan: [d1-schaerfen-fetter.md](../plan/features/d1-schaerfen-fetter.md). Code: `Shaders/TextEnhance.hlsli`,
+`Magnify.hlsl` `PSEnhanced`, `Core/Filters/TextEnhancement.cs`, `Rendering/TextEnhance/`.
+
+### Spike (2026-11-11, Branch `spike/d1-schaerfen-fetter`, nicht gemergt)
+- **Verglichen:** (A) im vorhandenen Durchgang (`PSEnhanced`, auf der Quelle vor Farbmatrix und
+  intelligentem Invertieren) und (B) eigener Durchgang auf einem Offscreen-Ziel in Monitorgröße.
+- **GPU-Zeit** 1080p, RTX 3060 Ti, Schärfe 60 %/Fett 1 px: A erste Fassung (Unschärfemaske + 20
+  eigene Abtastungen) +0,14 ms ✘; **A Runde 2** (9 Bikubik-Abtastungen + 4 für Fett) **+0,026–0,029
+  ms** ✔; B +0,146–0,155 ms ✘ (allein Schreiben/Lesen des Offscreen-Ziels 0,016–0,020 ms).
+  Faustwert: eine zusätzliche bilineare Abtastung je Pixel kostet bei 1080p ≈ 7 µs.
+- B verbreiterte die Nähte des intelligenten Invertierens (helle Kante an der dunklen Zeilenleiste):
+  Enhance gehört **vor** das Invertieren. → **Entscheidung: Variante A**, `DesktopLayer` bleibt ein
+  Durchgang, kein Offscreen-Ziel.
+
+### Umsetzung (2026-11-12)
+- `PSEnhanced` wird nur gebunden, wenn `TextEnhancement.At(Zoom, Glättung)` etwas liefert: Schärfe
+  oder Fett > 0, Glättung „Text-optimiert“ und Zoom ≥ 1,5×. Sonst läuft `PSMain` unverändert
+  (0 Zusatzkosten, bitgleich). Die Werte stehen im Konstantenpuffer b0 (`MagnifyConstants`, 128 B).
+  Nur der vergrößerte Bereich wird verbessert; die 1×-Fläche um Lupe/angedockten Bereich nicht.
+- **Schärfe = Catmull-Rom an umgerechneter Position.** Zwischen zwei Texeln wird die Mitte
+  schneller durchlaufen, an den Texelmitten entstehen kleine Plateaus (bei 100 % ein Drittel Texel
+  Übergang). Gleiche 9 Abtastungen, kostet nichts. *Abweichung vom Spike:* Der dort genutzte
+  schärfere Keys-Kern (`a = −0,5 − Schärfe`) macht Kanten **nicht** steiler – seine Steigung an
+  einer Kante ist `1,5 + a/2` (Catmull-Rom 1,25, `a = −1,5` nur 0,75); er wirkte nur über
+  Überschwinger und dunklere Striche. Nachgewiesen im WARP-Test (Kante gleich breit).
+- **Keine Begrenzung auf den Wertebereich der Abtastungen:** Die mittleren Abtastungen sind
+  Mischungen zweier Texel, ihr Bereich ist enger als der echte – die Begrenzung schnitt echte
+  Catmull-Rom-Werte ab und machte jede Kante weicher (Strichmitte 65 statt 62). Ohne sie bleibt das
+  leichte Überschwingen von Catmull-Rom wie heute; die Umrechnung erzeugt kein neues. Fett zieht
+  helle Überschwinger am Papier sogar auf den Papierton zurück.
+- **Fett = Minimum/Maximum der Leuchtdichte** über ein Kreuz aus 4 bilinearen Abtastungen im
+  Abstand „Fett px“ (Ausgabepixel, aus `ddx/ddy` der Uv – exakt, weil Uv linear ist). Ob der Strich
+  dunkel oder hell ist, entscheidet die Umgebung (Mittel der 9 Abtastungen gegen die Mitte des
+  Bereichs) – gleich vor und nach jedem invertierenden Filter.
+  - Kontrast-Prüfung über 9 Abtastungen **und** Kreuz zusammen: Die 9 allein übersehen einen
+    Strich ein Texel weiter (der Bilinear-Trick mischt ihn mit kleinem Gewicht ein, es entstand
+    eine Lücke im verbreiterten Strich), das Kreuz allein bei kleinem Fett-Wert.
+  - **Reichweite höchstens ½ Texel** (`BOLD_MAX_TEXELS`): Weiter sprangen die 4 Abtastungen über
+    den Rand eines 1-Texel-Strichs, und neben einer helleren Lücke erschien eine Geisterkopie
+    (gesehen bei 2× mit 3 px). Bei 2× wirkt Fett also höchstens 1 px, bei 4× 2 px, ab 6× voll.
+- **Risiko 1, ClearType-Säume** *(selbst entschieden, Vorgabe Nutzer)*: Nur die Leuchtdichte des
+  dunkelsten/hellsten Werts wird übernommen; der Pixel wird zu Schwarz bzw. Weiß hin skaliert und
+  behält seinen Farbton, die Sättigung kann nur sinken. Test: Fett erzeugt keine zusätzlichen
+  farbigen Pixel. Folge: Der verbreiterte Rand farbiger Schrift wird grau-dunkel, nicht farbig.
+- **Risiko 2, Fotos** *(selbst entschieden)*: Die 4 Eck-Abtastungen des Bikubik-Fensters (4 × 4
+  Texel, liegen immer auf Texelmitten) werden zuerst gelesen. Sind 3–4 davon farbig (Chroma-Schwellen
+  wie `Ambient.hlsl`, 0,10–0,25), gilt der Pixel als Foto: **Schärfe und Fett blenden aus**
+  (`smoothstep(2, 3,5, farbige Ecken)`). Ohne Zusatz-Abtastung. Bekannte Grenze: Text auf kräftig
+  farbiger Fläche (blaue Schaltfläche) wird ebenfalls nicht verbessert; graue Fotos werden verbessert.
+- **Risiko 3, Glättung** *(selbst entschieden)*: Nur bei „Text-optimiert“. Bei „Weich“/„Pixel“
+  sind die Regler deaktiviert, die Beschreibung sagt „Wirkt nur mit der Glättung ‚Text-optimiert‘“;
+  kein stilles Umschalten. Die Werte bleiben gespeichert und wirken wieder, sobald „Text-optimiert“
+  gewählt ist.
+- **Risiko 4, unter 1,5×** *(selbst entschieden)*: aus (`TextEnhancement.MinZoom`).
+- **Sichtbare Eigenheiten** (WARP-Bögen mit echter 9-pt-ClearType-Schrift): Schärfe 100 % zeigt die
+  Texel des Quellbilds deutlicher, auch ClearType-Farbpixel als kleine farbige Flecken (wie
+  „Pixel“, nur kleiner). Fett 3 px bei 4× füllt kleine Punzen (e, a). Bewertung durch den Nutzer offen.
+- **GPU-Zeit** (`EnhanceGpuTimeTests`, `ZOOMIN_GPU_TIMING=1`, 1080p, 3 Läufe, RTX 3060 Ti):
+  +0,018–0,030 ms bei 60 %/1 px und 100 %/3 px, 2×/4×/8×, ohne und mit intelligentem Invertieren
+  (Magnify aus 0,071–0,090 ms). ×10 Onboard **hochgerechnet** ≈ 0,3 ms ≤ 0,5 ms. Im Betrieb misst
+  `EnhanceCost` dasselbe nach jeder Änderung (`zoomin.render.enhance_gpu_ms`), nur mit Zuhörer.
+
 ## Shader-Regeln
 - HLSL-Dateien in `ZoomIN.Rendering/Shaders/`. Seit M14 Schritt 4 übersetzt sie der Build mit
   `tools/ZoomIN.ShaderCompiler` (derselbe d3dcompiler_47 aus Windows über Vortice, `O3`, also

@@ -69,9 +69,9 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 ## EventId-Bereiche
 | Bereich | Projekt |
 |---|---|
-| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1620 eigene Farbschemata) |
+| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1600 Schärfe/Fett – reserviert, noch ungenutzt, 1620 eigene Farbschemata) |
 | 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe) |
-| 3000–3999 | Rendering (3220 eigene Farbschemata) |
+| 3000–3999 | Rendering (3200 Schärfe/Fett, 3220 eigene Farbschemata) |
 | 4000–4999 | Watchdog |
 | 5000–5999 | Setup |
 | 6000–6999 | Core (noch keine) |
@@ -136,6 +136,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.windowfilter.update_duration` | ms | – | Fenster auflisten und Bereiche bauen nach einer Fensteränderung |
 | `zoomin.windowfilter.regions` | Bereiche | – | Bereiche, die der Shader nach einer Änderung bekommt (höchstens 64) |
 | `zoomin.windowfilter.regions_dropped` | Fenster | – | Fenster über dem Limit von 64 Bereichen, die den Monitorfilter zeigen (je Aktualisierung; dazu Log 2705) |
+| `zoomin.render.enhance_gpu_ms` | ms | `zoomin.monitor` | Zusatz-GPU-Zeit von Schärfe/Fett im Magnify-Durchgang (M18, D1): nach jeder Wertänderung 32 Frames ohne gegen mit, nach 60 Frames Aufwärmen (`PassCostProbe`); nur solange jemand das Instrument abonniert, sonst keine Messzeichnungen. Budget 0,05 ms auf RTX 3060 Ti |
 | `zoomin.filters.custom_schemes` | Schemata | – | Anzahl der eigenen Farbschemata (0–4, Gauge; beim Start und bei jeder Änderung, M18) |
 
 ## Katalog: Logmeldungen
@@ -244,6 +245,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 3007 | Warnung | Smart inversion on {Monitor} falls back to keep hue: {Reason} ({Milliseconds} ms) – `gpu_feature` oder `budget`, einmal je Pipeline |
 | 3050 | Info | Debug snapshot of {Monitor} saved to {Folder} (nur der Ordnername) |
 | 3051 | Warnung | Debug snapshot of {Monitor} failed |
+| 3200 | Info | Text enhancement {State}: sharpness {Sharpness} %, bold {Bold} px, smoothing {Smoothing} – `on`, `off`, `paused` (an, aber Glättung nicht „Text-optimiert“); beim Start nur, wenn an; nie im Render-Loop. Ein eigener Durchgang wird nicht angelegt (Variante A, nur anderer Pixel-Shader) |
+| 3201 | Debug | Text enhancement values changed: sharpness {Sharpness} %, bold {Bold} px – je Reglerschritt, solange an |
 | 3220 | Info | Filter palette rebuilt: {Count} own schemes ({Places}) – Plätze mit Art, z. B. `Custom1 Tint`; nur bei Änderung, nie im Render-Loop |
 | 3221 | Info | Colour replacements {State}: {Replacements} defined; the step runs only on monitors showing such a scheme – `on`, `changed`, `off`; ob der Schritt je Monitor läuft, steht in `ReplaceActive` |
 | 4001 | Warnung | Cannot watch process {ProcessId}: {Reason} |
