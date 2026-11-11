@@ -32,7 +32,8 @@ internal static class EngineRegistration
     public static IServiceCollection AddEngine(this IServiceCollection services)
     {
         // Settings and models
-        services.AddSingleton(sp => sp.GetRequiredService<ISettingsStore>().Load());
+        services.AddSingleton<SettingsLoader>();
+        services.AddSingleton(sp => sp.GetRequiredService<SettingsLoader>().Load());
         services.AddSingleton(sp => ZoomMapping.Create(sp.GetRequiredService<AppSettings>()));
         services.AddSingleton(sp => EffectsMapping.Create(sp.GetRequiredService<AppSettings>()));
         services.AddSingleton(sp => TrackingMapping.Create(sp.GetRequiredService<AppSettings>()));

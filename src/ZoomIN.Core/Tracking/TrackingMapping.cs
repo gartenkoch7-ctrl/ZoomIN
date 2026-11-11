@@ -15,7 +15,8 @@ public static class TrackingMapping
         Math.Clamp(s.CaretMargin, 0, 0.4),
         s.FocusFrame,
         s.CaretMarker,
-        s.CenterMouse);
+        Enum.IsDefined(s.MouseFollow) ? s.MouseFollow : TrackingOptions.Default.MouseFollow,
+        double.IsFinite(s.MouseMargin) ? Math.Clamp(s.MouseMargin, 0, TrackingOptions.MaxMouseMargin) : TrackingOptions.Default.MouseMargin);
 
     public static AppSettings Apply(AppSettings settings, TrackingModel model)
     {
@@ -30,7 +31,8 @@ public static class TrackingMapping
             CaretMargin = o.CaretMargin,
             FocusFrame = o.FocusFrame,
             CaretMarker = o.CaretMarker,
-            CenterMouse = o.CenterMouse,
+            MouseFollow = o.MouseFollow,
+            MouseMargin = o.MouseMargin,
         };
     }
 }

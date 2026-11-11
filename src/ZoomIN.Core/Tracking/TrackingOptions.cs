@@ -1,6 +1,6 @@
 namespace ZoomIN.Core.Tracking;
 
-/// <summary>Focus, caret and mouse tracking (M6 decisions).</summary>
+/// <summary>Focus, caret and mouse tracking (M6 decisions, mouse follow M17 A1).</summary>
 /// <param name="Enabled">Strg+Alt+T switches focus and caret tracking on/off; the mouse is always tracked.</param>
 /// <param name="Focus">Follow the keyboard focus.</param>
 /// <param name="Caret">Follow the text caret while typing.</param>
@@ -8,10 +8,14 @@ namespace ZoomIN.Core.Tracking;
 /// <param name="CaretMargin">The view only moves when the caret comes this close to its edge (0.2 = 20 %).</param>
 /// <param name="FocusFrame">Draw a frame around the focused element.</param>
 /// <param name="CaretMarker">Draw a thick bar over the text caret.</param>
-/// <param name="CenterMouse">Keep the pointer in the middle of the view; off = shown at its desktop position (fixpoint).</param>
+/// <param name="MouseFollow">How the view follows the mouse: middle, margin (default) or fixpoint.</param>
+/// <param name="MouseMargin">With <see cref="MouseFollowMode.Margin"/>: the view moves once the pointer is this close to its edge (0–0.5).</param>
 public sealed record TrackingOptions(
     bool Enabled, bool Focus, bool Caret, double PanSeconds, double CaretMargin, bool FocusFrame, bool CaretMarker,
-    bool CenterMouse)
+    MouseFollowMode MouseFollow, double MouseMargin)
 {
-    public static TrackingOptions Default { get; } = new(true, true, true, 0.2, 0.2, true, true, true);
+    /// <summary>0.5 leaves no room inside the margin: the pointer stays in the middle, like <see cref="MouseFollowMode.Center"/>.</summary>
+    public const double MaxMouseMargin = 0.5;
+
+    public static TrackingOptions Default { get; } = new(true, true, true, 0.2, 0.2, true, true, MouseFollowMode.Margin, 0.2);
 }

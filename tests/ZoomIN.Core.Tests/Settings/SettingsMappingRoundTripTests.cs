@@ -52,7 +52,8 @@ public sealed class SettingsMappingRoundTripTests
         CaretMargin = 0.3,
         FocusFrame = false,
         CaretMarker = false,
-        CenterMouse = false,
+        MouseFollow = MouseFollowMode.Fixpoint,
+        MouseMargin = 0.35,
         LastMode = ZoomMode.Lens,
         PerMonitorZoom = false,
         AnimationMilliseconds = 250,
@@ -86,7 +87,7 @@ public sealed class SettingsMappingRoundTripTests
         var back = TrackingMapping.Apply(new AppSettings(), TrackingMapping.Create(s_settings));
 
         AssertSame(s_settings, back, "TrackingEnabled", "TrackFocus", "TrackCaret", "PanMilliseconds", "CaretMargin", "FocusFrame",
-            "CaretMarker", "CenterMouse");
+            "CaretMarker", "MouseFollow", "MouseMargin");
     }
 
     [Fact]

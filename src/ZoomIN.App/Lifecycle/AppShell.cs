@@ -3,6 +3,7 @@ using ZoomIN.App.Localization;
 using ZoomIN.App.Settings;
 using ZoomIN.App.Updates;
 using ZoomIN.App.Views;
+using ZoomIN.App.Views.Pages;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Lifecycle;
@@ -71,9 +72,20 @@ public sealed class AppShell : IShellActions
     }
 
     /// <summary>Thread-safe: e.g. called when a second ZoomIN start asks for the settings.</summary>
-    public void OpenSettings() => _dispatcher.TryEnqueue(() =>
+    public void OpenSettings() => OpenSettings(null);
+
+    /// <param name="page">Page to show, e.g. from a notice; not while the first-run assistant runs.</param>
+    private void OpenSettings(Type? page) => _dispatcher.TryEnqueue(() =>
     {
-        _window ??= CreateWindow();
+        if (_window is null)
+        {
+            _window = CreateWindow(page);
+        }
+        else if (page is not null && _settings.Current.FirstRunCompleted)
+        {
+            _window.ShowPage(page);
+        }
+
         _window.ShowAndActivate();
     });
 
@@ -90,9 +102,9 @@ public sealed class AppShell : IShellActions
         Exit();
     });
 
-    private SettingsWindow CreateWindow()
+    private SettingsWindow CreateWindow(Type? page)
     {
-        var window = new SettingsWindow(_pages, _settings.Current.FirstRunCompleted);
+        var window = new SettingsWindow(_pages, _settings.Current.FirstRunCompleted, page);
         window.HiddenToTray += OnHiddenToTray;
         return window;
     }
@@ -113,6 +125,10 @@ public sealed class AppShell : IShellActions
         if (command == TrayCommand.Open)
         {
             OpenSettings();
+        }
+        else if (command == TrayCommand.OpenTracking)
+        {
+            OpenSettings(typeof(TrackingPage));
         }
         else if (command == TrayCommand.Exit)
         {

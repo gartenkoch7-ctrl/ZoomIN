@@ -43,6 +43,7 @@
 ## Messprotokoll
 | Datum | Hardware | Monitor | Modus | Ergebnis | Hinweis |
 |---|---|---|---|---|---|
+| 2026-11-11 | i7-12700KF | – | M17 A1 Randabstand (BenchmarkDotNet, Release, 4K-Monitor) | `AnchorMargin` 33 ns, `AnchorCenterMouse` 24 ns, `AnchorFollowCaret` 33 ns – alle 0 B (Stand nach Review: Moduswechsel, Platzierung) | Randabstand rechnet pro Frame Ausschnitt + Rückweg zum Anker (≈ +8 ns gegenüber Mitte); bei 144 Hz vernachlässigbar |
 | 2026-10-30 | RTX 3060 Ti | 1080p, 60 Hz | Vollbild 2× (M1) | 60,4 fps (171 Frames / 2,8 s) | p99 noch nicht gemessen; Start per Hotkey ≈ 215 ms (Pipeline-Aufbau) |
 | 2026-10-30 | RTX 3060 Ti | 1080p, 60 Hz | M2, Pipeline warm | Hotkey → Overlay sichtbar **2–16 ms**; Leerlauf 0,5 % eines Kerns | Ausblenden bis unsichtbar ≈ 390 ms (siehe unten) |
 | 2026-11-05 | Entwicklungsrechner | – | M11 Telemetrie-Start, Release, frischer Prozess, ohne ReadyToRun | Startpfad **~4 ms** Host, **~9 ms** inkl. erster Logzeile + Operation; ~100 ms Aufbau im Hintergrund | vorher (synchron) ~90 ms, kalter erster Lauf 255 ms – siehe unten |

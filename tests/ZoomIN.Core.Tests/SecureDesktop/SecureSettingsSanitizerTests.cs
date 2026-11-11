@@ -4,6 +4,7 @@ using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Settings;
+using ZoomIN.Core.Tracking;
 using ZoomIN.Core.WindowFilters;
 
 namespace ZoomIN.Core.Tests.SecureDesktop;
@@ -59,8 +60,10 @@ public sealed class SecureSettingsSanitizerTests
             LensWidth = double.PositiveInfinity,
             PanMilliseconds = int.MaxValue,
             AnimationMilliseconds = -5,
+            MouseMargin = double.NaN,
         });
 
+        Assert.Equal(0.2, result.MouseMargin);
         Assert.Equal(16, result.LastZoomLevel);
         Assert.Equal(1.0, result.Contrast);
         Assert.Equal(-0.5, result.Brightness);
@@ -77,8 +80,10 @@ public sealed class SecureSettingsSanitizerTests
             LastMode = (ZoomMode)99,
             ColorFilter = (ColorFilter)99,
             LocatorTriggers = (LocatorTriggers)0xFF,
+            MouseFollow = (MouseFollowMode)99,
         });
 
+        Assert.Equal(MouseFollowMode.Margin, result.MouseFollow);
         Assert.Equal(ZoomMode.Fullscreen, result.LastMode);
         Assert.Equal(new AppSettings().ColorFilter, result.ColorFilter);
         Assert.Equal(LocatorTriggers.Hotkey | LocatorTriggers.Shake | LocatorTriggers.AfterIdle | LocatorTriggers.CtrlKey, result.LocatorTriggers);
