@@ -22,7 +22,25 @@ internal sealed class TrackingTelemetry(ILogger log)
     private static readonly Counter<long> s_sources = Telemetry.Meter.CreateCounter<long>(
         "zoomin.tracking.caret_sources", "{source}", "A caret source seen for the first time in a process");
 
+    private static readonly Counter<long> s_failures = Telemetry.Meter.CreateCounter<long>(
+        "zoomin.tracking.read_failures", "{reading}", "Readings of focus and caret that failed unexpectedly");
+
     private readonly Dictionary<uint, CaretSource> _seen = [];
+    private readonly HashSet<Type> _failuresLogged = [];
+
+    /// <summary>
+    /// A reading failed with an exception nobody expected. Logged once per exception type – the
+    /// same window is read 30 times a second – and counted every time.
+    /// </summary>
+    public void ReadFailed(Exception exception)
+    {
+        var type = exception.GetType();
+        s_failures.Add(1, new KeyValuePair<string, object?>("exception.type", type.FullName));
+        if (_failuresLogged.Add(type))
+        {
+            log.ReadFailed(exception);
+        }
+    }
 
     public void Observe(uint processId, CaretSource source, double readMs)
     {
