@@ -27,42 +27,68 @@ Schon gesammelt („Nach dem MVP“): Sprachausgabe, Line View, Auto-Lupe am Fok
 
 Größen wie in der Roadmap: **S** ≈ wenige Tage · **M** ≈ 1–2 Wochen · **L** ≈ 2–4 Wochen.
 
-## Empfehlung – Top 5
-| # | Funktion | Warum zuerst | Größe |
-|---|---|---|---|
-| 1 | **Ruhige Mausverfolgung mit Randabstand** (A1) | Häufigste Klage über Vollbild-Lupen ist Schwindel/Übelkeit durch ständig wanderndes Bild. Reine Core-Logik im bestehenden `AnchorController`, voll testbar, kein Risiko für Klicks. | S–M |
-| 2 | **Übersicht auf Knopfdruck** (B2) | Orientierung ist bei hoher Stufe das größte Problem („wo bin ich?“). Auf 1× wechseln, Rahmen zeigt den Ausschnitt, loslassen springt hin. Nutzt vorhandene Gleit-Animation und Rahmen-Shader. | S–M |
-| 3 | **Eigene Farbschemata** (C1–C3) | Zwei frei wählbare Farben, Einfärben, Farbe ersetzen und Schemata für Farbsehschwächen. Jedes Vorbild hat das, ZoomIN nur feste Paare. Passt in den bestehenden Farbmatrix-Durchgang. | S–M |
-| 4 | **Eingefrorene Ausschnitte** (B1) | Zwei entfernte Stellen gleichzeitig sehen (Uhr, Statuszeile, Chat, Formelzeile). Hoher Alltagsnutzen. Rendering ist einfach (zweites Rechteck aus demselben Capture). Die Bedienung ist die eigentliche Arbeit. | M |
-| 5 | **Schwenken per Tastatur** (A3) | Lesen und Absuchen ohne Maus, mit Tempostufen, Sprung an Ränder/Mitte, Ansicht merken. Kernfunktion für Tastaturnutzer, gleiche Sprache wie die Verfolgung. Klärung nötig: Zeiger bleibt, wo er ist. | M |
+## Priorisierung nach Wichtigkeit (2026-11-11)
+Diese Reihenfolge gilt für alle vorgemerkten Features. Sie ersetzt die erste Top-5-Liste und die
+Blöcke 1/2 vom selben Tag. Geplant ist noch keines. Vor der Umsetzung kommt ein Grilling, dann ein
+Meilenstein.
 
-**Knapp dahinter:** Text schärfen/fetter (D1, hoher Nutzen, aber Qualitätsrisiko mit Filtern),
-Tooltips/Meldungen verfolgen (A4), Maus-Puffer und Achsensperre (A6, sehr klein),
-Zeigersuche „Sonar“ und Anzeige-Bedingungen (E1, klein).
+**Bewertung:** Jedes Kriterium von 1 bis 5 Punkten, gewichtet, höchstens 35 Punkte.
+- **Nutzen ×3:** wie stark es Sehbehinderten im Alltag hilft
+- **Reichweite ×2:** wie viele Nutzer es betrifft und wie oft
+- **Aufwand ×1:** 5 = klein
+- **Risiko ×1:** 5 = gering; zählt Klicks, Hot Path, Grundsatzentscheidungen
 
-## Vorgemerkt (Nutzerwunsch 2026-11-11)
-Diese Funktionen stehen auf der Liste möglicher neuer Features. Geplant ist noch keine. Vor der
-Umsetzung kommt ein Grilling und ein eigener Meilenstein.
+Bei Punktgleichstand steht das Feature mit dem geringeren Risiko vorn.
 
-**Block 1 – Kern, in dieser Reihenfolge**
-1. Ruhige Mausverfolgung mit Randabstand (A1)
-2. Übersicht auf Knopfdruck (B2)
-3. Eigene Farbschemata (C1–C3)
-4. Schärfen und Fetter (D1) – erst nach einem Spike (Halos, Invertieren, GPU-Budget Onboard)
-5. Eingefrorene Ausschnitte (B1)
+| Rang | Feature | Nutzen | Reichw. | Aufwand | Risiko | Punkte | Begründung in einem Satz |
+|---|---|---|---|---|---|---|---|
+| 1 | Ruhige Mausverfolgung mit Randabstand (A1) | 5 | 5 | 4 | 4 | **33** | Trifft jeden Vollbild-Nutzer bei jeder Mausbewegung und nimmt die häufigste Klage, Schwindel. |
+| 2 | Übersicht auf Knopfdruck (B2) | 4 | 4 | 4 | 4 | **28** | Orientierung bei hoher Stufe ist das zweitgrößte Alltagsproblem, und das Feature ist klein. |
+| 3 | Schärfen und Fetter (D1) | 5 | 4 | 3 | 2 | **28** | Lesbarer Text ist der Kern einer Lupe; erst nach einem Spike, denn Halos und GPU-Budget sind offen. |
+| 4 | Eigene Farbschemata (C1–C3) | 4 | 3 | 4 | 5 | **27** | Für Blendempfindliche und Farbsehschwache entscheidend, technisch fast ohne Risiko. |
+| 5 | Caret-Formen (E2) | 3 | 4 | 5 | 5 | **27** | Den Caret beim Tippen nicht zu finden ist eine häufige Klage; ein Caret-Balken ist schon da. |
+| 6 | Zoom beim Fenster-Verschieben (G1) | 4 | 4 | 4 | 3 | **27** | Fenster bei hoher Stufe zu ziehen ist heute ein Blindflug; Risiko: Apps ohne Verschiebe-Meldung. |
+| 7 | Eingefrorene Ausschnitte (B1) | 4 | 3 | 3 | 3 | **24** | Großer Nutzen für Profis (Uhr, Chat, Formelzeile), aber Bedienung und Klicks sind aufwendig. |
+| 8 | Anzeige-Bedingung für Markierungen (E1) | 2 | 3 | 5 | 5 | **22** | Komfort, damit Markierungen weniger stören; klein, nebenbei mitnehmen. |
+| 9 | Maus-Puffer und Achsensperre (A6) | 3 | 2 | 5 | 4 | **22** | Hilft vor allem mit mehreren Monitoren und beim Lesen von Tabellen; sehr klein. |
+| 10 | Einfrieren und Monitor wechseln (G2) | 4 | 2 | 3 | 2 | **21** | Stark für Nutzer mit mehreren Monitoren, braucht aber ein ADR (Zeiger versetzen) und eine Lösung für die Klicks. |
 
-Vorschlag: 1–3 als gemeinsamer Meilenstein (etwa 2–3 Wochen).
+**Bündel für Meilensteine:**
+- **„Ruhige Ansicht & Orientierung“ – A1, B2, G1 (M, ~2–3 Wochen).**
+  - Alle drei ändern nur Anker und Stufe im `ZoomModel`.
+  - B2 und G1 brauchen denselben Baustein „Stufe vorübergehend überschreiben, danach zurück“.
+    Das Halten-Kürzel B6 kommt damit fast umsonst.
+  - Kein Shader, keine Grundsatzfrage. Deshalb ist das der empfohlene nächste Meilenstein.
+- **„Lesbarkeit“ – D1-Spike, C1–C3, E2, E1 (M–L).**
+  - Alles läuft im Shader und im Zeiger-Durchgang.
+  - Der D1-Spike entscheidet, ob Schärfen und Fetter dazukommen.
+- **„Mehrere Ansichten“ – B1, G2, dazu A6 (L).**
+  - Gemeinsames Problem: Ansichten, die nicht an der Maus hängen, und Klicks dorthin.
+  - Davor braucht es ein ADR „Zeiger versetzen nur auf Befehl“ und eine Entscheidung zur Klickregel.
+  - Teile von G2 können vorgezogen werden: der Monitorwechsel per Kürzel (S) und der Maus-Puffer
+    aus A6 kommen ohne Einfrieren aus.
 
-**Block 2 – kleine Extras, nebenbei**
-- Caret-Formen, z. B. Keile über und unter dem Textcursor (E2)
-- Anzeige-Bedingung für alle Markierungen: immer, nur in Ruhe, nur in Bewegung, nur bei gehaltener Taste (E1)
-- Maus-Puffer am Monitorrand und Achsensperre mit Umschalt (A6)
-
-**Dazu:**
-- Zoom beim Fenster-Verschieben (G1)
-- Ausschnitt einfrieren und per Kurzbefehl auf den nächsten Monitor wechseln (G2)
-
-Beide sind im Abschnitt G beschrieben.
+**Übrige Ideen, nicht vorgemerkt (grobe Stufe):**
+- **Als Nächstes nachrücken:**
+  - Tooltips und Meldungen verfolgen (A4)
+  - feinere Fokus-Verfolgung (A5)
+  - Einstellungen pro App (F4)
+  - Präsentationsmodus (F2, klein)
+  - Zoomstufen-Politik (B7, klein)
+  - freies festes Fenster (B3)
+  - Filter pro Monitor (C4)
+- **Später, mit Grundsatzfrage:**
+  - Schwenken per Tastatur (A3)
+  - echte Mitte am Rand (A2, Spike)
+  - Zeilenstreifen (B4)
+  - zweiter Monitor zeigt den ersten (F1)
+- **Mit der Sprachausgabe:** Textleiste (D3), Lesefenster (D4), Ansicht folgt dem Vorlesen (A8)
+- **Nicht verfolgen:**
+  - Text neu zeichnen (D2)
+  - Kamera (F5)
+  - Zoom in Übertragung zeigen (F6), außer mit ADR
+  - Touch-Gesten (F7)
+  - Tafel (F8)
 
 ## A · Verfolgung und Bewegung
 | ID | Funktion | Nutzen | Größe | Machbarkeit / Risiko | Quelle |
