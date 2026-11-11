@@ -31,6 +31,14 @@ public static class WindowPalette
     /// <summary>True for entries that are a filter of their own (the window is left out of the monitor filter).</summary>
     public static bool IsOwnFilter(byte index) => index >= 2;
 
+    /// <summary>Technical name of an entry for diagnostics: "monitor filter", "original" or the filter.</summary>
+    public static string Name(byte index) => index switch
+    {
+        Monitor => "monitor filter",
+        Original => "original",
+        _ => ((ColorFilter)(index - 2)).ToString(),
+    };
+
     public static ColorMatrix[] Build(FilterSettings shared)
     {
         var adjust = ColorFilters.Adjust(shared);

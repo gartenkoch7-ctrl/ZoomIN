@@ -49,6 +49,8 @@ internal sealed class SnapshotTaker(DebugSnapshots snapshots, string deviceName,
         DebugSnapshotRequest pending, ID3D11Device device, ID3D11DeviceContext context, ID3D11ShaderResourceView desktop,
         ID3D11RenderTargetView result, ID3D11ShaderResourceView? weights, PhysicalRect bounds, PhysicalRect source, in FrameRequest request)
     {
+        // Counted until the files are complete, so the KI-Debug reader deletes the folder only after.
+        snapshots.WriteStarted();
         try
         {
             using var desktopTexture = desktop.Resource;
@@ -69,6 +71,7 @@ internal sealed class SnapshotTaker(DebugSnapshots snapshots, string deviceName,
         {
             log.SnapshotFailed(ex, deviceName);
             snapshots.Report(new DebugSnapshotResult(pending.Generation, deviceName, false, ex.GetType().Name));
+            snapshots.WriteEnded();
         }
     }
 
@@ -79,15 +82,14 @@ internal sealed class SnapshotTaker(DebugSnapshots snapshots, string deviceName,
         try
         {
             Directory.CreateDirectory(request.Folder);
-            var prefix = Path.Combine(request.Folder, SafeName(deviceName));
-            WritePng(prefix + "-original.png", original);
-            WritePng(prefix + "-result.png", drawn);
+            WritePng(SnapshotFiles.Image(request.Folder, deviceName, "original"), original);
+            WritePng(SnapshotFiles.Image(request.Folder, deviceName, "result"), drawn);
             if (weights is not null)
             {
-                WritePng(prefix + "-weights.png", weights);
+                WritePng(SnapshotFiles.Image(request.Folder, deviceName, "weights"), weights);
             }
 
-            File.WriteAllText(prefix + "-info.txt", info);
+            File.WriteAllText(SnapshotFiles.Info(request.Folder, deviceName), info);
             var folderName = Path.GetFileName(request.Folder);
             log.SnapshotSaved(deviceName, folderName);
             snapshots.Report(new DebugSnapshotResult(request.Generation, deviceName, true, "saved"));
@@ -98,6 +100,10 @@ internal sealed class SnapshotTaker(DebugSnapshots snapshots, string deviceName,
             activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, ex.GetType().Name);
             snapshots.Report(new DebugSnapshotResult(request.Generation, deviceName, false, ex.GetType().Name));
         }
+        finally
+        {
+            snapshots.WriteEnded();
+        }
     }
 
     private static void WritePng(string path, SnapshotImage image)
@@ -105,8 +111,4 @@ internal sealed class SnapshotTaker(DebugSnapshots snapshots, string deviceName,
         using var file = File.Create(path);
         PngWriter.Write(file, image);
     }
-
-    // "\\.\DISPLAY1" -> "DISPLAY1"
-    private static string SafeName(string device) =>
-        string.Concat(device.Where(char.IsLetterOrDigit));
 }

@@ -60,6 +60,12 @@ public sealed record AppSettings
 
     public string TelemetryOtlpEndpoint { get; set; } = string.Empty;
 
+    /// <summary>
+    /// KI-Debug (ADR-0027): an agent may read the state, take debug snapshots and trigger shortcuts
+    /// over a pipe. Off from the factory; stays on until the user turns it off (user's decision).
+    /// </summary>
+    public bool AgentDebugEnabled { get; set; }
+
     /// <summary>Filter per window (ADR-0020): on/off, automatic filter, sensitivity and the user's rules per app + window class.</summary>
     public WindowFilterOptions WindowFilter { get; set; } = WindowFilterOptions.Default;
 

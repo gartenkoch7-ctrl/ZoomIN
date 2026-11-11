@@ -44,6 +44,8 @@ internal static class TextsEnglishDiagnostics
         ["Snapshot.Countdown"] = "Snapshot in {0} s – bring the window to the front now",
         ["Snapshot.Saved"] = "Saved for {0} monitor(s): {1}",
         ["Snapshot.Nothing"] = "No image: ZoomIN is not drawing right now (no filter and no zoom on).",
+        ["Agent.Title"] = "Allow KI-Debug",
+        ["Agent.Desc"] = "An AI agent may read the state, take debug snapshots and trigger shortcuts through the MCP server \"ZoomIN.Mcp.exe\". Snapshots show screen content. Any program running under your account can then use this. Stays on until you turn it off.",
         ["Diag.Package"] = "Diagnostics package",
         ["Diag.Package.Desc"] = "Packs the kept logs and operations into a ZIP file for a bug report. Without settings, window titles or text.",
         ["Diag.Create"] = "Create",

@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using ZoomIN.App.AgentDebug;
 using ZoomIN.App.Composition;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.App.SecureDesktop;
@@ -12,6 +13,7 @@ using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Folders;
 using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Updates;
+using ZoomIN.Platform.AgentDebug;
 using ZoomIN.Platform.Diagnostics;
 using ZoomIN.Platform.Folders;
 using ZoomIN.Platform.SecureDesktop;
@@ -22,7 +24,7 @@ namespace ZoomIN.App;
 
 /// <summary>
 /// Entry point. "ZoomIN.exe --watchdog &lt;pid&gt;" runs the watchdog without any UI (ADR-0007),
-/// "--apply-update …" the elevated install step (ADR-0015); otherwise the WinUI app starts (same steps as the XAML-generated Main), once per session.
+/// "--apply-update …" the elevated install step (ADR-0015), "--mcp" the KI-Debug MCP server (ADR-0027); otherwise the WinUI app starts (same steps as the XAML-generated Main), once per session.
 /// Every role starts telemetry the same way (ADR-0019); "--traceparent" is taken out first.
 /// </summary>
 public static class Program
@@ -56,6 +58,14 @@ public static class Program
         {
             using var telemetry = Start(TelemetryRole.Secure, traceParent);
             return new SecureDesktopHost(telemetry, Folders).Run();
+        }
+
+        if (McpServerRole.IsRequested(args, Environment.ProcessPath))
+        {
+            // Started by an agent's MCP client; talks to the running ZoomIN over the pipe (ADR-0027).
+            // ZoomIN.Mcp.exe never runs anything else: it has no UIAccess, the tray app would be half a ZoomIN.
+            return RunRole(TelemetryRole.Mcp, traceParent, (telemetry, _) =>
+                new McpServerRole(new PipeAgentClient(telemetry.Logger<PipeAgentClient>()), telemetry.Loggers).Run());
         }
 
         if (SecureDesktopSetting.TryParse(args, out var secureDesktopOn))

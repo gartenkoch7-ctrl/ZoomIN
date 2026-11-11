@@ -1,16 +1,19 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ZoomIN.App.AgentDebug;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.App.SecureDesktop;
 using ZoomIN.App.Localization;
 using ZoomIN.App.Updates;
 using ZoomIN.App.Views;
+using ZoomIN.Core.AgentDebug;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Folders;
 using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.Localization;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Updates;
+using ZoomIN.Platform.AgentDebug;
 using ZoomIN.Platform.Diagnostics;
 using ZoomIN.Platform.Lifecycle;
 using ZoomIN.Platform.SecureDesktop;
@@ -64,6 +67,13 @@ internal static class ServiceRegistration
         services.AddSingleton<AppShell>();
         services.AddSingleton<IShellActions>(sp => sp.GetRequiredService<AppShell>());
         services.AddSingleton<PageServices>();
+
+        // KI-Debug (ADR-0027): tray app only, never on secure desktops.
+        services.AddSingleton<IAgentDebugServer, PipeAgentServer>();
+        services.AddSingleton<AgentStateReport>();
+        services.AddSingleton<AgentSnapshot>();
+        services.AddSingleton<AgentCommandHandler>();
+        services.AddSingleton<AgentDebugHost>();
         return services;
     }
 

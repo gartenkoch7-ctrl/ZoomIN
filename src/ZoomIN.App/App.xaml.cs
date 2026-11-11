@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
+using ZoomIN.App.AgentDebug;
 using ZoomIN.App.Composition;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.App.Settings;
@@ -62,6 +63,7 @@ public partial class App : Application
             using (Telemetry.Source.StartActivity("zoomin.app.start.shell.notify"))
             {
                 Program.Instance?.ListenForOpenRequests(shell.OpenSettings);
+                _services.GetRequiredService<AgentDebugHost>().Start();
                 _easeOfAccess = EaseOfAccessNotifier.Create(_log);
                 _easeOfAccess.NotifyStarted();
             }
