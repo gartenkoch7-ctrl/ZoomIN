@@ -72,5 +72,6 @@ Vorgemerkt (2026-11-11) sind:
 - Anzeige-Bedingungen für Markierungen
 - Maus-Puffer und Achsensperre
 - Zoom beim Fenster-Verschieben (aufheben, absenken oder unverändert)
+- Ausschnitt einfrieren und per Kurzbefehl auf den nächsten Monitor wechseln
 
 Details stehen im Abschnitt „Vorgemerkt“ der Ideenliste.

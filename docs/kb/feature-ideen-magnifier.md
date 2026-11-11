@@ -58,7 +58,11 @@ Vorschlag: 1–3 als gemeinsamer Meilenstein (etwa 2–3 Wochen).
 - Anzeige-Bedingung für alle Markierungen: immer, nur in Ruhe, nur in Bewegung, nur bei gehaltener Taste (E1)
 - Maus-Puffer am Monitorrand und Achsensperre mit Umschalt (A6)
 
-**Dazu: Zoom beim Fenster-Verschieben (G1)** – siehe Abschnitt G.
+**Dazu:**
+- Zoom beim Fenster-Verschieben (G1)
+- Ausschnitt einfrieren und per Kurzbefehl auf den nächsten Monitor wechseln (G2)
+
+Beide sind im Abschnitt G beschrieben.
 
 ## A · Verfolgung und Bewegung
 | ID | Funktion | Nutzen | Größe | Machbarkeit / Risiko | Quelle |
@@ -120,7 +124,7 @@ Vorschlag: 1–3 als gemeinsamer Meilenstein (etwa 2–3 Wochen).
 | F7 | **Touch-Gesten** (Dreifingertipp, Aufziehen zum Zoomen) | Tablets/Convertibles | M–L | globale Gesten ohne Magnification-API schwierig | Dolphin-Lektion⁶ |
 | F8 | Fernbildschirm/Tafel (Lehrer-PC) | Schule | L | außerhalb des Kerns, verworfen | Dolphin²² |
 
-## G · Fenster verschieben (eigene Idee, Nutzerwunsch 2026-11-11)
+## G · Fenster und Monitore (eigene Ideen, Nutzerwünsche 2026-11-11)
 | ID | Funktion | Nutzen | Größe | Machbarkeit / Risiko | Quelle |
 |---|---|---|---|---|---|
 | G1 | **Zoom beim Fenster-Verschieben**: Solange ein Fenster verschoben wird, ändert sich der Zoom auf dem Monitor, auf dem das Fenster gerade ist. Einstellung: *aufheben* (gleitet auf 1×, Filter bleiben), *absenken* auf eine wählbare Stufe, oder *unverändert*. | Beim Ziehen sieht man sofort, wohin das Fenster kommt, statt mit hoher Stufe blind zu schwenken | S–M | Siehe unten | eigene Idee; in den Vorbildern nicht gefunden |
@@ -147,6 +151,48 @@ Vorschlag: 1–3 als gemeinsamer Meilenstein (etwa 2–3 Wochen).
 **Risiken:** Manche Apps ziehen ihre Fenster selbst (eigene Titelleisten, z. B. Browser-Tabs) und
 melden kein `MOVESIZESTART`. Das muss eine App-Matrix prüfen. Ein Rückfall über die
 Fensterposition beim gedrückten Mausknopf ist denkbar, aber teurer.
+
+### G2 · Ausschnitt einfrieren und Monitor wechseln
+| ID | Funktion | Nutzen | Größe | Machbarkeit / Risiko | Quelle |
+|---|---|---|---|---|---|
+| G2 | **Ausschnitt einfrieren + nächster Monitor**: Ein Kurzbefehl friert den aktuellen Zoom-Ausschnitt eines Monitors ein. Ein zweiter Kurzbefehl setzt den Mauszeiger auf den nächsten Monitor. Dort arbeitet man normal mit Zoom weiter, während der eingefrorene Ausschnitt stehen bleibt. | Vorlage, Anleitung oder Video vergrößert auf Monitor A lesen und auf Monitor B schreiben, ohne dass A ständig wegschwenkt; Monitorwechsel ohne langes Ziehen der Maus bei hoher Stufe | M | Siehe unten | eigene Idee; ähnlich Windows-Beta „Ansicht sperren“ (F3) ¹⁷ ⚠️ und Monitorwechsel per Kürzel bei SuperNova und macOS (A7) ⁹ ⁷ |
+
+**Umsetzung grob:**
+- **Einfrieren:** Der Anker des Monitors bleibt stehen (eigener Zustand im `ZoomModel` pro
+  Monitor). Ab Werk bleibt der Inhalt live, also aktualisiert sich ein Video weiter. Optional
+  gibt es ein Standbild, für das ZoomIN den Capture-Frame nicht mehr kopiert.
+- **Monitor wechseln:** Der Zeiger springt auf dem Zielmonitor an seine letzte Position dort,
+  sonst in die Mitte (`SetCursorPos`). Das ist die erste Stelle, an der ZoomIN den Zeiger
+  versetzt, aber nur auf ausdrücklichen Befehl. Die M6-Regel „nie versetzen“ muss dafür eine
+  Ausnahme bekommen, festgehalten in einem ADR.
+- **Klicks auf dem eingefrorenen Monitor:** Der angezeigte Ausschnitt hängt dann nicht mehr an
+  der Maus, also stimmt das Bild nicht mit dem Klickpunkt überein (ADR-0003/0018). Zwei Wege:
+  - Kommt der Zeiger zurück, wird der Ausschnitt aufgehoben.
+  - Er bleibt eingefroren, und ZoomIN zeichnet den Zeiger dort, wo sein Desktop-Punkt angezeigt
+    wird, oder blendet ihn aus, wenn der Punkt außerhalb des Ausschnitts liegt. Dann ist der
+    Monitor reine Anzeige.
+- **Kurzbefehle (Vorschlag, prüfen):** `Strg+Alt+H` für Halten/Einfrieren und `Strg+Alt+N` für
+  den nächsten Monitor. Sie liegen nicht auf AltGr-Zeichen im deutschen Layout (anders als E, M
+  oder Q) und sind bisher frei.
+- **Anzeige:** Ein eingefrorener Monitor bekommt einen deutlichen Rahmen oder ein Symbol. Der
+  Rahmen-Shader ist vorhanden.
+- **Telemetrie:** Abläufe `zoomin.view.freeze` und `zoomin.view.monitor_switch` mit
+  Monitor-Index, Stufe und live/Standbild.
+
+**Offene Fragen fürs Grilling:**
+- Bleibt der Inhalt ab Werk live, oder wird er zum Standbild?
+- Was geschieht, wenn der Zeiger auf den eingefrorenen Monitor zurückkommt: aufheben, oder
+  bleiben als reine Anzeige?
+- Darf man auch einen Monitor einfrieren, auf dem gerade nicht gezoomt ist (1×)?
+- Kann man mehrere Monitore gleichzeitig einfrieren, und hebt ein Befehl alle auf?
+- Ist der Monitorwechsel auch ohne Einfrieren nützlich und deshalb ein eigener Schalter?
+- Was passiert bei nur einem Monitor? Dort wäre G2 dasselbe wie die eingefrorenen Ausschnitte (B1).
+
+**Risiken:**
+- Nutzer vergessen, dass ein Monitor eingefroren ist, und wundern sich, dass er nicht folgt.
+  Dagegen helfen Rahmen, Hinweis und Ansage.
+- Fokus- und Caret-Verfolgung auf dem eingefrorenen Monitor müssen pausieren.
+- Klicks dorthin sind die eigentliche Schwierigkeit.
 
 ## Stimmen von Nutzern (Auswahl)
 - Vollbild-Lupe macht nach Minuten **übel/schwindlig**; Angedockt ohne Kürzel für Größe/Lage;
