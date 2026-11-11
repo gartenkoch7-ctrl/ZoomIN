@@ -60,3 +60,5 @@ M0 ─► M1 ─► M2 ─┬─► M3 ─┬─► M4 ─┐
 ## Nach dem MVP (nicht geplant, nur gesammelt)
 Sprachausgabe (`ZoomIN.Speech`), Input-Transform mit UIAccess + Code-Signing,
 Line View, Auto-Lupe am Fokus, Zoom bis 64×. (Installer mit Updates → M9.)
+Weitere bewertete Ideen für die Vergrößerung (Top 5 und Gesamtliste):
+[../kb/feature-ideen-magnifier.md](../kb/feature-ideen-magnifier.md).
