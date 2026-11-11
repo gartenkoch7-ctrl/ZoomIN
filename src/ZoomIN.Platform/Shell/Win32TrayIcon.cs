@@ -11,13 +11,17 @@ namespace ZoomIN.Platform.Shell;
 
 /// <summary>
 /// Tray icon via Shell_NotifyIcon on its own thread with a message window (M7). Re-adds itself
-/// when Explorer restarts ("TaskbarCreated"). Menu commands are raised on this thread.
+/// when Explorer restarts ("TaskbarCreated"). Menu commands and notice clicks are raised on this thread.
 /// </summary>
 public sealed unsafe class Win32TrayIcon : ITrayIcon
 {
     private const string ClassName = "ZoomIN.Tray";
     private const uint IconId = 1;
+
+    // NIN_BALLOONUSERCLICK (WM_USER + 5): the user clicked a notice (a toast on Windows 10/11).
+    private const uint BalloonUserClick = 0x0405;
     private static readonly uint s_callbackMessage = PInvoke.WM_APP + 2;
+    private static readonly uint s_noticeMessage = PInvoke.WM_APP + 3;
     private static readonly uint s_taskbarCreated = PInvoke.RegisterWindowMessage("TaskbarCreated");
     private static readonly WNDPROC s_wndProc = WndProc;
     private static Win32TrayIcon? s_instance;
@@ -25,6 +29,7 @@ public sealed unsafe class Win32TrayIcon : ITrayIcon
     private readonly ILogger _log;
     private readonly Thread _thread;
     private readonly ManualResetEventSlim _ready = new();
+    private readonly TrayNotices _notices = new();
     private TrayMenu _menu = new("ZoomIN", []);
     private HWND _window;
     private nint _icon;
@@ -47,13 +52,39 @@ public sealed unsafe class Win32TrayIcon : ITrayIcon
         PInvoke.PostMessage(_window, PInvoke.WM_APP, default, default);
     }
 
-    public void Notify(string title, string message)
+    public void Notify(string title, string message, TrayCommand? clicked = null)
     {
-        var data = Data(NOTIFY_ICON_DATA_FLAGS.NIF_INFO);
-        data.szInfoTitle = title;
-        data.szInfo = message;
-        data.dwInfoFlags = NOTIFY_ICON_INFOTIP_FLAGS.NIIF_INFO;
-        PInvoke.Shell_NotifyIcon(NOTIFY_ICON_MESSAGE.NIM_MODIFY, data);
+        // Shown on the tray thread, after a Show posted before it: right after start the icon may
+        // not be added yet, and NIM_MODIFY would fail without a word.
+        // Cut to the fixed NOTIFYICONDATA buffers (64/256 chars with the terminator) here: copying
+        // a longer text throws, and inside the window procedure that would end the process.
+        _notices.Add(new TrayNotice(Fit(title, 63), Fit(message, 255), clicked));
+        PInvoke.PostMessage(_window, s_noticeMessage, default, default);
+    }
+
+    // Never ends between the two halves of a surrogate pair (emoji in a translation).
+    private static string Fit(string text, int max) =>
+        text.Length <= max ? text : text[..(char.IsHighSurrogate(text[max - 1]) ? max - 1 : max)];
+
+    // A new notice replaces the one on screen (one balloon per icon), as the newest status counts.
+    // Without the icon they wait for the next AddOrUpdate.
+    private void ShowNotices()
+    {
+        while (_added && _notices.TryPeek(out var notice))
+        {
+            var data = Data(NOTIFY_ICON_DATA_FLAGS.NIF_INFO);
+            data.szInfoTitle = notice.Title;
+            data.szInfo = notice.Message;
+            data.dwInfoFlags = NOTIFY_ICON_INFOTIP_FLAGS.NIIF_INFO;
+            if (PInvoke.Shell_NotifyIcon(NOTIFY_ICON_MESSAGE.NIM_MODIFY, data))
+            {
+                _notices.Shown(notice);
+            }
+            else
+            {
+                _notices.Drop(notice);
+            }
+        }
     }
 
     public void Dispose()
@@ -98,38 +129,17 @@ public sealed unsafe class Win32TrayIcon : ITrayIcon
         if (!_added)
         {
             _log.TrayIconFailed();
+            return;
         }
+
+        ShowNotices();
     }
 
     private void ShowMenu()
     {
-        var menu = PInvoke.CreatePopupMenu();
-        try
+        if (new TrayPopupMenu(_window).Show(Volatile.Read(ref _menu)) is { } command)
         {
-            foreach (var item in Volatile.Read(ref _menu).Items)
-            {
-                var flags = item.Text is null ? MENU_ITEM_FLAGS.MF_SEPARATOR
-                    : MENU_ITEM_FLAGS.MF_STRING | (item.Checked ? MENU_ITEM_FLAGS.MF_CHECKED : 0);
-                fixed (char* text = item.Text)
-                {
-                    PInvoke.AppendMenu(menu, flags, (nuint)item.Command + 1, text);
-                }
-            }
-
-            // Required so the menu closes when the user clicks elsewhere.
-            PInvoke.SetForegroundWindow(_window);
-            PInvoke.GetCursorPos(out var at);
-            var chosen = PInvoke.TrackPopupMenu(menu, TRACK_POPUP_MENU_FLAGS.TPM_RETURNCMD | TRACK_POPUP_MENU_FLAGS.TPM_RIGHTBUTTON,
-                at.X, at.Y, 0, _window, null);
-            PInvoke.PostMessage(_window, PInvoke.WM_NULL, default, default);
-            if (chosen.Value > 0)
-            {
-                Raise((TrayCommand)(chosen.Value - 1));
-            }
-        }
-        finally
-        {
-            PInvoke.DestroyMenu(menu);
+            Raise(command);
         }
     }
 
@@ -169,6 +179,12 @@ public sealed unsafe class Win32TrayIcon : ITrayIcon
                 return default;
             }
 
+            if (msg == s_noticeMessage)
+            {
+                self.ShowNotices();
+                return default;
+            }
+
             if (msg == s_callbackMessage)
             {
                 var mouse = (uint)(lParam.Value & 0xFFFF);
@@ -179,6 +195,10 @@ public sealed unsafe class Win32TrayIcon : ITrayIcon
                 else if (mouse == PInvoke.WM_RBUTTONUP)
                 {
                     self.ShowMenu();
+                }
+                else if (mouse == BalloonUserClick && self._notices.Click is { } command)
+                {
+                    self.Raise(command);
                 }
 
                 return default;
@@ -194,27 +214,5 @@ public sealed unsafe class Win32TrayIcon : ITrayIcon
         }
 
         return PInvoke.DefWindowProc(hwnd, msg, wParam, lParam);
-    }
-
-    private sealed class TrayIconImage(string path)
-    {
-        /// <summary>ZoomIN icon next to the exe; Windows' application icon if it is missing.</summary>
-        public nint Load()
-        {
-            var size = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXSMICON);
-            if (File.Exists(path))
-            {
-                fixed (char* file = path)
-                {
-                    var icon = PInvoke.LoadImage(HINSTANCE.Null, file, GDI_IMAGE_TYPE.IMAGE_ICON, size, size, IMAGE_FLAGS.LR_LOADFROMFILE);
-                    if (!icon.IsNull)
-                    {
-                        return (nint)icon.Value;
-                    }
-                }
-            }
-
-            return (nint)PInvoke.LoadIcon(HINSTANCE.Null, (PCWSTR)(char*)32512).Value; // IDI_APPLICATION
-        }
     }
 }

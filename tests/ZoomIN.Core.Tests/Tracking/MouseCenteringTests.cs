@@ -9,7 +9,7 @@ namespace ZoomIN.Core.Tests.Tracking;
 public sealed class MouseCenteringTests
 {
     private static readonly PhysicalRect s_monitor = new(0, 0, 1920, 1080);
-    private static readonly TrackingOptions s_centred = TrackingOptions.Default with { PanSeconds = 0 };
+    private static readonly TrackingOptions s_centred = TrackingOptions.Default with { PanSeconds = 0, MouseFollow = MouseFollowMode.Center };
 
     [Theory]
     [InlineData(ZoomMode.Fullscreen)]
@@ -86,7 +86,7 @@ public sealed class MouseCenteringTests
     {
         var mouse = new PhysicalPoint(1500, 200);
 
-        var anchor = new AnchorController().Next(Input(1.0, mouse, options: s_centred with { CenterMouse = false }));
+        var anchor = new AnchorController().Next(Input(1.0, mouse, options: s_centred with { MouseFollow = MouseFollowMode.Fixpoint }));
 
         Assert.Equal(mouse, anchor);
     }

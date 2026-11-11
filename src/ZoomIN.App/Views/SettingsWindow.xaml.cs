@@ -17,7 +17,8 @@ public sealed partial class SettingsWindow : Window
     private bool _exiting;
     private Type _currentPage;
 
-    public SettingsWindow(PageServices pages, bool firstRunCompleted)
+    /// <param name="startPage">Page to open with (e.g. from a notice); ignored while the first-run assistant runs.</param>
+    public SettingsWindow(PageServices pages, bool firstRunCompleted, Type? startPage = null)
     {
         _pages = pages;
         InitializeComponent();
@@ -30,7 +31,7 @@ public sealed partial class SettingsWindow : Window
         AppWindow.Closing += OnClosing;
         Text.LanguageChanged += OnLanguageChanged;
 
-        _currentPage = firstRunCompleted ? typeof(OverviewPage) : typeof(WelcomePage);
+        _currentPage = firstRunCompleted ? startPage ?? typeof(OverviewPage) : typeof(WelcomePage);
         BuildNavigation();
     }
 
@@ -81,7 +82,7 @@ public sealed partial class SettingsWindow : Window
         Add(Text.Get("NavUpdates"), "", typeof(UpdatesPage));
         Add(Text.NavInfo, "", typeof(InfoPage));
 
-        var current = Navigation.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => (Type)i.Tag == _currentPage);
+        var current = Find(_currentPage);
         if (current is not null)
         {
             Navigation.SelectedItem = current;
@@ -113,4 +114,16 @@ public sealed partial class SettingsWindow : Window
         _currentPage = typeof(OverviewPage);
         BuildNavigation();
     }
+
+    /// <summary>Selects a page of the menu, e.g. from a notice that points to it; navigates once.</summary>
+    internal void ShowPage(Type page)
+    {
+        if (Find(page) is { } item)
+        {
+            Navigation.SelectedItem = item;
+        }
+    }
+
+    private NavigationViewItem? Find(Type page) =>
+        Navigation.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => (Type)i.Tag == page);
 }

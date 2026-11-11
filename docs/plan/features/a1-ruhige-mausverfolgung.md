@@ -1,5 +1,5 @@
 # A1 · Ruhige Mausverfolgung mit Randabstand
-**Meilenstein:** [M17](../m17-ruhige-ansicht.md) · **Spur:** A · **Branch:** `feat/m17-a1-randabstand` · **Größe:** S–M · **Status:** geplant
+**Meilenstein:** [M17](../m17-ruhige-ansicht.md) · **Spur:** A · **Branch:** `feat/m17-a1-randabstand` · **Größe:** S–M · **Status:** umgesetzt, Sichtprüfung offen
 
 **Ziel:** Das vergrößerte Bild bewegt sich erst, wenn der Mauszeiger einen einstellbaren Rand
 erreicht. Dann schiebt es sich genau so weit, dass der Zeiger auf dem Randabstand bleibt. Das
@@ -49,27 +49,32 @@ Rand → das Bild läuft gleichmäßig mit, der Zeiger bleibt bei 20 % vom Rand 
 
 ## Aufgaben
 ### Core
-- [ ] `MouseFollowMode`, `TrackingOptions` umbauen (`CenterMouse` → `MouseFollow`, `MouseMargin`)
-- [ ] Schieberegel im `AnchorController`; Tests für Mitte, Schieben an allen vier Rändern,
-      Monitorrand ohne Zittern, Zoomwechsel, Rückkehr von Fokus/Caret, Lupe
-- [ ] Klickpunkt-Test analog `MouseCenteringTests`: Zeiger wird am angezeigten Desktop-Punkt
-      gezeichnet, über den ganzen Monitor
-- [ ] Benchmark `AnchorMargin` (neben `AnchorCenterMouse`): `0 B`, Zeit dokumentieren
-- [ ] Abdeckung Core ≥ 90 %
+- [x] `MouseFollowMode`, `TrackingOptions` umbauen (`CenterMouse` → `MouseFollow`, `MouseMargin`)
+- [x] Schieberegel im `AnchorController` (Rechnung in `MouseFollowTarget`); Tests für Mitte,
+      Schieben an allen vier Rändern, Monitorrand ohne Zittern, Zoomwechsel, Rückkehr von
+      Fokus/Caret, Lupe (`MouseMarginTests`)
+- [x] Klickpunkt-Test analog `MouseCenteringTests`: Zeiger wird am angezeigten Desktop-Punkt
+      gezeichnet, über den ganzen Monitor (`MouseMarginClickTests`, auch mit Zoomwechseln/Sprüngen)
+- [x] Benchmark `AnchorMargin` (neben `AnchorCenterMouse`): `0 B`, Zeit in `performance.md`
+- [x] Abdeckung Core ≥ 90 % (94 %; `AnchorController`, `PlacementTracker`, `SettingsMigration` 100 %)
+- [x] Für B2: `ViewPlacement` in `AnchorInput` (Anker an einen Punkt bei Zielzoom setzen), Tests
+      `ViewPlacementTests`
 ### Settings & Migration
-- [ ] Felder, Werkswerte, `ProfileFields`, `TrackingMapping`
-- [ ] Migration einmalig, Tests: alte Datei mit `CenterMouse=true/false`, neue Datei, zweiter Start
-      ändert nichts
+- [x] Felder, Werkswerte, `ProfileFields`, `TrackingMapping`, `SecureSettingsSanitizer`
+- [x] Migration einmalig (`SchemaVersion` 1 → 2, `SettingsMigration` + `SettingsLoader`), Tests:
+      alte Datei mit `CenterMouse=true/false`, neue Datei, zweiter Start ändert nichts
 ### App
-- [ ] Karte auf „Fokus & Verfolgung“, Texte DE/EN, Bildschirmleser liest Wert + Einheit
-- [ ] Hinweis nach Migration
+- [x] Karte auf „Fokus & Textcursor“ (Auswahl „Maus folgen“ + Regler „Randabstand für die Maus“,
+      ausgegraut außer bei Randabstand), Texte DE/EN, Bildschirmleser liest Wert + Einheit
+      (`ValueSlider`/`SettingCard` wie bisher)
+- [x] Hinweis nach Migration (Tray-Benachrichtigung; Klick öffnet die Seite)
 ### Telemetrie (EventIds App 1500–1519)
-- [ ] Log 1500 Migration ausgeführt (alter Wert, neuer Wert), 1501 Modus geändert
-- [ ] Messwert `zoomin.tracking.mouse_push` (Zähler „Ansicht geschoben“ je Sekunde, Tag Modus)
-      mit Instrument und Tags, die beim Start angelegt werden
-- [ ] Katalog `docs/kb/telemetrie.md`
+- [x] Log 1500 Migration ausgeführt (alter Wert, neuer Wert), 1501 Modus geändert, 1502 Hinweis gezeigt
+- [x] Messwert `zoomin.tracking.mouse_push` (Frames „Ansicht geschoben“, Rate je Sekunde im
+      Backend, Tag `zoomin.mouse.follow`) mit Instrument und Tags, die beim Start angelegt werden
+- [x] Katalog `docs/kb/telemetrie.md`
 ### Doku
-- [ ] `docs/kb/eingabe-und-tracking.md`: neuer Abschnitt „Randabstand“, ADR-0018 bleibt gültig
+- [x] `docs/kb/eingabe-und-tracking.md`: neuer Abschnitt „Randabstand“, ADR-0018 bleibt gültig
       (nur nicht mehr Werkswert)
 
 ## Parallelisierung
@@ -87,6 +92,30 @@ Rand → das Bild läuft gleichmäßig mit, der Zeiger bleibt bei 20 % vom Rand 
 - [ ] Update von einer Version mit `CenterMouse`: einmal Randabstand + Hinweis, danach bleibt die Wahl
 - [ ] Benchmark `0 B`, Bildrate unverändert
 - [ ] Overlay weiterhin aus Aufnahmen ausgeschlossen
+
+## Umsetzungsnotizen (2026-11-11)
+- Grundsatz festgehalten in [ADR-0029](../../adr/0029-maus-randabstand-als-werkswert.md)
+  (neuer Werkswert und einmalige Umstellung; ADR-0018 gilt weiter).
+- Zoomwechsel im Randabstand-Modus: Der Zeiger bleibt auf dem Bildschirm stehen (Anker wird
+  umgerechnet); ab 1× beginnt das Hineinzoomen am Zeiger. Im Plan nicht festgelegt, selbst
+  entschieden – sonst rutscht der Inhalt unter dem Zeiger weg.
+- Seitenname ist „Fokus & Textcursor“ (im Plan „Fokus & Verfolgung“).
+- Migration speichert sofort; Profile aus 1.0 bekommen beim Laden den Werkswert Randabstand.
+- Klick auf den Hinweis: neues `TrayCommand.OpenTracking`, `ITrayIcon.Notify(…, clicked)`.
+  Windows meldet nur „Ballon geklickt“; der Klick gehört zum zuletzt gezeigten Hinweis. Hinweise
+  laufen über den Tray-Thread (nach dem Anlegen des Symbols). Ein zweiter Hinweis ersetzt den
+  ersten sofort (ein Ballon je Symbol, wie bisher): Beim Start mit dem Hinweis entfällt die
+  UIAccess-Benachrichtigung dieses eine Mal (sie kommt bei jedem Start, Banner bleibt).
+  `TrayNotices` hält Hinweise nur, solange das Symbol fehlt (höchstens 4, die neuesten) und zeigt
+  sie dann sofort hintereinander. Ein „einer nach dem anderen“ (warten auf das Ende des Ballons)
+  wurde verworfen: Es verzögerte Statushinweise (Filter pro Fenster), und Windows' Ende-Meldungen
+  lassen sich keinem Hinweis sicher zuordnen. Texte werden auf 63/255 Zeichen gekürzt (sonst
+  Ausnahme in der Fensterprozedur).
+- Profile aus 1.0 werden nicht einzeln migriert: Sie haben kein `MouseFollow` und laden mit dem
+  Werkswert Randabstand (passt zur Entscheidung „einmal auf Randabstand“). Auch die Migration
+  stellt „Fixpunkt“ (`CenterMouse=false`) um – wie im Plan entschieden; im Review angemerkt.
+- Restrisiko: Findet die Update-Prüfung kurz nach dem Start eine neue Version, ersetzt deren
+  Hinweis den Randabstand-Hinweis; der Merker ist dann schon gelöscht.
 
 ## Offene Fragen / Risiken
 - Wirkt 20 % bei Lupe (kleines Fenster) zu groß? Eventuell eigener Werkswert für die Lupe, im

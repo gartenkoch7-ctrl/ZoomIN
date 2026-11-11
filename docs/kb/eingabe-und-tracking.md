@@ -30,8 +30,9 @@ Springt der Viewport zum Tastaturfokus/Caret, stimmen Bild und Mausposition nich
 überein. MVP-Verhalten: Beim Fokus-Tracking wird die Maus **nicht** bewegt; sobald die Maus
 bewegt wird, übernimmt wieder der Cursor-Fixpunkt. ⚠️ Mit Nutzern testen.
 
-## Mauszeiger in der Mitte (Standard, ADR-0018)
-`TrackingOptions.CenterMouse` (Seite „Verfolgung“, standardmäßig an): `AnchorController` legt den
+## Mauszeiger in der Mitte (ADR-0018)
+Modus `MouseFollowMode.Center` (bis 1.0 der Schalter `CenterMouse`, Werkswert; seit M17 ist
+„Randabstand“ der Werkswert, ADR-0018 gilt weiter): `AnchorController` legt den
 Fixpunkt mit `ViewCentering.AnchorFor` so, dass die Maus in der **Bildmitte** angezeigt wird
 (Vollbild, Lupe). Am Monitorrand bleibt die Ansicht stehen und der Zeiger rückt zum Rand.
 Angedockt ist unverändert. Klicks treffen trotzdem: Der Systemzeiger ist beim Zoomen
@@ -40,7 +41,52 @@ Klick landet genau an diesem Desktop-Punkt. Ein Input-Transform ist dafür **nic
 - Folge: Pro Mauspixel wandert der Inhalt um `z` Bildschirmpixel (der Zeiger steht still).
 - Tests: `MouseCenteringTests` (Mitte, Klickpunkt unter dem Zeiger über den ganzen Monitor,
   Monitorrand, Zoomwechsel, Rückkehr vom Fokus). Benchmark `AnchorCenterMouse` 19 ns, 0 B.
-- Aus = Fixpunkt an der Maus (ADR-0003).
+- Modus „Fixpunkt“ = Fixpunkt an der Maus (ADR-0003).
+
+## Randabstand (Werkswert seit M17, Feature A1, ADR-0029)
+`TrackingOptions.MouseFollow = Margin`, Abstand `MouseMargin` 0–0,5 (Werk 0,2), Seite
+„Fokus & Textcursor“ → „Maus folgen“. Rechnung in `Core/Tracking/MouseFollowTarget`.
+- Liegt die Maus im inneren Bereich des sichtbaren Ausschnitts (Ausschnitt minus Abstand je
+  Seite), bleibt der Anker **bitgenau** stehen – das Bild ruht, der gezeichnete Zeiger wandert.
+- Sonst wird die Ausschnittsmitte um die kleinste Verschiebung bewegt, die die Maus genau auf den
+  Abstand bringt, und mit `ViewCentering.AnchorFor` in einen Fixpunkt umgerechnet – wie beim
+  Caret mit `CaretMargin`. Kein Verzögern, kein Springen: am Rand läuft das Bild 1:1 mit.
+- Pro Achse: Eine Achse ohne Schub behält ihren Ankerwert exakt. Schübe ≤ 1e-6 px gelten als
+  Rundung. Sonst würde der Rückweg Ausschnitt → Anker jedes Frame um Bruchteile eines Pixels
+  wackeln, und der Render-Loop käme am Monitorrand nie in den Leerlauf.
+- Monitorrand: `AnchorFor` klemmt, die Ansicht steht, der Zeiger rückt in den Rand (kein Zittern,
+  Test `AtTheMonitorEdge_TheViewStops_WithoutJitter`).
+- Zoomwechsel (Vollbild; die Lupe bleibt stehen, sonst wanderte ihr Fenster): Der Anker wird so umgerechnet, dass der Zeiger auf dem Bildschirm stehen bleibt
+  (Vollbild und Lupe zeigen `x` bei `p + z·(x − p)`, also `p' = (z'·m − s) / (z' − 1)`). Ab 1×
+  ergibt das die Maus selbst: Hineinzoomen beginnt am Zeiger wie beim Fixpunkt.
+- Moduswechsel (z. B. Vollbild → Lupe): Der Anker startet an der Maus, die Lupe öffnet also am
+  Zeiger; der alte Anker gehört zu einer anderen Geometrie.
+- Messwert `zoomin.tracking.mouse_push` zählt nur Mausschritte (nicht angedockt, nicht bei 1×,
+  nicht während sich der Zoom ändert).
+- Rückkehr von Fokus/Caret (Maus > 8 px bewegt): Der Randabstand rechnet vom aktuellen Ziel aus,
+  liegt die Maus im Bild, bewegt sich nichts.
+- 0,5 = kein Innenbereich, der Zeiger bleibt in der Mitte (wie „Mitte“); 0 = erst ganz am Rand.
+- Lupe: gleiche Regel auf dem kleinen Quellausschnitt der Lupe; die Lupe steht still, solange der
+  Zeiger innen bleibt. Angedockt: unverändert (Umgebung der Maus).
+- Klicks: Der Zeiger wird an seinem angezeigten Desktop-Punkt gezeichnet (ADR-0018). Test
+  `MouseMarginClickTests` fährt den ganzen Monitor ab, auch mit Zoomwechseln und Sprüngen.
+- `ViewPlacement` in `AnchorInput` (für M17 B2 „hineinzoomen am Rahmen“): setzt den Maus-Anker so,
+  dass ein Punkt bei der Zielzoomstufe mittig steht; bis der Zoom dort ankommt, wird nicht auf
+  den Zeiger umgerechnet. Danach gilt der Randabstand. In „Mitte“/„Fixpunkt“ übernimmt die Maus
+  sofort wieder.
+- Migration: Einstellungen mit `SchemaVersion` 1 werden beim ersten Start **einmal** auf
+  Randabstand gestellt (`SettingsMigration`, Log 1500), sofort gespeichert und der Hinweis
+  (Windows-Benachrichtigung, Klick öffnet die Seite, Log 1502) einmal gezeigt. `CenterMouse` wird
+  nur noch gelesen. Profile aus 1.0 haben kein `MouseFollow` und bekommen beim Laden den
+  Werkswert Randabstand.
+- Tray-Hinweise (gelernt mit A1): Windows zeigt einen Ballon je Symbol, ein neuer ersetzt den
+  angezeigten sofort, und ein Klick meldet nur „Ballon geklickt“ (NIN_BALLOONUSERCLICK), ohne zu
+  sagen, welcher. Der Klick gehört darum zum zuletzt gezeigten Hinweis
+  (`ITrayIcon.Notify(…, clicked)`). Hinweise laufen über den Tray-Thread, damit sie nach dem
+  Anlegen des Symbols kommen (direkt nach dem Start schlug NIM_MODIFY sonst stumm fehl); ohne
+  Symbol warten sie, bis es (wieder) angelegt ist. Beim
+  Start mit dem Randabstand-Hinweis entfällt die UIAccess-Benachrichtigung einmal.
+- Benchmark `AnchorMargin` siehe `performance.md`.
 
 ## Später: Input-Transform
 `MagSetInputTransform` bildet Eingaben aufs vergrößerte Bild ab und erlaubt weitere

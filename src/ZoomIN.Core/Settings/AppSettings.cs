@@ -1,9 +1,11 @@
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
+using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Updates;
 using ZoomIN.Core.WindowDrag;
 using ZoomIN.Core.WindowFilters;
@@ -23,7 +25,8 @@ namespace ZoomIN.Core.Settings;
 /// </remarks>
 public sealed record AppSettings
 {
-    public const int CurrentSchemaVersion = 1;
+    /// <summary>2 (M17): mouse follow mode instead of CenterMouse, see <see cref="SettingsMigration"/>.</summary>
+    public const int CurrentSchemaVersion = 2;
 
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
 
@@ -35,6 +38,9 @@ public sealed record AppSettings
 
     /// <summary>The "closes to tray" hint is shown only once.</summary>
     public bool CloseToTrayHintShown { get; set; }
+
+    /// <summary>The migration to the margin mode (M17 A1) still has to tell the user once where to change it back.</summary>
+    public bool MouseFollowHintPending { get; set; }
 
     /// <summary>Update check at start and once a day (ADR-0014); only asks GitHub for the release list.</summary>
     public bool CheckForUpdates { get; set; }
@@ -192,8 +198,15 @@ public sealed record AppSettings
 
     public bool CaretMarker { get; set; } = true;
 
-    /// <summary>Keep the pointer in the middle of the view (ADR-0018); off = fixpoint at the mouse (ADR-0003).</summary>
-    public bool CenterMouse { get; set; } = true;
+    /// <summary>How the view follows the mouse (M17 A1): middle, margin (factory) or fixpoint.</summary>
+    public MouseFollowMode MouseFollow { get; set; } = TrackingOptions.Default.MouseFollow;
+
+    /// <summary>With MouseFollow = Margin: the view moves once the pointer is this close to its edge (0–0.5).</summary>
+    public double MouseMargin { get; set; } = TrackingOptions.Default.MouseMargin;
+
+    /// <summary>Before 1.1 (schema 1): "keep the pointer centred". Read once by <see cref="SettingsMigration"/>, never written.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? CenterMouse { get; set; }
 
     /// <summary>Glide duration for zoom changes in milliseconds; 0 = instant.</summary>
     public int AnimationMilliseconds { get; set; } = 150;

@@ -69,7 +69,7 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 ## EventId-Bereiche
 | Bereich | Projekt |
 |---|---|
-| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1540 Fenster-Verschieben) |
+| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1500 Maus folgen, 1540 Fenster-Verschieben) |
 | 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe, 2900 Fenster-Verschieben) |
 | 3000–3999 | Rendering |
 | 4000–4999 | Watchdog |
@@ -127,6 +127,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.tracking.read_failures` | Abfragen | `exception.type` | Abfrage von Fokus und Caret mit unerwarteter Ausnahme abgebrochen; Tracking läuft mit Systemcaret weiter (dazu Log 2003, einmal je Ausnahmetyp) |
 | `zoomin.tracking.anchor_switches` | Wechsel | `zoomin.anchor.source` (`mouse`, `focus`, `caret`) | Ansicht folgt jetzt Maus, Fokus oder Caret (Render-Thread, ohne Allokation) |
 | `zoomin.zoom.temporary_levels` | Änderungen | `zoomin.owner` (`overview`, `window_drag`), `zoomin.action` (`set`, `release`, `move`, `cleared`) | Vorübergehende Zoomstufe (M17) gesetzt, freigegeben, auf einen anderen Monitor verschoben oder durch einen Befehl des Nutzers gelöscht. `set` zählt nur neue Stufen (Ersetzen nicht), ein `move` auf eine eigene Stufe zählt zusätzlich ein `release`. Bleibt ein `set` ohne späteres `release` oder `cleared`, gibt ein Besitzer nicht frei (der KI-Debug-Zustand zeigt dann „temporary“ am Monitor). Abläufe und Logs bringen Übersicht (B2) und Fenster-Verschieben (G1) selbst mit |
+| `zoomin.tracking.mouse_push` | Frames | `zoomin.mouse.follow` (`center`, `margin`, `fixpoint`) | Frames, in denen eine Mausbewegung die Ansicht verschoben hat (M17 A1); die Rate je Sekunde zeigt, wie unruhig das Bild im jeweiligen Modus ist. Render-Thread, Instrument und Tags beim Start angelegt, ohne Allokation |
 | `zoomin.render.smart_invert_gpu_time` | ms | `zoomin.monitor` | Mittlere Zusatz-GPU-Zeit des intelligenten Invertierens: Umgebungs-Durchgang (Mittel über 120 Läufe) plus Mehrkosten im Magnify-Durchgang (seit M14 je Pipeline gemessen, 32 Frames schlicht gegen intelligent nach 60 Frames Aufwärmen, erneut wenn der ganze Monitor intelligent wird); > 1 ms → Rückfall (Log 3007) |
 | `zoomin.render.gpu_time` | ms | `zoomin.monitor`, `zoomin.pass` (`magnify`) | Mittlere GPU-Zeit eines Durchgangs über 120 Frames (M14); Zeitstempel-Abfragen laufen nur, solange jemand das Instrument abonniert (Diagnose, OTLP). Durchgänge überlappen nicht: kein Gesamt-Frame-Wert, weil verschachtelte Disjoint-Abfragen nicht überall erlaubt sind |
 | `zoomin.render.ready_time` | ms | `zoomin.monitor` | Prozessstart bis erste fertige Zoom-Pipeline des Monitors (einmal je Prozess und Monitor, nur in der ersten Minute – später angesteckte Monitore zählen nicht, M14) |
@@ -176,6 +177,9 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1403 | Fehler | KI-Debug command {Tool} failed |
 | 1404 | Info | MCP server started |
 | 1405 | Info | MCP server ended |
+| 1500 | Info | Settings migrated to schema {Version}: mouse follow {Previous} -> {Current} |
+| 1501 | Info | Mouse follow mode changed: {Previous} -> {Current} |
+| 1502 | Info | Mouse follow hint shown |
 | 1540 | Debug | Window drag ended on {Monitor}: {Kind}, {Action}, zoom {LevelBefore} held at {Level}, crossed monitors {Crossed}, cleared {Cleared} |
 | 1541 | Info | Monitors changed during a window drag; its zoom level was given back |
 | 1542 | Fehler | Handling a window drag failed |
