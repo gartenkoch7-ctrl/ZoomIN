@@ -85,7 +85,8 @@ public static class CustomSchemes
         {
             Name = Name(scheme.Name),
 
-            // An unknown kind (newer build, hand edit) keeps the scheme and its colours: it only
+            // An unknown kind given as a number (hand edit; an unknown name already fails the whole file
+            // in the string enum converter) keeps the scheme and its colours: it only
             // replaces colours until the user picks a kind, instead of losing the definition.
             Kind = Enum.IsDefined(scheme.Kind) ? scheme.Kind : SchemeKind.ReplaceOnly,
             Color1 = Hex(scheme.Color1, d.Color1),

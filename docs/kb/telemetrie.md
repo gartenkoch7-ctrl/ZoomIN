@@ -245,7 +245,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 3050 | Info | Debug snapshot of {Monitor} saved to {Folder} (nur der Ordnername) |
 | 3051 | Warnung | Debug snapshot of {Monitor} failed |
 | 3220 | Info | Filter palette rebuilt: {Count} own schemes ({Places}) – Plätze mit Art, z. B. `Custom1 Tint`; nur bei Änderung, nie im Render-Loop |
-| 3221 | Info | Colour replacement step {State}: {Replacements} replacements – `on`, `changed`, `off` |
+| 3221 | Info | Colour replacements {State}: {Replacements} defined; the step runs only on monitors showing such a scheme – `on`, `changed`, `off`; ob der Schritt je Monitor läuft, steht in `ReplaceActive` |
 | 4001 | Warnung | Cannot watch process {ProcessId}: {Reason} |
 | 4002 | Fehler | ZoomIN ended unexpectedly (exit code 0x{ExitCode:X8}) |
 | 4003 | Warnung | Restarting ZoomIN |
