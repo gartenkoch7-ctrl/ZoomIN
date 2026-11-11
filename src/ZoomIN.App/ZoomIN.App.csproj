@@ -51,7 +51,14 @@
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="ModelContextProtocol.Core" />
   </ItemGroup>
+
+  <!-- KI-Debug (ADR-0027): dev builds get ZoomIN.Mcp.exe too, a copy of the app host that always
+       runs the MCP role. The UIAccess build gets it from publish.ps1 (from a plain build). -->
+  <Target Name="ZoomInMcpHost" AfterTargets="Build" Condition="'$(ZoomInUiAccess)' != 'true' And Exists('$(OutDir)$(AssemblyName).exe')">
+    <Copy SourceFiles="$(OutDir)$(AssemblyName).exe" DestinationFiles="$(OutDir)$(AssemblyName).Mcp.exe" SkipUnchangedFiles="true" />
+  </Target>
 
   <!-- The Windows App SDK merges our manifest into obj\...\Manifests\app.manifest only when that file is
        older than its inputs, so switching app.manifest <-> app.uiaccess.manifest silently kept the

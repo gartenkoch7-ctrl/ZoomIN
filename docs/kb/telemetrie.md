@@ -8,7 +8,7 @@ Grundlage: [ADR-0019](../adr/0019-telemetrie-lokal-mit-opentelemetry.md), Plan:
   `ILogger<T>` aus `Microsoft.Extensions.Logging.Abstractions`. Ohne Zuhörer kosten sie nichts.
 - **Platform/Diagnostics/TelemetryHost** startet in jedem Prozess dasselbe: OpenTelemetry-SDK,
   Datei-Exporter, optional OTLP. Jede Rolle setzt `zoomin.role`
-  (`app`, `watchdog`, `update`, `elevated`, `uninstall`, `secure`, `setup`).
+  (`app`, `watchdog`, `update`, `elevated`, `uninstall`, `secure`, `setup`, `mcp`).
 - Die Logger werden einmal beim Start verteilt (`SwitchableLoggerProvider`); dahinter wird die
   Pipeline neu gebaut, wenn Stufe oder Export-Adresse wechseln – **ohne Neustart**.
 - Logs entstehen nur über `[LoggerMessage]`-Methoden in einer `*Log.cs` je Feature-Ordner
@@ -41,7 +41,7 @@ Grundlage: [ADR-0019](../adr/0019-telemetrie-lokal-mit-opentelemetry.md), Plan:
 - Fehler und Abstürze werden **immer** geschrieben.
 - „Ausführlich“, „Benutzerdefiniert“ und mehr als 1 Tag gelten 7 Tage (`TelemetryRaisedUntil`),
   dann zurück auf Normal / 1 Tag. Ein Wert ohne Ende (von Hand eingetragen) fällt sofort zurück.
-- Kurzlebige Rollen (Update, Hilfsprozesse, Deinstallation, Setup) lesen keine Einstellungen und
+- Kurzlebige Rollen (Update, Hilfsprozesse, Deinstallation, Setup, MCP-Server) lesen keine Einstellungen und
   laufen mit „Normal“. Die App und der sichere Modus wenden die Einstellung nach dem Laden an.
 - Messwerte gibt es nur mit Export-Adresse (sie werden nicht in Dateien geschrieben).
 
@@ -69,8 +69,8 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 ## EventId-Bereiche
 | Bereich | Projekt |
 |---|---|
-| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom) |
-| 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster) |
+| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug) |
+| 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe) |
 | 3000–3999 | Rendering |
 | 4000–4999 | Watchdog |
 | 5000–5999 | Setup |
@@ -107,6 +107,7 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.diagnostics.package` | app | Diagnosepaket erstellen (Tag `zoomin.diagnostics.files`) |
 | `zoomin.debug.snapshot` | app | Debug-Schnappschuss eines Monitors schreiben (Tag `zoomin.monitor`; Fehler: Ausnahmetyp) |
 | `zoomin.windowfilter.toggle` | app | Kürzel „Filter für aktives Fenster“ (Tags `process.name`, `zoomin.choice`: `None`, `Filter`) |
+| `zoomin.agent.command` | app | Ein KI-Debug-Befehl über die Pipe (ADR-0027; Tag `zoomin.agent.tool`: Werkzeugname oder `unknown`; Fehler: Ausnahmetyp bzw. `failed`) |
 
 ## Katalog: Messwerte
 Nur mit Export-Adresse und Stufe „Ausführlich“/„Benutzerdefiniert + Messwerte“. Im Render-Loop
@@ -167,6 +168,11 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1208 | Fehler | Update: refreshing the Apps entry failed |
 | 1209 | Info | Update available: {Version} |
 | 1301 | Debug | Hotkey {Gesture} registered |
+| 1401 | Info | KI-Debug allowed: {Allowed} |
+| 1402 | Info | KI-Debug command {Tool}: {Result} |
+| 1403 | Fehler | KI-Debug command {Tool} failed |
+| 1404 | Info | MCP server started |
+| 1405 | Info | MCP server ended |
 | 2001 | Fehler | UI Automation is unavailable; focus tracking is off |
 | 2002 | Info | Caret source in {Process}: {Source} |
 | 2101 | Warnung | MagInitialize failed: the system pointer stays visible while zoomed |
@@ -214,6 +220,10 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2703 | Fehler | Updating the window regions failed |
 | 2704 | Warnung | No bitmap for brightness looks; windows stay unmeasured |
 | 2705 | Info | {Dropped} windows over the limit of {Max} regions show the monitor filter |
+| 2801 | Info | KI-Debug pipe open |
+| 2802 | Info | KI-Debug pipe closed |
+| 2803 | Warnung | KI-Debug connection failed |
+| 2804 | Info | KI-Debug: ZoomIN not reachable ({Reason}) |
 | 3001 | Info | Zoom pipeline ready for {Monitor} |
 | 3002 | Info | Display changed on {Monitor}: {Reason} |
 | 3003 | Fehler | Zoom pipeline for {Monitor} failed |

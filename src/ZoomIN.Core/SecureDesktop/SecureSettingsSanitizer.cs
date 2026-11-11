@@ -43,6 +43,9 @@ public static class SecureSettingsSanitizer
 
             // SYSTEM never sends telemetry anywhere (ADR-0019), whatever the user's file says.
             TelemetryOtlpEndpoint = string.Empty,
+
+            // KI-Debug never runs as SYSTEM (ADR-0016, ADR-0027); the secure host has no pipe anyway.
+            AgentDebugEnabled = false,
             ActiveProfile = Text(s.ActiveProfile, d.ActiveProfile),
             LastMode = Defined(s.LastMode, d.LastMode),
             LastZoomLevel = Level(s.LastZoomLevel, d.LastZoomLevel),

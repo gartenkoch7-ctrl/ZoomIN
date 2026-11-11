@@ -70,10 +70,10 @@ Tag `v1.0.0`.
 - [x] Sichere Bildschirme (M10): Verhalten festlegen (vermutlich Automatik aus)
 
 ## Akzeptanzkriterien
-- [ ] Helles und dunkles Fenster nebeneinander: nur das helle invertiert, ohne Zoom
-- [ ] Monitor invertiert: eigenständig invertiertes Fenster nicht doppelt invertiert (Test + Sicht)
-- [ ] Menü in invertierter App blitzt nicht weiß auf
-- [ ] Nutzerwahl per Kürzel bleibt nach Neustart für App + Fensterart erhalten
+- [x] Helles und dunkles Fenster nebeneinander: nur das helle invertiert, ohne Zoom (KI-Debug 2026-11-11)
+- [x] Monitor invertiert: eigenständig invertiertes Fenster nicht doppelt invertiert (Test + Sicht, KI-Debug 2026-11-11)
+- [ ] Menü in invertierter App blitzt nicht weiß auf (Menü erbt den Filter – geprüft 2026-11-11; Aufblitzen sieht ein Einzelbild nicht, gemessen 3,3 ms Median)
+- [x] Nutzerwahl per Kürzel bleibt nach Neustart für App + Fensterart erhalten (KI-Debug 2026-11-11)
 - [x] Medien-Apps und Windows-Oberfläche werden ab Werk nicht gefiltert
 - [x] Nur dunkle Fenster sichtbar → Overlay pausiert (keine Aufnahme, kein Zeichnen) – geprüft
       2026-11-06 am laufenden Dev-Build: nur schwarzes Testfenster → Overlay unsichtbar; weißes
@@ -106,7 +106,7 @@ installierte ZoomIN-Instanz nicht vom Agenten beendet wird:
 - Lupe/Angedockt: außen wie bei 1× (Monitor- und Fensterfilter), Entscheidung des Nutzers.
 - Bis 64 Bereiche, Rest gezählt (`regions_dropped`, Log 2705); Store-Rahmen werden nachgefragt;
   keine Regeln für `unknown` und unaufgelöste Store-Rahmen; Kürzel auf Popup → Besitzer.
-- Offen für die Sichtprüfung zusätzlich: Lupe und Angedockt mit invertiertem Fenster.
+- Offen für die Sichtprüfung zusätzlich: Lupe und Angedockt mit invertiertem Fenster (geprüft 2026-11-11, siehe unten).
 
 ### Titelleiste 2026-11-06 ([ADR-0023](../adr/0023-filter-pro-fenster-titelleiste.md))
 - [x] Dunkle Titelleiste (dunkles Windows-Design) zählt nicht mehr bei hell/dunkel und wird nicht mit
@@ -114,6 +114,22 @@ installierte ZoomIN-Instanz nicht vom Agenten beendet wird:
 - [x] Detailseite: Spalte „Titelleiste“ je App + Fensterart (Automatisch · Wie das Fenster · Nie filtern).
 - [ ] Sichtprüfung: Einstellungen/Explorer im dunklen Design mit heller Seite → Seite invertiert,
       Titelleiste bleibt dunkel; „Nie filtern“/„Wie das Fenster“ wirken sofort.
+
+### Sichtprüfung per KI-Debug 2026-11-11 ([M16](m16-ki-debug.md), Dev-Build, 1080p, eigene Testfenster)
+- Hell (weiß, dunkle Titelleiste) und dunkel nebeneinander, ohne Zoom: nur die helle Seite
+  invertiert (`InvertedSmart`), ihre dunkle Titelleiste bleibt dunkel (eigener Bereich mit
+  Monitorfilter), das dunkle Fenster bleibt unverändert.
+- Monitorfilter an (`InvertedSmart`): das eigenständig gefilterte Fenster bleibt dunkel, also
+  **nicht doppelt invertiert**; beim dunklen Fenster wird nur die helle Titelleiste invertiert.
+- Kontextmenü (`#32768`) im hellen Fenster: im Original weiß, im Ergebnis dunkel – erbt den Filter.
+  Ob es einen Frame lang weiß aufblitzt, zeigt ein Einzelbild nicht.
+- `toggle_window_filter` → Regel für App + Fensterklasse in `settings.json`; nach Neustart des
+  Dev-Builds wieder aktiv. Achtung: Die Regel gilt für alle Fenster derselben Klasse.
+- Lupe: die weiße Seite erscheint in der Lupe invertiert, außen bleibt der Fensterfilter.
+  Angedockt: außen bleibt der Fensterfilter (der Streifen zeigte nur dunklen Inhalt).
+- Offen: Titelleisten-Wahl „Nie filtern“/„Wie das Fenster“ auf der Detailseite (Aufklappliste lag
+  unter einem fremden Fenster, das immer im Vordergrund bleibt), Aufblitzen des Menüs, Budget auf
+  Onboard-Grafik.
 
 ## Offene Fragen / Risiken
 - Fensterbereiche ohne Versatz und ohne Allokation pro Frame – Kern des Spikes.

@@ -52,6 +52,9 @@ public sealed partial class DebugSnapshotViewModel(DebugSnapshots snapshots, Sma
             {
                 request = snapshots.Request(folder);
                 await Task.Delay(s_answerWait);
+
+                // A paused renderer would otherwise take it whenever it wakes, into this old folder.
+                snapshots.Withdraw(request);
             }
             finally
             {

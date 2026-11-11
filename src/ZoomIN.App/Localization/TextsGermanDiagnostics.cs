@@ -50,5 +50,7 @@ internal static class TextsGermanDiagnostics
         ["Snapshot.Countdown"] = "Schnappschuss in {0} s – Fenster jetzt nach vorn holen",
         ["Snapshot.Saved"] = "Gespeichert für {0} Monitor(e): {1}",
         ["Snapshot.Nothing"] = "Kein Bild: ZoomIN zeichnet gerade nichts (kein Filter und kein Zoom aktiv).",
+        ["Agent.Title"] = "KI-Debug erlauben",
+        ["Agent.Desc"] = "Ein KI-Agent darf über den MCP-Server „ZoomIN.Mcp.exe“ den Zustand lesen, Debug-Schnappschüsse machen und Kurzbefehle auslösen. Schnappschüsse zeigen Bildschirminhalt. Jedes Programm, das unter Ihrem Konto läuft, kann das dann nutzen. Bleibt an, bis Sie es ausschalten.",
     };
 }

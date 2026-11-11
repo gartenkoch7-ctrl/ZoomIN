@@ -125,6 +125,10 @@ public list of releases from the GitHub API (api.github.com).
          <pe-file path="ZoomIN.exe" product-name="ZoomIN">
            <authenticode-sign />
          </pe-file>
+         <!-- KI-Debug (ADR-0027): app host without UIAccess for MCP clients -->
+         <pe-file path="ZoomIN.Mcp.exe" product-name="ZoomIN">
+           <authenticode-sign />
+         </pe-file>
          <pe-file-set>
            <include path="ZoomIN.dll" product-name="ZoomIN" />
            <include path="ZoomIN.*.dll" product-name="ZoomIN" />

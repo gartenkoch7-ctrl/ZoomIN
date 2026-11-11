@@ -64,6 +64,10 @@
                     <TextBlock MaxWidth="320" HorizontalAlignment="Right" AutomationProperties.LiveSetting="Polite" Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind Snapshot.Status, Mode=OneWay}" TextWrapping="Wrap" />
                 </StackPanel>
             </c:SettingCard>
+            <!-- KI-Debug (ADR-0027) -->
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Agent.Desc')}" Glyph="&#xE99A;" Header="{x:Bind loc:Text.Get('Agent.Title')}">
+                <ToggleSwitch AutomationProperties.Name="{x:Bind loc:Text.Get('Agent.Title')}" IsOn="{x:Bind Agent.Allowed, Mode=TwoWay}" />
+            </c:SettingCard>
         </StackPanel>
     </ScrollViewer>
 </Page>

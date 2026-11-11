@@ -17,12 +17,15 @@ public sealed partial class GeneralPage : Page
 
     public DebugSnapshotViewModel? Snapshot { get; private set; }
 
+    public AgentDebugViewModel? Agent { get; private set; }
+
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         var services = (PageServices)e.Parameter;
         Vm = services.Create<GeneralViewModel>();
         Diag = services.Create<DiagnosticsViewModel>();
         Snapshot = services.Create<DebugSnapshotViewModel>();
+        Agent = services.Create<AgentDebugViewModel>();
         Bindings.Update();
     }
 }

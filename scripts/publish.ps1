@@ -43,12 +43,32 @@ if (Test-Path $publish) {
     Remove-Item -Recurse -Force $publish
 }
 
-$uiAccessFlag = if ($UiAccess) { 'true' } else { 'false' }
-dotnet publish (Join-Path $root 'src\ZoomIN.App\ZoomIN.App.csproj') `
-    -c Release -r win-x64 --self-contained -p:Platform=x64 -p:Version=$Version `
-    -p:ZoomInUiAccess=$uiAccessFlag -o $publish
-if ($LASTEXITCODE -ne 0) {
-    throw "dotnet publish failed ($LASTEXITCODE)."
+function Publish-App([string]$Flag, [string]$Folder) {
+    dotnet publish (Join-Path $root 'src\ZoomIN.App\ZoomIN.App.csproj') `
+        -c Release -r win-x64 --self-contained -p:Platform=x64 -p:Version=$Version `
+        -p:ZoomInUiAccess=$Flag -o $Folder
+    if ($LASTEXITCODE -ne 0) {
+        throw "dotnet publish failed ($LASTEXITCODE)."
+    }
+}
+
+# ZoomIN.Mcp.exe (ADR-0027): the same program without the uiAccess manifest. An MCP client starts
+# it with redirected stdin/stdout, and CreateProcess refuses UIAccess exes (ERROR_ELEVATION_REQUIRED,
+# ADR-0012). The app host only names ZoomIN.dll, so a renamed copy of the plain host runs the same app.
+$plainHost = Join-Path $out 'publish\ZoomIN-mcp-host'
+if ($UiAccess) {
+    if (Test-Path $plainHost) {
+        Remove-Item -Recurse -Force $plainHost
+    }
+
+    Publish-App 'false' $plainHost
+    Publish-App 'true' $publish
+    Copy-Item (Join-Path $plainHost 'ZoomIN.exe') (Join-Path $publish 'ZoomIN.Mcp.exe')
+    Remove-Item -Recurse -Force $plainHost
+}
+else {
+    Publish-App 'false' $publish
+    Copy-Item (Join-Path $publish 'ZoomIN.exe') (Join-Path $publish 'ZoomIN.Mcp.exe')
 }
 
 if ($UiAccess -and $Unsigned) {
@@ -57,13 +77,17 @@ if ($UiAccess -and $Unsigned) {
     exit 0
 }
 elseif ($UiAccess) {
-    # Windows checks the signature of the exe itself before granting UIAccess.
-    $exe = Join-Path $publish 'ZoomIN.exe'
-    $signature = Set-AuthenticodeSignature -FilePath $exe -Certificate (Get-SigningCertificate) -HashAlgorithm SHA256
-    if ($signature.Status -ne 'Valid') {
-        throw "Signing ZoomIN.exe failed ($($signature.Status): $($signature.StatusMessage)). Is the certificate trusted (scripts/setup-signing.ps1)?"
+    # Windows checks the signature of the exe itself before granting UIAccess. ZoomIN.Mcp.exe
+    # needs none for that, but is signed so it carries the same publisher.
+    $certificate = Get-SigningCertificate
+    foreach ($name in 'ZoomIN.exe', 'ZoomIN.Mcp.exe') {
+        $exe = Join-Path $publish $name
+        $signature = Set-AuthenticodeSignature -FilePath $exe -Certificate $certificate -HashAlgorithm SHA256
+        if ($signature.Status -ne 'Valid') {
+            throw "Signing $name failed ($($signature.Status): $($signature.StatusMessage)). Is the certificate trusted (scripts/setup-signing.ps1)?"
+        }
+        Write-Host "Signed: $exe" -ForegroundColor Green
     }
-    Write-Host "Signed: $exe" -ForegroundColor Green
 }
 else {
     $zip = Join-Path $out "ZoomIN-$Version-win-x64.zip"

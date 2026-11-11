@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "zoomin": {
+      "command": "C:\Program Files\ZoomIN\current\ZoomIN.Mcp.exe",
+      "args": []
+    }
+  }
+}

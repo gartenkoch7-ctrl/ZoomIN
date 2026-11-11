@@ -10,4 +10,7 @@ public enum TelemetryRole
     Uninstall,
     Secure,
     Setup,
+
+    /// <summary>"ZoomIN.Mcp.exe" (or "ZoomIN.exe --mcp"): the KI-Debug MCP server for an agent (ADR-0027).</summary>
+    Mcp,
 }
