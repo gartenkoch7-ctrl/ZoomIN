@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <!-- D3D11, Desktop Duplication, shaders, overlay swapchain, render thread. References Core only. -->
   <PropertyGroup>
     <TargetFramework>$(ZoomInWindowsTfm)</TargetFramework>
@@ -28,6 +28,8 @@
   <ItemGroup>
     <ShaderEntry Include="Magnify.hlsl" Entry="VSMain" Profile="vs_4_0" />
     <ShaderEntry Include="Magnify.hlsl" Entry="PSMain" Profile="ps_4_0" />
+    <ShaderEntry Include="Magnify.hlsl" Entry="PSEnhanced" Profile="ps_4_0" />
+    <ShaderEntry Include="Enhance.hlsl" Entry="PSMain" Profile="ps_4_0" />
     <ShaderEntry Include="Ambient.hlsl" Entry="VSMain" Profile="vs_4_0" />
     <ShaderEntry Include="Ambient.hlsl" Entry="PSMain" Profile="ps_4_0" />
     <ShaderEntry Include="PhotoFill.hlsl" Entry="PSMain" Profile="ps_4_0" />

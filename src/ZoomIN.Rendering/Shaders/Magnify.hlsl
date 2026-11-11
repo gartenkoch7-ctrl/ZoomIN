@@ -111,6 +111,17 @@ float3 Apply(float4 row0, float4 row1, float4 row2, float3 c)
         dot(row2.xyz, c) + row2.w));
 }
 
+// D1 spike, variant A: enhancement inside this pass, on the source before the colour matrix.
+float3 EnhanceTap(float2 uv)
+{
+    return Desktop.SampleLevel(LinearSampler, uv, 0).rgb;
+}
+
+#include "Enhance.hlsli"
+#include "EnhanceInPass.hlsli"
+
+float4 Shade(float2 uv, float3 c);
+
 float4 PSMain(VertexOutput input) : SV_Target
 {
     float2 inner = (input.Uv - InnerOffset) / InnerScale;
@@ -120,8 +131,26 @@ float4 PSMain(VertexOutput input) : SV_Target
     }
 
     float2 uv = SourceOffset + inner * SourceScale;
-    float3 c = SampleDesktop(uv);
+    return Shade(uv, SampleDesktop(uv));
+}
 
+float4 PSEnhanced(VertexOutput input) : SV_Target
+{
+    float2 inner = (input.Uv - InnerOffset) / InnerScale;
+    if (any(inner < 0) || any(inner > 1))
+    {
+        return FrameColor;
+    }
+
+    float2 uv = SourceOffset + inner * SourceScale;
+
+    // One output pixel in source UV: the source rectangle spread over the target's pixels.
+    float2 px = SourceScale * OutputTexel / InnerScale;
+    return Shade(uv, EnhanceInPass(uv, px));
+}
+
+float4 Shade(float2 uv, float3 c)
+{
     float4 row0 = ColorRow0;
     float4 row1 = ColorRow1;
     float4 row2 = ColorRow2;

@@ -5,6 +5,8 @@
     <SupportedOSPlatformVersion>$(ZoomInMinWindows)</SupportedOSPlatformVersion>
     <OutputType>Exe</OutputType>
     <IsTestProject>true</IsTestProject>
+    <!-- D1 spike: GDI text for the test scene via LibraryImport. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

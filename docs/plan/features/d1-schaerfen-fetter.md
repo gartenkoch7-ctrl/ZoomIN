@@ -1,5 +1,5 @@
 # D1 · Schärfen und Fetter
-**Meilenstein:** Spike parallel zu [M17](../m17-ruhige-ansicht.md), Umsetzung in [M18](../m18-lesbarkeit.md) · **Spur:** M17-D (Spike), M18-A (Umsetzung) · **Branch:** `spike/d1-schaerfen-fetter` (von `develop`), danach `feat/m18-d1-schaerfen-fetter` · **Größe:** Spike S, Umsetzung M · **Status:** geplant
+**Meilenstein:** Spike parallel zu [M17](../m17-ruhige-ansicht.md), Umsetzung in [M18](../m18-lesbarkeit.md) · **Spur:** M17-D (Spike), M18-A (Umsetzung) · **Branch:** `spike/d1-schaerfen-fetter` (von `develop`), danach `feat/m18-d1-schaerfen-fetter` · **Größe:** Spike S, Umsetzung M · **Status:** Spike bestanden (Variante A), Sichtprüfung Nutzer offen
 
 **Ziel:** Dünne Schrift bleibt bei hoher Stufe lesbar. „Schärfe“ hebt Kanten an, „Fetter“ verbreitert
 dunkle Striche, beide nach der Vergrößerung. Vorher zeigt ein Spike, ob das sauber und im
@@ -41,13 +41,40 @@ klarer und kräftiger. Dasselbe mit „Invertiert (intelligent)“ ohne Halos.
   - App: zwei Regler mit Wert + Einheit.
   - D1 besitzt in M18 die Durchgangsstruktur von `DesktopLayer`.
 
+## Spike-Ergebnis (2026-11-11)
+**Urteil: bestanden mit Variante A (im vorhandenen Durchgang)**, vorbehaltlich der Sichtprüfung
+durch den Nutzer. Variante B (eigener Durchgang) ist **durchgefallen** (Budget, Nähte).
+Details, Verfahren und Tabelle: [rendering-pipeline.md › Schärfen und Fett](../../kb/rendering-pipeline.md#schärfen-und-fett--spike-d1-2026-11-11).
+Code: Branch `spike/d1-schaerfen-fetter` (nicht gemergt).
+
+| Kriterium | A (Runde 2) | B (Post-Durchgang) |
+|---|---|---|
+| Zusatz-GPU 1080p, RTX 3060 Ti, 2×/4×/8×, ohne/mit Smart Invert | **0,026–0,029 ms** ✔ (≤ 0,05) | 0,146–0,155 ms ✘ |
+| ×10 Onboard (**hochgerechnet**) | ≈ 0,29 ms ✔ (≤ 0,5) | ≈ 1,5 ms ✘ |
+| Text sichtbar kräftiger/klarer (WARP-Bilder) | ja | ja |
+| Halos invertiert / intelligent invertiert | keine | keine um Buchstaben, aber breitere Naht an Smart-Invert-Kanten |
+
+- Erste Fassung von A (Unschärfemaske + Fett mit 20 eigenen Abtastungen) kostete 0,14 ms und wäre
+  ebenfalls durchgefallen. Bestanden hat erst Runde 2: **Schärfe = schärferer Bikubik-Kern**
+  (Keys `a = −0,5 − Schärfe`, kostenlos), **Fett = 4 Abtastungen** auf einem Kreuz, Richtung aus
+  dem Mittel der 9 Bikubik-Abtastungen.
+- Antwort auf die Spike-Fragen: Enhance läuft **vor** Farbmatrix und Smart Invert (auf der Quelle);
+  die Fett-Richtung folgt der Umgebung und ist dadurch für Invertieren egal. Fett bei farbiger
+  Schrift: der Abtastwert behält seine Farbe. „Bei 1×“: Schärfe wirkt dort technisch nicht
+  (Texelmitten), Fett schon → „ab 1,5×“ bleibt richtig.
+- **Für M18 mitnehmen:** (1) Fett nur über Leuchtdichte, Farbton des Pixels behalten
+  (ClearType-Säume werden sonst farbiger). (2) Fett an Fotokanten abschwächen (treppig bei 3 px).
+  (3) Schärfe erzwingt den Bikubik-Weg – bei Glättung „Pixel“/„Weich“ festlegen, ob der Regler
+  wirkt. (4) `PSEnhanced` nur binden, wenn Schärfe oder Fett > 0; sonst bleibt `PSMain`
+  (0 Zusatzkosten). `DesktopLayer` braucht kein Offscreen-Ziel.
 ## Aufgaben
 ### Spike (`spike/d1-schaerfen-fetter`, nie nach M17 gemergt)
-- [ ] Beide Wege als Prototyp; Testbilder: 9-pt-Text hell/dunkel, invertiert, intelligent
+- [x] Beide Wege als Prototyp; Testbilder: 9-pt-Text hell/dunkel, invertiert, intelligent
       invertiert, Foto, Excel-Gitter
-- [ ] GPU-Zeit je Weg mit Timestamp-Queries (vorhandene GPU-Messung), 1080p, Stufen 2×/4×/8×
-- [ ] Debug-Schnappschüsse vorher/nachher; Nutzer bewertet die Lesbarkeit
-- [ ] Ergebnis + Entscheidung in `docs/kb/rendering-pipeline.md` und hier (bestanden / durchgefallen,
+- [x] GPU-Zeit je Weg mit Timestamp-Queries (vorhandene GPU-Messung), 1080p, Stufen 2×/4×/8×
+- [ ] Debug-Schnappschüsse vorher/nachher; Nutzer bewertet die Lesbarkeit *(Vergleichsbilder per
+      WARP erzeugt, siehe Spike-Ergebnis; Bewertung durch den Nutzer steht aus)*
+- [x] Ergebnis + Entscheidung in `docs/kb/rendering-pipeline.md` und hier (bestanden / durchgefallen,
       gewählter Weg, Messwerte „hochgerechnet“)
 ### Umsetzung M18 (nur wenn bestanden)
 - [ ] Core: Modell, Mapping, Tests (Werte, Grenzen, Profil), Abdeckung ≥ 90 %
@@ -71,7 +98,7 @@ klarer und kräftiger. Dasselbe mit „Invertiert (intelligent)“ ohne Halos.
   Farbschemata.
 
 ## Akzeptanzkriterien
-- [ ] Spike-Ergebnis dokumentiert mit Messwerten und Entscheidung
+- [x] Spike-Ergebnis dokumentiert mit Messwerten und Entscheidung
 - [ ] (M18) Schärfe und Fett sichtbar wirksam, keine Halos mit Invertieren/intelligentem
       Invertieren (KI-Debug-Schnappschuss)
 - [ ] (M18) Zusatz-GPU ≤ 0,05 ms auf RTX 3060 Ti bei 1080p, Benchmark `0 B`

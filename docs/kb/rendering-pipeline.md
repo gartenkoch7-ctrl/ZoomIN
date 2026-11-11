@@ -219,6 +219,58 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   (32 B/Frame) – der teure Teil steht deshalb in einer eigenen Methode.
 - PNG ohne Bibliothek: `PngWriter` (RGBA8, Filter 0, ein zlib-IDAT, CRC-32).
 
+## Schärfen und Fett – Spike D1 (2026-11-11)
+Machbarkeitsstudie für Feature D1 ([d1-schaerfen-fetter.md](../plan/features/d1-schaerfen-fetter.md)).
+Code nur auf Branch `spike/d1-schaerfen-fetter` (wird nicht gemergt): `EnhanceInPass.hlsli`,
+`Enhance.hlsl/.hlsli`, `EnhancePass`, Tests `D1Spike*`.
+
+- **Verglichen:** (A) im vorhandenen Durchgang (`Magnify.hlsl` `PSEnhanced`, auf der Quelle vor
+  Farbmatrix und Smart-Invertieren) und (B) eigener Durchgang: Magnify schreibt in ein
+  Offscreen-Ziel in Monitorgröße, `Enhance.hlsl` liest es und schreibt ins Ziel (auf dem Ergebnis).
+- **Verfahren:** *Schärfe* = Unschärfemaske, auf den Wertebereich der Nachbarn begrenzt (kein
+  Überschwingen → kein Halo). *Fett* = Minimum- oder Maximumfilter auf Leuchtdichte im Abstand
+  „Fett px“ (Ausgabepixel). Die Richtung entscheidet die **Umgebung** (Mittel der Leuchtdichte in
+  ≈ 3 Quelltexeln): heller Grund → dunkelster Abtastwert, dunkler Grund → hellster. Damit wird
+  „Fett“ vor und nach jedem invertierenden Filter gleich, auch beim intelligenten Invertieren.
+  Der Abtastwert behält seine Farbe (farbige Schrift bleibt farbig).
+- **Wichtige Erkenntnis Schärfe:** Nach der Vergrößerung ist das Bild auf Ausgabepixel-Ebene
+  glatt. Eine Unschärfemaske mit 1 Ausgabepixel Radius bewirkt bei 8× fast nichts; der Radius muss
+  **ein Quelltexel** sein. In (A) ist das gleichwertig mit einem **schärferen Bikubik-Kern**:
+  Keys-Kubik mit `a = −0,5 − Schärfe` (−0,5 = Catmull-Rom bis −1,5), dieselben 9 Abtastungen,
+  begrenzt auf Min/Max dieser Abtastungen. Kostet nichts. Bei 1× (ganzzahlige Texelmitten) wirkt
+  der Kern nicht – passt zur Entscheidung „wirkt ab 1,5×“.
+- **GPU-Zeit** (`D1SpikeGpuTimeTests`, Timestamp-Queries, 300 Frames, 1080p, RTX 3060 Ti,
+  Schärfe 60 %, Fett 1 px; „aus“ = heutiger Magnify-Durchgang 0,071–0,090 ms):
+
+  | Variante | Zusatz 2×/4×/8× ohne Filter | mit Smart-Invertieren | ×10 Onboard (**hochgerechnet**) |
+  |---|---|---|---|
+  | A Runde 1 (CR 9 + 20 bilineare Abtastungen) | 0,150 / 0,137 / 0,138 ms | 0,138 / 0,139 / 0,138 ms | ≈ 1,4 ms |
+  | **A Runde 2** (Kern schärfer + 4 Abtastungen für Fett) | **0,026 / 0,027 / 0,027 ms** | **0,028 / 0,029 / 0,028 ms** | **≈ 0,29 ms** |
+  | A Runde 2 nur Schärfe | −0,002 / −0,003 / −0,003 ms (Rauschen) | −0,002 ms | 0 |
+  | B Post-Durchgang (21 Abtastungen) | 0,146 / 0,154 / 0,153 ms | 0,154 / 0,155 / 0,154 ms | ≈ 1,5 ms |
+  | B nur Kopie (Schärfe = Fett = 0) | 0,020 / 0,017 / 0,016 ms | 0,016 / 0,017 / 0,016 ms | ≈ 0,2 ms |
+
+  Faustwert: eine zusätzliche bilineare Abtastung je Pixel kostet bei 1080p ≈ 7 µs. Ein
+  Post-Durchgang zahlt allein für Schreiben und Lesen des Offscreen-Ziels schon 0,016–0,020 ms;
+  mit sinnvoller Arbeit bleibt B über dem Budget (geschätzt ≥ 0,08 ms mit 9 Abtastungen,
+  **nicht gemessen**).
+- **Bilder** (`D1SpikeImageTests`, WARP, `ZOOMIN_D1_OUT=<Ordner unter TestResults>`): echte
+  9-pt-ClearType-Schrift (GDI) hell/dunkel, Tabellengitter neben dunkler Zeilenleiste,
+  synthetisches Foto; Stufen 2×/4×/8×, Schärfe 60 %/Fett 1 px und 100 %/3 px; Zeilen ohne Filter,
+  invertiert, intelligent invertiert; Spalten aus/A/B.
+  - Text wird in A und B sichtbar kräftiger und kantiger, gleichwertig. Keine hellen oder
+    dunklen Säume um Buchstaben, auch nicht invertiert/intelligent invertiert (Begrenzung wirkt).
+  - **B verstärkt Nähte des intelligenten Invertierens:** Die helle Kante zwischen dunkler
+    Zeilenleiste und invertiertem Blatt wird in B breiter (Fett wählt dort „hell“). A arbeitet
+    vor dem Invertieren auf der Quelle und zeigt das nicht. → Enhance gehört **vor** Smart Invert.
+  - ClearType-Farbsäume werden mit Fett deutlicher (der dunkelste Abtastwert ist oft ein farbiger
+    Saumpixel). Abhilfe für M18: nur die Leuchtdichte übernehmen, Farbton des Pixels behalten.
+  - Fotos: Bei 100 %/3 px werden kontrastreiche Fotokanten treppig. Abhilfe für M18: Fett dort
+    abschwächen, wo die Fotoerkennung des intelligenten Invertierens greift, oder höhere
+    Kontrastschwelle.
+- **Entscheidung:** Variante **A Runde 2** (im Durchgang). B fällt am Budget und an den Nähten.
+  A braucht kein Offscreen-Ziel; `DesktopLayer` bleibt ein Durchgang.
+
 ## Shader-Regeln
 - HLSL-Dateien in `ZoomIN.Rendering/Shaders/`. Seit M14 Schritt 4 übersetzt sie der Build mit
   `tools/ZoomIN.ShaderCompiler` (derselbe d3dcompiler_47 aus Windows über Vortice, `O3`, also
