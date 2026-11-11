@@ -118,6 +118,14 @@ public sealed class MagnifySchemeTests
         Assert.Equal(2u, constants.ReplaceCounts[3].X);
         Assert.Equal(0u, constants.ReplaceCounts[0].X);
 
+        // Defined but used neither by the monitor nor by a region on it: the step stays off.
+        var unused = Monitor(scheme) with { Filter = new FilterSettings(true, FilterId.Inverted, 1, 0) };
+        WindowConstants.Fill(ref constants, WindowRegions.Empty, s_monitor, unused);
+        Assert.Equal(0u, constants.ReplaceActive);
+        var window = new WindowRegions([new PhysicalRect(0, 0, 10, 10)], [WindowPalette.For(FilterId.Custom4)]);
+        WindowConstants.Fill(ref constants, window, s_monitor, unused);
+        Assert.Equal(1u, constants.ReplaceActive);
+
         WindowConstants.Fill(ref constants, WindowRegions.Empty, s_monitor, DisplayEffects.Default);
         Assert.Equal(0u, constants.ReplaceActive);
         Assert.Equal(0u, constants.MonitorScheme);

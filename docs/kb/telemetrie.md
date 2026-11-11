@@ -181,8 +181,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1622 | Info | Own scheme in {Place} deleted ({Kind}) |
 | 1623 | Info | {Count} choices of the deleted scheme in {Place} fell back to {Fallback} ({Profiles} stored profiles changed) |
 | 1624 | Warnung | No free place for another own scheme ({Max} in use) |
-| 1625 | Warnung | A stored profile could not be updated after deleting the scheme in {Place} |
-| 1626 | Warnung | Saving the settings after deleting the scheme in {Place} failed; the next change saves them |
+| 1625 | Warnung | A stored profile could not be updated after deleting the scheme in {Place}: {Error} – nur der Ausnahmetyp (die Meldung enthält Pfad und Profilnamen) |
+| 1626 | Warnung | Saving the settings after deleting the scheme in {Place} failed ({Error}); the next change saves them – nur der Ausnahmetyp |
 | 2001 | Fehler | UI Automation is unavailable; focus tracking is off |
 | 2002 | Info | Caret source in {Process}: {Source} |
 | 2003 | Fehler | Reading focus and caret failed; tracking goes on with the system caret |

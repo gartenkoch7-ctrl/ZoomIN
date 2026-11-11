@@ -60,12 +60,19 @@ public sealed class CustomSchemeService(RenderModels models, SettingsService set
             return;
         }
 
-        // An event that changes nothing (slider let go on the same value) publishes nothing.
+        // An event that changes nothing (slider let go on the same value, a trimmed space) publishes
+        // nothing and is not logged as an edit; a scheme deleted meanwhile is not brought back.
+        var changed = false;
         models.Effects.UpdateSchemes(current =>
-            CustomSchemes.Find(current, scheme.Id) is { } old && SameScheme(old, scheme)
-                ? current
-                : [.. current.Select(s => s.Id == scheme.Id ? scheme : s)]);
-        _edited.Add(scheme.Id);
+        {
+            changed = CustomSchemes.Find(current, scheme.Id) is { } old && !SameScheme(old, scheme);
+            return changed ? [.. current.Select(s => s.Id == scheme.Id ? scheme : s)] : current;
+        });
+
+        if (changed)
+        {
+            _edited.Add(scheme.Id);
+        }
     }
 
     /// <summary>The user is done with a scheme (other scheme picked, page left): one log line for all its edits.</summary>
@@ -111,7 +118,7 @@ public sealed class CustomSchemeService(RenderModels models, SettingsService set
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            log.SaveFailed(ex, id);
+            log.SaveFailed(id, ex.GetType().Name);
         }
 
         var fallbacks = inEffects + inWindows + inProfiles;
@@ -152,7 +159,7 @@ public sealed class CustomSchemeService(RenderModels models, SettingsService set
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            log.ProfileNotUpdated(ex, id);
+            log.ProfileNotUpdated(id, ex.GetType().Name);
             return 0;
         }
 
@@ -175,7 +182,7 @@ public sealed class CustomSchemeService(RenderModels models, SettingsService set
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                log.ProfileNotUpdated(ex, id);
+                log.ProfileNotUpdated(id, ex.GetType().Name);
             }
         }
 

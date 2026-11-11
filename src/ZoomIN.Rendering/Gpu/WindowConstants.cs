@@ -43,6 +43,7 @@ internal struct WindowConstants
     public static void Fill(ref WindowConstants target, WindowRegions regions, PhysicalRect monitor, DisplayEffects effects, bool smartActive = true)
     {
         var count = 0;
+        var replacing = effects.ReplaceSlotOf(WindowPalette.Monitor) >= 0;
         var rects = regions.Rects;
         var palette = regions.Palette;
         for (var i = 0; i < rects.Length; i++)
@@ -52,6 +53,8 @@ internal struct WindowConstants
             {
                 continue;
             }
+
+            replacing |= effects.ReplaceSlotOf(palette[i]) >= 0;
 
             target.Rects[count] = new Vector4(
                 (float)((r.X - monitor.X) / monitor.Width),
@@ -73,14 +76,15 @@ internal struct WindowConstants
             target.Palette[(i * 3) + 2] = new Vector4(m.M20, m.M21, m.M22, m.OffsetB);
         }
 
-        FillReplacements(ref target, effects);
+        FillReplacements(ref target, effects, replacing);
     }
 
-    // Own schemes (M18): the counts say how many entries of each place the shader reads.
-    private static void FillReplacements(ref WindowConstants target, DisplayEffects effects)
+    // Own schemes (M18): the counts say how many entries of each place the shader reads. The step
+    // runs only on a monitor where the monitor filter or a region on it uses replacements.
+    private static void FillReplacements(ref WindowConstants target, DisplayEffects effects, bool replacing)
     {
         var table = effects.Replacements;
-        target.ReplaceActive = table.Any ? 1u : 0u;
+        target.ReplaceActive = replacing ? 1u : 0u;
         target.MonitorScheme = (uint)(effects.MonitorReplaceSlot + 1);
         for (var slot = 0; slot < CustomSchemes.Max; slot++)
         {

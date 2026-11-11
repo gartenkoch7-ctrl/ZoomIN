@@ -78,5 +78,5 @@ die sRGB-codierten Werte an (eine Matrix, keine Umrechnung im Shader). Mit Betro
   „Bearbeiten“, „Neues Schema“ (ein fünftes wird mit Hinweis abgelehnt), Editor (Name, Art, Farben,
   Stärke, Ersetzungen), Vorschau (7 Farbpaare vorher/nachher, je ein Tab-Stopp mit Ansage
   „Rot wird zu #…“), „Jetzt anzeigen“, „Schema löschen“ mit Rückfrage.
-- Änderungen wirken sofort (`CustomSchemeService.Update` → `EffectsModel.SetSchemes`).
+- Änderungen wirken sofort (`CustomSchemeService.Update` → `EffectsModel.UpdateSchemes`).
 - Ergebnis von Anlegen/Löschen in einer Live-Region (Bildschirmleser liest es vor).

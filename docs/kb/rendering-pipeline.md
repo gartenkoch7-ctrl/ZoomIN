@@ -88,7 +88,7 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   CPU-Referenz mit derselben Formel: `ReplacementTable.Apply` (Tests vergleichen beide).
 - **Constant Buffer `b1`** (3,2 KB statt 2,5 KB): nach der Palette `ReplaceCounts[4]` (uint4, x = Anzahl
   je Platz), `ReplaceFrom[12]` (YCbCr + Radius), `ReplaceShift[12]` (RGB). Im Kopf `MonitorScheme`
-  (Platz + 1 des Monitorfilters, 0 = keiner) und `ReplaceActive`: **0 überspringt den Schritt ganz**.
+  (Platz + 1 des Monitorfilters, 0 = keiner) und `ReplaceActive` – 1 nur, wenn auf diesem Monitor der Monitorfilter oder ein Bereich Ersetzungen nutzt; **0 überspringt den Schritt ganz**.
   Befüllt von `WindowConstants.Fill` aus `DisplayEffects.Replacements` (beim Settings-Wechsel gebaut, 0 B je Frame).
 - **Pausieren:** Ein „Nur ersetzen“-Fenster hat dieselbe Matrix wie der ungefilterte Monitor; `ChangesMonitor`
   vergleicht deshalb auch `DisplayEffects.ReplaceSlotOf(entry)`.

@@ -74,7 +74,11 @@ public sealed class EffectsModel
     public int RemoveScheme(FilterId id)
     {
         var fallbacks = 0;
-        Update(e => SchemeRemoval.Without(e, id, out fallbacks));
+        Update(e =>
+        {
+            fallbacks = 0;
+            return CustomSchemes.Find(e.Schemes, id) is null ? e : SchemeRemoval.Without(e, id, out fallbacks);
+        });
         return fallbacks;
     }
 
