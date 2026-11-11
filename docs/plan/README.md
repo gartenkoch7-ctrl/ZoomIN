@@ -25,6 +25,9 @@ Jeder Meilenstein endet mit etwas, das man **starten und vorführen** kann.
 | M13 | [Intelligentes Invertieren](m13-intelligent-invertieren.md) | Nur helle Flächen invertiert, dunkle Leisten bleiben dunkel, Fotos original – live, ohne Flackern | L | Design freigegeben (ADR-0024), Spike offen – **vor** dem ersten Release |
 | M14 | [Interfaces, DI & Performance](m14-interfaces-und-performance.md) | GPU im Leerlauf nahe null, schnellerer Start, Smart Invert sicher im Budget; Dienste statt statischer Klassen, Tests für App/Watchdog/Setup | L | umgesetzt – in `develop` gemergt (2026-11-08, ADR-0025), Testbuild dev.126 geprüft; echte Deinstallation mit den neuen Nahtstellen offen |
 | M16 | [KI-Debug (MCP-Server)](m16-ki-debug.md) | Ein KI-Agent liest Zustand, macht Debug-Schnappschüsse und löst Kurzbefehle aus – ohne Klicks | M | umgesetzt – in `develop` gemergt (2026-11-11, ADR-0027); wirkt in der installierten Version erst mit einem neuen Build |
+| M17 | [Ruhige Ansicht & Orientierung](m17-ruhige-ansicht.md) | Bild bewegt sich erst am Randabstand, Übersicht per Strg+Alt+O, Zoom geht beim Fenster-Ziehen auf 1× | M | geplant (Grilling 2026-11-11) – **nach** `v1.0.0`, Release 1.1 |
+| M18 | [Lesbarkeit](m18-lesbarkeit.md) | Schärfen/Fetter (falls Spike besteht), eigene Farbschemata, Caret-Formen, Anzeige-Bedingungen | M–L | geplant – Release 1.2 |
+| M19 | [Mehrere Ansichten](m19-mehrere-ansichten.md) | Monitor einfrieren + Monitorwechsel, Inseln, Maus-Puffer/Achsensperre (ADR-0028) | M–L | geplant – Release 1.3 |
 
 Größen: **S** ≈ wenige Tage · **M** ≈ 1–2 Wochen · **L** ≈ 2–4 Wochen (eine Person, Teilzeit-Schätzung, grob).
 
@@ -48,6 +51,9 @@ M0 ─► M1 ─► M2 ─┬─► M3 ─┬─► M4 ─┐
   knapp ist. Teil B/C (Interfaces und DI nach ADR-0025, Aufteilen, Testprojekte) blockieren 1.0 nicht.
 - M7 setzt alle Features voraus, weil es deren Einstellungen bündelt.
   Einfache Einstellungen (Hotkeys, Zoomstufe) werden vorher per JSON-Datei gepflegt.
+- M17 → M18 → M19 kommen nach `v1.0.0` als Releases 1.1, 1.2, 1.3. Der D1-Spike (Schärfen/Fetter)
+  läuft parallel zu M17 und entscheidet über D1 in M18. Innerhalb jedes Meilensteins laufen Spuren
+  parallel (Abschnitt „Parallelisierung“ der Meilensteindatei).
 
 ## Querschnittsregeln für alle Meilensteine
 - Jede Aufgabe hält die Regeln aus [AGENTS.md](../../AGENTS.md) ein (300 Zeilen, Schichten,
@@ -56,6 +62,8 @@ M0 ─► M1 ─► M2 ─┬─► M3 ─┬─► M4 ─┐
   Status hier auf **erledigt** gesetzt.
 - Neue Erkenntnisse, die einen späteren Plan ändern, werden **sofort** in dessen Datei
   eingetragen (Abschnitt „Offene Fragen / Risiken“).
+- Jeder Plan hat einen Abschnitt **„Parallelisierung“** (Spuren, Schritt 0, Exklusiv-Dateien,
+  Hotspots, Merge-Reihenfolge, EventId-Bereiche); umgesetzt wird nach [AGENTS.md §11](../../AGENTS.md).
 
 ## Nach dem MVP (nicht geplant, nur gesammelt)
 Sprachausgabe (`ZoomIN.Speech`), Input-Transform mit UIAccess + Code-Signing,
@@ -75,5 +83,5 @@ Vorgemerkt sind diese Features, nach Wichtigkeit geordnet (Priorisierung vom 202
 9. Maus-Puffer und Achsensperre
 10. Ausschnitt einfrieren und Monitor wechseln
 
-Empfohlener nächster Meilenstein: **„Ruhige Ansicht & Orientierung“** mit den Features 1, 2 und 6.
+Diese Features sind seit dem Grilling 2026-11-11 als M17–M19 geplant (siehe oben).
 Punkte, Potenzial, Bündel und Empfehlung: [../kb/feature-priorisierung.md](../kb/feature-priorisierung.md).

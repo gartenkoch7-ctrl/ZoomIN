@@ -122,3 +122,11 @@ Die Rangliste oben fragt, was **jetzt am meisten hilft**. Das Potenzial fragt, w
 - Neu ist, den Machbarkeitstest für Schärfen/Fetter (D1) **gleich parallel** zu starten. D1 hat
   das höchste Potenzial, und vom Test hängt der übernächste Meilenstein ab.
 - Die Caret-Formen (E2) rutschen trotz hoher Priorität nach hinten, weil Windows das schon kann.
+
+## Umsetzungsplan
+Seit dem Grilling 2026-11-11 als Meilensteine geplant:
+- [M17 Ruhige Ansicht & Orientierung](../plan/m17-ruhige-ansicht.md)
+- [M18 Lesbarkeit](../plan/m18-lesbarkeit.md)
+- [M19 Mehrere Ansichten](../plan/m19-mehrere-ansichten.md)
+
+Die Pläne pro Feature liegen in [../plan/features/](../plan/features/).
