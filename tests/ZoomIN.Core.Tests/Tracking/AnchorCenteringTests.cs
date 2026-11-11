@@ -11,7 +11,7 @@ public sealed class AnchorCenteringTests
     private static readonly PhysicalRect s_monitor = new(0, 0, 1920, 1080);
     private static readonly PhysicalPoint s_mouse = new(300, 300);
     // Mouse as fixpoint (ADR-0003): the view starts exactly around s_mouse. Centring: MouseCenteringTests.
-    private static readonly TrackingOptions s_instant = TrackingOptions.Default with { PanSeconds = 0, CenterMouse = false };
+    private static readonly TrackingOptions s_instant = TrackingOptions.Default with { PanSeconds = 0, MouseFollow = MouseFollowMode.Fixpoint };
 
     [Theory]
     [InlineData(ZoomMode.Fullscreen)]

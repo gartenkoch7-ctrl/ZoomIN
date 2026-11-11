@@ -9,5 +9,6 @@ public interface ITrayIcon : IDisposable
     void Show(TrayMenu menu);
 
     /// <summary>Short Windows notification next to the icon.</summary>
-    void Notify(string title, string message);
+    /// <param name="clicked">Raised as <see cref="Command"/> when the user clicks this notice; null = nothing.</param>
+    void Notify(string title, string message, TrayCommand? clicked = null);
 }
