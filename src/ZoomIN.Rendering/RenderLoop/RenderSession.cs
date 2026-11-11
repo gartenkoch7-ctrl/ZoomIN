@@ -13,6 +13,7 @@ using ZoomIN.Rendering.Capture;
 using ZoomIN.Rendering.Gpu;
 using ZoomIN.Rendering.Overlay;
 using ZoomIN.Rendering.Snapshots;
+using ZoomIN.Rendering.TextEnhance;
 
 namespace ZoomIN.Rendering.RenderLoop;
 
@@ -82,7 +83,8 @@ internal sealed class RenderSession : IDisposable
                 _highlights = new HighlightLayer(cursorPass);
                 var smart = Own(SmartInvertLayer.Create(_gpu.Device, _monitor.Width, _monitor.Height, deviceName, health, log));
                 _desktop = new DesktopLayer(
-                    pass, smart, Own(new GpuPassTimer(_gpu.Device, deviceName, "magnify")), Own(new SmartCostProbe(_gpu.Device)));
+                    pass, smart, Own(new GpuPassTimer(_gpu.Device, deviceName, "magnify")), Own(new PassCostProbe(_gpu.Device)),
+                    Own(new EnhanceCost(_gpu.Device, deviceName)));
             }
         }
         catch

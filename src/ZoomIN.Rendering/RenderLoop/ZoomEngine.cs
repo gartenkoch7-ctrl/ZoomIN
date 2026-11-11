@@ -5,6 +5,7 @@ using ZoomIN.Core.Filters;
 using ZoomIN.Core.Zoom;
 using ZoomIN.Rendering.Capture;
 using ZoomIN.Rendering.Schemes;
+using ZoomIN.Rendering.TextEnhance;
 
 namespace ZoomIN.Rendering.RenderLoop;
 
@@ -27,6 +28,7 @@ public sealed class ZoomEngine : IZoomOutput
     private readonly PointerServices _pointer;
     private readonly ILogger<ZoomEngine> _log;
     private readonly SchemePaletteWatch _schemes;
+    private readonly EnhanceWatch _enhance;
     private readonly Lock _gate = new();
     private MonitorRenderer[] _renderers = [];
     private int _rebuildPending;
@@ -41,6 +43,7 @@ public sealed class ZoomEngine : IZoomOutput
         _pointer = pointerServices;
         _log = log;
         _schemes = new SchemePaletteWatch(_effects, log);
+        _enhance = new EnhanceWatch(_effects, log);
         _model.Changed += Wake;
         _effects.Changed += Wake;
         _effects.Signaled += Wake;
@@ -81,6 +84,7 @@ public sealed class ZoomEngine : IZoomOutput
     {
         _watchdog.Dispose();
         _schemes.Dispose();
+        _enhance.Dispose();
         _model.Changed -= Wake;
         _effects.Changed -= Wake;
         _effects.Signaled -= Wake;

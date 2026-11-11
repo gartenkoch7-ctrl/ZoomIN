@@ -19,6 +19,7 @@ public static class EffectsMapping
             PerMonitorFilter = settings.PerMonitorFilter,
             MonitorFilters = settings.MonitorFilters,
             ProtectPhotos = settings.ProtectPhotos,
+            Enhancement = new TextEnhancement(settings.TextSharpness, settings.TextBold).Normalized(),
             Schemes = settings.CustomSchemes,
         };
     }
@@ -37,6 +38,8 @@ public static class EffectsMapping
             Brightness = effects.Filter.Brightness,
             Smoothing = effects.Smoothing,
             ProtectPhotos = effects.ProtectPhotos,
+            TextSharpness = effects.Enhancement.Sharpness,
+            TextBold = effects.Enhancement.BoldPixels,
             CustomSchemes = effects.Schemes,
         };
     }

@@ -5,14 +5,17 @@ using ZoomIN.Core.Modes;
 using ZoomIN.Core.Viewport;
 using ZoomIN.Core.WindowFilters;
 using ZoomIN.Rendering.Gpu;
+using ZoomIN.Rendering.TextEnhance;
 
 namespace ZoomIN.Rendering.RenderLoop;
 
 /// <summary>
-/// Draws the captured desktop of one monitor with zoom, colour filter, filter per window and smart
-/// inversion into the overlay. <see cref="Draw"/> runs every frame and must not allocate (AGENTS.md 2.3).
+/// Draws the captured desktop of one monitor with zoom, colour filter, filter per window, smart
+/// inversion and "Schärfe"/"Fett" into the overlay. One pass: the enhancement only swaps the pixel
+/// shader (spike D1, variant A). <see cref="Draw"/> runs every frame and must not allocate (AGENTS.md 2.3).
 /// </summary>
-internal sealed class DesktopLayer(MagnifyPass pass, SmartInvertLayer smart, GpuPassTimer magnifyTime, SmartCostProbe probe)
+internal sealed class DesktopLayer(
+    MagnifyPass pass, SmartInvertLayer smart, GpuPassTimer magnifyTime, PassCostProbe probe, EnhanceCost enhanceCost)
 {
     // Frame around lens and docked view, in physical pixels.
     private const double FrameThickness = 4;
@@ -63,12 +66,19 @@ internal sealed class DesktopLayer(MagnifyPass pass, SmartInvertLayer smart, Gpu
                 effects, windows, monitorSmart, weights);
         }
 
+        // Only the magnified view is enhanced; the rest of the monitor around a lens shows 1×.
+        var enhance = effects.Enhancement.At(frame.Target.Width / frame.Source.Width, effects.Smoothing);
+        if (enhance.IsActive && enhanceCost.Tick(context, enhance))
+        {
+            ProbeEnhanceCost(context, desktop, target, width, height, monitor, frame.Source, effects, monitorSmart, weights, enhance);
+        }
+
         magnifyTime.Collect(context);
         magnifyTime.Begin(context);
         if (!frame.HasFrame)
         {
             pass.Draw(context, desktop, target, width, height,
-                MagnifyConstants.Fullscreen(frame.Source, monitor, matrix, effects.Smoothing, monitorSmart), weights);
+                MagnifyConstants.Fullscreen(frame.Source, monitor, matrix, effects.Smoothing, monitorSmart, enhance), weights);
             magnifyTime.End(context);
             return weights;
         }
@@ -87,14 +97,15 @@ internal sealed class DesktopLayer(MagnifyPass pass, SmartInvertLayer smart, Gpu
         }
 
         var viewport = Expand(frame.Target, FrameThickness, monitor);
-        var constants = MagnifyConstants.WithFrame(frame.Source, monitor, frame.Target, viewport, FrameColor.Default, matrix, effects.Smoothing, monitorSmart);
+        var constants = MagnifyConstants.WithFrame(
+            frame.Source, monitor, frame.Target, viewport, FrameColor.Default, matrix, effects.Smoothing, monitorSmart, enhance);
         pass.Draw(context, desktop, target, (float)(viewport.X - monitor.X), (float)(viewport.Y - monitor.Y),
             (float)viewport.Width, (float)viewport.Height, constants, weights);
         magnifyTime.End(context);
         return weights;
     }
 
-    // Once per pipeline (SmartCostProbe.Frames frames): the same desktop drawn plain and smart, each
+    // Once per pipeline (PassCostProbe.Frames frames): the same desktop drawn plain and smart, each
     // timed, so the budget sees what the smart inversion adds to the magnify pass. The real draw
     // overwrites the whole target afterwards (fullscreen draw or clear), so nothing of it is seen.
     private void ProbeSmartCost(
@@ -123,15 +134,34 @@ internal sealed class DesktopLayer(MagnifyPass pass, SmartInvertLayer smart, Gpu
         // Plain: no palette entry is smart and the monitor matrix is applied without weights.
         WindowConstants.Fill(ref _probeConstants, windows, monitor, effects, smartActive: false);
         pass.UpdateWindows(context, _probeConstants);
-        probe.BeginPlain(context);
+        probe.BeginBase(context);
         pass.Draw(context, desktop, target, width, height, MagnifyConstants.Fullscreen(source, monitor, effects.Matrix, effects.Smoothing), null);
-        probe.EndPlain(context);
+        probe.EndBase(context);
 
         pass.UpdateWindows(context, _windowConstants);
-        probe.BeginSmart(context);
+        probe.BeginVariant(context);
         pass.Draw(context, desktop, target, width, height,
             MagnifyConstants.Fullscreen(source, monitor, effects.Matrix, effects.Smoothing, monitorSmart), weights);
-        probe.EndSmart(context);
+        probe.EndVariant(context);
+    }
+
+    // After a change of "Schärfe"/"Fett", while someone listens (EnhanceCost): the magnified source
+    // drawn over the whole target without and with them, each timed; the real draw overwrites it.
+    private void ProbeEnhanceCost(
+        ID3D11DeviceContext context, ID3D11ShaderResourceView desktop, ID3D11RenderTargetView target, int width, int height,
+        PhysicalRect monitor, PhysicalRect source, DisplayEffects effects, bool monitorSmart, ID3D11ShaderResourceView? weights,
+        TextEnhancement enhance)
+    {
+        var cost = enhanceCost.Probe;
+        cost.BeginBase(context);
+        pass.Draw(context, desktop, target, width, height,
+            MagnifyConstants.Fullscreen(source, monitor, effects.Matrix, effects.Smoothing, monitorSmart), weights);
+        cost.EndBase(context);
+
+        cost.BeginVariant(context);
+        pass.Draw(context, desktop, target, width, height,
+            MagnifyConstants.Fullscreen(source, monitor, effects.Matrix, effects.Smoothing, monitorSmart, enhance), weights);
+        cost.EndVariant(context);
     }
 
     private static PhysicalRect Expand(PhysicalRect rect, double by, PhysicalRect within)

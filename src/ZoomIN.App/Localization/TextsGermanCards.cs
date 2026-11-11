@@ -113,6 +113,11 @@ internal static class TextsGermanCards
         ["ZoomLensHeightTitle"] = "Lupenhöhe",
         ["ZoomDockEdge.Desc"] = "Der Streifen wird reserviert, Fenster rücken zur Seite.",
         ["ZoomDockSizeTitle"] = "Größe des Streifens",
+        ["ZoomSharpnessTitle"] = "Schärfe",
+        ["ZoomSharpness.Desc"] = "Macht Kanten von Schrift steiler, ohne Säume. Wirkt ab 1,5×.",
+        ["ZoomBoldTitle"] = "Fett",
+        ["ZoomBold.Desc"] = "Macht dünne Striche breiter, auch invertiert. Wirkt ab 1,5×.",
+        ["ZoomEnhance.NeedsText"] = "Wirkt nur mit der Glättung „Text-optimiert“.",
 
         ["TrackingFocus.Desc"] = "Beim Wechsel mit Tab springt die Ansicht zum Element.",
         ["TrackingCaret.Desc"] = "Beim Tippen bleibt der Textcursor im Bild.",

@@ -66,6 +66,8 @@ public static class SecureSettingsSanitizer
             Contrast = Number(s.Contrast, 0.5, 3, d.Contrast),
             Brightness = Number(s.Brightness, -0.5, 0.5, d.Brightness),
             Smoothing = Defined(s.Smoothing, d.Smoothing),
+            TextSharpness = Number(s.TextSharpness, 0, TextEnhancement.MaxSharpness, d.TextSharpness),
+            TextBold = Number(s.TextBold, 0, TextEnhancement.MaxBoldPixels, d.TextBold),
             CursorMaxScale = Number(s.CursorMaxScale, 1, 8, d.CursorMaxScale),
             CursorUnzoomedScale = Number(s.CursorUnzoomedScale, 1, 4, d.CursorUnzoomedScale),
             CursorColorMode = Defined(s.CursorColorMode, d.CursorColorMode),

@@ -84,6 +84,9 @@ public sealed class EffectsModel
 
     public void SetSmoothing(Smoothing smoothing) => Update(e => e with { Smoothing = smoothing });
 
+    /// <summary>"Schärfe" and "Fett" (M18, D1), clamped to their ranges.</summary>
+    public void SetEnhancement(TextEnhancement enhancement) => Update(e => e with { Enhancement = enhancement.Normalized() });
+
     /// <summary>Smart inversion: photos and videos stay original (ADR-0024).</summary>
     public void SetProtectPhotos(bool protect) => Update(e => e with { ProtectPhotos = protect });
 
@@ -138,6 +141,7 @@ public sealed class EffectsModel
     {
         Filter = e.Filter.Normalized(),
         Cursor = e.Cursor.Normalized(),
+        Enhancement = e.Enhancement.Normalized(),
         MonitorFilters = e.MonitorFilters ?? new Dictionary<string, MonitorFilter>(),
     };
 

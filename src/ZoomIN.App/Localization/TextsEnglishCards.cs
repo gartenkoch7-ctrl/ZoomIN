@@ -113,6 +113,11 @@ internal static class TextsEnglishCards
         ["ZoomLensHeightTitle"] = "Lens height",
         ["ZoomDockEdge.Desc"] = "The strip is reserved, windows move aside.",
         ["ZoomDockSizeTitle"] = "Strip size",
+        ["ZoomSharpnessTitle"] = "Sharpness",
+        ["ZoomSharpness.Desc"] = "Makes edges of text steeper, without halos. Works from 1.5×.",
+        ["ZoomBoldTitle"] = "Bold",
+        ["ZoomBold.Desc"] = "Makes thin strokes wider, inverted too. Works from 1.5×.",
+        ["ZoomEnhance.NeedsText"] = "Works only with the smoothing \"Text-optimised\".",
 
         ["TrackingFocus.Desc"] = "When moving with Tab, the view jumps to the element.",
         ["TrackingCaret.Desc"] = "While typing, the text cursor stays in view.",

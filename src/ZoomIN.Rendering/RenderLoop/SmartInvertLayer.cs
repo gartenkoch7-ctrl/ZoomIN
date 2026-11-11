@@ -167,7 +167,7 @@ internal sealed class SmartInvertLayer : IDisposable
     }
 
     /// <summary>
-    /// What the smart inversion adds to the magnify pass (SmartCostProbe, M14 step 5). Before, the
+    /// What the smart inversion adds to the magnify pass (PassCostProbe, M14 step 5). Before, the
     /// budget saw only the ambient pass, although the edge-aware weight in Magnify.hlsl costs as much.
     /// </summary>
     public void SetMagnifyExtra(double milliseconds)

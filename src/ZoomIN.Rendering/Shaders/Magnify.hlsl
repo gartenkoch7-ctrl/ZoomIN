@@ -14,6 +14,9 @@ cbuffer MagnifyConstants : register(b0)
     float2 TextureSize;  // desktop texture size in pixels
     uint Smoothing;      // 0 = text (Catmull-Rom), 1 = soft (bilinear), 2 = pixel (nearest)
     uint MonitorSmart;   // 1 = the monitor matrix is the smart inversion (ADR-0024)
+    float Sharpness;     // "Schärfe" 0–1 (M18, D1); read by PSEnhanced only
+    float BoldPx;        // "Fett" 0–3 output pixels (M18, D1); read by PSEnhanced only
+    float2 EnhancePadding;
 };
 
 // Filter per window (ADR-0020): window rectangles front to back, each with a palette entry. The
@@ -120,6 +123,10 @@ float3 Apply(float4 row0, float4 row1, float4 row2, float3 c)
         dot(row2.xyz, c) + row2.w));
 }
 
+#include "TextEnhance.hlsli"
+
+float4 Shade(float2 uv, float3 c);
+
 float4 PSMain(VertexOutput input) : SV_Target
 {
     float2 inner = (input.Uv - InnerOffset) / InnerScale;
@@ -129,8 +136,29 @@ float4 PSMain(VertexOutput input) : SV_Target
     }
 
     float2 uv = SourceOffset + inner * SourceScale;
-    float3 c = SampleDesktop(uv);
+    return Shade(uv, SampleDesktop(uv));
+}
 
+// "Schärfe"/"Fett" (M18, D1): bound instead of PSMain only while one of them is on, the zoom is at
+// least 1.5× and the smoothing is text-optimised (TextEnhancement.At), so it always samples bicubic.
+float4 PSEnhanced(VertexOutput input) : SV_Target
+{
+    // One output pixel in source UV. Uv is linear across the triangle, so its derivatives are
+    // exact; taken before the branch, where all pixels of a quad still run.
+    float2 px = abs(float2(ddx(input.Uv.x), ddy(input.Uv.y))) * SourceScale / InnerScale;
+    float2 inner = (input.Uv - InnerOffset) / InnerScale;
+    if (any(inner < 0) || any(inner > 1))
+    {
+        return FrameColor;
+    }
+
+    float2 uv = SourceOffset + inner * SourceScale;
+    return Shade(uv, EnhanceText(uv, px));
+}
+
+// Own schemes, the colour matrix (per window) and the smart inversion on the sampled colour c.
+float4 Shade(float2 uv, float3 c)
+{
     float4 row0 = ColorRow0;
     float4 row1 = ColorRow1;
     float4 row2 = ColorRow2;

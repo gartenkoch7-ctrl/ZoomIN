@@ -30,6 +30,12 @@
                     <ComboBoxItem Content="{x:Bind loc:Text.SmoothingPixel}" />
                 </ComboBox>
             </c:SettingCard>
+            <c:SettingCard Description="{x:Bind Vm.SharpnessDescription, Mode=OneWay}" Glyph="&#xE890;" Header="{x:Bind loc:Text.Get('ZoomSharpnessTitle')}">
+                <c:ValueSlider Format="{}{0:0} %" IsEnabled="{x:Bind Vm.EnhanceAvailable, Mode=OneWay}" Maximum="100" Minimum="0" Step="1" Value="{x:Bind Vm.Sharpness, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind Vm.BoldDescription, Mode=OneWay}" Glyph="&#xE8DD;" Header="{x:Bind loc:Text.Get('ZoomBoldTitle')}">
+                <c:ValueSlider Format="{}{0:0.0} px" IsEnabled="{x:Bind Vm.EnhanceAvailable, Mode=OneWay}" Maximum="3" Minimum="0" Step="0.1" Value="{x:Bind Vm.Bold, Mode=TwoWay}" />
+            </c:SettingCard>
 
             <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.ModeLens}" />
             <c:SettingCard Description="{x:Bind loc:Text.Get('ZoomLensSize.Desc')}" Glyph="&#xE721;" Header="{x:Bind loc:Text.Get('ZoomLensWidthTitle')}">
