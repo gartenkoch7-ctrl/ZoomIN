@@ -40,6 +40,26 @@ Größen wie in der Roadmap: **S** ≈ wenige Tage · **M** ≈ 1–2 Wochen · 
 Tooltips/Meldungen verfolgen (A4), Maus-Puffer und Achsensperre (A6, sehr klein),
 Zeigersuche „Sonar“ und Anzeige-Bedingungen (E1, klein).
 
+## Vorgemerkt (Nutzerwunsch 2026-11-11)
+Diese Funktionen stehen auf der Liste möglicher neuer Features. Geplant ist noch keine. Vor der
+Umsetzung kommt ein Grilling und ein eigener Meilenstein.
+
+**Block 1 – Kern, in dieser Reihenfolge**
+1. Ruhige Mausverfolgung mit Randabstand (A1)
+2. Übersicht auf Knopfdruck (B2)
+3. Eigene Farbschemata (C1–C3)
+4. Schärfen und Fetter (D1) – erst nach einem Spike (Halos, Invertieren, GPU-Budget Onboard)
+5. Eingefrorene Ausschnitte (B1)
+
+Vorschlag: 1–3 als gemeinsamer Meilenstein (etwa 2–3 Wochen).
+
+**Block 2 – kleine Extras, nebenbei**
+- Caret-Formen, z. B. Keile über und unter dem Textcursor (E2)
+- Anzeige-Bedingung für alle Markierungen: immer, nur in Ruhe, nur in Bewegung, nur bei gehaltener Taste (E1)
+- Maus-Puffer am Monitorrand und Achsensperre mit Umschalt (A6)
+
+**Dazu: Zoom beim Fenster-Verschieben (G1)** – siehe Abschnitt G.
+
 ## A · Verfolgung und Bewegung
 | ID | Funktion | Nutzen | Größe | Machbarkeit / Risiko | Quelle |
 |---|---|---|---|---|---|
@@ -99,6 +119,34 @@ Zeigersuche „Sonar“ und Anzeige-Bedingungen (E1, klein).
 | F6 | **Zoom bewusst in Übertragung zeigen** (Opt-in, für Schulungen) | Trainer zeigt, was der Nutzer sieht | S | technisch trivial, **verstößt gegen §2.4** → nur mit ADR | macOS⁷ |
 | F7 | **Touch-Gesten** (Dreifingertipp, Aufziehen zum Zoomen) | Tablets/Convertibles | M–L | globale Gesten ohne Magnification-API schwierig | Dolphin-Lektion⁶ |
 | F8 | Fernbildschirm/Tafel (Lehrer-PC) | Schule | L | außerhalb des Kerns, verworfen | Dolphin²² |
+
+## G · Fenster verschieben (eigene Idee, Nutzerwunsch 2026-11-11)
+| ID | Funktion | Nutzen | Größe | Machbarkeit / Risiko | Quelle |
+|---|---|---|---|---|---|
+| G1 | **Zoom beim Fenster-Verschieben**: Solange ein Fenster verschoben wird, ändert sich der Zoom auf dem Monitor, auf dem das Fenster gerade ist. Einstellung: *aufheben* (gleitet auf 1×, Filter bleiben), *absenken* auf eine wählbare Stufe, oder *unverändert*. | Beim Ziehen sieht man sofort, wohin das Fenster kommt, statt mit hoher Stufe blind zu schwenken | S–M | Siehe unten | eigene Idee; in den Vorbildern nicht gefunden |
+
+**Umsetzung grob:**
+- **Erkennen:** `SetWinEventHook` mit `EVENT_SYSTEM_MOVESIZESTART`/`…END`. Das läuft
+  out-of-context, also ohne Code in fremden Prozessen, und gilt auch für Verschieben per Tastatur
+  über das Fenstermenü.
+- **Zoom ändern:** Der Monitor ist der unter dem Zeiger. Wechselt er beim Ziehen, wird der neue
+  Monitor angepasst und der alte bekommt seine Stufe zurück. Das Gleiten (150 ms) kommt aus dem
+  `ZoomModel`. Die Stufe des Nutzers wird nur vorübergehend überschrieben, nicht gespeichert.
+- **Klicks:** Durch den Cursor-Fixpunkt bleibt das gezogene Fenster unter dem Zeiger, auch während
+  sich der Zoom ändert.
+- **Telemetrie:** Ablauf `zoomin.tracking.window_move` mit Monitor, Stufe vorher/nachher und Dauer.
+  Fenstertitel werden nicht erfasst.
+
+**Offene Fragen fürs Grilling:**
+- Was gilt ab Werk: aufheben, absenken oder unverändert?
+- Kommt die alte Stufe nach dem Loslassen sofort zurück oder nach einer kurzen Pause?
+- Gilt das auch für die Fenstergröße ändern (`MOVESIZESTART` meldet beides)?
+- Was passiert beim Andocken per Win+Pfeil (kein Ziehen) und bei Lupe und Angedockt?
+- Soll ein Kurzbefehl die Funktion an- und ausschalten?
+
+**Risiken:** Manche Apps ziehen ihre Fenster selbst (eigene Titelleisten, z. B. Browser-Tabs) und
+melden kein `MOVESIZESTART`. Das muss eine App-Matrix prüfen. Ein Rückfall über die
+Fensterposition beim gedrückten Mausknopf ist denkbar, aber teurer.
 
 ## Stimmen von Nutzern (Auswahl)
 - Vollbild-Lupe macht nach Minuten **übel/schwindlig**; Angedockt ohne Kürzel für Größe/Lage;
