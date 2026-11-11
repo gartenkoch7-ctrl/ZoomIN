@@ -18,7 +18,7 @@ public class HotPathBenchmarks
     private readonly ZoomModel _model = new(new ZoomLevels(), Core.Modes.ZoomMode.Fullscreen, true, 0.15);
     private readonly EffectsModel _effects = new(DisplayEffects.Default with
     {
-        MonitorFilters = new Dictionary<string, MonitorFilter> { [@"\\.\DISPLAY1"] = new(true, ColorFilter.YellowOnBlack) },
+        MonitorFilters = new Dictionary<string, MonitorFilter> { [@"\\.\DISPLAY1"] = new(true, FilterId.YellowOnBlack) },
     });
 
     private readonly AnchorController _anchors = new();
@@ -26,7 +26,22 @@ public class HotPathBenchmarks
     // Worst case of the filter per window: the full shader limit, none on the monitor asked about.
     private readonly WindowRegions _windows = new(
         Enumerable.Range(0, WindowRegions.Max).Select(i => new PhysicalRect(4000 + (i * 20), i * 10, 600, 400)).ToArray(),
-        Enumerable.Range(0, WindowRegions.Max).Select(i => WindowPalette.For(ColorFilter.Inverted)).ToArray());
+        Enumerable.Range(0, WindowRegions.Max).Select(i => WindowPalette.For(FilterId.Inverted)).ToArray());
+
+    // Own schemes (M18): all four places with three replacements each; the windows show them in turn.
+    private readonly EffectsModel _schemeEffects = new(new DisplayEffects(new FilterSettings(true, FilterId.Custom2, 1, 0), Smoothing.Text, PointerStyle.Default)
+    {
+        Schemes = [.. Enumerable.Range(0, CustomSchemes.Max).Select(i => new CustomScheme
+        {
+            Id = CustomSchemes.IdOf(i),
+            Kind = (SchemeKind)i,
+            Replacements = [new ColorReplacement(), new ColorReplacement { From = "#00FF00" }, new ColorReplacement { From = "#0000FF" }],
+        })],
+    });
+
+    private readonly WindowRegions _schemeWindows = new(
+        Enumerable.Range(0, WindowRegions.Max).Select(i => new PhysicalRect(4000 + (i * 20), i * 10, 600, 400)).ToArray(),
+        Enumerable.Range(0, WindowRegions.Max).Select(i => (byte)(WindowPalette.FirstScheme + (i % CustomSchemes.Max))).ToArray());
 
     // Published by the tracking thread, not per frame. Only the first round is news; afterwards
     // this measures the per-frame cost while following (the allocation test covers every path).
@@ -96,4 +111,16 @@ public class HotPathBenchmarks
     /// <summary>Filter per window: does any window on this monitor need the overlay (ADR-0020)?</summary>
     [Benchmark]
     public bool WindowRegionsCheck() => _windows.ChangesMonitor(_monitor, _effects.CurrentFor(@"\\.\DISPLAY1"));
+
+    /// <summary>
+    /// Own schemes (M18): the matrices, palette and replacements of four schemes come ready-made with
+    /// the snapshot; per frame only the lookup and the region check with the replacement compare run.
+    /// </summary>
+    [Benchmark]
+    public int SchemeEffectsRead()
+    {
+        var effects = _schemeEffects.CurrentFor(@"\\.\DISPLAY1");
+        return (_schemeWindows.ChangesMonitor(_monitor, effects) ? 1 : 0) + effects.ReplaceSlotOf(WindowPalette.Monitor)
+            + effects.Replacements.CountOf(3) + effects.WindowMatrices.Length;
+    }
 }

@@ -104,7 +104,7 @@ public sealed class SmartCostBudgetTests
         using var probe = new SmartCostProbe(gpu.Device);
         var layer = new DesktopLayer(pass, smart, timer, probe);
         var monitor = new PhysicalRect(0, 0, Size, Size);
-        var effects = new DisplayEffects(new FilterSettings(true, ColorFilter.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default);
+        var effects = new DisplayEffects(new FilterSettings(true, FilterId.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default);
         var frame = ModeGeometry.Compute(ZoomMode.Fullscreen, monitor, new PhysicalPoint(32, 32), 2, LensSize.Default, DockLayout.Default);
 
         // Flush stands in for Present. WARP runs behind the CPU, so the queries come back many

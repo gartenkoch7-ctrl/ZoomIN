@@ -14,11 +14,11 @@ public sealed class JsonProfileStoreTests : IDisposable
     {
         var store = new JsonProfileStore(NullLogger<JsonProfileStore>.Instance, _directory);
 
-        store.Save("Büro", new AppSettings { ColorFilter = ColorFilter.Grayscale });
+        store.Save("Büro", new AppSettings { ColorFilter = FilterId.Grayscale });
         store.Save("Abends", new AppSettings());
 
         Assert.Equal(["Abends", "Büro"], store.Names());
-        Assert.Equal(ColorFilter.Grayscale, store.Load("Büro")!.ColorFilter);
+        Assert.Equal(FilterId.Grayscale, store.Load("Büro")!.ColorFilter);
     }
 
     [Fact]

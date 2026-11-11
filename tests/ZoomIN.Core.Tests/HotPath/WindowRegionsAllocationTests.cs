@@ -19,11 +19,11 @@ public sealed class WindowRegionsAllocationTests
         for (var i = 0; i < rects.Length; i++)
         {
             rects[i] = new PhysicalRect(i * 20, i * 10, 300, 200);
-            palette[i] = i % 3 == 0 ? WindowPalette.Monitor : WindowPalette.For(ColorFilter.Inverted);
+            palette[i] = i % 3 == 0 ? WindowPalette.Monitor : WindowPalette.For(FilterId.Inverted);
         }
 
         model.Publish(new WindowRegions(rects, palette));
-        var effects = new DisplayEffects(new FilterSettings(true, ColorFilter.YellowOnBlack, 1.2, 0), Smoothing.Text, PointerStyle.Default);
+        var effects = new DisplayEffects(new FilterSettings(true, FilterId.YellowOnBlack, 1.2, 0), Smoothing.Text, PointerStyle.Default);
         var monitor = new PhysicalRect(5000, 0, 1920, 1080); // no region on it: every rectangle is checked
         var hits = Read(model, monitor, effects); // warm-up / JIT
 

@@ -97,7 +97,7 @@ public sealed class SnapshotTakerTests
 
     private static FrameRequest Request() => new(
         ZoomMode.Fullscreen, 1, LensSize.Default, DockLayout.Default,
-        new DisplayEffects(new FilterSettings(true, ColorFilter.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default),
+        new DisplayEffects(new FilterSettings(true, FilterId.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default),
         0, TrackingSnapshot.Empty, TrackingOptions.Default, false,
         new WindowRegions([new PhysicalRect(0, 0, 16, 16)], [WindowPalette.Smart]), true);
 }

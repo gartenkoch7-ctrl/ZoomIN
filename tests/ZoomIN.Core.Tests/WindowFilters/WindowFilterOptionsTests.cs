@@ -13,7 +13,7 @@ public sealed class WindowFilterOptionsTests
         var options = WindowFilterOptions.Default;
 
         Assert.True(options.Enabled);
-        Assert.Equal(ColorFilter.InvertedSmart, options.AutoFilter);
+        Assert.Equal(FilterId.InvertedSmart, options.AutoFilter);
         Assert.Equal(WindowFilterOptions.CurrentAutoFilterRevision, options.AutoFilterRevision);
         Assert.Equal(60, options.ThresholdPercent);
         Assert.Empty(options.Rules);
@@ -55,11 +55,11 @@ public sealed class WindowFilterOptionsTests
         var options = WindowFilterOptions.Default
             .WithRule(WindowFilterRule.For(s_word, WindowFilterChoice.None))
             .WithRule(WindowFilterRule.For(excel, WindowFilterChoice.None))
-            .WithRule(WindowFilterRule.For(s_word, WindowFilterChoice.Filter, ColorFilter.Grayscale));
+            .WithRule(WindowFilterRule.For(s_word, WindowFilterChoice.Filter, FilterId.Grayscale));
 
         Assert.Equal(2, options.Rules.Count);
         Assert.Equal(s_word, options.Rules[0].Kind);
-        Assert.Equal(ColorFilter.Grayscale, options.Rules[0].Filter);
+        Assert.Equal(FilterId.Grayscale, options.Rules[0].Filter);
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public sealed class WindowFilterOptionsTests
     {
         var options = new WindowFilterOptions
         {
-            AutoFilter = (ColorFilter)99,
+            AutoFilter = (FilterId)99,
             Sensitivity = (WindowFilterSensitivity)42,
             CustomPercent = 400,
             Rules =
@@ -88,12 +88,12 @@ public sealed class WindowFilterOptionsTests
                 WindowFilterRule.For(new WindowKind("winword.exe", "opusapp"), WindowFilterChoice.Filter),
                 WindowFilterRule.For(new WindowKind(string.Empty, "x"), WindowFilterChoice.None),
                 WindowFilterRule.For(new WindowKind("a.exe", "b"), (WindowFilterChoice)7),
-                new WindowFilterRule { Process = "c.exe", WindowClass = "d", Filter = (ColorFilter)9 },
+                new WindowFilterRule { Process = "c.exe", WindowClass = "d", Filter = (FilterId)99 },
                 null!,
             ],
         }.Normalized();
 
-        Assert.Equal(ColorFilter.InvertedSmart, options.AutoFilter);
+        Assert.Equal(FilterId.InvertedSmart, options.AutoFilter);
         Assert.Equal(WindowFilterSensitivity.Medium, options.Sensitivity);
         Assert.Equal(WindowFilterOptions.MaxPercent, options.CustomPercent);
         Assert.Equal(WindowFilterChoice.None, Assert.Single(options.Rules).Choice);

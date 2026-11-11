@@ -18,6 +18,16 @@ public readonly record struct RgbColor(byte R, byte G, byte B)
 
     public string ToHex() => string.Create(CultureInfo.InvariantCulture, $"#{R:X2}{G:X2}{B:X2}");
 
+    /// <summary>The colour as 0–1 per channel, as shaders and colour matrices take it.</summary>
+    public (float R, float G, float B) ToUnit() => (R / 255f, G / 255f, B / 255f);
+
+    /// <summary>
+    /// <paramref name="hex"/> as clean "#RRGGBB" (upper case), else <paramref name="fallback"/>, else
+    /// white: what settings may keep of a colour read from a file.
+    /// </summary>
+    public static string NormalizedHex(string? hex, string fallback) =>
+        ParseOrDefault(hex, ParseOrDefault(fallback, White)).ToHex();
+
     public static RgbColor ParseOrDefault(string? hex, RgbColor fallback)
     {
         if (hex is { Length: 7 } && hex[0] == '#'

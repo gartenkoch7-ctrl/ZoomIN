@@ -69,9 +69,9 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 ## EventId-Bereiche
 | Bereich | Projekt |
 |---|---|
-| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug) |
+| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1620 eigene Farbschemata) |
 | 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe) |
-| 3000–3999 | Rendering |
+| 3000–3999 | Rendering (3220 eigene Farbschemata) |
 | 4000–4999 | Watchdog |
 | 5000–5999 | Setup |
 | 6000–6999 | Core (noch keine) |
@@ -107,6 +107,7 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.diagnostics.package` | app | Diagnosepaket erstellen (Tag `zoomin.diagnostics.files`) |
 | `zoomin.debug.snapshot` | app | Debug-Schnappschuss eines Monitors schreiben (Tag `zoomin.monitor`; Fehler: Ausnahmetyp) |
 | `zoomin.windowfilter.toggle` | app | Kürzel „Filter für aktives Fenster“ (Tags `process.name`, `zoomin.choice`: `None`, `Filter`) |
+| `zoomin.filters.scheme_edit` | app | Eigenes Farbschema angelegt, fertig bearbeitet, gelöscht oder per „Jetzt anzeigen“ eingeschaltet (M18; Tags `zoomin.operation`: `create`, `change`, `delete`, `show`; Fehler `full`, wenn alle 4 Plätze belegt sind; `zoomin.place`: `Custom1`–`Custom4`, `zoomin.kind`: Art, beim Löschen `zoomin.fallbacks`). Nie der Name des Schemas |
 | `zoomin.agent.command` | app | Ein KI-Debug-Befehl über die Pipe (ADR-0027; Tag `zoomin.agent.tool`: Werkzeugname oder `unknown`; Fehler: Ausnahmetyp bzw. `failed`) |
 
 ## Katalog: Messwerte
@@ -135,6 +136,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.windowfilter.update_duration` | ms | – | Fenster auflisten und Bereiche bauen nach einer Fensteränderung |
 | `zoomin.windowfilter.regions` | Bereiche | – | Bereiche, die der Shader nach einer Änderung bekommt (höchstens 64) |
 | `zoomin.windowfilter.regions_dropped` | Fenster | – | Fenster über dem Limit von 64 Bereichen, die den Monitorfilter zeigen (je Aktualisierung; dazu Log 2705) |
+| `zoomin.filters.custom_schemes` | Schemata | – | Anzahl der eigenen Farbschemata (0–4, Gauge; beim Start und bei jeder Änderung, M18) |
 
 ## Katalog: Logmeldungen
 | Id | Stufe | Meldung |
@@ -174,6 +176,13 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1403 | Fehler | KI-Debug command {Tool} failed |
 | 1404 | Info | MCP server started |
 | 1405 | Info | MCP server ended |
+| 1620 | Info | Own scheme created in {Place} ({Kind}) – Platz `Custom1`–`Custom4`, nie der Name |
+| 1621 | Info | Own scheme in {Place} changed ({Kind}, {Replacements} replacements) – einmal je Bearbeitung (anderes Schema gewählt oder Seite verlassen) |
+| 1622 | Info | Own scheme in {Place} deleted ({Kind}) |
+| 1623 | Info | {Count} choices of the deleted scheme in {Place} fell back to {Fallback} ({Profiles} stored profiles changed) |
+| 1624 | Warnung | No free place for another own scheme ({Max} in use) |
+| 1625 | Warnung | A stored profile could not be updated after deleting the scheme in {Place} |
+| 1626 | Warnung | Saving the settings after deleting the scheme in {Place} failed; the next change saves them |
 | 2001 | Fehler | UI Automation is unavailable; focus tracking is off |
 | 2002 | Info | Caret source in {Process}: {Source} |
 | 2003 | Fehler | Reading focus and caret failed; tracking goes on with the system caret |
@@ -235,6 +244,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 3007 | Warnung | Smart inversion on {Monitor} falls back to keep hue: {Reason} ({Milliseconds} ms) – `gpu_feature` oder `budget`, einmal je Pipeline |
 | 3050 | Info | Debug snapshot of {Monitor} saved to {Folder} (nur der Ordnername) |
 | 3051 | Warnung | Debug snapshot of {Monitor} failed |
+| 3220 | Info | Filter palette rebuilt: {Count} own schemes ({Places}) – Plätze mit Art, z. B. `Custom1 Tint`; nur bei Änderung, nie im Render-Loop |
+| 3221 | Info | Colour replacement step {State}: {Replacements} replacements – `on`, `changed`, `off` |
 | 4001 | Warnung | Cannot watch process {ProcessId}: {Reason} |
 | 4002 | Fehler | ZoomIN ended unexpectedly (exit code 0x{ExitCode:X8}) |
 | 4003 | Warnung | Restarting ZoomIN |

@@ -60,6 +60,9 @@ public static class SecureSettingsSanitizer
             DockFraction = Number(s.DockFraction, 0.15, 0.7, d.DockFraction),
             ColorFilter = Defined(s.ColorFilter, d.ColorFilter),
             MonitorFilters = Filters(s.MonitorFilters),
+
+            // At most 4 schemes with bounded names, colours and replacements (M18).
+            CustomSchemes = CustomSchemes.Normalized(s.CustomSchemes),
             Contrast = Number(s.Contrast, 0.5, 3, d.Contrast),
             Brightness = Number(s.Brightness, -0.5, 0.5, d.Brightness),
             Smoothing = Defined(s.Smoothing, d.Smoothing),
@@ -112,8 +115,7 @@ public static class SecureSettingsSanitizer
         string.IsNullOrWhiteSpace(value) || value.Length > MaxTextLength ? fallback : value;
 
     // Normalised through RgbColor so only "#RRGGBB" survives.
-    private static string Color(string? value, string fallback) =>
-        RgbColor.ParseOrDefault(value, RgbColor.ParseOrDefault(fallback, RgbColor.White)).ToHex();
+    private static string Color(string? value, string fallback) => RgbColor.NormalizedHex(value, fallback);
 
     private static Dictionary<string, double> Levels(IReadOnlyDictionary<string, double>? levels)
     {

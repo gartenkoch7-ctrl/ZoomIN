@@ -19,6 +19,7 @@ public static class EffectsMapping
             PerMonitorFilter = settings.PerMonitorFilter,
             MonitorFilters = settings.MonitorFilters,
             ProtectPhotos = settings.ProtectPhotos,
+            Schemes = settings.CustomSchemes,
         };
     }
 
@@ -36,6 +37,7 @@ public static class EffectsMapping
             Brightness = effects.Filter.Brightness,
             Smoothing = effects.Smoothing,
             ProtectPhotos = effects.ProtectPhotos,
+            CustomSchemes = effects.Schemes,
         };
     }
 }

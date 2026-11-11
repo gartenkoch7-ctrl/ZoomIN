@@ -19,9 +19,9 @@ public sealed class SettingsMappingRoundTripTests
     private static readonly AppSettings s_settings = new AppSettings() with
     {
         FilterEnabled = true,
-        ColorFilter = ColorFilter.YellowOnBlack,
+        ColorFilter = FilterId.YellowOnBlack,
         PerMonitorFilter = false,
-        MonitorFilters = new Dictionary<string, MonitorFilter> { [@"\\.\DISPLAY2"] = new(true, ColorFilter.Inverted) },
+        MonitorFilters = new Dictionary<string, MonitorFilter> { [@"\\.\DISPLAY2"] = new(true, FilterId.Inverted) },
         Contrast = 1.4,
         Brightness = -0.1,
         Smoothing = Smoothing.Pixel,

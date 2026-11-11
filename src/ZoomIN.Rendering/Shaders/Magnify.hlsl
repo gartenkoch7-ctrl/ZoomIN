@@ -20,20 +20,28 @@ cbuffer MagnifyConstants : register(b0)
 // first rectangle holding the source pixel wins, so windows above hide the ones below; pixels in
 // none of them keep the monitor's matrix (ColorRow0–2). Updated only when windows or filters change.
 #define MAX_REGIONS 64
-#define PALETTE_SIZE 10
+#define PALETTE_SIZE 14
 
-// Palette entries with a fixed meaning (WindowPalette): the monitor's matrix, original colours.
+// Palette entries with a fixed meaning (WindowPalette): the monitor's matrix, original colours,
+// and from FIRST_SCHEME_ENTRY on the four places of own schemes (M18).
 #define MONITOR_ENTRY 0
 #define ORIGINAL_ENTRY 1
+#define FIRST_SCHEME_ENTRY 10
+#define MAX_SCHEMES 4
+#define REPLACEMENTS_PER_SCHEME 3
 
 cbuffer WindowConstants : register(b1)
 {
     uint RegionCount;
     uint SmartEntry;                       // palette entry of the smart inversion (ADR-0024)
-    float2 RegionPadding;
+    uint MonitorScheme;                    // place + 1 of the own scheme of the monitor entry, 0 = none
+    uint ReplaceActive;                    // 1 = some own scheme replaces colours (M18); 0 skips the step
     float4 RegionRects[MAX_REGIONS];       // left, top, right, bottom in desktop texture UV space
     float4 RegionEntries[MAX_REGIONS];     // x = palette entry
     float4 Palette[PALETTE_SIZE * 3];      // three colour matrix rows per entry
+    uint4 ReplaceCounts[MAX_SCHEMES];      // x = replacements of the scheme in that place
+    float4 ReplaceFrom[MAX_SCHEMES * REPLACEMENTS_PER_SCHEME];  // YCbCr of the colour to catch, w = radius
+    float4 ReplaceShift[MAX_SCHEMES * REPLACEMENTS_PER_SCHEME]; // new minus old colour (RGB)
 };
 
 Texture2D Desktop : register(t0);
@@ -102,6 +110,7 @@ float3 SampleDesktop(float2 uv)
 }
 
 #include "SmartWeight.hlsli"
+#include "ColorReplace.hlsli"
 
 float3 Apply(float4 row0, float4 row1, float4 row2, float3 c)
 {
@@ -126,19 +135,26 @@ float4 PSMain(VertexOutput input) : SV_Target
     float4 row1 = ColorRow1;
     float4 row2 = ColorRow2;
     bool smart = MonitorSmart != 0;
+    uint entry = MONITOR_ENTRY;
     [loop]
     for (uint i = 0; i < RegionCount; i++)
     {
         float4 rect = RegionRects[i];
         if (all(uv >= rect.xy) && all(uv < rect.zw))
         {
-            uint entry = (uint)RegionEntries[i].x;
+            entry = (uint)RegionEntries[i].x;
             row0 = Palette[entry * 3];
             row1 = Palette[entry * 3 + 1];
             row2 = Palette[entry * 3 + 2];
             smart = entry == SmartEntry || (entry == MONITOR_ENTRY && MonitorSmart != 0);
             break;
         }
+    }
+
+    // Own schemes: replace first, then the matrix and the smart weighting see the new colour.
+    if (ReplaceActive != 0)
+    {
+        c = ReplaceColors(c, entry);
     }
 
     float3 filtered = Apply(row0, row1, row2, c);

@@ -72,7 +72,30 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   gleicher Inhalt → kein Wecken. Render-Thread: `ChangesMonitor` (65 ns bei 64 Bereichen, 0 B) entscheidet über
   Pause; `WindowConstants.Fill` + Upload in `b1` nur bei neuem Snapshot oder neuen Effekten.
 - **Shader:** Quell-UV gegen die Rechtecke (Monitor-UV), erstes Treffer-Rechteck wählt die Matrix
-  aus `Palette` (9 Einträge), sonst Monitor-Matrix. Gilt auch beim Zoom, weil im Quellraum geprüft.
+  aus `Palette`, sonst Monitor-Matrix. Gilt auch beim Zoom, weil im Quellraum geprüft.
+  Palette seit M18: **14 feste Einträge** (`WindowPalette.Count`, `PALETTE_SIZE`): 0 Monitor,
+  1 Original, 2–9 die eingebauten Filter (Enum-Reihenfolge, 9 = intelligent), 10–13 die vier Plätze
+  der eigenen Schemata (`FilterId.Custom1–4`). Ein Index bedeutet immer dasselbe, auch wenn ein Platz
+  leer ist (leerer Platz = Matrix „Invertiert“, wie ein gelöschtes Schema).
+
+## Eigene Farbschemata (M18, C1–C3)
+- Die Art eines Schemas ist eine **Matrix** wie jeder Filter (`SchemeMatrices`, Herleitung in
+  [farbschemata.md](farbschemata.md)); Kontrast/Helligkeit kommen wie gewohnt dazu.
+- **Farbe ersetzen** ist keine Matrix: Schritt `ReplaceColors` (`Shaders/ColorReplace.hlsli`)
+  **nach der Abtastung, vor `Apply(...)`** und vor der intelligenten Gewichtung. Je Schema bis zu
+  3 Ersetzungen; Abstand in YCbCr (Rec. 709), Gewicht `w = 1 − smoothstep(r/2, r, d)`, Pixel wird um
+  `(neu − alt)·w` verschoben (Kanten und Schattierungen wandern mit). Radius `r = 0,01 + 0,5·Toleranz`.
+  CPU-Referenz mit derselben Formel: `ReplacementTable.Apply` (Tests vergleichen beide).
+- **Constant Buffer `b1`** (3,2 KB statt 2,5 KB): nach der Palette `ReplaceCounts[4]` (uint4, x = Anzahl
+  je Platz), `ReplaceFrom[12]` (YCbCr + Radius), `ReplaceShift[12]` (RGB). Im Kopf `MonitorScheme`
+  (Platz + 1 des Monitorfilters, 0 = keiner) und `ReplaceActive`: **0 überspringt den Schritt ganz**.
+  Befüllt von `WindowConstants.Fill` aus `DisplayEffects.Replacements` (beim Settings-Wechsel gebaut, 0 B je Frame).
+- **Pausieren:** Ein „Nur ersetzen“-Fenster hat dieselbe Matrix wie der ungefilterte Monitor; `ChangesMonitor`
+  vergleicht deshalb auch `DisplayEffects.ReplaceSlotOf(entry)`.
+- **Gemessen (RTX 3060 Ti, 1080p, 2026-11-11):** Magnify 0,081 ms, mit 3 Ersetzungen auf dem ganzen
+  Monitor 0,089 ms → **+0,008 ms**, hochgerechnet ×10 ≈ 0,08 ms Onboard; Gesamtframe ≈ 0,9 ms ≤ 2 ms.
+  Die Palette mit 14 statt 10 Einträgen ändert die Bereichsschleife nicht (64 Bereiche wie bisher).
+  Messung: `ZOOMIN_GPU_TIMING=1 dotnet test --project tests/ZoomIN.Rendering.Tests --filter-class "*SchemeGpuTimeTests"`.
 - **Gemessen (Dev-PC, 2026-11-06):** Aktualisieren 0,10 ms bei 16 sichtbaren Fenstern; ein Blick
   16,5 ms (1200×800) bzw. 17 ms (ganzer Monitor) – GDI wartet auf den nächsten DWM-Frame; ein
   sichtbares Fenster ist nach ≈ 0,6 s entschieden (Blicke bei 250 und 600 ms).

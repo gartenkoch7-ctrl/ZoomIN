@@ -36,9 +36,24 @@ public sealed class WindowFilterModel
         RegionsChanged?.Invoke();
     }
 
-    public void SetOptions(WindowFilterOptions options)
+    /// <summary>Replaces the options outright; prefer <see cref="UpdateOptions"/> for changes based on the current ones.</summary>
+    public void SetOptions(WindowFilterOptions options) => UpdateOptions(_ => options);
+
+    /// <summary>
+    /// Changes the options from their current state in one step, so a shortcut on another thread and
+    /// a change on the settings page cannot overwrite each other (M18: deleting an own scheme).
+    /// </summary>
+    public void UpdateOptions(Func<WindowFilterOptions, WindowFilterOptions> change)
     {
-        Volatile.Write(ref _options, options.Normalized());
+        ArgumentNullException.ThrowIfNull(change);
+        WindowFilterOptions current, next;
+        do
+        {
+            current = Volatile.Read(ref _options);
+            next = change(current).Normalized();
+        }
+        while (Interlocked.CompareExchange(ref _options, next, current) != current);
+
         OptionsChanged?.Invoke();
     }
 }

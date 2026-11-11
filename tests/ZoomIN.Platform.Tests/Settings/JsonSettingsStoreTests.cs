@@ -33,13 +33,21 @@ public sealed class JsonSettingsStoreTests : IDisposable
             WheelModifiers = HotkeyModifiers.Alt,
             PerMonitorZoom = false,
             PerMonitorFilter = false,
-            MonitorFilters = new Dictionary<string, MonitorFilter> { [@"\\.\DISPLAY2"] = new(true, ColorFilter.BlackOnYellow) },
+            MonitorFilters = new Dictionary<string, MonitorFilter> { [@"\\.\DISPLAY2"] = new(true, FilterId.BlackOnYellow) },
             MonitorZoomLevels = new Dictionary<string, double> { [@"\\.\DISPLAY1"] = 2.5, [@"\\.\DISPLAY2"] = 4 },
             WindowFilterHotkey = new HotkeyGesture(HotkeyModifiers.Control | HotkeyModifiers.Alt, 0x57),
             WindowFilter = WindowFilterOptions.Default
                 .WithRule(WindowFilterRule.For(new WindowKind("winword.exe", "OpusApp"), WindowFilterChoice.None))
-                .WithRule(WindowFilterRule.For(new WindowKind("excel.exe", "XLMAIN"), WindowFilterChoice.Filter, ColorFilter.Grayscale))
-                with { Sensitivity = WindowFilterSensitivity.Custom, CustomPercent = 70, AutoFilter = ColorFilter.WhiteOnBlue },
+                .WithRule(WindowFilterRule.For(new WindowKind("excel.exe", "XLMAIN"), WindowFilterChoice.Filter, FilterId.Grayscale))
+                with { Sensitivity = WindowFilterSensitivity.Custom, CustomPercent = 70, AutoFilter = FilterId.WhiteOnBlue },
+            CustomSchemes =
+            [
+                new CustomScheme
+                {
+                    Id = FilterId.Custom2, Name = "Grün auf Dunkelblau", Kind = SchemeKind.Deficiency, Strength = 70,
+                    Replacements = [new ColorReplacement { From = "#FF0000", To = "#FFFF00", Tolerance = 5 }],
+                },
+            ],
         };
 
         store.Save(settings);
@@ -131,6 +139,13 @@ public sealed class JsonSettingsStoreTests : IDisposable
         Assert.Equal(expected.DockedMonitorZoomLevels, actual.DockedMonitorZoomLevels);
         Assert.Equal(expected.MonitorFilters, actual.MonitorFilters);
         Assert.Equal(expected.WindowFilter.Rules, actual.WindowFilter.Rules);
+        Assert.Equal(expected.CustomSchemes.Count, actual.CustomSchemes.Count);
+        for (var i = 0; i < expected.CustomSchemes.Count; i++)
+        {
+            Assert.Equal(expected.CustomSchemes[i].Replacements, actual.CustomSchemes[i].Replacements);
+            Assert.Equal(expected.CustomSchemes[i] with { Replacements = [] }, actual.CustomSchemes[i] with { Replacements = [] });
+        }
+
         Assert.Equal(
             expected with
             {
@@ -138,6 +153,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
                 LensMonitorZoomLevels = actual.LensMonitorZoomLevels,
                 DockedMonitorZoomLevels = actual.DockedMonitorZoomLevels,
                 MonitorFilters = actual.MonitorFilters,
+                CustomSchemes = actual.CustomSchemes,
                 WindowFilter = expected.WindowFilter with { Rules = actual.WindowFilter.Rules },
             },
             actual);

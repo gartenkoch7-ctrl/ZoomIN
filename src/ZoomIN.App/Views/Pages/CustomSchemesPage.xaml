@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="ZoomIN.App.Views.Pages.CustomSchemesPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:c="using:ZoomIN.App.Views.Controls"
+    xmlns:loc="using:ZoomIN.App.Localization"
+    xmlns:pages="using:ZoomIN.App.Views.Pages"
+    xmlns:vm="using:ZoomIN.App.ViewModels">
+
+    <!-- Own colour schemes (M18, C1–C3): reached from the colour filter page. -->
+    <ScrollViewer>
+        <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Style="{StaticResource CardStackStyle}">
+            <HyperlinkButton Click="OnBack" Content="{x:Bind loc:Text.Get('Schemes.Back')}" />
+            <TextBlock Style="{StaticResource PageTitleStyle}" Text="{x:Bind loc:Text.Get('Schemes.Title')}" />
+            <TextBlock Text="{x:Bind loc:Text.Get('Schemes.Intro')}" TextWrapping="Wrap" />
+            <TextBlock
+                x:Name="StatusText"
+                AutomationProperties.LiveSetting="Polite"
+                FontWeight="SemiBold"
+                Text="{x:Bind Vm.Status, Mode=OneWay}"
+                TextWrapping="Wrap"
+                Visibility="{x:Bind Vm.HasStatus, Mode=OneWay}" />
+
+            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('Schemes.List')}" />
+            <TextBlock Text="{x:Bind loc:Text.Get('Schemes.Empty')}" Visibility="{x:Bind Vm.NoSchemes, Mode=OneWay}" />
+            <ItemsControl IsTabStop="False" ItemsSource="{x:Bind Vm.Schemes}">
+                <ItemsControl.ItemContainerTransitions>
+                    <TransitionCollection />
+                </ItemsControl.ItemContainerTransitions>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SchemeRow">
+                        <c:SettingCard Margin="0,0,0,4" Description="{x:Bind Description}" Glyph="&#xE790;" Header="{x:Bind Name}">
+                            <Button
+                                AutomationProperties.Name="{x:Bind EditName}"
+                                Click="OnEdit"
+                                Content="{x:Bind loc:Text.Get('Schemes.Edit')}"
+                                Tag="{x:Bind}" />
+                        </c:SettingCard>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Schemes.New.Desc')}" Glyph="&#xE710;" Header="{x:Bind loc:Text.Get('Schemes.New')}">
+                <Button x:Name="CreateButton" Click="OnAdd" Content="{x:Bind loc:Text.Get('Schemes.Create')}" />
+            </c:SettingCard>
+
+            <StackPanel Spacing="4" Visibility="{x:Bind Vm.IsEditing, Mode=OneWay}">
+                <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind Vm.Editor.Title, Mode=OneWay}" />
+                <c:SettingCard Description="{x:Bind loc:Text.Get('Schemes.Name.Desc')}" Glyph="&#xE8AC;" Header="{x:Bind loc:Text.Get('Schemes.Name')}">
+                    <TextBox
+                        x:Name="NameBox"
+                        MinWidth="240"
+                        MaxLength="{x:Bind vm:CustomSchemesViewModel.MaxNameLength}"
+                        PlaceholderText="{x:Bind Vm.Editor.DefaultName, Mode=OneWay}"
+                        Text="{x:Bind Vm.Editor.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </c:SettingCard>
+                <c:SettingCard Description="{x:Bind loc:Text.Get('Schemes.Kind.Desc')}" Glyph="&#xE7B3;" Header="{x:Bind loc:Text.Get('Schemes.Kind')}">
+                    <ComboBox MinWidth="240" ItemsSource="{x:Bind Vm.KindNames}" SelectedIndex="{x:Bind Vm.Editor.KindIndex, Mode=TwoWay}" />
+                </c:SettingCard>
+                <c:SettingCard
+                    Description="{x:Bind loc:Text.Get('Schemes.Color1.Desc')}"
+                    Glyph="&#xE2B1;"
+                    Header="{x:Bind loc:Text.Get('Schemes.Color1')}"
+                    Visibility="{x:Bind Vm.Editor.IsTwoColors, Mode=OneWay}">
+                    <c:ColorChooser Color="{x:Bind Vm.Editor.Color1, Mode=TwoWay}" />
+                </c:SettingCard>
+                <c:SettingCard
+                    Description="{x:Bind loc:Text.Get('Schemes.Color2.Desc')}"
+                    Glyph="&#xE2B1;"
+                    Header="{x:Bind loc:Text.Get('Schemes.Color2')}"
+                    Visibility="{x:Bind Vm.Editor.IsTwoColors, Mode=OneWay}">
+                    <c:ColorChooser Color="{x:Bind Vm.Editor.Color2, Mode=TwoWay}" />
+                </c:SettingCard>
+                <c:SettingCard
+                    Description="{x:Bind loc:Text.Get('Schemes.Hue.Desc')}"
+                    Glyph="&#xE2B1;"
+                    Header="{x:Bind loc:Text.Get('Schemes.Hue')}"
+                    Visibility="{x:Bind Vm.Editor.IsTint, Mode=OneWay}">
+                    <c:ColorChooser Color="{x:Bind Vm.Editor.Hue, Mode=TwoWay}" />
+                </c:SettingCard>
+                <c:SettingCard
+                    Description="{x:Bind loc:Text.Get('Schemes.Deficiency.Desc')}"
+                    Glyph="&#xE7B3;"
+                    Header="{x:Bind loc:Text.Get('Schemes.Deficiency')}"
+                    Visibility="{x:Bind Vm.Editor.IsDeficiency, Mode=OneWay}">
+                    <ComboBox MinWidth="240" ItemsSource="{x:Bind Vm.DeficiencyNames}" SelectedIndex="{x:Bind Vm.Editor.DeficiencyIndex, Mode=TwoWay}" />
+                </c:SettingCard>
+                <c:SettingCard
+                    Description="{x:Bind loc:Text.Get('Schemes.Strength.Desc')}"
+                    Glyph="&#xE9E9;"
+                    Header="{x:Bind loc:Text.Get('Schemes.Strength')}"
+                    Visibility="{x:Bind Vm.Editor.IsDeficiency, Mode=OneWay}">
+                    <c:ValueSlider Format="{}{0:0} %" Maximum="100" Minimum="0" Step="1" Value="{x:Bind Vm.Editor.Strength, Mode=TwoWay}" />
+                </c:SettingCard>
+
+                <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('Schemes.Replacements')}" />
+                <TextBlock Text="{x:Bind loc:Text.Get('Schemes.Replacements.Desc')}" TextWrapping="Wrap" />
+                <ItemsControl x:Name="ReplacementList" IsTabStop="False" ItemsSource="{x:Bind Vm.Editor.Replacements, Mode=OneWay}">
+                    <ItemsControl.ItemContainerTransitions>
+                        <TransitionCollection />
+                    </ItemsControl.ItemContainerTransitions>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ReplacementRow">
+                            <StackPanel Margin="0,0,0,8" Spacing="4">
+                                <c:SettingCard Glyph="&#xE2B1;" Header="{x:Bind FromName}">
+                                    <c:ColorChooser Color="{x:Bind From, Mode=TwoWay}" />
+                                </c:SettingCard>
+                                <c:SettingCard Glyph="&#xE72A;" Header="{x:Bind ToName}">
+                                    <c:ColorChooser Color="{x:Bind To, Mode=TwoWay}" />
+                                </c:SettingCard>
+                                <c:SettingCard Description="{x:Bind loc:Text.Get('Schemes.Tolerance.Desc')}" Glyph="&#xE9E9;" Header="{x:Bind ToleranceName}">
+                                    <c:ValueSlider Format="{}{0:0} %" Maximum="100" Minimum="0" Step="1" Value="{x:Bind Tolerance, Mode=TwoWay}" />
+                                </c:SettingCard>
+                                <Button
+                                    HorizontalAlignment="Right"
+                                    AutomationProperties.Name="{x:Bind RemoveName}"
+                                    Click="OnRemoveReplacement"
+                                    Content="{x:Bind loc:Text.Get('Schemes.Remove')}"
+                                    Tag="{x:Bind}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <c:SettingCard Description="{x:Bind loc:Text.Get('Schemes.AddReplacement.Desc')}" Glyph="&#xE710;" Header="{x:Bind loc:Text.Get('Schemes.AddReplacement')}">
+                    <Button x:Name="AddReplacementButton" Click="OnAddReplacement" Content="{x:Bind loc:Text.Get('Schemes.AddReplacement')}" IsEnabled="{x:Bind Vm.Editor.CanAddReplacement, Mode=OneWay}" />
+                </c:SettingCard>
+
+                <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('Schemes.Preview')}" />
+                <TextBlock Text="{x:Bind loc:Text.Get('Schemes.Preview.Desc')}" TextWrapping="Wrap" />
+                <ItemsControl IsTabStop="False" ItemsSource="{x:Bind Vm.Editor.Preview, Mode=OneWay}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="8" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PreviewSwatch">
+                            <!-- Focusable so screen-reader and keyboard users get each colour pair read out. -->
+                            <ContentControl
+                                AutomationProperties.Name="{x:Bind Description, Mode=OneWay}"
+                                IsTabStop="True"
+                                ToolTipService.ToolTip="{x:Bind Description, Mode=OneWay}"
+                                UseSystemFocusVisuals="True">
+                                <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4">
+                                    <StackPanel>
+                                        <Border Width="48" Height="32" Background="{x:Bind pages:CustomSchemesPage.BrushOf(Before)}" />
+                                        <Border Width="48" Height="32" Background="{x:Bind pages:CustomSchemesPage.BrushOf(After), Mode=OneWay}" />
+                                    </StackPanel>
+                                </Border>
+                            </ContentControl>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <c:SettingCard Description="{x:Bind loc:Text.Get('Schemes.Use.Desc')}" Glyph="&#xE7B3;" Header="{x:Bind loc:Text.Get('Schemes.Use')}">
+                    <Button Click="OnUse" Content="{x:Bind loc:Text.Get('Schemes.Use')}" Style="{StaticResource AccentButtonStyle}" />
+                </c:SettingCard>
+                <c:SettingCard Description="{x:Bind loc:Text.Get('Schemes.Delete.Desc')}" Glyph="&#xE74D;" Header="{x:Bind loc:Text.Get('Schemes.Delete')}">
+                    <Button Content="{x:Bind loc:Text.Get('Schemes.Delete')}">
+                        <Button.Flyout>
+                            <Flyout x:Name="DeleteFlyout">
+                                <Button Click="OnDeleteConfirmed" Content="{x:Bind loc:Text.Get('Schemes.DeleteConfirm')}" Style="{StaticResource AccentButtonStyle}" />
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                </c:SettingCard>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

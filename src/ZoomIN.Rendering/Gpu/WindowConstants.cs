@@ -14,7 +14,7 @@ namespace ZoomIN.Rendering.Gpu;
 [StructLayout(LayoutKind.Sequential)]
 internal struct WindowConstants
 {
-    public const int PaletteRows = 3 * 10;
+    public const int PaletteRows = 3 * WindowPalette.Count;
 
     /// <summary>A palette entry no region has; used as <see cref="SmartEntry"/> after a fall-back.</summary>
     public const uint NoEntry = uint.MaxValue;
@@ -22,10 +22,18 @@ internal struct WindowConstants
 
     public uint RegionCount;
     public uint SmartEntry;
-    public Vector2 Padding;
+
+    /// <summary>Place + 1 of the own scheme whose replacements the monitor entry gets, 0 for none (M18).</summary>
+    public uint MonitorScheme;
+
+    /// <summary>1 if any own scheme replaces colours; 0 lets the shader skip the step.</summary>
+    public uint ReplaceActive;
     public Regions Rects;
     public Regions Entries;
     public Rows Palette;
+    public Schemes ReplaceCounts;
+    public Replacements ReplaceFrom;
+    public Replacements ReplaceShift;
 
     /// <summary>
     /// Writes <paramref name="regions"/> in the UV space of <paramref name="monitor"/> and the
@@ -64,6 +72,28 @@ internal struct WindowConstants
             target.Palette[(i * 3) + 1] = new Vector4(m.M10, m.M11, m.M12, m.OffsetG);
             target.Palette[(i * 3) + 2] = new Vector4(m.M20, m.M21, m.M22, m.OffsetB);
         }
+
+        FillReplacements(ref target, effects);
+    }
+
+    // Own schemes (M18): the counts say how many entries of each place the shader reads.
+    private static void FillReplacements(ref WindowConstants target, DisplayEffects effects)
+    {
+        var table = effects.Replacements;
+        target.ReplaceActive = table.Any ? 1u : 0u;
+        target.MonitorScheme = (uint)(effects.MonitorReplaceSlot + 1);
+        for (var slot = 0; slot < CustomSchemes.Max; slot++)
+        {
+            target.ReplaceCounts[slot] = new UInt4((uint)table.CountOf(slot));
+        }
+
+        var items = table.Items;
+        for (var i = 0; i < items.Length; i++)
+        {
+            var p = items[i];
+            target.ReplaceFrom[i] = new Vector4(p.Y, p.Cb, p.Cr, p.Radius);
+            target.ReplaceShift[i] = new Vector4(p.ShiftR, p.ShiftG, p.ShiftB, 0);
+        }
     }
 
     [InlineArray(WindowRegions.Max)]
@@ -77,4 +107,20 @@ internal struct WindowConstants
     {
         private Vector4 _element;
     }
+
+    [InlineArray(CustomSchemes.Max)]
+    public struct Schemes
+    {
+        private UInt4 _element;
+    }
+
+    [InlineArray(ReplacementTable.Size)]
+    public struct Replacements
+    {
+        private Vector4 _element;
+    }
+
+    /// <summary>An HLSL <c>uint4</c>; only x is used, the rest pads to 16 bytes.</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public readonly record struct UInt4(uint X, uint Y = 0, uint Z = 0, uint W = 0);
 }
