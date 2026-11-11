@@ -27,38 +27,68 @@ Schon gesammelt („Nach dem MVP“): Sprachausgabe, Line View, Auto-Lupe am Fok
 
 Größen wie in der Roadmap: **S** ≈ wenige Tage · **M** ≈ 1–2 Wochen · **L** ≈ 2–4 Wochen.
 
-## Empfehlung – Top 5
-| # | Funktion | Warum zuerst | Größe |
-|---|---|---|---|
-| 1 | **Ruhige Mausverfolgung mit Randabstand** (A1) | Häufigste Klage über Vollbild-Lupen ist Schwindel/Übelkeit durch ständig wanderndes Bild. Reine Core-Logik im bestehenden `AnchorController`, voll testbar, kein Risiko für Klicks. | S–M |
-| 2 | **Übersicht auf Knopfdruck** (B2) | Orientierung ist bei hoher Stufe das größte Problem („wo bin ich?“). Auf 1× wechseln, Rahmen zeigt den Ausschnitt, loslassen springt hin. Nutzt vorhandene Gleit-Animation und Rahmen-Shader. | S–M |
-| 3 | **Eigene Farbschemata** (C1–C3) | Zwei frei wählbare Farben, Einfärben, Farbe ersetzen und Schemata für Farbsehschwächen. Jedes Vorbild hat das, ZoomIN nur feste Paare. Passt in den bestehenden Farbmatrix-Durchgang. | S–M |
-| 4 | **Eingefrorene Ausschnitte** (B1) | Zwei entfernte Stellen gleichzeitig sehen (Uhr, Statuszeile, Chat, Formelzeile). Hoher Alltagsnutzen. Rendering ist einfach (zweites Rechteck aus demselben Capture). Die Bedienung ist die eigentliche Arbeit. | M |
-| 5 | **Schwenken per Tastatur** (A3) | Lesen und Absuchen ohne Maus, mit Tempostufen, Sprung an Ränder/Mitte, Ansicht merken. Kernfunktion für Tastaturnutzer, gleiche Sprache wie die Verfolgung. Klärung nötig: Zeiger bleibt, wo er ist. | M |
+## Priorisierung nach Wichtigkeit (2026-11-11)
+Diese Reihenfolge gilt für alle vorgemerkten Features. Sie ersetzt die erste Top-5-Liste und die
+Blöcke 1/2 vom selben Tag. Geplant ist noch keines. Vor der Umsetzung kommt ein Grilling, dann ein
+Meilenstein.
 
-**Knapp dahinter:** Text schärfen/fetter (D1, hoher Nutzen, aber Qualitätsrisiko mit Filtern),
-Tooltips/Meldungen verfolgen (A4), Maus-Puffer und Achsensperre (A6, sehr klein),
-Zeigersuche „Sonar“ und Anzeige-Bedingungen (E1, klein).
+**Bewertung:** Jedes Kriterium von 1 bis 5 Punkten, gewichtet, höchstens 35 Punkte.
+- **Nutzen ×3:** wie stark es Sehbehinderten im Alltag hilft
+- **Reichweite ×2:** wie viele Nutzer es betrifft und wie oft
+- **Aufwand ×1:** 5 = klein
+- **Risiko ×1:** 5 = gering; zählt Klicks, Hot Path, Grundsatzentscheidungen
 
-## Vorgemerkt (Nutzerwunsch 2026-11-11)
-Diese Funktionen stehen auf der Liste möglicher neuer Features. Geplant ist noch keine. Vor der
-Umsetzung kommt ein Grilling und ein eigener Meilenstein.
+Bei Punktgleichstand steht das Feature mit dem geringeren Risiko vorn.
 
-**Block 1 – Kern, in dieser Reihenfolge**
-1. Ruhige Mausverfolgung mit Randabstand (A1)
-2. Übersicht auf Knopfdruck (B2)
-3. Eigene Farbschemata (C1–C3)
-4. Schärfen und Fetter (D1) – erst nach einem Spike (Halos, Invertieren, GPU-Budget Onboard)
-5. Eingefrorene Ausschnitte (B1)
+| Rang | Feature | Nutzen | Reichw. | Aufwand | Risiko | Punkte | Begründung in einem Satz |
+|---|---|---|---|---|---|---|---|
+| 1 | Ruhige Mausverfolgung mit Randabstand (A1) | 5 | 5 | 4 | 4 | **33** | Trifft jeden Vollbild-Nutzer bei jeder Mausbewegung und nimmt die häufigste Klage, Schwindel. |
+| 2 | Übersicht auf Knopfdruck (B2) | 4 | 4 | 4 | 4 | **28** | Orientierung bei hoher Stufe ist das zweitgrößte Alltagsproblem, und das Feature ist klein. |
+| 3 | Schärfen und Fetter (D1) | 5 | 4 | 3 | 2 | **28** | Lesbarer Text ist der Kern einer Lupe; erst nach einem Spike, denn Halos und GPU-Budget sind offen. |
+| 4 | Eigene Farbschemata (C1–C3) | 4 | 3 | 4 | 5 | **27** | Für Blendempfindliche und Farbsehschwache entscheidend, technisch fast ohne Risiko. |
+| 5 | Caret-Formen (E2) | 3 | 4 | 5 | 5 | **27** | Den Caret beim Tippen nicht zu finden ist eine häufige Klage; ein Caret-Balken ist schon da. |
+| 6 | Zoom beim Fenster-Verschieben (G1) | 4 | 4 | 4 | 3 | **27** | Fenster bei hoher Stufe zu ziehen ist heute ein Blindflug; Risiko: Apps ohne Verschiebe-Meldung. |
+| 7 | Eingefrorene Ausschnitte (B1) | 4 | 3 | 3 | 3 | **24** | Großer Nutzen für Profis (Uhr, Chat, Formelzeile), aber Bedienung und Klicks sind aufwendig. |
+| 8 | Anzeige-Bedingung für Markierungen (E1) | 2 | 3 | 5 | 5 | **22** | Komfort, damit Markierungen weniger stören; klein, nebenbei mitnehmen. |
+| 9 | Maus-Puffer und Achsensperre (A6) | 3 | 2 | 5 | 4 | **22** | Hilft vor allem mit mehreren Monitoren und beim Lesen von Tabellen; sehr klein. |
+| 10 | Einfrieren und Monitor wechseln (G2) | 4 | 2 | 3 | 2 | **21** | Stark für Nutzer mit mehreren Monitoren, braucht aber ein ADR (Zeiger versetzen) und eine Lösung für die Klicks. |
 
-Vorschlag: 1–3 als gemeinsamer Meilenstein (etwa 2–3 Wochen).
+**Bündel für Meilensteine:**
+- **„Ruhige Ansicht & Orientierung“ – A1, B2, G1 (M, ~2–3 Wochen).**
+  - Alle drei ändern nur Anker und Stufe im `ZoomModel`.
+  - B2 und G1 brauchen denselben Baustein „Stufe vorübergehend überschreiben, danach zurück“.
+    Das Halten-Kürzel B6 kommt damit fast umsonst.
+  - Kein Shader, keine Grundsatzfrage. Deshalb ist das der empfohlene nächste Meilenstein.
+- **„Lesbarkeit“ – D1-Spike, C1–C3, E2, E1 (M–L).**
+  - Alles läuft im Shader und im Zeiger-Durchgang.
+  - Der D1-Spike entscheidet, ob Schärfen und Fetter dazukommen.
+- **„Mehrere Ansichten“ – B1, G2, dazu A6 (L).**
+  - Gemeinsames Problem: Ansichten, die nicht an der Maus hängen, und Klicks dorthin.
+  - Davor braucht es ein ADR „Zeiger versetzen nur auf Befehl“ und eine Entscheidung zur Klickregel.
+  - Teile von G2 können vorgezogen werden: der Monitorwechsel per Kürzel (S) und der Maus-Puffer
+    aus A6 kommen ohne Einfrieren aus.
 
-**Block 2 – kleine Extras, nebenbei**
-- Caret-Formen, z. B. Keile über und unter dem Textcursor (E2)
-- Anzeige-Bedingung für alle Markierungen: immer, nur in Ruhe, nur in Bewegung, nur bei gehaltener Taste (E1)
-- Maus-Puffer am Monitorrand und Achsensperre mit Umschalt (A6)
-
-**Dazu: Zoom beim Fenster-Verschieben (G1)** – siehe Abschnitt G.
+**Übrige Ideen, nicht vorgemerkt (grobe Stufe):**
+- **Als Nächstes nachrücken:**
+  - Tooltips und Meldungen verfolgen (A4)
+  - feinere Fokus-Verfolgung (A5)
+  - Einstellungen pro App (F4)
+  - Präsentationsmodus (F2, klein)
+  - Zoomstufen-Politik (B7, klein)
+  - freies festes Fenster (B3)
+  - Filter pro Monitor (C4)
+- **Später, mit Grundsatzfrage:**
+  - Schwenken per Tastatur (A3)
+  - echte Mitte am Rand (A2, Spike)
+  - Zeilenstreifen (B4)
+  - zweiter Monitor zeigt den ersten (F1)
+- **Mit der Sprachausgabe:** Textleiste (D3), Lesefenster (D4), Ansicht folgt dem Vorlesen (A8)
+- **Nicht verfolgen:**
+  - Text neu zeichnen (D2)
+  - Kamera (F5)
+  - Zoom in Übertragung zeigen (F6), außer mit ADR
+  - Touch-Gesten (F7)
+  - Tafel (F8)
 
 ## A · Verfolgung und Bewegung
 | ID | Funktion | Nutzen | Größe | Machbarkeit / Risiko | Quelle |
@@ -120,7 +150,7 @@ Vorschlag: 1–3 als gemeinsamer Meilenstein (etwa 2–3 Wochen).
 | F7 | **Touch-Gesten** (Dreifingertipp, Aufziehen zum Zoomen) | Tablets/Convertibles | M–L | globale Gesten ohne Magnification-API schwierig | Dolphin-Lektion⁶ |
 | F8 | Fernbildschirm/Tafel (Lehrer-PC) | Schule | L | außerhalb des Kerns, verworfen | Dolphin²² |
 
-## G · Fenster verschieben (eigene Idee, Nutzerwunsch 2026-11-11)
+## G · Fenster und Monitore (eigene Ideen, Nutzerwünsche 2026-11-11)
 | ID | Funktion | Nutzen | Größe | Machbarkeit / Risiko | Quelle |
 |---|---|---|---|---|---|
 | G1 | **Zoom beim Fenster-Verschieben**: Solange ein Fenster verschoben wird, ändert sich der Zoom auf dem Monitor, auf dem das Fenster gerade ist. Einstellung: *aufheben* (gleitet auf 1×, Filter bleiben), *absenken* auf eine wählbare Stufe, oder *unverändert*. | Beim Ziehen sieht man sofort, wohin das Fenster kommt, statt mit hoher Stufe blind zu schwenken | S–M | Siehe unten | eigene Idee; in den Vorbildern nicht gefunden |
@@ -147,6 +177,48 @@ Vorschlag: 1–3 als gemeinsamer Meilenstein (etwa 2–3 Wochen).
 **Risiken:** Manche Apps ziehen ihre Fenster selbst (eigene Titelleisten, z. B. Browser-Tabs) und
 melden kein `MOVESIZESTART`. Das muss eine App-Matrix prüfen. Ein Rückfall über die
 Fensterposition beim gedrückten Mausknopf ist denkbar, aber teurer.
+
+### G2 · Ausschnitt einfrieren und Monitor wechseln
+| ID | Funktion | Nutzen | Größe | Machbarkeit / Risiko | Quelle |
+|---|---|---|---|---|---|
+| G2 | **Ausschnitt einfrieren + nächster Monitor**: Ein Kurzbefehl friert den aktuellen Zoom-Ausschnitt eines Monitors ein. Ein zweiter Kurzbefehl setzt den Mauszeiger auf den nächsten Monitor. Dort arbeitet man normal mit Zoom weiter, während der eingefrorene Ausschnitt stehen bleibt. | Vorlage, Anleitung oder Video vergrößert auf Monitor A lesen und auf Monitor B schreiben, ohne dass A ständig wegschwenkt; Monitorwechsel ohne langes Ziehen der Maus bei hoher Stufe | M | Siehe unten | eigene Idee; ähnlich Windows-Beta „Ansicht sperren“ (F3) ¹⁷ ⚠️ und Monitorwechsel per Kürzel bei SuperNova und macOS (A7) ⁹ ⁷ |
+
+**Umsetzung grob:**
+- **Einfrieren:** Der Anker des Monitors bleibt stehen (eigener Zustand im `ZoomModel` pro
+  Monitor). Ab Werk bleibt der Inhalt live, also aktualisiert sich ein Video weiter. Optional
+  gibt es ein Standbild, für das ZoomIN den Capture-Frame nicht mehr kopiert.
+- **Monitor wechseln:** Der Zeiger springt auf dem Zielmonitor an seine letzte Position dort,
+  sonst in die Mitte (`SetCursorPos`). Das ist die erste Stelle, an der ZoomIN den Zeiger
+  versetzt, aber nur auf ausdrücklichen Befehl. Die M6-Regel „nie versetzen“ muss dafür eine
+  Ausnahme bekommen, festgehalten in einem ADR.
+- **Klicks auf dem eingefrorenen Monitor:** Der angezeigte Ausschnitt hängt dann nicht mehr an
+  der Maus, also stimmt das Bild nicht mit dem Klickpunkt überein (ADR-0003/0018). Zwei Wege:
+  - Kommt der Zeiger zurück, wird der Ausschnitt aufgehoben.
+  - Er bleibt eingefroren, und ZoomIN zeichnet den Zeiger dort, wo sein Desktop-Punkt angezeigt
+    wird, oder blendet ihn aus, wenn der Punkt außerhalb des Ausschnitts liegt. Dann ist der
+    Monitor reine Anzeige.
+- **Kurzbefehle (Vorschlag, prüfen):** `Strg+Alt+H` für Halten/Einfrieren und `Strg+Alt+N` für
+  den nächsten Monitor. Sie liegen nicht auf AltGr-Zeichen im deutschen Layout (anders als E, M
+  oder Q) und sind bisher frei.
+- **Anzeige:** Ein eingefrorener Monitor bekommt einen deutlichen Rahmen oder ein Symbol. Der
+  Rahmen-Shader ist vorhanden.
+- **Telemetrie:** Abläufe `zoomin.view.freeze` und `zoomin.view.monitor_switch` mit
+  Monitor-Index, Stufe und live/Standbild.
+
+**Offene Fragen fürs Grilling:**
+- Bleibt der Inhalt ab Werk live, oder wird er zum Standbild?
+- Was geschieht, wenn der Zeiger auf den eingefrorenen Monitor zurückkommt: aufheben, oder
+  bleiben als reine Anzeige?
+- Darf man auch einen Monitor einfrieren, auf dem gerade nicht gezoomt ist (1×)?
+- Kann man mehrere Monitore gleichzeitig einfrieren, und hebt ein Befehl alle auf?
+- Ist der Monitorwechsel auch ohne Einfrieren nützlich und deshalb ein eigener Schalter?
+- Was passiert bei nur einem Monitor? Dort wäre G2 dasselbe wie die eingefrorenen Ausschnitte (B1).
+
+**Risiken:**
+- Nutzer vergessen, dass ein Monitor eingefroren ist, und wundern sich, dass er nicht folgt.
+  Dagegen helfen Rahmen, Hinweis und Ansage.
+- Fokus- und Caret-Verfolgung auf dem eingefrorenen Monitor müssen pausieren.
+- Klicks dorthin sind die eigentliche Schwierigkeit.
 
 ## Stimmen von Nutzern (Auswahl)
 - Vollbild-Lupe macht nach Minuten **übel/schwindlig**; Angedockt ohne Kürzel für Größe/Lage;

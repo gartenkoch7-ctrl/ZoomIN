@@ -60,17 +60,20 @@ M0 ─► M1 ─► M2 ─┬─► M3 ─┬─► M4 ─┐
 ## Nach dem MVP (nicht geplant, nur gesammelt)
 Sprachausgabe (`ZoomIN.Speech`), Input-Transform mit UIAccess + Code-Signing,
 Line View, Auto-Lupe am Fokus, Zoom bis 64×. (Installer mit Updates → M9.)
-Weitere bewertete Ideen für die Vergrößerung (Top 5 und Gesamtliste):
+Weitere bewertete Ideen für die Vergrößerung:
 [../kb/feature-ideen-magnifier.md](../kb/feature-ideen-magnifier.md).
-Vorgemerkt (2026-11-11) sind:
-- ruhige Mausverfolgung mit Randabstand
-- Übersicht auf Knopfdruck
-- eigene Farbschemata
-- Schärfen/Fetter
-- eingefrorene Ausschnitte
-- Caret-Formen
-- Anzeige-Bedingungen für Markierungen
-- Maus-Puffer und Achsensperre
-- Zoom beim Fenster-Verschieben (aufheben, absenken oder unverändert)
 
-Details stehen im Abschnitt „Vorgemerkt“ der Ideenliste.
+Vorgemerkt sind diese Features, nach Wichtigkeit geordnet (Priorisierung vom 2026-11-11):
+1. ruhige Mausverfolgung mit Randabstand
+2. Übersicht auf Knopfdruck
+3. Schärfen/Fetter (erst nach einem Spike)
+4. eigene Farbschemata
+5. Caret-Formen
+6. Zoom beim Fenster-Verschieben
+7. eingefrorene Ausschnitte
+8. Anzeige-Bedingungen für Markierungen
+9. Maus-Puffer und Achsensperre
+10. Ausschnitt einfrieren und Monitor wechseln
+
+Empfohlener nächster Meilenstein: **„Ruhige Ansicht & Orientierung“** mit den Features 1, 2 und 6.
+Punkte, Begründung und Bündel stehen im Abschnitt „Priorisierung“ der Ideenliste.
