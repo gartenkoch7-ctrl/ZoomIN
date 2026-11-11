@@ -208,3 +208,72 @@ Fensters (`GetWindowDpiAwarenessContext` → `SetThreadDpiAwarenessContext`) und
 `LogicalToPhysicalPointForPerMonitorDPI`. Für Per-Monitor-Apps ändert sich nichts.
 ⚠️ Nicht automatisch getestet – Sichttest mit einer alten Win32-App bei 150 % Skalierung.
 UIA-Rechtecke (`CurrentBoundingRectangle`) sind für einen Per-Monitor-Client bereits physisch.
+
+## Fenster-Verschieben erkennen (G1, Mini-Spike 2026-11-11)
+Ziel: Solange ein Fenster gezogen wird, geht der Monitor unter dem Zeiger vorübergehend auf 1×
+(Plan [G1](../plan/features/g1-zoom-beim-verschieben.md)). Gemessen mit einem eigenen
+Win32-Testfenster (WS_OVERLAPPEDWINDOW) und eigenem Hook-Thread, keine fremde App angefasst.
+
+**Ereignisse:** `EVENT_SYSTEM_MOVESIZESTART/END` (0x000A/0x000B, out-of-context) kommen für
+Ziehen mit der Maus und für Alt+Leertaste → Verschieben/Größe ändern. `GetGUIThreadInfo` zeigt
+während der Schleife `GUI_INMOVESIZE` und `hwndMoveSize` = Fenster, danach nicht mehr. Ein
+`SC_MOVE|HTCAPTION` ohne gedrückte Taste löst gar nichts aus.
+
+**Verschieben oder Größe – Ergebnis:**
+| Weg | Trefferzone (`WM_NCHITTEST` am Zeiger beim Start) | Erste Rechteckänderung |
+|---|---|---|
+| Titelleiste ziehen | 2 = Titel → Verschieben | gleiche Größe |
+| Rand/Ecke ziehen | 10–17 → Größe | andere Größe |
+| Alt+Leertaste → Verschieben | 2 (Windows setzt den Zeiger auf die Titelleiste) | gleiche Größe |
+| Alt+Leertaste → Größe ändern | 1 = Client (Zeiger in der Fenstermitte) → **unklar** | andere Größe |
+| Maximiertes Fenster an der Titelleiste ziehen | 2 → Verschieben | **andere** Größe (Wiederherstellen) |
+| App startet das Ziehen selbst aus dem Client (`WM_NCLBUTTONDOWN` mit HTCAPTION) | 1 → unklar | gleiche Größe |
+
+- **Entscheidung:** erst die Trefferzone (`DragHitTest`, `SendMessageTimeout` mit
+  `SMTO_BLOCK|SMTO_ABORTIFHUNG`, 100 ms, Punkt per `PhysicalToLogicalPointForPerMonitorDPI` im
+  DPI-Raum des Fensters); ist sie unklar, die erste Rechteckänderung. Keine der beiden allein
+  reicht: Die Trefferzone versagt bei Alt+Leertaste → Größe und bei Apps, die selbst ziehen; die
+  Rechteckänderung irrt beim maximierten Fenster. UIPI blockt die Nachricht an Fenster mit
+  Adminrechten → unklar → erste Änderung.
+- **Erste Änderung im Detail:** gleiche Größe = Verschieben; neue Größe nur dann Größe ändern, wenn
+  eine Kante liegen blieb (die gegenüber dem gezogenen Rand). Ein maximiertes (`IsZoomed`) oder
+  angedocktes Fenster bekommt beim Verschieben seine normale Größe (`GetWindowPlacement`) an neuer Stelle
+  → Verschieben. Grenze: Das Ereignis kommt etwas verspätet; unter Last kann der Zeiger
+  die Randzone schon verlassen haben (dann unklar → erste Änderung, beim Umriss-Ziehen evtl.
+  falsche Zone).
+- **Erst bei der ersten Änderung handeln:** Ein einfacher Klick auf eine Titelleiste betritt
+  dieselbe Schleife (MOVESIZESTART/END ohne Bewegung). Würde schon der Start den Zoom heben, gliche
+  jeder Klick auf eine Titelleiste einem Zoom-Flackern. Die Quelle meldet den Start deshalb erst
+  bei der ersten Rechteckänderung (`EVENT_OBJECT_LOCATIONCHANGE`, nur für Prozess und Thread des
+  gezogenen Fensters, nur während des Ziehens).
+- **Umriss-Ziehen** („Fensterinhalt beim Ziehen anzeigen“ aus, `SPI_GETDRAGFULLWINDOWS`): Das
+  Fenster bewegt sich erst beim Loslassen, also kommen keine Änderungen. Dann zählt der Zeiger,
+  sobald er die Ziehschwelle (`SM_CXDRAG`/`SM_CYDRAG`) überschreitet
+  (Timer 50 ms). Mit gedrückter Maustaste zählt sie ab dem Start, sonst ab der ersten Abfrage,
+  weil Alt+Leertaste → Verschieben den Zeiger selbst umsetzt; die
+  Verschiebung beim Loslassen startet nichts. Die Art kommt dann nur aus der Trefferzone (sonst
+  „unbekannt“, zählt nur, wenn beide Schalter an sind). Code: `DragStartProbe`.
+- **Monitorwechsel:** aus dem Zeiger (`MonitorFromPoint` bei jeder Fensteränderung), nicht aus
+  dem Fensterrechteck. Gemeldet wird nur ein Wechsel.
+- **Sicherung:** Ein Fenster, das beim Ziehen abstürzt, sendet kein END. Ein Timer (250 ms, nur
+  während des Ziehens) prüft `GUI_INMOVESIZE` und beendet sonst das Ziehen („lost“).
+- Eigener Thread `ZoomIN Window Drag` (`Platform/WindowDrag`), nicht die Hooks des Filters pro
+  Fenster (`WindowEventHooks` hat eine statische Instanz für seinen Thread und listet nach jedem
+  Ereignis alle Fenster).
+
+**App-Matrix:** Automatisch nur mit eigenen Fenstern geprüft (Agents dürfen keine Nutzer-Apps
+bedienen). Erwartung aus der Technik, Sichtprüfung durch einen Menschen offen:
+| App | Erwartung | Geprüft |
+|---|---|---|
+| Win32 mit Systemtitelleiste (Testfenster) | Start/Ende, Verschieben/Größe sicher | ✓ Spike |
+| Explorer | Systemschleife → wie oben | offen |
+| Edge/Chrome: Fenster ziehen | eigene Titelleiste antwortet auf `WM_NCHITTEST` mit Titel → Verschieben | offen |
+| Edge/Chrome: Tab herausziehen | Chromium zieht das neue Fenster mit der Systemschleife (`SC_MOVE`) → Start bei der ersten Bewegung; sonst bekannte Einschränkung | offen |
+| Teams (neu, WebView2), VS Code (Electron) | eigene Titelleiste per `WM_NCHITTEST` → wie Chrome | offen |
+| Office | Systemschleife | offen |
+| Windows-Terminal | eigene Titelleiste per `WM_NCHITTEST` | offen |
+| Einstellungen-App (UWP, ApplicationFrameHost) | Systemschleife am Rahmenfenster | offen |
+| Fenster mit Adminrechten | Ereignisse kommen, Trefferzone blockiert → erste Änderung entscheidet | offen |
+
+Apps, die ihr Fenster selbst per `SetWindowPos` verschieben (ohne Systemschleife), melden kein
+MOVESIZESTART und bleiben bekannte Einschränkung (Plan B nur nach Rücksprache).

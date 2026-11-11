@@ -5,6 +5,7 @@ using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Updates;
+using ZoomIN.Core.WindowDrag;
 using ZoomIN.Core.WindowFilters;
 using ZoomIN.Core.Zoom;
 
@@ -196,6 +197,9 @@ public sealed record AppSettings
 
     /// <summary>Glide duration for zoom changes in milliseconds; 0 = instant.</summary>
     public int AnimationMilliseconds { get; set; } = 150;
+
+    /// <summary>Zoom while moving or resizing windows (G1): lift to 1× by default, for both.</summary>
+    public WindowDragOptions WindowDrag { get; set; } = WindowDragOptions.Default;
 
     // --- Input (shared by all profiles) ---
     public HotkeyGesture ToggleHotkey { get; set; } = HotkeyGesture.ToggleZoom;

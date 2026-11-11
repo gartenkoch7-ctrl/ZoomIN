@@ -58,6 +58,7 @@ public static class ProfileFields
         CaretMarker = profile.CaretMarker,
         CenterMouse = profile.CenterMouse,
         AnimationMilliseconds = profile.AnimationMilliseconds,
+        WindowDrag = profile.WindowDrag,
     };
 
     /// <summary>Profile names are file names: letters, digits, space, dash and underscore only.</summary>

@@ -193,3 +193,12 @@ GetCurrentProcessId
 GetStockObject
 UnregisterClass
 UpdateWindow
+
+// WindowDrag/WindowDragWatcher (G1: zoom while moving windows)
+SendMessageTimeout
+WM_NCHITTEST
+PhysicalToLogicalPointForPerMonitorDPI
+SystemParametersInfo
+IsZoomed
+GetWindowPlacement
+WINDOWPLACEMENT

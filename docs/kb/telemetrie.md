@@ -69,8 +69,8 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 ## EventId-Bereiche
 | Bereich | Projekt |
 |---|---|
-| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug) |
-| 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe) |
+| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1540 Fenster-Verschieben) |
+| 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe, 2900 Fenster-Verschieben) |
 | 3000–3999 | Rendering |
 | 4000–4999 | Watchdog |
 | 5000–5999 | Setup |
@@ -108,6 +108,7 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.debug.snapshot` | app | Debug-Schnappschuss eines Monitors schreiben (Tag `zoomin.monitor`; Fehler: Ausnahmetyp) |
 | `zoomin.windowfilter.toggle` | app | Kürzel „Filter für aktives Fenster“ (Tags `process.name`, `zoomin.choice`: `None`, `Filter`) |
 | `zoomin.agent.command` | app | Ein KI-Debug-Befehl über die Pipe (ADR-0027; Tag `zoomin.agent.tool`: Werkzeugname oder `unknown`; Fehler: Ausnahmetyp bzw. `failed`) |
+| `zoomin.view.window_drag` | app, secure | Fenster verschieben oder Größe ändern (G1), von der ersten Fensteränderung bis zum Loslassen. Tags `zoomin.drag.kind` (`move`, `resize`; `unknown` nur bei Umriss-Ziehen mit unklarer Trefferzone), `zoomin.drag.action` (`lift`, `lower`, `unchanged`), `zoomin.zoom.before` (Stufe des Nutzers), `zoomin.zoom.during` (vorübergehende Stufe; fehlt, wenn sie nichts absenkte), `zoomin.drag.crossed_monitor`, `zoomin.drag.cleared` (Befehl des Nutzers oder neue Monitoranordnung), `zoomin.monitor` (Monitor am Ende). Keine Fenstertitel |
 
 ## Katalog: Messwerte
 Nur mit Export-Adresse und Stufe „Ausführlich“/„Benutzerdefiniert + Messwerte“. Im Render-Loop
@@ -175,6 +176,9 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1403 | Fehler | KI-Debug command {Tool} failed |
 | 1404 | Info | MCP server started |
 | 1405 | Info | MCP server ended |
+| 1540 | Debug | Window drag ended on {Monitor}: {Kind}, {Action}, zoom {LevelBefore} held at {Level}, crossed monitors {Crossed}, cleared {Cleared} |
+| 1541 | Info | Monitors changed during a window drag; its zoom level was given back |
+| 1542 | Fehler | Handling a window drag failed |
 | 2001 | Fehler | UI Automation is unavailable; focus tracking is off |
 | 2002 | Info | Caret source in {Process}: {Source} |
 | 2003 | Fehler | Reading focus and caret failed; tracking goes on with the system caret |
@@ -227,6 +231,13 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2802 | Info | KI-Debug pipe closed |
 | 2803 | Warnung | KI-Debug connection failed |
 | 2804 | Info | KI-Debug: ZoomIN not reachable ({Reason}) |
+| 2900 | Debug | Window drag started: {Process} {WindowClass} as {Kind} (Programmdatei und Fensterklasse, nie der Titel) |
+| 2901 | Debug | Window drag ended ({Reason}) after {DurationMs} ms – `released`, `lost` (Fenster weg, Sicherungs-Timer), `restarted`, `stopped` |
+| 2902 | Debug | Window drag kind unclear at the start (hit test {HitTest}); the first change decides |
+| 2903 | Debug | Window drag kind from the first change: {Kind} |
+| 2904 | Info | Window drag source watches move and size events |
+| 2905 | Warnung | Window move and size events unavailable; the zoom stays while windows are dragged |
+| 2906 | Fehler | Handling a window drag event failed |
 | 3001 | Info | Zoom pipeline ready for {Monitor} |
 | 3002 | Info | Display changed on {Monitor}: {Reason} |
 | 3003 | Fehler | Zoom pipeline for {Monitor} failed |
