@@ -120,7 +120,7 @@ internal sealed class MonitorRenderer : IDisposable
                 _log.PipelineFailed(ex, _deviceName);
                 _metrics.Restarted("failure");
                 SetStatus(ZoomStatus.Idle with { LastError = ex.Message });
-                var needed = _model.TargetFor(_deviceName) > ZoomLimits.Min || NeedsOverlayUnzoomed(_effects.CurrentFor(_deviceName))
+                var needed = _model.EffectiveTargetFor(_deviceName) > ZoomLimits.Min || NeedsOverlayUnzoomed(_effects.CurrentFor(_deviceName))
                     || _windows.Regions.Count > 0;
                 Sleep(needed ? RetryDelay : Timeout.InfiniteTimeSpan);
             }
@@ -138,7 +138,7 @@ internal sealed class MonitorRenderer : IDisposable
             Volatile.Write(ref _heartbeat, Stopwatch.GetTimestamp());
             // The monitor's own colour filter, if it has one (per-monitor filter).
             var effects = _effects.CurrentFor(_deviceName);
-            animator.SetTarget(_model.TargetFor(_deviceName));
+            animator.SetTarget(_model.EffectiveTargetFor(_deviceName));
             var unzoomed = animator.IsSettled && animator.Current == ZoomLimits.Min;
             var windows = _windows.Regions;
             var windowsFiltered = session.FiltersWindows(windows, effects);

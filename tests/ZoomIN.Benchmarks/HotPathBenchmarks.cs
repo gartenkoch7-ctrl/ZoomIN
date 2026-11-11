@@ -16,6 +16,7 @@ public class HotPathBenchmarks
     private readonly PhysicalRect _monitor = new(0, 0, 3840, 2160);
     private readonly ZoomAnimator _animator = new();
     private readonly ZoomModel _model = new(new ZoomLevels(), Core.Modes.ZoomMode.Fullscreen, true, 0.15);
+    private readonly ZoomModel _temporaryModel = new(new ZoomLevels(), Core.Modes.ZoomMode.Fullscreen, true, 0.15);
     private readonly EffectsModel _effects = new(DisplayEffects.Default with
     {
         MonitorFilters = new Dictionary<string, MonitorFilter> { [@"\\.\DISPLAY1"] = new(true, ColorFilter.YellowOnBlack) },
@@ -53,7 +54,19 @@ public class HotPathBenchmarks
     }
 
     [Benchmark]
-    public double ModelRead() => _model.TargetFor(@"\\.\DISPLAY1") + _model.AnimationSeconds;
+    public double ModelRead() => _model.EffectiveTargetFor(@"\\.\DISPLAY1") + _model.AnimationSeconds;
+
+    /// <summary>Per-frame target while a temporary level (overview, window drag) is active (M17).</summary>
+    [Benchmark]
+    public double ModelReadTemporary() => _temporaryModel.EffectiveTargetFor(@"\\.\DISPLAY1") + _temporaryModel.AnimationSeconds;
+
+    [GlobalSetup]
+    public void Setup()
+    {
+        string[] monitors = [@"\\.\DISPLAY1", @"\\.\DISPLAY2"];
+        _temporaryModel.Toggle(monitors[0], monitors);
+        _temporaryModel.Temporary.Set(TemporaryZoomOwner.Overview, monitors[0], 1);
+    }
 
     /// <summary>Pointer image placement per frame (mirrored at the bottom/right edge).</summary>
     [Benchmark]

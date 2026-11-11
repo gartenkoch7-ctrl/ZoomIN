@@ -68,7 +68,8 @@ Spur D: D1-Spike (sofort, eigener Branch von develop) ─────┴─► n
 B und C nach Schritt 0 (≈ 1–2 Tage) gleichzeitig.
 
 ## Aufgaben (Integration)
-- [ ] Integrationsbranch anlegen, Schritt 0 umsetzen, Review-Schleife (§9), Commit, Push
+- [x] Integrationsbranch anlegen, Schritt 0 umsetzen, Review-Schleife (§9), Commit, Push
+      (`ZoomModel.Temporary` / `TemporaryZoom`, siehe [architektur.md](../kb/architektur.md#vorübergehende-zoomstufe-m17-temporaryzoom))
 - [ ] Spuren A, D sofort starten; B, C nach Schritt 0 (Subagenten mit Worktree oder eigene Sitzungen)
 - [ ] Spuren der Reihe nach mergen (A → B → C), nach jedem Merge `dotnet build` + `dotnet test`
 - [ ] Gesamt-Review des ganzen Meilensteins (§9) bis ohne Befunde
