@@ -7,6 +7,7 @@ using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Viewport;
+using ZoomIN.Core.WindowDrag;
 using ZoomIN.Core.WindowFilters;
 using ZoomIN.Core.Zoom;
 using ZoomIN.Rendering.RenderLoop;
@@ -67,7 +68,7 @@ public sealed class HotkeyBindingsTests
         var models = new RenderModels(
             ZoomMapping.Create(settings), EffectsMapping.Create(settings), TrackingMapping.Create(settings),
             new WindowFilterModel(WindowFilterOptions.Default), new Core.Diagnostics.DebugSnapshots(), new SmartInvertHealth());
-        var service = new SettingsService(settings, models, new NoSettingsStore(), new NoProfiles());
+        var service = new SettingsService(settings, models, new NoSettingsStore(), new NoProfiles(), WindowDragMapping.Create(settings, models.Zoom));
         var monitors = new OneMonitor();
         var zoom = new ZoomCommands(models.Zoom, models.Effects, monitors, new FixedCursor());
         var windowFilter = new WindowFilterCommands(models.Windows, models.Effects, new NoWindows(), monitors);

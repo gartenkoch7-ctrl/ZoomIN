@@ -59,6 +59,7 @@ public static class ProfileFields
         MouseFollow = profile.MouseFollow,
         MouseMargin = profile.MouseMargin,
         AnimationMilliseconds = profile.AnimationMilliseconds,
+        WindowDrag = profile.WindowDrag,
     };
 
     /// <summary>Profile names are file names: letters, digits, space, dash and underscore only.</summary>

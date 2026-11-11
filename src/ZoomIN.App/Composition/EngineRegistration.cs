@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using ZoomIN.App.Settings;
+using ZoomIN.App.WindowDrag;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
@@ -9,6 +10,7 @@ using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
+using ZoomIN.Core.WindowDrag;
 using ZoomIN.Core.WindowFilters;
 using ZoomIN.Core.Zoom;
 using ZoomIN.Platform.Automation;
@@ -16,6 +18,7 @@ using ZoomIN.Platform.Cursor;
 using ZoomIN.Platform.Input;
 using ZoomIN.Platform.Monitors;
 using ZoomIN.Platform.Shell;
+using ZoomIN.Platform.WindowDrag;
 using ZoomIN.Platform.WindowFilters;
 using ZoomIN.Rendering.RenderLoop;
 
@@ -37,6 +40,7 @@ internal static class EngineRegistration
         services.AddSingleton(sp => ZoomMapping.Create(sp.GetRequiredService<AppSettings>()));
         services.AddSingleton(sp => EffectsMapping.Create(sp.GetRequiredService<AppSettings>()));
         services.AddSingleton(sp => TrackingMapping.Create(sp.GetRequiredService<AppSettings>()));
+        services.AddSingleton(sp => WindowDragMapping.Create(sp.GetRequiredService<AppSettings>(), sp.GetRequiredService<ZoomModel>()));
         services.AddSingleton(sp => new WindowFilterModel(sp.GetRequiredService<AppSettings>().WindowFilter ?? WindowFilterOptions.Default));
         services.AddSingleton(sp => new RenderModels(
             sp.GetRequiredService<ZoomModel>(),
@@ -65,6 +69,7 @@ internal static class EngineRegistration
         services.AddSingleton<IInputActivitySource, Win32InputActivityHook>();
         services.AddSingleton<ITrackingSource, UiaTrackingSource>();
         services.AddSingleton<IWindowFilterSource, Win32WindowFilterSource>();
+        services.AddSingleton<IWindowDragSource, Win32WindowDragSource>();
 
         // Rendering
         services.AddSingleton<IZoomOutput, ZoomEngine>();
@@ -74,6 +79,7 @@ internal static class EngineRegistration
         services.AddSingleton<HotkeyBindings>();
         services.AddSingleton<InputSources>();
         services.AddSingleton<DockedStripSync>();
+        services.AddSingleton<WindowDragSync>();
         services.AddSingleton<ZoomController>();
         return services;
     }
