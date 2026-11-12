@@ -399,6 +399,11 @@ an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten
   oder einem fremden `ClipCursor` um wenige Pixel zurücksetzt, startet die 8 px nicht neu.
 - **Ecke:** Ein Drücken, das schräg an einer Ecke begann, bleibt beim Entlanggleiten an einer der
   beiden Kanten erhalten; erst ein Rückzug von allen gedrückten Kanten beginnt von vorn.
+- **Strg als Haltetaste und Suchhilfe „Strg allein“:** Der Aktivitäts-Hook wertet ein Strg, das
+  ohne andere Taste losgelassen wird, als Auslöser der Suchhilfe; eine Mausbewegung dazwischen
+  zählt dort nicht. Mit Strg als Haltetaste zeigt jede Nutzung der Achsensperre also die
+  Suchhilfe, wenn dieser Auslöser an ist (offen, braucht eine Änderung im geteilten
+  `Win32InputActivityHook`; bis dahin Umschalt oder Alt als Haltetaste wählen).
 - **Ein Monitor:** Der Puffer-Filter bleibt auch mit nur einem Monitor angemeldet (er tut dann
   nichts): Nur ein angemeldeter Filter hält den Zaun-Wächter, der Anzeigewechsel meldet. Sonst
   käme der Puffer nach dem Anstecken eines zweiten Monitors nicht zurück.

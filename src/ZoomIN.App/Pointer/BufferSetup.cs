@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Pointer;
+using ZoomIN.Core.Viewport;
 
 namespace ZoomIN.App.Pointer;
 
@@ -43,12 +44,13 @@ internal sealed class BufferSetup(EdgeBuffer buffer, IMonitorProvider monitors, 
             }
 
             _level = level ?? _level;
-            var bounds = monitors.AllBounds();
+            var bounds = ReadMonitors();
 
             // Empty or one monitor while Windows is still enumerating: the buffer rests (it needs
             // two) and reads again a few times. With really one monitor that costs ten cheap reads.
             buffer.Configure(bounds, _level);
-            if (_level == EdgeBufferLevel.Off || _disposed || (bounds.Count >= 2 && !confirm))
+            // The confirming read also runs while off: the buffer may be switched on right after.
+            if (_disposed || (!confirm && (_level == EdgeBufferLevel.Off || bounds.Count >= 2)))
             {
                 _retries = 0;
             }
@@ -73,6 +75,20 @@ internal sealed class BufferSetup(EdgeBuffer buffer, IMonitorProvider monitors, 
             _disposed = true;
             _retry?.Dispose();
             _retry = null;
+        }
+    }
+
+    // A failed read (mid display change) counts as "nothing readable": the buffer rests and reads again.
+    private IReadOnlyList<PhysicalRect> ReadMonitors()
+    {
+        try
+        {
+            return monitors.AllBounds();
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            log.ApplyFailed(ex);
+            return [];
         }
     }
 
