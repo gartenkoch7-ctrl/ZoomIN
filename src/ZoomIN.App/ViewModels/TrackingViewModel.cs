@@ -11,6 +11,7 @@ public sealed partial class TrackingViewModel : ObservableObject
     private readonly TrackingModel _tracking;
     private readonly ILogger _log;
     private readonly bool _ready;
+    private bool _restoring;
 
     public TrackingViewModel(TrackingModel tracking, ILogger<TrackingViewModel> log)
     {
@@ -84,6 +85,26 @@ public sealed partial class TrackingViewModel : ObservableObject
     {
         if (value < 0)
         {
+            // The combo box reports -1 while its items are replaced: show the stored mode again,
+            // without applying (the page's other values may be older than the model by now).
+            if (_ready)
+            {
+                _restoring = true;
+                try
+                {
+                    MouseFollowIndex = (int)_tracking.Options.MouseFollow;
+                }
+                finally
+                {
+                    _restoring = false;
+                }
+            }
+
+            return;
+        }
+
+        if (_restoring)
+        {
             return;
         }
 
@@ -93,10 +114,20 @@ public sealed partial class TrackingViewModel : ObservableObject
             _log.MouseFollowChanged(previous, MouseFollow);
         }
 
-        Apply();
+        ApplyOnly(o => o with { MouseFollow = MouseFollow });
     }
 
-    partial void OnMouseMarginChanged(double value) => Apply();
+    partial void OnMouseMarginChanged(double value) => ApplyOnly(o => o with { MouseMargin = value / 100 });
+
+    // Only the changed field (M17 A1): the page's other values may be older than the model, e.g.
+    // after Strg+Alt+T or a profile switch while the page is open.
+    private void ApplyOnly(Func<TrackingOptions, TrackingOptions> change)
+    {
+        if (_ready)
+        {
+            _tracking.SetOptions(change(_tracking.Options));
+        }
+    }
 
     private void Apply()
     {

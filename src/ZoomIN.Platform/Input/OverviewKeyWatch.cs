@@ -32,7 +32,12 @@ public sealed class OverviewKeyWatch : IOverviewKeys
 
     // This Esc press belongs to someone else – it was held when the overview started, or it was a
     // Windows shortcut (Win+Esc, Ctrl+Shift+Esc): its repeats and release go on to them as well.
-    private volatile bool _passEscape;
+    // Who set it: Watch (Esc held at the start) or the hook (Windows shortcut). Only the first is
+    // undone by the delayed second look, so it never clears a Windows shortcut's pass.
+    private const int PassNone = 0;
+    private const int PassHeldAtWatch = 1;
+    private const int PassWindows = 2;
+    private int _passEscape;
     private int _escapesSwallowed;
 
     public OverviewKeyWatch(ILogger<OverviewKeyWatch> log, TimeProvider time)
@@ -52,7 +57,7 @@ public sealed class OverviewKeyWatch : IOverviewKeys
     {
         ArgumentNullException.ThrowIfNull(handler);
         var watch = new ActiveWatch(watchId, gesture, handler);
-        _passEscape = _isDown(Escape) && !_escapeDown;
+        Volatile.Write(ref _passEscape, _isDown(Escape) && !_escapeDown ? PassHeldAtWatch : PassNone);
         Volatile.Write(ref _watch, watch);
         Interlocked.Exchange(ref _escapesSwallowed, 0);
 
@@ -106,20 +111,24 @@ public sealed class OverviewKeyWatch : IOverviewKeys
             if (down && time - _lastEscapeAt > RepeatGapMilliseconds)
             {
                 _escapeDown = false;
-                _passEscape = false;
+                Volatile.Write(ref _passEscape, PassNone);
             }
 
             _lastEscapeAt = time;
-            if (_passEscape)
+            if (Volatile.Read(ref _passEscape) is not PassNone and var pass)
             {
-                _passEscape = !up;
+                if (up)
+                {
+                    Interlocked.CompareExchange(ref _passEscape, PassNone, pass);
+                }
+
                 return false;
             }
 
             // Windows' own Esc shortcuts pass (see WindowsEscape).
             if (down && !_escapeDown && watch is not null && WindowsEscape(watch.Gesture))
             {
-                _passEscape = true; // its repeats and release go to Windows as well
+                Volatile.Write(ref _passEscape, PassWindows); // its repeats and release go to Windows as well
                 return false;
             }
 
@@ -194,6 +203,13 @@ public sealed class OverviewKeyWatch : IOverviewKeys
         {
             if (ReferenceEquals(Volatile.Read(ref owner._watch), watch))
             {
+                // An Esc release passing the hook while Watch ran still read as down there: without
+                // this, the next Esc would go to the application instead of ending the overview.
+                if (!owner._isDown(Escape))
+                {
+                    Interlocked.CompareExchange(ref owner._passEscape, PassNone, PassHeldAtWatch);
+                }
+
                 owner.CheckReleased(watch);
             }
         }

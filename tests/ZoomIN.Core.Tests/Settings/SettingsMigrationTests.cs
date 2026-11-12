@@ -1,3 +1,4 @@
+using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
 
@@ -58,6 +59,18 @@ public sealed class SettingsMigrationTests
         Assert.Null(result.PreviousMouseFollow);
         Assert.Equal(MouseFollowMode.Fixpoint, result.Settings.MouseFollow);
         Assert.Null(result.Settings.CenterMouse);
+    }
+
+    [Fact]
+    public void OldFile_WithTheOverviewKeyGivenToAnotherAction_LeavesTheOverviewUnassigned()
+    {
+        var old = new AppSettings { SchemaVersion = 1, WindowFilterHotkey = HotkeyGesture.Overview };
+
+        var migrated = SettingsMigration.Migrate(old).Settings;
+
+        Assert.Equal(0, migrated.OverviewHotkey.VirtualKey);
+        Assert.Equal(HotkeyGesture.Overview, migrated.WindowFilterHotkey);
+        Assert.Equal(HotkeyGesture.Overview, SettingsMigration.Migrate(new AppSettings { SchemaVersion = 1 }).Settings.OverviewHotkey);
     }
 
     [Fact]

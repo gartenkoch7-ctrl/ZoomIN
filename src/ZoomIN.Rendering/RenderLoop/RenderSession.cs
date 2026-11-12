@@ -1,9 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Vortice.Direct3D11;
-using Vortice.DXGI;
 using Vortice.Mathematics;
-using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Tracking;
@@ -24,8 +22,7 @@ internal sealed class RenderSession : IDisposable
 {
     private static readonly Color4 s_transparent = new(0, 0, 0, 0);
 
-    // Owned resources in creation order; disposed in reverse.
-    private readonly List<IDisposable> _owned = [];
+    private readonly RenderResources _resources;
     private readonly PointerServices _pointer;
     private readonly MonitorOutput _monitor;
     private readonly GpuDevice _gpu;
@@ -52,46 +49,19 @@ internal sealed class RenderSession : IDisposable
 
         // Taken before enumerating outputs so a change during construction is not missed.
         _displayGeneration = OverlayWindow.DisplayChangeCount;
-        try
-        {
-            // Phases as child operations of zoomin.render.pipeline_start (startup measurement, M14).
-            IDXGIFactory2 factory;
-            using (Telemetry.Source.StartActivity("zoomin.render.pipeline_start.device"))
-            {
-                factory = Own(DXGI.CreateDXGIFactory2<IDXGIFactory2>(false));
-                _monitor = Own(MonitorOutput.Find(factory, deviceName));
-                _lastCursor = new PhysicalPoint(_monitor.Bounds.X + (_monitor.Width / 2), _monitor.Bounds.Y + (_monitor.Height / 2));
-                _gpu = Own(GpuDevice.CreateForAdapter(_monitor.Adapter));
-            }
+        _resources = new RenderResources(pointer, deviceName, health, log);
 
-            using (Telemetry.Source.StartActivity("zoomin.render.pipeline_start.capture"))
-            {
-                _duplicator = Own(new DesktopDuplicator(_gpu, _monitor));
-            }
-
-            using (Telemetry.Source.StartActivity("zoomin.render.pipeline_start.overlay"))
-            {
-                _overlay = Own(new OverlayWindow(_monitor.Bounds));
-                _swapchain = Own(new CompositionSwapchain(_gpu, factory, _overlay.Handle, _monitor.Width, _monitor.Height));
-            }
-
-            using (Telemetry.Source.StartActivity("zoomin.render.pipeline_start.shaders"))
-            {
-                var pass = Own(new MagnifyPass(_gpu.Device));
-                var cursorPass = Own(new CursorPass(_gpu.Device));
-                _cursorLayer = new CursorLayer(cursorPass, pointer.Shapes, pointer.SystemCursor);
-                _highlights = new HighlightLayer(cursorPass);
-                _overview = new OverviewLayer(cursorPass);
-                var smart = Own(SmartInvertLayer.Create(_gpu.Device, _monitor.Width, _monitor.Height, deviceName, health, log));
-                _desktop = new DesktopLayer(
-                    pass, smart, Own(new GpuPassTimer(_gpu.Device, deviceName, "magnify")), Own(new SmartCostProbe(_gpu.Device)));
-            }
-        }
-        catch
-        {
-            Dispose();
-            throw;
-        }
+        // Copied once into fields, so the hot path below reads them as before.
+        _monitor = _resources.Monitor;
+        _gpu = _resources.Gpu;
+        _duplicator = _resources.Duplicator;
+        _overlay = _resources.Overlay;
+        _swapchain = _resources.Swapchain;
+        _cursorLayer = _resources.CursorLayer;
+        _highlights = _resources.Highlights;
+        _overview = _resources.OverviewLayer;
+        _desktop = _resources.Desktop;
+        _lastCursor = new PhysicalPoint(_monitor.Bounds.X + (_monitor.Width / 2), _monitor.Bounds.Y + (_monitor.Height / 2));
     }
 
     /// <summary>The overlay is on screen.</summary>
@@ -105,11 +75,15 @@ internal sealed class RenderSession : IDisposable
         windows.ChangesMonitor(_monitor.Bounds, effects);
 
     /// <summary>Hides the overlay but keeps every resource warm for an instant restart.</summary>
-    public void Hide()
+    /// <param name="keepView">A temporary level holds the monitor: the view before it stays valid for an overview.</param>
+    public void Hide(bool keepView = false)
     {
         _overlay.Hide();
         _shown = false;
-        _overview.Forget();
+        if (!keepView)
+        {
+            _overview.Forget();
+        }
         if (_cursorInside)
         {
             _cursorLayer.ShowSystemCursor();
@@ -168,11 +142,11 @@ internal sealed class RenderSession : IDisposable
         // The anchor is the mouse, or the focus/caret while the user works with the keyboard (M6).
         var anchor = _anchors.Next(new AnchorInput(
             Stopwatch.GetTimestamp(), hasCursor ? cursor : _lastCursor, _cursorInside, _monitor.Bounds,
-            request.Mode, request.Zoom, request.Lens, request.Dock, request.Tracking, request.TrackingOptions, request.Placement));
+            request.AnchorMode, request.Zoom, request.Lens, request.Dock, request.Tracking, request.TrackingOptions, request.Placement));
 
         var frame = ModeGeometry.Compute(request.Mode, _monitor.Bounds, anchor, request.Zoom, request.Lens, request.Dock);
         _overview.Update(frame, request.Overview, _monitor.Bounds, hasCursor ? cursor : _lastCursor, request.OverviewLevel, request.Lens, request.Dock,
-            request.TrackingOptions.MouseFollow);
+            request.TrackingOptions.MouseFollow, request.ViewHeld);
         var shape = _pointer.Shapes.TryGetCurrent(out var handle) ? handle : 0;
         // The desktop layer (and its smoothing) only runs while the desktop is drawn.
         // The overview frame also counts: it follows the mouse even while that is on another monitor.
@@ -223,26 +197,11 @@ internal sealed class RenderSession : IDisposable
         return FrameOutcome.Presented;
     }
 
-    public void Dispose()
-    {
-        for (var i = _owned.Count - 1; i >= 0; i--)
-        {
-            _owned[i].Dispose();
-        }
-
-        _owned.Clear();
-    }
+    public void Dispose() => _resources.Dispose();
 
     private void Present()
     {
         _swapchain.Present();
         _holdsFrameSlot = false;
-    }
-
-    private T Own<T>(T resource)
-        where T : IDisposable
-    {
-        _owned.Add(resource);
-        return resource;
     }
 }

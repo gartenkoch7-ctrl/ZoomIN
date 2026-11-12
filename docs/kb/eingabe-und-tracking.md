@@ -74,11 +74,28 @@ Klick landet genau an diesem Desktop-Punkt. Ein Input-Transform ist dafür **nic
   dass ein Punkt bei der Zielzoomstufe mittig steht; bis der Zoom dort ankommt, wird nicht auf
   den Zeiger umgerechnet. Danach gilt der Randabstand. In „Mitte“/„Fixpunkt“ übernimmt die Maus
   sofort wieder.
+- Integration M17 (Übersicht × Fenster-Ziehen × Randabstand):
+  - Eine vorübergehende 1× (Übersicht, Fenster-Ziehen) ist für den Anker **kein Moduswechsel**:
+    Der Renderer zeichnet 1× als Vollbild, gibt dem Anker aber den Modus des Nutzers
+    (`FrameRequest.AnchorMode`). Sonst sprang die Lupe nach der Übersicht zur Maus.
+  - Der Halt einer Platzierung endet bei „Zoom entfernt sich“ erst, nachdem er sich ihr genähert
+    hat: Die Übersicht stellt die Platzierung **vor** der Freigabe der 1×, ein Frame dazwischen sah
+    den Zoom noch fallen (schnelles Doppel-Antippen). Weiter endet er nach 0,25 s ohne Fortschritt.
+  - Die Platzierung gilt für die Stufe, zu der der Monitor wirklich gleitet: Nutzerstufe, gesenkt
+    durch Stufen anderer Besitzer (Fenster-Ziehen „Senken“).
+  - Solange eine vorübergehende Stufe den Monitor unter die Nutzerstufe drückt (auch während des
+    Gleitens), merkt sich die Übersicht keinen neuen „Ausschnitt davor“: Übersicht während eines
+    Fenster-Ziehens startet vom Ausschnitt vor dem Ziehen, Esc kehrt dorthin zurück.
+  - Esc-Durchlass: Liest `Watch` Esc noch als gedrückt (Loslassen steckt noch im Hook), hebt der
+    zweite Blick nach 100 ms den Durchlass auf – aber nur den von `Watch`, nie den einer
+    Windows-Tastenkombination (Besitzer im Zustand, `Interlocked.CompareExchange`).
 - Migration: Einstellungen mit `SchemaVersion` 1 werden beim ersten Start **einmal** auf
   Randabstand gestellt (`SettingsMigration`, Log 1500), sofort gespeichert und der Hinweis
   (Windows-Benachrichtigung, Klick öffnet die Seite, Log 1502) einmal gezeigt. `CenterMouse` wird
   nur noch gelesen. Profile aus 1.0 haben kein `MouseFollow` und bekommen beim Laden den
-  Werkswert Randabstand.
+  Werkswert Randabstand (Test `JsonProfileStoreTests`). Hatte der Nutzer `Strg+Alt+O` schon einer
+  anderen Aktion gegeben, bleibt das neue Übersicht-Kürzel (B2) nach der Migration frei, statt als
+  „nicht verfügbar“ zu melden (Integration M17).
 - Tray-Hinweise (gelernt mit A1): Windows zeigt einen Ballon je Symbol, ein neuer ersetzt den
   angezeigten sofort, und ein Klick meldet nur „Ballon geklickt“ (NIN_BALLOONUSERCLICK), ohne zu
   sagen, welcher. Der Klick gehört darum zum zuletzt gezeigten Hinweis

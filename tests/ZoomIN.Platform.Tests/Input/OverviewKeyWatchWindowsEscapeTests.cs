@@ -80,6 +80,37 @@ public sealed class OverviewKeyWatchWindowsEscapeTests
         Assert.Equal(["escape 3"], handler.Signals);
     }
 
+    [Fact]
+    public async Task EscapeReleasedWhileTheWatchStarts_DoesNotPassTheNextEscape()
+    {
+        var (watch, handler, keys) = OverviewKeyWatchTests.Create();
+        Hold(keys, KeyState.Control, KeyState.Alt, O, Escape); // the release is still in the hook
+        watch.Watch(1, s_gesture, handler);
+        Hold(keys, KeyState.Control, KeyState.Alt, O);
+
+        // The second look of Watch (100 ms) sees Esc up.
+        await Task.Delay(TimeSpan.FromMilliseconds(400), TestContext.Current.CancellationToken);
+
+        Assert.True(watch.OnKey(Escape, down: true, up: false, time: 500));
+        Assert.Equal(["escape 1"], handler.Signals);
+    }
+
+    [Fact]
+    public async Task WindowsShortcutEscape_KeepsPassing_AfterTheSecondLook()
+    {
+        var (watch, handler, keys) = OverviewKeyWatchTests.Create();
+        watch.Watch(1, s_gesture, handler);
+        Hold(keys, KeyState.Control, KeyState.Shift); // tapped; Esc not yet in the async key state
+
+        Assert.False(watch.OnKey(Escape, down: true, up: false, time: 100));
+        await Task.Delay(TimeSpan.FromMilliseconds(400), TestContext.Current.CancellationToken);
+        Hold(keys); // Ctrl and Shift let go, Esc still repeating
+
+        Assert.False(watch.OnKey(Escape, down: true, up: false, time: 140));
+        Assert.False(watch.OnKey(Escape, down: false, up: true, time: 180));
+        Assert.DoesNotContain("escape 1", handler.Signals); // the tap's release (second look) is fine
+    }
+
     private static void Hold(HashSet<int> keys, params int[] held)
     {
         lock (keys)

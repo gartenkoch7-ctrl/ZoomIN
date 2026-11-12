@@ -89,6 +89,24 @@ public sealed class OverviewLayerTests
     }
 
     [Fact]
+    public void UnderAWindowDragsOneX_TheViewBeforeTheDragStays()
+    {
+        using var gpu = GpuDevice.CreateWarp();
+        using var pass = new CursorPass(gpu.Device);
+        var layer = new OverviewLayer(pass);
+        var zoomed = ModeGeometry.Compute(ZoomMode.Fullscreen, s_monitor, new PhysicalPoint(8, 8), 4, LensSize.Default, DockLayout.Default);
+        layer.Update(zoomed, null, s_monitor, default, 4, LensSize.Default, DockLayout.Default);
+        var session = Session();
+
+        // M17 integration: G1 lifts the monitor to 1×; then the overview (B2) starts.
+        layer.Update(OneX(), null, s_monitor, new PhysicalPoint(9, 9), 4, LensSize.Default, DockLayout.Default, viewHeld: true);
+        layer.Update(OneX(), session, s_monitor, new PhysicalPoint(9, 9), 4, LensSize.Default, DockLayout.Default);
+
+        Assert.True(session.TryGetStart(out var view, out _));
+        Assert.Equal(zoomed.Source, view);
+    }
+
+    [Fact]
     public void UpdateAndDraw_DoNotAllocate()
     {
         using var gpu = GpuDevice.CreateWarp();

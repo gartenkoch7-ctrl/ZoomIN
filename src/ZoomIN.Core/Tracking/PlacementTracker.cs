@@ -18,6 +18,8 @@ internal sealed class PlacementTracker
     private long _since;
     private double _zoom;
     private double _gap;
+    private bool _approached;
+    private double _lastZoom;
 
     /// <summary>True if the zoom step of this frame belongs to the glide to a placed view (including its last step).</summary>
     public bool HeldThisFrame { get; private set; }
@@ -45,6 +47,7 @@ internal sealed class PlacementTracker
                 anchor = ViewCentering.AnchorFor(input.Mode, input.Monitor, placement.Center, placement.Zoom, input.Lens, input.Dock);
                 _zoom = placement.Zoom;
                 _gap = Math.Abs(input.Zoom - placement.Zoom);
+                _approached = Math.Abs(_lastZoom - placement.Zoom) > _gap; // already heading there
                 taken = true;
             }
         }
@@ -56,12 +59,16 @@ internal sealed class PlacementTracker
 
         HeldThisFrame = Holding;
         Update(input.Zoom, input.Now);
+        _lastZoom = input.Zoom;
         return taken;
     }
 
     // Holds until the zoom arrives, turns away from the placement (another zoom change) or makes no
     // progress for a moment: it stopped short (clamped) or never started. Single frames without a
-    // step (two renders within one animation tick) do not end it.
+    // step (two renders within one animation tick) do not end it. Moving away only counts once the
+    // zoom came closer: a glide still under way when the request was taken (the overview's 1× is
+    // given back just after the placement) first finishes, then turns towards the placement. That
+    // rest of a glide is shorter than the stall time, which still ends a hold that never turns.
     private void Update(double zoom, long now)
     {
         if (!Holding)
@@ -70,13 +77,15 @@ internal sealed class PlacementTracker
         }
 
         var gap = Math.Abs(zoom - _zoom);
+        var away = gap > _gap;
         if (gap < _gap)
         {
             _since = now;
         }
 
+        _approached |= gap < _gap;
         var stalled = (now - _since) / (double)Stopwatch.Frequency > StallSeconds;
-        var ended = gap < 1e-6 || gap > _gap || stalled;
+        var ended = gap < 1e-6 || (away && _approached) || stalled;
         _gap = gap;
         _zoom = ended ? 0 : _zoom;
     }

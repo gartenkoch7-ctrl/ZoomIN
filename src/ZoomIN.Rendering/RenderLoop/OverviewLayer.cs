@@ -41,13 +41,19 @@ internal sealed class OverviewLayer
     /// the first frame of one it hands the view of the frame before to the overview.
     /// </summary>
     /// <param name="level">The user's level: the frame shows what zooming in would show.</param>
+    /// <param name="viewHeld">A temporary level of another feature (window drag, G1) holds the monitor: the
+    /// view from before it stays the one an overview starts from and Esc returns to (M17).</param>
     public void Update(in ModeFrame frame, OverviewSession? overview, PhysicalRect monitor, PhysicalPoint mouse,
-        double level, LensSize lens, DockLayout dock, MouseFollowMode follow = MouseFollowMode.Margin)
+        double level, LensSize lens, DockLayout dock, MouseFollowMode follow = MouseFollowMode.Margin, bool viewHeld = false)
     {
         if (overview is null)
         {
-            _lastView = frame.Source;
-            _hasView = true;
+            if (!viewHeld)
+            {
+                _lastView = frame.Source;
+                _hasView = true;
+            }
+
             _hasRect = false;
             return;
         }
@@ -58,7 +64,7 @@ internal sealed class OverviewLayer
         _hasRect = true;
     }
 
-    /// <summary>The overlay was hidden (render loop asleep): the remembered view is out of date.</summary>
+    /// <summary>The overlay was hidden (render loop asleep): the remembered view is out of date (not under a temporary 1×, see Update).</summary>
     public void Forget() => _hasView = false;
 
     public void Draw(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor, in ModeFrame frame)

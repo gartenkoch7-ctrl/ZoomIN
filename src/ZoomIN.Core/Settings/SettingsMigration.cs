@@ -1,3 +1,4 @@
+using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Tracking;
 
 namespace ZoomIN.Core.Settings;
@@ -28,6 +29,7 @@ public static class SettingsMigration
             MouseFollow = MouseFollowMode.Margin,
             MouseFollowHintPending = true,
             CenterMouse = null,
+            OverviewHotkey = OverviewHotkeyFor(settings),
         };
         return new(migrated, previous);
     }
@@ -35,4 +37,17 @@ public static class SettingsMigration
     /// <summary>What schema 1 did: centred unless switched off (missing = the default, on).</summary>
     public static MouseFollowMode LegacyMouseFollow(bool? centerMouse) =>
         centerMouse == false ? MouseFollowMode.Fixpoint : MouseFollowMode.Center;
+
+    // The overview shortcut (B2) is new in schema 2: if the user already gave its default to
+    // another action, it stays unassigned instead of failing as "unavailable" or taking it over.
+    private static HotkeyGesture OverviewHotkeyFor(AppSettings old)
+    {
+        HotkeyGesture[] taken =
+        [
+            old.ToggleHotkey, old.ZoomInHotkey, old.ZoomOutHotkey, old.FullscreenHotkey, old.LensHotkey, old.DockedHotkey,
+            old.FilterHotkey, old.NextFilterHotkey, old.LocateHotkey, old.CrosshairHotkey, old.TrackingHotkey, old.ProfileHotkey,
+            old.WindowFilterHotkey,
+        ];
+        return taken.Contains(HotkeyGesture.Overview) ? default : old.OverviewHotkey;
+    }
 }

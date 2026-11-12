@@ -21,9 +21,9 @@ namespace ZoomIN.App.Overview;
 public sealed class OverviewController : IDisposable
 {
     private readonly Lock _gate = new();
-    // Only around setting and releasing the 1× (with its 'newer overview?' check). Never taken while
-    // holding _gate: Set/Release raise Changed into OnTemporaryChanged, which takes _gate.
-    private readonly Lock _levelGate = new();
+    // TrySet and ReleaseUnlessNewer are never called while holding _gate (they raise Changed into
+    // OnTemporaryChanged, which takes it). IsHeld only reads the model and is safe under _gate.
+    private readonly OverviewLevel _level;
     private readonly SettingsService _settings;
     private readonly ZoomModel _zoom;
     private readonly OverviewModel _overview;
@@ -48,6 +48,7 @@ public sealed class OverviewController : IDisposable
         _settings = settings;
         _zoom = settings.Models.Zoom;
         _overview = settings.Models.Overview;
+        _level = new OverviewLevel(_zoom, _overview);
         _commands = commands;
         _frames = new OverviewFrameSource(
             monitors, cursor, _zoom, settings.Models.Tracking, settings.Models.ViewRequests, time, log);
@@ -95,16 +96,10 @@ public sealed class OverviewController : IDisposable
     // Returns true if the overview is already lost and must be cancelled.
     private bool SetUp(OverviewSession session)
     {
-        lock (_levelGate)
+        // Ended on another thread before this handler ran: nothing to set up.
+        if (!_level.TrySet(session))
         {
-            // Ended on another thread before this handler ran: nothing to set up. Checked with the
-            // Set in one step, so an end before it never sees a 1× flicker.
-            if (!ReferenceEquals(_overview.Current, session))
-            {
-                return false;
-            }
-
-            _zoom.Temporary.Set(TemporaryZoomOwner.Overview, session.MonitorId, ZoomLimits.Min);
+            return false;
         }
 
         bool ended;
@@ -120,7 +115,7 @@ public sealed class OverviewController : IDisposable
 
                 // A zoom command between the press and Set clears levels before this one was set
                 // (set-after-clear): then the overview would show 1× on a monitor the user switched.
-                lost = _zoom.Temporary.LevelFor(TemporaryZoomOwner.Overview, session.MonitorId) is null
+                lost = !_level.IsHeld(session.MonitorId)
                     || _zoom.Mode != session.Mode || _zoom.TargetFor(session.MonitorId) <= ZoomLimits.Min;
                 _log.OverviewStarted(session.MonitorId, session.LevelBefore);
 
@@ -135,7 +130,7 @@ public sealed class OverviewController : IDisposable
 
         if (ended)
         {
-            ReleaseUnlessNewer(session);
+            _level.ReleaseUnlessNewer(session);
         }
 
         return lost;
@@ -158,7 +153,7 @@ public sealed class OverviewController : IDisposable
             // Whatever failed above, the monitor must not stay at 1×, and other Ended handlers run.
             try
             {
-                ReleaseUnlessNewer(session);
+                _level.ReleaseUnlessNewer(session);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
@@ -198,28 +193,13 @@ public sealed class OverviewController : IDisposable
         }
     }
 
-
-    // A newer overview on the same monitor keeps its level. Check and release in one step under
-    // _levelGate, so the next overview's Set never lands between them and gets released.
-    private void ReleaseUnlessNewer(OverviewSession session)
-    {
-        lock (_levelGate)
-        {
-            if (_overview.Current?.MonitorId != session.MonitorId)
-            {
-                _zoom.Temporary.Release(TemporaryZoomOwner.Overview, session.MonitorId);
-            }
-        }
-    }
-
     // A user command cleared the level (zoom off, mode change, step to 1×): the overview is over.
     private void OnTemporaryChanged()
     {
         OverviewSession? cleared = null;
         lock (_gate)
         {
-            if (_overview.Current is { } session && _activeId == session.Id
-                && _zoom.Temporary.LevelFor(TemporaryZoomOwner.Overview, session.MonitorId) is null)
+            if (_overview.Current is { } session && _activeId == session.Id && !_level.IsHeld(session.MonitorId))
             {
                 cleared = session;
             }

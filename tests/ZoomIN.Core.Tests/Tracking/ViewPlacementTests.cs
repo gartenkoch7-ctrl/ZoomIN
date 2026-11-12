@@ -142,6 +142,26 @@ public sealed class ViewPlacementTests
     }
 
     [Fact]
+    public void APlacementTakenWhileTheZoomStillFalls_HoldsUntilItArrives()
+    {
+        // Tap, tap again within the glide to 1×: the request comes before the 1× is given back.
+        var controller = new AnchorController();
+        var mouse = new PhysicalPoint(100, 100);
+        controller.Next(Input(1.0, mouse, zoom: 2.5));
+        var placement = new ViewPlacement(s_center, 4, Ticks(1.05));
+        controller.Next(Input(1.1, mouse, zoom: 2.4, placement: placement));
+        controller.Next(Input(1.15, mouse, zoom: 2.2, placement: placement)); // still falling
+
+        PhysicalPoint anchor = default;
+        for (var zoom = 2.5; zoom <= 4.0; zoom += 0.5)
+        {
+            anchor = controller.Next(Input(1.2 + (zoom / 10), mouse, zoom: zoom, placement: placement));
+        }
+
+        Assert.Equal(960, Shown(Frame(anchor), s_center).X, 6);
+    }
+
+    [Fact]
     public void AZoomChangeAwayFromThePlacement_EndsIt()
     {
         var controller = new AnchorController();

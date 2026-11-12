@@ -46,12 +46,29 @@ internal sealed class OverviewFrameSource(
 
             if (center is { } point)
             {
-                views.Request(session.MonitorId, point, zoom.TargetFor(session.MonitorId), time.GetTimestamp());
+                views.Request(session.MonitorId, point, ZoomAfter(session.MonitorId), time.GetTimestamp());
             }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             log.OverviewFailed(ex, "view_placement");
         }
+    }
+
+    // The level the monitor glides to once the overview's 1× is gone: the user's, lowered by the
+    // levels other features still hold (a window drag, G1). The placement must be for that level,
+    // or the anchor waits for a zoom that never comes.
+    private double ZoomAfter(string monitorId)
+    {
+        var level = zoom.TargetFor(monitorId);
+        foreach (var owner in Enum.GetValues<TemporaryZoomOwner>())
+        {
+            if (owner != TemporaryZoomOwner.Overview && zoom.Temporary.LevelFor(owner, monitorId) is { } held)
+            {
+                level = Math.Min(level, held);
+            }
+        }
+
+        return level;
     }
 }
