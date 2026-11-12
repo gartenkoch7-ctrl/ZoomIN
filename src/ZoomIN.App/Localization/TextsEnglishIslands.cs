@@ -15,6 +15,7 @@ internal static class TextsEnglishIslands
         ["Islands.Island"] = "Island {0} of {1}, {2}×",
         ["Islands.Full"] = "At most 4 islands. Delete one first.",
         ["Islands.Deleted"] = "Island deleted",
+        ["Islands.Cancelled"] = "Drag cancelled",
         ["Islands.Docked"] = "Islands cannot be edited in docked mode",
         ["Islands.NoInput"] = "Islands cannot be edited right now: ZoomIN cannot take the mouse clicks",
         ["Islands.Title"] = "Islands",

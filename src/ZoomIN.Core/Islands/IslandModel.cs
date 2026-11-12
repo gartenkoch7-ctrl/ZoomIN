@@ -64,7 +64,7 @@ public sealed class IslandModel
     {
         ArgumentNullException.ThrowIfNull(boundsOf);
         Volatile.Write(ref _boundsOf, boundsOf);
-        Publish(scene => scene.Edit is null ? scene with { Set = scene.Set.FitTo(boundsOf) } : scene, save: false, () => null);
+        Publish(scene => scene.Edit is null ? scene with { Set = _committed.FitTo(boundsOf) } : scene, save: false, () => null);
     }
 
     public void SetVisible(bool visible) => Publish(scene => scene with { Visible = visible }, save: true, () => null);

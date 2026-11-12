@@ -31,12 +31,23 @@ internal sealed class IslandReport(IAnnouncer announcer, ILocalizer texts, ILogg
                     log.IslandRemoved(editor.Set.Count);
                     Say("Islands.Deleted");
                     break;
+                case IslandEditOutcome.Cancelled:
+                    Say("Islands.Cancelled");
+                    break;
             }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             log.EditFailed(ex, "report");
         }
+    }
+
+    /// <summary>A new island turned hidden islands back on: logged and traced like Ctrl+Alt+I, spoken.</summary>
+    public void ShownAgain(int count)
+    {
+        IslandOperation.Toggled(true, count);
+        log.IslandsToggled(true, count);
+        Say("Islands.On");
     }
 
     /// <summary>Speaks a text without arguments; never throws.</summary>

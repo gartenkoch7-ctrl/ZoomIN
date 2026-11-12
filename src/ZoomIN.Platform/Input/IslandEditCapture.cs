@@ -34,6 +34,8 @@ public sealed class IslandEditCapture : IIslandEditInput
 
     private const double WheelDelta = 120;
 
+    private static readonly TimeSpan RecheckDelay = TimeSpan.FromMilliseconds(100);
+
     private readonly Func<int, bool> _isDown;
     private readonly Func<bool> _buttonsSwapped;
     private readonly IslandKeyGate _escape = new();
@@ -78,6 +80,11 @@ public sealed class IslandEditCapture : IIslandEditInput
         _escape.Starting(_isDown(EscapeKey));
         _delete.Starting(_isDown(DeleteKey));
 
+        // Windows updates the key state only after the hook returned: a release passing the hook right
+        // now still reads as down. A second look a moment later (as the overview does).
+        _ = Task.Delay(RecheckDelay).ContinueWith(
+            static (_, state) => ((IslandEditCapture)state!).Recheck(), this, TaskScheduler.Default);
+
         // Low-level hooks report the physical buttons: with swapped buttons (left-handed) the primary
         // one, that drags, arrives as the right button.
         var swapped = _buttonsSwapped();
@@ -87,6 +94,12 @@ public sealed class IslandEditCapture : IIslandEditInput
     }
 
     public void Stop() => Interlocked.Exchange(ref _session, null)?.Complete();
+
+    private void Recheck()
+    {
+        _escape.Recheck(_isDown(EscapeKey));
+        _delete.Recheck(_isDown(DeleteKey));
+    }
 
     /// <summary>Hook thread, every mouse event. Returns true if it must not reach applications.</summary>
     internal bool OnMouse(uint message, PhysicalPoint point, uint mouseData)

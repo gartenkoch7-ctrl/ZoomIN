@@ -29,7 +29,9 @@ public static class IslandGrab
             {
                 var target = set[i].Target;
                 var hit = pass == 0 ? target.Contains(point) : CornerAt(target, point) is not null;
-                if (hit && IsShown(set[i], monitors, out monitor))
+
+                // Only an island of the monitor the press is on: a corner reach never crosses to the next monitor.
+                if (hit && IsShown(set[i], monitors, out monitor) && monitor.Contains(point))
                 {
                     corner = withCorners ? CornerAt(target, point) : null;
                     return i;

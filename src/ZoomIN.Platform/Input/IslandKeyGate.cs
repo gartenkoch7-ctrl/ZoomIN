@@ -25,6 +25,15 @@ internal sealed class IslandKeyGate
         _pass = down;
     }
 
+    /// <summary>The second look after the start: a key that is up by now passes nothing more.</summary>
+    public void Recheck(bool down)
+    {
+        if (!down)
+        {
+            _pass = false;
+        }
+    }
+
     /// <summary>Hook thread, every event of this key.</summary>
     /// <param name="take">Hands a new press to the edit mode; false if it does not take it (not running, modifier held).</param>
     /// <returns>True if the event must not reach applications.</returns>

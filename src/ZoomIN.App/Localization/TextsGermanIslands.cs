@@ -15,6 +15,7 @@ internal static class TextsGermanIslands
         ["Islands.Island"] = "Insel {0} von {1}, {2}-fach",
         ["Islands.Full"] = "Höchstens 4 Inseln. Erst eine löschen.",
         ["Islands.Deleted"] = "Insel gelöscht",
+        ["Islands.Cancelled"] = "Ziehen abgebrochen",
         ["Islands.Docked"] = "Inseln lassen sich im angedockten Modus nicht bearbeiten",
         ["Islands.NoInput"] = "Inseln bearbeiten geht gerade nicht: ZoomIN kann die Mausklicks nicht abfangen",
         ["Islands.Title"] = "Inseln",

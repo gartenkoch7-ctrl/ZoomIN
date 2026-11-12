@@ -120,6 +120,7 @@ internal sealed class IslandEditSession : IDisposable
         if (outcome == IslandEditOutcome.Created && !model.Scene.Visible)
         {
             model.SetVisible(true);
+            report.ShownAgain(model.Scene.Set.Count);
         }
 
         return null;

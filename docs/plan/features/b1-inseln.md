@@ -165,8 +165,9 @@ Befunde der Reviews, die bewusst nicht als Code umgesetzt sind (Designvorschläg
 - **Zaun klemmt am Rand:** Die vom Zaun per `SetCursorPos` gesetzte Position sieht kein Low-Level-Hook;
   die Insel folgt bis zum Loslassen nur bis zur letzten gesehenen Position.
 - **Halbe Pixel:** Bei Stufen wie 2,5× kann die Gegenkante beim Ecke-Ziehen einen halben Pixel springen.
-- **Esc beim Start losgelassen:** Ohne zweiten Blick (wie bei der Übersicht) kann das erste Esc an die
-  Anwendung gehen, wenn es genau beim Start losgelassen wurde.
+- **Esc/Entf beim Start gehalten:** Ein zweiter Blick nach 100 ms klärt ein Loslassen genau beim Start.
+  Geht das Loslassen später verloren (Win+L) und kam keine Wiederholung, kann das erste Esc an die
+  Anwendung gehen.
 - **Architektur:** Zwei Sperren (Start/Ende, Eingabeschritt) statt eines einzigen Akteurs; Enden aus
   fremden Threads laufen über den Thread-Pool. Ein Umbau zum Akteur wäre sauberer, ist aber kein Fehler.
 - **Kosten im Bearbeitungsmodus:** Jede Bewegung setzt den Leerlauf-Timer neu und vergleicht die
@@ -174,6 +175,7 @@ Befunde der Reviews, die bewusst nicht als Code umgesetzt sind (Designvorschläg
 - **Doppelter Code:** Monitornummer aus `\\.\DISPLAYn` (Zoom- und Filterseite), Punkt-Klemmen
   (`IslandEditor`, `ModeGeometry`, `FenceGeometry`), Tasten-Wiederholungslücke (`OverviewKeyWatch`).
   `PointerStyle` nutzt 1,01 noch als Zahl statt `ZoomLimits.UnzoomedUpTo`.
+  `IslandOperation` wiederholt die Wurzel-Ablauf-Logik von `OverviewOperation`.
 - **P/Invoke in `Platform/Input`:** `GetSystemMetrics` wie die übrigen Hook-Klassen dort direkt über
   CsWin32 (gelebte Ausnahme der Regel „nur in Interop/“).
 - **Monitorwechsel bei offener Einstellungsseite:** Die Zeilen aktualisieren Monitornummer und
