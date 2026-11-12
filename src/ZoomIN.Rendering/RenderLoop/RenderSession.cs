@@ -186,12 +186,7 @@ internal sealed class RenderSession : IDisposable
         // A highlight fading in or out under its show condition (E1) also needs the frame drawn.
         var fading = _alphas.Update(request.Effects.Cursor, request.Zoom, request.TrackingOptions, request.Activity,
             Stopwatch.GetTimestamp(), Stopwatch.Frequency);
-        _islands.Update(request.Islands, Stopwatch.GetTimestamp());
-        if (request.Islands is null && request.KnownIslands is { } known)
-        {
-            _islands.Prune(known, _monitor.DeviceName); // the last still island may just have gone
-        }
-
+        _islands.Begin(request.Islands, request.KnownIslands, _monitor.DeviceName, Stopwatch.GetTimestamp());
         var animating = LocatorActive || fading || (!request.OverlayOnly && _desktop.SmartSettling) || _overview.NeedsRedraw || _islands.NeedsRedraw;
         var changes = _changes.Compare(newImage, request, frame, _cursorInside, _lastCursor, shape,
             animating, _snapshots.IsRequested, _shown);
@@ -228,11 +223,12 @@ internal sealed class RenderSession : IDisposable
             _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions, _alphas);
         }
 
-        // Islands (M19 B1) above the zoom and its highlights, below the overview frame and the pointer;
-        // never on a frozen monitor (MonitorRenderer passes none there).
+        // Islands (M19 B1) above the zoom and its highlights, below the overview frame and the pointer. On a
+        // frozen monitor they read its still image (G2); while that is held the capture texture is not
+        // updated either, so still islands taken then match it.
         if (request.Islands is not null)
         {
-            _islands.Draw(_gpu.Context, _duplicator.ShaderResource, _duplicator.Texture, _swapchain.RenderTarget, _monitor.DeviceName,
+            _islands.Draw(_gpu.Context, image, _duplicator.Texture, _swapchain.RenderTarget, _monitor.DeviceName,
                 _monitor.Bounds, request.Islands, request.Effects, weights);
         }
 

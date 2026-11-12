@@ -46,6 +46,7 @@ public abstract record InputSettings
     public HotkeyGesture IslandsHotkey { get; set; } = HotkeyGesture.ToggleIslands;
 
     public HotkeyGesture IslandEditHotkey { get; set; } = HotkeyGesture.EditIslands;
+
     /// <summary>Freeze the monitor under the pointer / unfreeze all, and pointer to the next monitor (G2, M19).</summary>
     public HotkeyGesture FreezeMonitorHotkey { get; set; } = HotkeyGesture.FreezeMonitor;
 

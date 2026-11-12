@@ -270,14 +270,15 @@ Plan: [b1-inseln.md](../plan/features/b1-inseln.md). Code: `Core/Islands/`, `Ren
   Angedockt zeigen keine Inseln (Vorschlag des Plans übernommen). Übersicht und Fenster-Verschieben
   (vorübergehend 1×) blenden sie damit aus. Im Bearbeitungsmodus zeichnen **alle** Monitore, auch
   bei 1×; dann ist `FrameRequest.OverlayOnly` falsch, damit die Desktop-Kopie läuft.
-- **Eingefrorener Monitor (G2):** zeigt **keine** Inseln, auch nicht im Bearbeitungsmodus
-  (`OverlayDemand.Islands` fragt `Frozen.IsFrozen`). Eingefroren heißt „Ansicht bleibt wie sie war“;
-  eine Live-Insel über dem Standbild widerspräche dem, und der Zeiger kann den Monitor ohnehin nicht
-  erreichen, um dort zu bearbeiten. Die Inseln bleiben gespeichert, ihre Standbilder auch
-  (`KnownIslands` unverändert); nach dem Auftauen erscheinen sie wieder. Die vorübergehende 1× des
-  Bearbeitens übergeht ein eingefrorener Monitor (er behält Stufe, Modus und Zaun); taut er während
-  des Bearbeitens auf, zeigt er 1× und macht beim Bearbeiten mit. Einfrieren während des Bearbeitens
-  lehnt G2 ab (`island_edit`, Hinweis „Erst das Bearbeiten der Inseln beenden …“).
+- **Eingefrorener Monitor (G2):** Seine Inseln **bleiben sichtbar und frieren mit ein** (Plan B1,
+  Merge-Prüfung). `OverlayDemand.Islands(zoom, mode)` bekommt dort Stufe und Modus des Einfrierens,
+  nicht die live. `IslandLayer.Draw` tastet dasselbe Bild ab wie das Hauptbild (`FrozenLayer.Desktop`).
+  Mit Standbild ist das also das Standbild. Solange es gehalten wird, liest der Monitor keinen neuen
+  Capture-Frame, und Standbild-Inseln, die dann aufgenommen werden, passen dazu. Beim Einfrieren mit
+  „live“ bleiben auch die Inseln live. Die vorübergehende 1× des Bearbeitens übergeht ein
+  eingefrorener Monitor: Er behält Stufe, Modus und Zaun, und seine Inseln zeigen dort auch die
+  Bearbeitungsrahmen. Erreichen kann der Zeiger ihn nicht. Taut er während des Bearbeitens auf,
+  zeigt er 1× und macht mit. Einfrieren während des Bearbeitens lehnt G2 ab (`island_edit`).
 - **Reihenfolge im Frame:** Desktop → Hervorhebungen (Fokus, Caret) → **Inseln** → Übersichtsrahmen
   → Zeiger. Der Zeiger liegt also immer oben. Alles im vorhandenen Overlay-Fenster
   (`WDA_EXCLUDEFROMCAPTURE`), kein neues Fenster.

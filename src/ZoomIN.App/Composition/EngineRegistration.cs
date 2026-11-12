@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using ZoomIN.App.Islands;
 using ZoomIN.App.Freeze;
+using ZoomIN.App.Islands;
 using ZoomIN.App.Localization;
 using ZoomIN.App.Markers;
 using ZoomIN.App.Overview;

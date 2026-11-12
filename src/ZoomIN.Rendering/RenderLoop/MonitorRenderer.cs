@@ -147,8 +147,8 @@ internal sealed class MonitorRenderer : IDisposable
             var windows = _windows.Regions;
             var windowsFiltered = session.FiltersWindows(windows, effects);
             var overview = frozen is null ? _demand.Overview : null;
-
-            var islands = _demand.Islands(animator.Current); // none on a frozen monitor (G2)
+            var userMode = frozen?.Mode ?? _model.Mode; // a frozen monitor's islands stay and freeze with it (G2)
+            var islands = _demand.Islands(animator.Current, userMode);
 
             // Filters work at 1× too (M5 decision); so do the pointer options (larger or coloured
             // pointer, crosshair, hiding while typing); the locator needs a few frames as well.
@@ -182,10 +182,10 @@ internal sealed class MonitorRenderer : IDisposable
             var delta = Math.Min(Stopwatch.GetElapsedTime(lastFrame, now).TotalSeconds, 0.1);
             lastFrame = now;
             animator.Advance(delta, _model.AnimationSeconds);
-            islands = _demand.Islands(animator.Current); // for the zoom this frame is drawn at
+            islands = _demand.Islands(animator.Current, userMode); // for the zoom this frame is drawn at
 
             // Unzoomed: the whole monitor, no lens or strip.
-            var mode = unzoomed ? ZoomMode.Fullscreen : frozen?.Mode ?? _model.Mode;
+            var mode = unzoomed ? ZoomMode.Fullscreen : userMode;
             var request = new FrameRequest(mode, _demand.AnchorMode(mode, unzoomed, overview, lowered), animator.Current,
                 frozen?.Lens ?? _model.Lens, frozen?.Dock ?? _model.Dock, effects,
                 frozen is null ? _effects.LocateRequestedAt : 0, frozen is null ? _tracking.Snapshot : TrackingSnapshot.Empty, _tracking.Options,

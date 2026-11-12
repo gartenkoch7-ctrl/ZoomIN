@@ -148,9 +148,10 @@ Details: [rendering-pipeline.md](../../kb/rendering-pipeline.md#inseln-m19-b1) u
 - **Telemetrie:** App 1740–1748; Rendering 3320–3339 bleibt frei (kein Log im Render-Loop,
   Standbilder melden 3300/3301). GPU-Zeit im Betrieb als `zoomin.render.gpu_time` (`islands`).
 - **GPU** (RTX 3060 Ti, 1080p, 4×, 4 Inseln 600 × 160): +0,008–0,018 ms, ×10 ≈ 0,2 ms.
-- **Zusammenspiel nach dem Merge von M18/A6/G2** (selbst entschieden): Ein eingefrorener Monitor
-  zeigt keine Inseln, auch nicht beim Bearbeiten; er bleibt beim Bearbeiten eingefroren (Stufe,
-  Zaun). Einfrieren während des Bearbeitens lehnt G2 ab (`island_edit`). Filterkette 100 → 200 → 300,
+- **Zusammenspiel nach dem Merge von M18/A6/G2:** Inseln auf einem eingefrorenen Monitor bleiben
+  sichtbar und frieren mit ein (Standbild des Monitors, Stufe und Modus des Einfrierens). Beim
+  Bearbeiten bleibt er eingefroren (Stufe, Zaun). Einfrieren während des Bearbeitens lehnt G2 ab
+  (`island_edit`, *selbst entschieden*). Filterkette 100 → 200 → 300,
   danach die gesperrten Bereiche (`IslandEditFilterChainTests`). Eigene Farbschemata und Schärfe/Fett
   wirken auf Live- und Standbild-Inseln wie im Hauptbild (WARP-Tests).
 - **Offen für den Menschen:** Sichtprüfung (Blinken, Griffe, gestricheltes Rechteck, Uhr läuft),
@@ -196,3 +197,12 @@ Befunde der Reviews, die bewusst nicht als Code umgesetzt sind (Designvorschläg
   Pause; eine halbe Rastung kann sich mit einer späteren halben auf einer anderen Insel addieren.
 - **Überflüssiges Speichern:** Endet ein Lauf mit Änderungen, nachdem eine Änderung von außen gewann,
   wird einmal unverändert gespeichert.
+- **Einfrieren gegen Bearbeiten (Merge G2):** Die Ablehnung prüft `Scene.Editing` ohne gemeinsame
+  Sperre mit `IslandController`. Ein Einfrieren genau beim Start oder Ende des Bearbeitens kann
+  durchrutschen. Schlimmstenfalls hält der Zaun des Ziehens den Zeiger bis zum Loslassen am Rand,
+  eine Falle ist das nicht.
+- **Strg+Alt+N während eines Ziehens:** Der Sprung per `SetCursorPos` umgeht den Zaun des Ziehens.
+  Die nächste Bewegung holt den Zeiger an den Rand des Zieh-Monitors zurück. Esc nimmt das Ziehen zurück.
+- **Dateigröße nach dem Merge:** `RenderSession.cs` (265) und `MonitorFreezeController.cs` (256) liegen
+  über 250, aber unter 300. Sie sind Integrationsdateien mehrerer Spuren. Aufgeteilt wird nach dem
+  Merge aller M19-Spuren im Integrationsbranch, damit andere Spuren keine Konflikte bekommen.

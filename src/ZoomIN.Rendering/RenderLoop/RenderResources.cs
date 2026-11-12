@@ -4,10 +4,10 @@ using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Rendering.Capture;
 using ZoomIN.Rendering.Freeze;
-using ZoomIN.Rendering.Still;
 using ZoomIN.Rendering.Gpu;
 using ZoomIN.Rendering.Islands;
 using ZoomIN.Rendering.Overlay;
+using ZoomIN.Rendering.Still;
 using ZoomIN.Rendering.TextEnhance;
 
 namespace ZoomIN.Rendering.RenderLoop;

@@ -64,17 +64,15 @@ internal sealed class OverlayDemand
         unzoomed && (overview is not null || lowered) ? _zoom.Mode : frameMode;
 
     /// <summary>
-    /// The islands this monitor draws at <paramref name="zoom"/> (M19 B1), or null: in fullscreen
-    /// while zoomed in, and on every monitor while they are edited (also at 1×). Never on a frozen
-    /// monitor (G2): it keeps its view as it was, and the pointer cannot reach it to edit. Lock-free, 0 B.
+    /// The islands this monitor draws at <paramref name="zoom"/> in <paramref name="mode"/> (M19 B1), or
+    /// null: in fullscreen while zoomed in, and on every monitor while they are edited (also at 1×).
+    /// A frozen monitor (G2) passes its frozen mode and level: its islands stay and freeze with it.
+    /// Lock-free, 0 B.
     /// </summary>
-    public IslandScene? Islands(double zoom)
+    public IslandScene? Islands(double zoom, ZoomMode mode)
     {
         var scene = _models.Islands.Scene;
-        return !_zoom.Frozen.IsFrozen(_deviceName)
-            && scene.ShowsOn(_deviceName, _zoom.Mode == ZoomMode.Fullscreen && zoom > ZoomLimits.UnzoomedUpTo)
-            ? scene
-            : null;
+        return scene.ShowsOn(_deviceName, mode == ZoomMode.Fullscreen && zoom > ZoomLimits.UnzoomedUpTo) ? scene : null;
     }
 
     /// <summary>After a pipeline failure: retry soon if the monitor should show anything, else wait for a change.</summary>
