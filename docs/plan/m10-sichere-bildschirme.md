@@ -299,18 +299,20 @@ Tray-App außerhalb des Jobs weiterlaufen lassen?
 - Hier im Plan die Häkchen setzen.
 
 ### Aufgaben (Abschluss)
-- [ ] Integrationsbranch `feat/m10-abschluss`, Spuren A, B, C gleichzeitig (Worktree je Spur)
+- [x] Integrationsbranch `feat/m10-abschluss`, Spuren A, B, C gleichzeitig (Worktree je Spur)
 - [x] Spur A: Paket A2 umgesetzt (`feat/m10-a-autostart`); Job-Prüfung und Ausstieg für A1 gebaut,
   Win+U-Trick nur noch ohne Start durch die Erleichterte Bedienung
-- [ ] Integration nach dem Merge von B: `ServiceRegistration.cs` Zeilen 57 und 108
+- [x] Integration nach dem Merge von B: `ServiceRegistration.cs` Zeilen 57 und 108
   `IAutostart` → `AutostartSelector` (sonst nutzen Schalter, Willkommen und Deinstallation weiter
   nur den Run-Eintrag, während die Migration schon in die Liste umzieht); vor dem Testbuild für A1
 - [ ] Spike A1, Ergebnis als Nachtrag in ADR-0030 – Messung mit dem Nutzer offen, Anleitung in
   [sichere-desktops.md](../kb/sichere-desktops.md#spike-a1-durchführen-nutzer-offen)
 - [ ] Ausweichweg Q9 (`TaskSchedulerAutostart`, geplante Aufgabe bei der Anmeldung): ausstehend,
   nur falls der Spike scheitert – noch nicht gebaut
-- [ ] Mergen B → C → A, nach jedem Merge Build und Tests
-- [ ] Gesamt-Review (§9) bis ohne Befunde; `/security-review`
+- [x] Mergen B → C → A, nach jedem Merge Build und Tests (2026-11-12, `aa01cba`; dazu
+  `ISecureLogsRequest` → `ElevatedSecureLogsRequest` in `Tray()`)
+- [x] Gesamt-Review (§9) bis ohne Befunde; `/security-review` (Spur C: zwei Befunde behoben;
+  Gesamt-Review: 2 Runden, `dde4b5c`, 1863 Tests, 0 rot)
 - [ ] Testbuild installieren (Nutzer), dann die Checkliste in Abschnitt 6 und zusätzlich:
   - [ ] Nach der Anmeldung läuft ZoomIN sofort (kein Warten auf den Run-Eintrag)
   - [ ] Win+L, Strg+Alt+Entf und UAC vergrößert ohne Win+U-Trick; erstes Bild ≤ 1 s
