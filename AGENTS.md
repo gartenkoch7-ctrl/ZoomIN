@@ -29,6 +29,7 @@ Lade nur die Dateien, die deine Aufgabe betreffen. Index: [docs/kb/README.md](do
 | **Telemetrie (Katalog)** | [docs/kb/telemetrie.md](docs/kb/telemetrie.md) | du ein Feature baust – jedes bringt Logs/Abläufe mit |
 | Architekturentscheidungen | [docs/adr/](docs/adr/) | du eine Entscheidung infrage stellst |
 | **Roadmap & Meilensteinpläne** | [docs/plan/README.md](docs/plan/README.md) | du eine Aufgabe beginnst – arbeite im aktuellen Meilenstein, hake erledigte Punkte ab |
+| Detailplan-Vorlage | [docs/plan/detailplan-vorlage.md](docs/plan/detailplan-vorlage.md) | du einen Plan in Pakete zerlegst und Modelle zuweist (§13) |
 
 **Pflege:** Wer etwas Neues lernt (API-Eigenheit, Messwert, Verhaltensbeobachtung),
 schreibt es in die passende KB-Datei. Neue Grundsatzentscheidungen → neues ADR
@@ -246,6 +247,7 @@ Bei **jedem** Plan und vor jeder Umsetzung prüfen: Was davon kann gleichzeitig 
    - hält Build, Tests, `check-file-length.ps1` und ihre eigene Review-Schleife (§9) ein
    - committet und pusht nur auf ihren Branch
    - hakt nur ihre eigene Feature-Datei ab
+   - läuft mit dem Modell und Effort aus dem Detailplan (§13)
 3. **Zusammenführen an einem Strang:** Die steuernde Sitzung mergt die Spuren in der
    Merge-Reihenfolge in den Integrationsbranch. Nach jedem Merge laufen Build und Tests, Konflikte
    in Hotspots löst sie dort.
@@ -273,3 +275,62 @@ Spuren und Subagenten.
   Abschnitt 5. Warnungen (Datenverlust, Adminrechte, Merge) bleiben vollständige, eindeutige Sätze.
 - **Fragen nie im Caveman-Stil:** Jede Frage an den Nutzer (Rückfrage, Auswahl, Freigabe) samt
   ihren Antwortoptionen und Erklärungen wird in ganzen, verständlichen Sätzen gestellt.
+
+---
+
+## 13. Detailplan und Modellwahl (Zeit und Tokens sparen)
+
+Vor der Umsetzung eines Meilenstein- oder Feature-Plans wird jeder Punkt **eingeschätzt** und
+in einen **Detailplan** zerlegt. Aus dem Detailplan folgt, **welches Modell** ihn umsetzt.
+Ziel: Teure Modelle denken und prüfen, günstige Modelle führen genau beschriebene Arbeit aus.
+Vorlage: [docs/plan/detailplan-vorlage.md](docs/plan/detailplan-vorlage.md).
+
+### 13.1 Einschätzen
+Die steuernde Sitzung bewertet jeden Aufgabenpunkt (Checkbox der Feature-Datei) nach:
+
+| Kriterium | Frage |
+|---|---|
+| **Umfang** | Wie viele Dateien und Zeilen ändern sich ungefähr? |
+| **Risiko** | Hot Path, Shader, Win32/D3D-Interop, Threads, Sicherheit/Setup, Datenverlust? |
+| **Neuheit** | Gibt es ein Muster im Code, dem man folgen kann, oder ist es neues Terrain? |
+| **Klarheit** | Ist alles entschieden, oder sind noch Designfragen offen? |
+| **Prüfbarkeit** | Belegen Build und Tests das Ergebnis, oder braucht es Messung bzw. Sichtprüfung? |
+
+Ergebnis je Punkt: **Stufe 1–4** (siehe 13.3). Offene Designfragen werden **vor** dem Detailplan
+geklärt (Grilling, Nutzer), nie vom ausführenden Modell nebenbei entschieden.
+
+### 13.2 Detailplan
+- Steht in der Feature-Datei im Abschnitt **„Detailplan“** (bei mehr als etwa 15 Dateien als
+  eigene Datei `docs/plan/features/<id>-detail.md`).
+- Je Arbeitspaket eine Tabelle mit **jeder** Datei:
+  `Datei | neu/ändern | Was genau | Tests | ca. Zeilen`.
+  „Was genau“ nennt Typen, Methoden mit Signatur, betroffene Stellen (Methode oder Zeilen) und
+  das Muster, dem gefolgt wird (z. B. „wie `CaretMarkerGeometry`“).
+- Dazu je Paket: Reihenfolge, EventIds und Telemetrie-Namen, Akzeptanz (welcher Test, welcher
+  Befehl beweist es), **Modell** und **Effort**.
+- Der Detailplan ist so genau, dass ein Modell der zugewiesenen Stufe **ohne eigene
+  Designentscheidung und ohne breite Codesuche** umsetzen kann. Das spart die meisten Tokens:
+  Der Planer liest den Code einmal, die Ausführenden lesen nur ihre Dateien.
+- Pakete gleicher Stufe, die dieselben Dateien berühren, werden **ein** Paket. Mehrere kleine
+  Pakete gleicher Stufe kommen in **einen** Subagenten (jeder Start kostet Kontext).
+- Arbeit, die nur wenige Werkzeugaufrufe braucht, erledigt die steuernde Sitzung selbst.
+
+### 13.3 Modellwahl
+Stand 2026-11, Kosten grob relativ: Haiku ≈ 1/20 Sonnet, Sonnet ≈ ½ Opus, Opus ≈ ½ Fable.
+
+| Stufe | Modell | Effort | Typische Arbeit |
+|---|---|---|---|
+| 1 – mechanisch | **Haiku** | `low` | Code suchen und zusammenfassen (Explore), Texte DE/EN, Telemetrie-Katalog, KB- und Plan-Häkchen, `[LoggerMessage]`-Methoden nach Vorgabe, Umbenennen, Datei aufteilen nach genauer Vorgabe |
+| 2 – Standard nach Plan | **Sonnet** | `medium` | Core-Logik mit Tests nach Detailplan, Settings/Mapping/Profilfelder, UI-Karten nach bestehendem Muster, WARP-Tests, Build- und Testfehler beheben |
+| 3 – anspruchsvoll | **Opus** | `high` | Detailplan erstellen, Hot Path und Benchmarks, Shader, Interop, Threads, Capture/Overlay, Setup/Sichere Bildschirme, unklare Fehlersuche, Integration und Merge-Konflikte, **jedes Review nach §9** |
+| 4 – Grenzfall | **Fable** | `high` | Spikes mit offenem Ausgang, ADR-Entwürfe mit großer Tragweite, Probleme, an denen Opus gescheitert ist |
+
+- **Steuernde Sitzung** und **Reviews** laufen mindestens auf Opus.
+- Subagenten bekommen `model` und `effort` aus dem Detailplan (Agent-Tool: `model`, `effort`);
+  Spuren nach §11 übernehmen das Modell ihres anspruchsvollsten Pakets oder werden in Pakete
+  verschiedener Stufen geteilt.
+- **Eskalation:** Scheitert ein Modell zweimal am selben Paket (Build oder Tests rot) oder stößt es
+  auf eine Entscheidung, die der Plan nicht trifft, hört es auf und meldet das. Die steuernde
+  Sitzung ergänzt den Plan oder vergibt das Paket eine Stufe höher. Kein Raten, kein Umgehen.
+- **Rückblick:** Nach dem Meilenstein trägt die steuernde Sitzung in der Meilensteindatei ein,
+  welche Einstufungen zu niedrig oder zu hoch waren, damit spätere Pläne besser schätzen.

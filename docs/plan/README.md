@@ -64,6 +64,8 @@ M0 ─► M1 ─► M2 ─┬─► M3 ─┬─► M4 ─┐
   eingetragen (Abschnitt „Offene Fragen / Risiken“).
 - Jeder Plan hat einen Abschnitt **„Parallelisierung“** (Spuren, Schritt 0, Exklusiv-Dateien,
   Hotspots, Merge-Reihenfolge, EventId-Bereiche); umgesetzt wird nach [AGENTS.md §11](../../AGENTS.md).
+- Vor der Umsetzung wird jeder Aufgabenpunkt eingeschätzt und in einen **Detailplan** mit Dateien,
+  Modell und Effort zerlegt ([Vorlage](detailplan-vorlage.md), [AGENTS.md §13](../../AGENTS.md)).
 
 ## Nach dem MVP (nicht geplant, nur gesammelt)
 Sprachausgabe (`ZoomIN.Speech`), Input-Transform mit UIAccess + Code-Signing,
