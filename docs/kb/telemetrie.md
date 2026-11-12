@@ -268,7 +268,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2951 | Info | Hold key hook stopped (E1) |
 | 2952 | Fehler | Installing the hold key hook failed; highlights shown only while a key is held stay hidden (E1) |
 | 2953 | Fehler | Hold key handler failed (E1) |
-| 2954 | Warnung | Hold key is down but the hook saw no press; following the key state instead – Hook von Windows entfernt oder Taste schon vor dem Start gehalten; einmal je Hook-Start (E1) |
+| 2954 | Warnung | Hold key is down but the hook saw no press; following the key state instead – Hook von Windows entfernt (eine schon beim Start gehaltene Taste zählt nicht); einmal je Hook-Start (E1) |
 | 3001 | Info | Zoom pipeline ready for {Monitor} |
 | 3002 | Info | Display changed on {Monitor}: {Reason} |
 | 3003 | Fehler | Zoom pipeline for {Monitor} failed |

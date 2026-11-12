@@ -160,6 +160,7 @@ E2 und E1 laufen in **einer** Spur hintereinander, weil beide diese Dateien änd
   gehalten nicht im Tastenzustand. Grund ist die Alt-Gr-Erkennung.
 - **Kostenmessung D1:** `EnhanceCost` misst nach jedem Überschreiten von 1,5× neu. Das passiert nur,
   solange jemand die Metrik abonniert.
+- **Farbumwandlung doppelt:** `CustomSchemesPage.BrushOf` wiederholt die Umwandlung aus `ColorChooser`.
 - Das Review lief, bis eine Runde keine Codeänderung mehr ergab.
 
 ## Offen für Menschen

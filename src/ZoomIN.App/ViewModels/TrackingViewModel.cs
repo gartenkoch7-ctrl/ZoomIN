@@ -43,7 +43,7 @@ public sealed partial class TrackingViewModel : ObservableObject
     /// <summary>Raised after the caret marker look changed; the page redraws its preview.</summary>
     public event Action? CaretStyleChanged;
 
-    /// <summary>The caret marker look as the model holds it (also after a profile switch while the page is open).</summary>
+    /// <summary>The caret marker look as the model holds it; the page refreshes its preview only on its own changes.</summary>
     public CaretMarkerStyle CaretStyle => _tracking.Options.CaretStyle;
 
     /// <summary>What the preview shows, in words, for screen readers.</summary>
