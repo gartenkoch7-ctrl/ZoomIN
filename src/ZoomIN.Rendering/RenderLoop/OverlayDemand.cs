@@ -70,7 +70,7 @@ internal sealed class OverlayDemand
     public IslandScene? Islands(double zoom)
     {
         var scene = _models.Islands.Scene;
-        return scene.ShowsOn(_deviceName, _zoom.Mode == ZoomMode.Fullscreen && zoom > FrameRequest.UnzoomedUpTo) ? scene : null;
+        return scene.ShowsOn(_deviceName, _zoom.Mode == ZoomMode.Fullscreen && zoom > ZoomLimits.UnzoomedUpTo) ? scene : null;
     }
 
     /// <summary>After a pipeline failure: retry soon if the monitor should show anything, else wait for a change.</summary>

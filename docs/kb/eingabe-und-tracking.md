@@ -343,7 +343,8 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
     Start schon gedrückt war (samt Wiederholung und Loslassen). Mit vertauschten Maustasten (Linkshänder)
     zieht die physisch rechte, also die primäre Taste. Eine Folge von Bewegungen wird
     nur bis zur nächsten anderen Eingabe zusammengefasst (Reihenfolge Drücken → Bewegen bleibt).
-  - Strg+Mausrad zoomt weiter (eigener Hook, der vorher greift) – unsichtbar, denn die 1× gilt.
+  - Mausrad mit Strg, Alt oder Win lässt der Bearbeitungsmodus durch: Strg+Mausrad zoomt weiter
+    (der Rad-Hook kommt nach dem Aktivitäts-Hook) – unsichtbar, denn die 1× gilt.
   - **Zeigerzaun:** Während eines Ziehens hält `IslandDragFence` (Filter `PointerFilterOrder.IslandEdit`
     = 100, erster der Kette) den Zeiger auf dem Monitor der Insel (eine Insel gehört genau einem
     Monitor). Der Filter ist nur im Bearbeitungsmodus registriert und lässt außerhalb eines

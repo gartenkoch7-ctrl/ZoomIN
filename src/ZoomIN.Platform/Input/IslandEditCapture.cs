@@ -45,6 +45,7 @@ public sealed class IslandEditCapture : IIslandEditInput
     private uint _escapeAt;
     private uint _deleteAt;
     private int _wheelRest;
+    private IslandEditQueue? _wheelSession;
     private volatile bool _hooksInstalled;
     private volatile bool _escapePass;
     private volatile bool _deletePass;
@@ -65,9 +66,6 @@ public sealed class IslandEditCapture : IIslandEditInput
         _buttonsSwapped = buttonsSwapped ?? (() => false);
     }
 
-    /// <summary>True while the edit mode takes the input.</summary>
-    public bool IsCapturing => Volatile.Read(ref _session) is not null;
-
     public bool IsAvailable => _hooksInstalled;
 
     /// <summary>Set by <see cref="Win32InputActivityHook"/> once its mouse and keyboard hooks are (no longer) installed.</summary>
@@ -80,7 +78,6 @@ public sealed class IslandEditCapture : IIslandEditInput
         // Esc or Del held at the start belongs to whoever got its press: its repeats and release too.
         _escapePass = _isDown(EscapeKey);
         _deletePass = _isDown(DeleteKey);
-        _wheelRest = 0;
 
         // Low-level hooks report the physical buttons: with swapped buttons (left-handed) the primary
         // one, that drags, arrives as the right button.
@@ -103,7 +100,8 @@ public sealed class IslandEditCapture : IIslandEditInput
                 return false; // the pointer must move, also while dragging
             case Wheel:
             case HorizontalWheel:
-                if (session is null)
+                // Ctrl+wheel and the like stay the zoom's and the applications' (the wheel hook comes after this one).
+                if (session is null || AnyModifierDown())
                 {
                     return false;
                 }
@@ -111,7 +109,13 @@ public sealed class IslandEditCapture : IIslandEditInput
                 if (message == Wheel)
                 {
                     // Touchpads and fine wheels send parts of a notch: only whole notches change the level
-                    // (one step, one save, one announcement).
+                    // (one step, one save, one announcement). A new run starts from no rest (hook thread only).
+                    if (!ReferenceEquals(session, _wheelSession))
+                    {
+                        _wheelSession = session;
+                        _wheelRest = 0;
+                    }
+
                     _wheelRest += (short)(mouseData >> 16);
                     var notches = (int)(_wheelRest / WheelDelta);
                     if (notches != 0)
@@ -170,18 +174,22 @@ public sealed class IslandEditCapture : IIslandEditInput
         ref var last = ref virtualKey == EscapeKey ? ref _escapeAt : ref _deleteAt;
         if (virtualKey == EscapeKey ? _escapePass : _deletePass)
         {
-            // Held when the edit mode started: its repeats and release go on; the press after it is ours.
-            if (up && virtualKey == EscapeKey)
+            // Held when the edit mode started. Its press reached the application (repeats and release go
+            // on), unless ZoomIN swallowed that press itself (held): then its release stays swallowed.
+            if ((up || held) && virtualKey == EscapeKey)
             {
                 _escapePass = false; // only this key's flag: Start may set the other one right now
             }
-            else if (up)
+            else if (up || held)
             {
                 _deletePass = false;
             }
 
-            last = time;
-            return false;
+            if (!held)
+            {
+                last = time;
+                return false;
+            }
         }
 
         // Key repeat starts within 1 s (2 s with FilterKeys): a "repeat" later than that is a new

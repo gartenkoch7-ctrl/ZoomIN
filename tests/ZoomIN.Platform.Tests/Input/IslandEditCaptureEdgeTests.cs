@@ -76,6 +76,41 @@ public sealed class IslandEditCaptureEdgeTests
     }
 
     [Fact]
+    public void CtrlWheel_StaysTheZooms()
+    {
+        var ctrl = true;
+        var capture = new IslandEditCapture(key => ctrl && key == 0x11);
+        capture.Start(new RecordingIslandHandler());
+
+        Assert.False(capture.OnMouse(IslandEditCapture.Wheel, new(5, 5), 120u << 16));
+        ctrl = false;
+        Assert.True(capture.OnMouse(IslandEditCapture.Wheel, new(5, 5), 120u << 16));
+        capture.Stop();
+    }
+
+    [Fact]
+    public void EscSwallowedThenStillHeldAtTheNextStart_KeepsItsReleaseSwallowed_AndTheNextPressCounts()
+    {
+        var escDown = false;
+        var capture = new IslandEditCapture(key => escDown && key == IslandEditCapture.EscapeKey);
+        var handler = new RecordingIslandHandler();
+        capture.Start(handler);
+        Assert.True(capture.OnKey(IslandEditCapture.EscapeKey, down: true, up: false, 1000)); // ends the run
+        capture.Stop();
+
+        escDown = true;
+        var next = new RecordingIslandHandler();
+        capture.Start(next); // started again while Esc is still down
+        escDown = false;
+
+        Assert.True(capture.OnKey(IslandEditCapture.EscapeKey, down: false, up: true, 1200));
+        Assert.True(capture.OnKey(IslandEditCapture.EscapeKey, down: true, up: false, 1500));
+        next.WaitFor(1);
+        Assert.Equal(["key Escape"], next.Calls);
+        capture.Stop();
+    }
+
+    [Fact]
     public void ExtraButtons_KeepTheirReleasesApart()
     {
         const uint First = 1u << 16;
