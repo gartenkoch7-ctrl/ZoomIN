@@ -66,6 +66,27 @@ public sealed class HoldKeyFakeEventTests : IDisposable
         Assert.Equal([true, false], _changes);
     }
 
+    [Fact]
+    public void InjectedNeutralShift_CountsAsLeftShift()
+    {
+        _watch.Start(AxisLockKey.LeftShift, _changes.Add);
+
+        _watch.OnKey(0x10, 0x2A, extended: false, down: true, up: false, injected: true);
+
+        Assert.Equal([true], _changes);
+    }
+
+    [Theory]
+    [InlineData(0x10, 0x2Au, false, 0xA0)]
+    [InlineData(0x10, 0x36u, false, 0xA1)]
+    [InlineData(0x11, 0x1Du, false, 0xA2)]
+    [InlineData(0x11, 0x1Du, true, 0xA3)]
+    [InlineData(0x12, 0x38u, false, 0xA4)]
+    [InlineData(0x12, 0x38u, true, 0xA5)]
+    [InlineData(0xA0, 0x2Au, false, 0xA0)]
+    public void Sided_MapsNeutralModifiers(int virtualKey, uint scanCode, bool extended, int sided) =>
+        Assert.Equal(sided, HoldKeyCodes.Sided(virtualKey, scanCode, extended));
+
     [Theory]
     [InlineData(0x21Du, false, false, true)]
     [InlineData(0x22Au, false, false, true)]

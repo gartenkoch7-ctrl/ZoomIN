@@ -341,7 +341,8 @@ an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten
 - **Drücken gehört zu einem Monitor:** Wechselt der Zeiger (z. B. per Kürzel) auf einen anderen
   Monitor, beginnt die Druckzeit dort von vorn.
 - **Monitore beim Anzeigewechsel:** Liefert Windows mitten im Aufzählen keine vollständige Liste,
-  behält der Puffer die zuletzt bekannten Monitore, statt sich bis zum nächsten Wechsel abzuschalten.
+  ruht der Puffer (eine alte Anordnung könnte eine Kante mitten in einen echten Monitor legen)
+  und liest die Monitore jede Sekunde neu, bis zu zehnmal (`BufferSetup`).
 - **Eingefrorene Monitore:** Der Puffer gibt eine Bewegung frei, danach wirken die gesperrten
   Bereiche des Zauns. Ein eingefrorener Monitor bleibt also gesperrt, der Puffer gilt nur zwischen
   freien Monitoren.
@@ -361,8 +362,12 @@ an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten
   `VK_RMENU` plus ein unechtes `VK_LCONTROL` mit Scancode `0x21D`, das ignoriert wird, damit
   Alt Gr nicht als gehaltenes Strg links zählt). Ebenso ignoriert werden die unechten
   Umschalt-Ereignisse, die Windows bei eingeschaltetem NumLock um Ziffernblock- und
-  Navigationstasten legt (Scancode mit Bit `0x200` oder erweitertes `0x2A`/`0x36`): Umschalt
-  halten und eine Pfeiltaste des Ziffernblocks drücken löst die Sperre nicht. Nach so einem
+  Navigationstasten legt (Scancode mit Bit `0x200` oder erweitertes `0x2A`): Umschalt
+  halten und eine Pfeiltaste des Ziffernblocks drücken löst die Sperre nicht. Ein erweitertes
+  `0x36` (rechts) gilt nicht als unecht, weil manche Layouts das echte Umschalt rechts so melden;
+  mit „Umschalt rechts“ kann eine graue Pfeiltaste die Achse daher neu wählen lassen (offen,
+  am echten Gerät prüfen). Injizierte neutrale Codes (`VK_SHIFT`, `VK_CONTROL`, `VK_MENU`)
+  werden nach Scancode bzw. Erweiterungs-Flag links oder rechts zugeordnet. Nach so einem
   unechten Loslassen meldet `GetAsyncKeyState` die Taste eine Weile als oben; die Prüfung wartet
   dann bis zu vier Takte (2 s), bevor sie die Sperre löst. Injizierte Tasten mit Erweiterungs-Flag
   (Tastenumbelegung, Hilfsprogramme) gelten nicht als unecht. Die Tastenwiederholung beim Halten zählt nur

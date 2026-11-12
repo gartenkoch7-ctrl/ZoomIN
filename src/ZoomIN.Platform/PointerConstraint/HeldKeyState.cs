@@ -67,6 +67,7 @@ internal sealed class HeldKeyState(Func<int, bool> isDown, TimeSpan checkInterva
     public void OnKey(int virtualKey, uint scanCode, bool extended, bool down, bool up, bool injected = false)
     {
         var fake = HoldKeyCodes.IsFake(scanCode, extended, injected);
+        virtualKey = HoldKeyCodes.Sided(virtualKey, scanCode, extended);
         lock (_state)
         {
             if (_watch is not { } watch || virtualKey != watch.VirtualKey)

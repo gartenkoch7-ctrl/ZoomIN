@@ -22,6 +22,18 @@ internal static class HoldKeyCodes
         (scanCode & FakeScanCodeBit) != 0
         || (extended && !injected && (scanCode & 0xFF) == LeftShiftScanCode);
 
+    /// <summary>
+    /// The left or right code for a neutral modifier (injected input may carry VK_SHIFT, VK_CONTROL
+    /// or VK_MENU): by scan code for Shift, by the extended flag for Ctrl and Alt. Others unchanged.
+    /// </summary>
+    public static int Sided(int virtualKey, uint scanCode, bool extended) => (VIRTUAL_KEY)virtualKey switch
+    {
+        VIRTUAL_KEY.VK_SHIFT => (int)((scanCode & 0xFF) == 0x36 ? VIRTUAL_KEY.VK_RSHIFT : VIRTUAL_KEY.VK_LSHIFT),
+        VIRTUAL_KEY.VK_CONTROL => (int)(extended ? VIRTUAL_KEY.VK_RCONTROL : VIRTUAL_KEY.VK_LCONTROL),
+        VIRTUAL_KEY.VK_MENU => (int)(extended ? VIRTUAL_KEY.VK_RMENU : VIRTUAL_KEY.VK_LMENU),
+        _ => virtualKey,
+    };
+
     public static int VirtualKey(AxisLockKey key) => (int)(key switch
     {
         AxisLockKey.RightShift => VIRTUAL_KEY.VK_RSHIFT,

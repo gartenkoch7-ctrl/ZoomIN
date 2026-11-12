@@ -37,7 +37,7 @@ public sealed class PointerConstraintController : IDisposable
         _settings = settings;
         _log = log;
         _buffer = new EdgeBuffer(time);
-        _bufferSetup = new BufferSetup(_buffer, monitors);
+        _bufferSetup = new BufferSetup(_buffer, monitors, time, log);
         _axis = new AxisLockSetup(fence, keys, log);
     }
 
@@ -104,6 +104,7 @@ public sealed class PointerConstraintController : IDisposable
             _settings.Changed -= OnSettingsChanged;
             _fence.Recomputed -= OnRecomputed;
             TurnOff();
+            _bufferSetup.Dispose();
         }
     }
 
