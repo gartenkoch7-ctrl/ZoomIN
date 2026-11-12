@@ -10,25 +10,23 @@ namespace ZoomIN.App.Pointer;
 
 /// <summary>
 /// Mouse buffer and axis lock (A6): turns the global settings into move filters of the pointer
-/// fence and the held key into the axis lock. Filters are only registered while switched on, so
-/// with both off no hook runs (behaviour as in Windows). Re-reads the monitors after a display
-/// change and starts the key watch over after a desktop switch, so a missed release never keeps
-/// the pointer on one axis.
+/// fence and the held key into the axis lock (<see cref="AxisLockSetup"/>). Filters are only
+/// registered while switched on, so with both off no hook runs (behaviour as in Windows).
+/// Re-reads the monitors after a display change (<see cref="BufferSetup"/>) and lets the key start
+/// over after a desktop switch, so a missed release never keeps the pointer on one axis.
 /// </summary>
 public sealed class PointerConstraintController : IDisposable
 {
     private readonly IPointerFence _fence;
-    private readonly IHoldKeyWatch _keys;
     private readonly SettingsService _settings;
     private readonly ILogger _log;
     private readonly EdgeBuffer _buffer;
     private readonly BufferSetup _bufferSetup;
-    private readonly AxisLock _axis = new();
-    private readonly Action<bool> _setHeld;
+    private readonly AxisLockSetup _axis;
+    private readonly Action<Action> _attempt;
     private readonly Lock _gate = new();
     private PointerConstraintOptions? _applied;
     private bool _bufferOn;
-    private bool _axisOn;
     private bool _started;
     private bool _disposed;
 
@@ -37,17 +35,17 @@ public sealed class PointerConstraintController : IDisposable
         ILogger<PointerConstraintController> log)
     {
         _fence = fence;
-        _keys = keys;
         _settings = settings;
         _log = log;
         _buffer = new EdgeBuffer(time);
         _bufferSetup = new BufferSetup(_buffer, monitors);
-        _setHeld = _axis.SetHeld;
+        _axis = new AxisLockSetup(fence, keys);
+        _attempt = Attempt;
     }
 
     internal EdgeBuffer Buffer => _buffer;
 
-    internal AxisLock Axis => _axis;
+    internal AxisLock Axis => _axis.Axis;
 
     public void Start()
     {
@@ -83,7 +81,7 @@ public sealed class PointerConstraintController : IDisposable
             try
             {
                 var monitors = ApplyBuffer(wanted.Buffer);
-                ApplyAxisLock(wanted, _applied);
+                _axis.Apply(wanted, _applied);
                 Volatile.Write(ref _applied, wanted);
                 _log.Applied(wanted.Buffer, wanted.AxisLock, wanted.AxisLockKey, monitors);
                 activity?.SetTag("zoomin.buffer", wanted.Buffer.ToString())
@@ -111,15 +109,16 @@ public sealed class PointerConstraintController : IDisposable
         }
     }
 
+    // "On" is cleared only after the steps that can fail, so TurnOff still cleans up after a failure.
     private int ApplyBuffer(EdgeBufferLevel level)
     {
         if (level == EdgeBufferLevel.Off)
         {
             if (_bufferOn)
             {
-                _bufferOn = false;
                 _fence.RemoveFilter(_buffer);
                 _bufferSetup.Configure(EdgeBufferLevel.Off);
+                _bufferOn = false;
             }
 
             return 0;
@@ -137,36 +136,6 @@ public sealed class PointerConstraintController : IDisposable
         return monitors;
     }
 
-
-    private void ApplyAxisLock(PointerConstraintOptions wanted, PointerConstraintOptions? before)
-    {
-        if (!wanted.AxisLock)
-        {
-            if (_axisOn)
-            {
-                _axisOn = false;
-                _keys.Stop();
-                _fence.RemoveFilter(_axis);
-                _axis.SetHeld(false);
-            }
-
-            return;
-        }
-
-        // Marked on first: if a step below throws, TurnOff stops the watch and removes the filter.
-        var wasOn = _axisOn;
-        _axisOn = true;
-        if (!wasOn || before?.AxisLockKey != wanted.AxisLockKey)
-        {
-            _keys.Start(wanted.AxisLockKey, _setHeld);
-        }
-
-        if (!wasOn)
-        {
-            _fence.AddFilter(_axis);
-        }
-    }
-
     // Under the lock. Each step on its own: one failing must not keep the other running.
     private void TurnOff()
     {
@@ -174,21 +143,14 @@ public sealed class PointerConstraintController : IDisposable
         if (_bufferOn)
         {
             _bufferOn = false;
-            Try(() => _fence.RemoveFilter(_buffer));
+            Attempt(() => _fence.RemoveFilter(_buffer));
         }
 
-        if (_axisOn)
-        {
-            _axisOn = false;
-            Try(_keys.Stop);
-            Try(() => _fence.RemoveFilter(_axis));
-        }
-
-        _axis.SetHeld(false);
-        Try(() => _bufferSetup.Configure(EdgeBufferLevel.Off));
+        _axis.TurnOff(_attempt);
+        Attempt(() => _bufferSetup.Configure(EdgeBufferLevel.Off));
     }
 
-    private void Try(Action step)
+    private void Attempt(Action step)
     {
         try
         {
@@ -204,8 +166,8 @@ public sealed class PointerConstraintController : IDisposable
 
     // On the fence's watcher thread: an escaping exception would end ZoomIN. Never takes _gate:
     // Apply holds it while the fence may join this very thread (a removed last filter retires
-    // the watcher). The buffer is refreshed by BufferSetup with the level Apply set last; Reset
-    // is thread-safe and harmless if the axis lock was just switched off.
+    // the watcher). The buffer is refreshed by BufferSetup with the level Apply set last; the key
+    // reset is thread-safe and harmless if the axis lock was just switched off.
     private void OnRecomputed(object? sender, FenceTrigger trigger)
     {
         try
@@ -217,12 +179,9 @@ public sealed class PointerConstraintController : IDisposable
             }
 
             var monitors = _bufferSetup.Configure(null);
-
-            // Windows did not deliver key events meanwhile: start over; a key still held
-            // re-engages with its next repeat.
             if (Volatile.Read(ref _applied) is { AxisLock: true } && trigger is FenceTrigger.DesktopSwitch or FenceTrigger.SessionUnlock)
             {
-                _keys.Reset();
+                _axis.KeysMissed();
             }
 
             _log.Reapplied(trigger, monitors);

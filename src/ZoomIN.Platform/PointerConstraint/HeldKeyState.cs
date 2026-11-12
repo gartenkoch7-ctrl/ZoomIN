@@ -13,6 +13,7 @@ internal sealed class HeldKeyState(Func<int, bool> isDown, TimeSpan checkInterva
     private Watch? _watch;
     private ITimer? _timer;
     private bool _held;
+    private bool _fakeUp;
     private int _failures;
 
     public bool IsWatching
@@ -59,19 +60,25 @@ internal sealed class HeldKeyState(Func<int, bool> isDown, TimeSpan checkInterva
         }
     }
 
-    public void OnKey(int virtualKey, uint scanCode, bool extended, bool down, bool up)
+    public void OnKey(int virtualKey, uint scanCode, bool extended, bool down, bool up, bool injected = false)
     {
-        if (HoldKeyCodes.IsFake(scanCode, extended))
-        {
-            return;
-        }
-
+        var fake = HoldKeyCodes.IsFake(scanCode, extended, injected);
         lock (_state)
         {
             if (_watch is not { } watch || virtualKey != watch.VirtualKey)
             {
                 return;
             }
+
+            if (fake)
+            {
+                // Windows' own Shift up (NumLock) also sets the key state to up while the user
+                // still holds Shift: the check must not take that for a missed release.
+                _fakeUp = up || (_fakeUp && !down);
+                return;
+            }
+
+            _fakeUp = false;
 
             // Key repeat sends further "down" events while held; only the first one counts.
             if (down && !_held)
@@ -94,7 +101,7 @@ internal sealed class HeldKeyState(Func<int, bool> isDown, TimeSpan checkInterva
         {
             // The first check runs half a second after the press, long after Windows set the key
             // state: one "not down" is a release the hook never saw.
-            if (_watch is { } watch && _held && !isDown(watch.VirtualKey))
+            if (_watch is { } watch && _held && !_fakeUp && !isDown(watch.VirtualKey))
             {
                 Release();
                 return true;

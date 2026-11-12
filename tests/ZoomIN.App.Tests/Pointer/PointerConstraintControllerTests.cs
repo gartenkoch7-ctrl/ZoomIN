@@ -141,6 +141,18 @@ public sealed class PointerConstraintControllerTests : IDisposable
     }
 
     [Fact]
+    public void FailingKeyStop_StillRemovesTheFilter()
+    {
+        _controller.Start();
+        Set(new PointerConstraintOptions { AxisLock = true });
+        _keys.FailNextStop = true;
+
+        Set(new PointerConstraintOptions());
+
+        Assert.Empty(_fence.Filters);
+    }
+
+    [Fact]
     public void LateApplyAfterDispose_InstallsNothing()
     {
         _controller.Start();
@@ -213,8 +225,16 @@ public sealed class PointerConstraintControllerTests : IDisposable
             _changed?.Invoke(false);
         }
 
+        public bool FailNextStop { get; set; }
+
         public void Stop()
         {
+            if (FailNextStop)
+            {
+                FailNextStop = false;
+                throw new InvalidOperationException("hook thread stuck");
+            }
+
             if (!Silent)
             {
                 _changed?.Invoke(false);

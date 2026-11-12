@@ -100,8 +100,8 @@ public sealed unsafe class Win32HoldKeyWatch : IHoldKeyWatch
     public void Dispose() => Stop();
 
     /// <summary>One key event as the hook sees it; internal for tests.</summary>
-    internal void OnKey(int virtualKey, uint scanCode, bool extended, bool down, bool up) =>
-        _key.OnKey(virtualKey, scanCode, extended, down, up);
+    internal void OnKey(int virtualKey, uint scanCode, bool extended, bool down, bool up, bool injected = false) =>
+        _key.OnKey(virtualKey, scanCode, extended, down, up, injected);
 
     /// <summary>The periodic check while the key counts as held; internal for tests.</summary>
     internal void Check()
@@ -158,7 +158,8 @@ public sealed unsafe class Win32HoldKeyWatch : IHoldKeyWatch
                 info->scanCode,
                 (info->flags & KBDLLHOOKSTRUCT_FLAGS.LLKHF_EXTENDED) != 0,
                 message is PInvoke.WM_KEYDOWN or PInvoke.WM_SYSKEYDOWN,
-                message is PInvoke.WM_KEYUP or PInvoke.WM_SYSKEYUP);
+                message is PInvoke.WM_KEYUP or PInvoke.WM_SYSKEYUP,
+                (info->flags & KBDLLHOOKSTRUCT_FLAGS.LLKHF_INJECTED) != 0);
         }
 
         return PInvoke.CallNextHookEx(HHOOK.Null, code, wParam, lParam);

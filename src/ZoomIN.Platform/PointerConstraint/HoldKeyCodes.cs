@@ -11,15 +11,16 @@ internal static class HoldKeyCodes
 
     // Keys Windows makes up: AltGr's left Ctrl carries this bit (0x21D); the Shift up/down it sends
     // around numpad and navigation keys while NumLock is on is reported either with this bit
-    // (0x22A, 0x236) or as an extended (E0) Shift, which a real Shift key never is.
+    // (0x22A, 0x236) or as an extended (E0) Shift, which a real Shift key never is. Injected
+    // keys (remappers, accessibility tools) may send an extended Shift on purpose: those count.
     private const uint FakeScanCodeBit = 0x200;
     private const uint LeftShiftScanCode = 0x2A;
     private const uint RightShiftScanCode = 0x36;
 
     /// <summary>A key event Windows generated itself, not a key the user pressed or released.</summary>
-    public static bool IsFake(uint scanCode, bool extended) =>
+    public static bool IsFake(uint scanCode, bool extended, bool injected) =>
         (scanCode & FakeScanCodeBit) != 0
-        || (extended && (scanCode & 0xFF) is LeftShiftScanCode or RightShiftScanCode);
+        || (extended && !injected && (scanCode & 0xFF) is LeftShiftScanCode or RightShiftScanCode);
 
     public static int VirtualKey(AxisLockKey key) => (int)(key switch
     {
