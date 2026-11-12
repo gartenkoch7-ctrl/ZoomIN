@@ -11,7 +11,7 @@ namespace ZoomIN.App.ViewModels;
 /// <summary>
 /// The card "Inseln" on the "Zoom" page (M19 B1): shown or hidden, the list of islands with live or
 /// still and remove, and "Bearbeiten starten". The edit mode and shortcuts change the islands too,
-/// so the page calls <see cref="Refresh"/> regularly; rows are rebuilt only when the islands changed.
+/// so the page lets it <see cref="Watch"/> them; rows are rebuilt only when the saved islands changed.
 /// </summary>
 public sealed partial class IslandsViewModel : ObservableObject
 {
@@ -22,6 +22,7 @@ public sealed partial class IslandsViewModel : ObservableObject
     private readonly ILocalizer _texts;
     private IslandSet? _shown;
     private bool _loading;
+    private Action? _watching;
 
     public IslandsViewModel(
         SettingsService settings, IslandController controller, IslandVisibility visibility, IMonitorProvider monitors, ILocalizer texts)
@@ -72,6 +73,26 @@ public sealed partial class IslandsViewModel : ObservableObject
 
     /// <summary>Starts the edit mode (or ends it if it runs).</summary>
     public void Edit() => _controller.ToggleEdit();
+
+    /// <summary>
+    /// Refreshes after every saved change (edit mode, shortcut, profile switch), through
+    /// <paramref name="onUiThread"/>: the model raises its events on the thread of the change.
+    /// </summary>
+    public void Watch(Action<Action> onUiThread)
+    {
+        Unwatch();
+        _watching = () => onUiThread(Refresh);
+        _model.Saved += _watching;
+    }
+
+    public void Unwatch()
+    {
+        if (_watching is not null)
+        {
+            _model.Saved -= _watching;
+            _watching = null;
+        }
+    }
 
     public void Remove(IslandRow row)
     {

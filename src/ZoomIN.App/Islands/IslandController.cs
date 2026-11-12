@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using ZoomIN.App.Settings;
 using ZoomIN.Core.Islands;
 using ZoomIN.Core.Localization;
-using ZoomIN.Core.Modes;
 using ZoomIN.Core.Monitors;
 using ZoomIN.Core.PointerFence;
 using ZoomIN.Core.Shell;
@@ -12,29 +11,28 @@ using ZoomIN.Core.Zoom;
 namespace ZoomIN.App.Islands;
 
 /// <summary>
-/// Carries out the island edit mode (M19 B1; showing and hiding: <see cref="IslandVisibility"/>). Ctrl+Alt+Shift+I starts the
-/// edit mode, which shows every monitor at 1× (temporary level), takes clicks, wheel, Esc and Del
-/// (<see cref="IIslandEditInput"/>), keeps a drag on its monitor (<see cref="IslandDragFence"/>)
-/// and feeds the <see cref="IslandEditor"/>. It ends with Esc, the shortcut again, 2 minutes
-/// without input or one of the safety ends of <see cref="IslandEditWatch"/>. Input steps run one at
-/// a time under a lock; the islands are saved with the profile.
+/// Carries out the island edit mode (M19 B1; showing and hiding: <see cref="IslandVisibility"/>).
+/// Ctrl+Alt+Shift+I starts it: it takes over 1×, the input and the drag filter
+/// (<see cref="IslandEditTakeover"/>) and feeds the <see cref="IslandEditor"/>. It ends with Esc,
+/// the shortcut again, 2 minutes without input or one of the safety ends of
+/// <see cref="IslandEditWatch"/>. Start and end run one at a time (<c>_lifecycle</c>), so an end
+/// never gives back what a new start just took; input steps run one at a time under <c>_gate</c>.
 /// </summary>
 public sealed class IslandController : IIslandEditInputHandler, IDisposable
 {
     /// <summary>Safety net (plan decision): the edit mode never keeps the clicks longer without input.</summary>
     public static readonly TimeSpan IdleLimit = TimeSpan.FromMinutes(2);
 
+    private readonly Lock _lifecycle = new();
     private readonly Lock _gate = new();
     private readonly IslandModel _model;
     private readonly ZoomModel _zoom;
     private readonly IMonitorProvider _monitors;
-    private readonly IIslandEditInput _input;
-    private readonly IPointerFence _fence;
+    private readonly IslandEditTakeover _takeover;
     private readonly TimeProvider _time;
     private readonly IslandReport _report;
     private readonly IslandEditWatch _watch;
     private readonly ILogger _log;
-    private readonly IslandDragFence _dragFence = new();
     private IslandEditSession? _edit;
 
     public IslandController(
@@ -44,8 +42,7 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
         _model = settings.Models.Islands;
         _zoom = settings.Models.Zoom;
         _monitors = monitors;
-        _input = input;
-        _fence = fence;
+        _takeover = new IslandEditTakeover(_zoom, monitors, input, fence);
         _time = time;
         _log = log;
         _report = new IslandReport(announcer, texts, log);
@@ -60,111 +57,26 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
     /// <summary>Ctrl+Alt+Shift+I or the settings page: starts the edit mode, or ends it if it runs.</summary>
     public void ToggleEdit()
     {
-        if (IsEditing)
+        lock (_lifecycle)
         {
-            End("shortcut");
-            return;
-        }
-
-        if (Refused() is { } reason)
-        {
-            _log.EditRefused(reason);
-            _report.Say(reason == "docked" ? "Islands.Docked" : "Islands.NoInput");
-            return;
-        }
-
-        IslandEditSession session;
-        try
-        {
-            // Levels first: their Changed must not find a running edit mode with a monitor still unset.
-            foreach (var monitor in _monitors.MonitorIds())
+            if (IsEditing)
             {
-                _zoom.Temporary.Set(TemporaryZoomOwner.IslandEdit, monitor, ZoomLimits.Min);
+                End("shortcut");
             }
-
-            var current = _model.Scene.Set;
-            var set = current.FitTo(_monitors.BoundsOf);
-            var editor = new IslandEditor(set, _monitors, monitor => IslandRules.StartLevel(_zoom, monitor));
-            session = new IslandEditSession(
-                editor, current, IslandOperation.StartEdit(set.Count), _time, IdleLimit, idle => EndLogged("idle", idle));
-            bool started;
-            lock (_gate)
+            else if (_takeover.Refused() is { } reason)
             {
-                _edit = session;
-                started = session.Publish(_model, save: false);
-                _edit = started ? session : null;
+                _log.EditRefused(reason);
+                _report.Say(reason == "docked" ? "Islands.Docked" : "Islands.NoInput");
             }
-
-            if (!started)
+            else
             {
-                // The islands changed from outside since they were read: start again with the shortcut.
-                session.Dispose();
-                IslandOperation.StopEdit(session.Operation, "changed", _model.Scene.Set.Count);
-                _zoom.Temporary.ReleaseAll(TemporaryZoomOwner.IslandEdit);
-                _log.EditRefused("changed");
-                return;
+                Start();
             }
-
-            _fence.AddFilter(_dragFence);
-            _input.Start(this);
         }
-        catch
-        {
-            // Never leave the monitors at 1× or the clicks taken after a failed start.
-            EndLogged("failed");
-            _zoom.Temporary.ReleaseAll(TemporaryZoomOwner.IslandEdit);
-            throw;
-        }
-
-        // Ended on another thread meanwhile (display change, zoom command): undo what came after its end.
-        if (!ReferenceEquals(Volatile.Read(ref _edit), session))
-        {
-            _input.Stop();
-            _fence.RemoveFilter(_dragFence);
-            return;
-        }
-
-        _log.EditStarted(session.Editor.Set.Count);
-        _report.Say("Islands.Edit.On");
     }
 
     /// <summary>Ends the edit mode if it runs; the islands are saved with the profile.</summary>
     public void End(string reason) => End(reason, only: null);
-
-    // only: end just this run (its idle timer), never a newer one.
-    private void End(string reason, IslandEditSession? only)
-    {
-        IslandEditSession? edit;
-        lock (_gate)
-        {
-            edit = _edit;
-            if (edit is null || (only is not null && !ReferenceEquals(edit, only)))
-            {
-                return;
-            }
-
-            _edit = null;
-
-            // A drag in progress is undone, not saved half way; a change from outside (profile switch,
-            // settings page) is kept instead of the edit mode's islands.
-            edit.Editor.CancelDrag();
-            _model.EndEdit(edit.Published, edit.Editor.Set);
-        }
-
-        // Clicks go back to applications first, whatever fails afterwards.
-        _input.Stop();
-        _dragFence.Confine(null);
-        try
-        {
-            _fence.RemoveFilter(_dragFence);
-            _zoom.Temporary.ReleaseAll(TemporaryZoomOwner.IslandEdit);
-        }
-        finally
-        {
-            edit.Dispose();
-            edit.Finish(reason, _model.Scene.Set.Count, _log, _report);
-        }
-    }
 
     public void Pressed(PhysicalPoint point) => Step(editor => editor.Press(point), "press");
 
@@ -183,17 +95,105 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
         End("exit");
     }
 
-    // Docked has no temporary 1× (the strip reserves screen space), so the pointer would not be where
-    // the islands are; without the hooks the clicks would reach the applications under the islands.
-    private string? Refused() =>
-        _zoom.Mode == ZoomMode.Docked ? "docked" : !_input.IsAvailable ? "no_input" : null;
+    // Under _lifecycle.
+    private void Start()
+    {
+        IslandEditSession? session = null;
+        var started = false;
+        var notStarted = "failed";
+        try
+        {
+            _takeover.ShowOneTimes();
+            var current = _model.Scene.Set;
+            var set = current.FitTo(_monitors.BoundsOf);
+            var editor = new IslandEditor(set, _monitors, monitor => IslandRules.StartLevel(_zoom, monitor));
+            session = new IslandEditSession(
+                editor, current, IslandOperation.StartEdit(set.Count), _time, IdleLimit, idle => EndLogged("idle", idle));
+            lock (_gate)
+            {
+                _edit = session;
+                started = session.Publish(_model, save: false);
+                _edit = started ? session : null;
+            }
+
+            if (started)
+            {
+                _takeover.TakeInput(this);
+                _log.EditStarted(set.Count);
+                _report.Say("Islands.Edit.On");
+                return;
+            }
+
+            // The islands changed from outside since they were read: start again with the shortcut.
+            notStarted = "changed";
+            _log.EditRefused(notStarted);
+        }
+        catch when (started)
+        {
+            End("failed");
+            throw;
+        }
+        finally
+        {
+            if (!started)
+            {
+                // Never leave the monitors at 1× after a start that did not happen.
+                session?.Dispose();
+                IslandOperation.StopEdit(session?.Operation, notStarted, _model.Scene.Set.Count);
+                _takeover.GiveBack();
+            }
+        }
+    }
+
+    // only: end just this run (its idle timer), never a newer one.
+    private void End(string reason, IslandEditSession? only)
+    {
+        lock (_lifecycle)
+        {
+            IslandEditSession? edit = null;
+            try
+            {
+                lock (_gate)
+                {
+                    edit = _edit;
+                    if (edit is null || (only is not null && !ReferenceEquals(edit, only)))
+                    {
+                        edit = null;
+                        return;
+                    }
+
+                    _edit = null;
+
+                    // A drag in progress is undone, not saved half way; a change from outside (profile
+                    // switch, settings page) is kept instead of the edit mode's islands.
+                    edit.Editor.CancelDrag();
+                    _model.EndEdit(edit.Published, edit.Editor.Set);
+                }
+            }
+            finally
+            {
+                if (edit is not null)
+                {
+                    try
+                    {
+                        _takeover.GiveBack();
+                    }
+                    finally
+                    {
+                        edit.Dispose();
+                        edit.Finish(reason, _model.Scene.Set.Count, _log, _report);
+                    }
+                }
+            }
+        }
+    }
 
     // One input of the edit mode (capture worker thread). Never throws: the worker goes on.
     private void Step(Func<IslandEditor, IslandEditOutcome> step, string name)
     {
         try
         {
-            string? end = null;
+            string? end;
             lock (_gate)
             {
                 if (_edit is not { } edit)
@@ -201,7 +201,7 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
                     return; // input queued before the end
                 }
 
-                end = edit.Step(step, _model, _dragFence, _report);
+                end = edit.Step(step, _model, _takeover.DragFence, _report);
             }
 
             if (end is not null)

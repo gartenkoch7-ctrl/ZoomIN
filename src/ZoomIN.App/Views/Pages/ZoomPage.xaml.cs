@@ -1,4 +1,3 @@
-using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
@@ -8,8 +7,6 @@ namespace ZoomIN.App.Views.Pages;
 
 public sealed partial class ZoomPage : Page
 {
-    private DispatcherQueueTimer? _timer;
-
     public ZoomPage()
     {
         InitializeComponent();
@@ -31,16 +28,13 @@ public sealed partial class ZoomPage : Page
         Islands = services.Create<IslandsViewModel>();
         Bindings.Update();
 
-        // The edit mode and the shortcuts change the islands too; render threads never call into the UI.
-        _timer = DispatcherQueue.CreateTimer();
-        _timer.Interval = TimeSpan.FromMilliseconds(500);
-        _timer.Tick += (_, _) => Islands.Refresh();
-        _timer.Start();
+        // The edit mode, the shortcuts and profile switches change the islands on other threads.
+        Islands.Watch(refresh => DispatcherQueue.TryEnqueue(() => refresh()));
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
-        _timer?.Stop();
+        Islands?.Unwatch();
         base.OnNavigatedFrom(e);
     }
 

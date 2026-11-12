@@ -41,7 +41,7 @@ internal sealed class IslandEditSession : IDisposable
     public IslandSet Published { get; private set; }
 
     /// <summary>What the render threads draw for the editor's state now.</summary>
-    public IslandEditView View() => new(Editor.Selected, Editor.RubberBand, StartedAt);
+    public IslandEditView View() => new(Editor.Selected, Editor.RubberBand, StartedAt, Editor.DragBounds is not null);
 
     /// <summary>Input came: the safety end waits again for the full idle time.</summary>
     public void Touch() => _idle.Change(_idleLimit, Timeout.InfiniteTimeSpan);
@@ -53,11 +53,13 @@ internal sealed class IslandEditSession : IDisposable
         var outcome = step(Editor);
         Touch();
         fence.Confine(Editor.DragBounds);
-        if (outcome is IslandEditOutcome.None or IslandEditOutcome.End)
+        if (outcome == IslandEditOutcome.End)
         {
-            return outcome == IslandEditOutcome.End ? "escape" : null;
+            return "escape";
         }
 
+        // Also after "None": the editor's islands or selection may still differ from what is drawn
+        // (a drag released where it began, a selection at the wheel's limit). Unchanged = no event.
         var saved = outcome is IslandEditOutcome.Created or IslandEditOutcome.Changed or IslandEditOutcome.LevelChanged or IslandEditOutcome.Deleted;
         if (!Publish(model, saved))
         {

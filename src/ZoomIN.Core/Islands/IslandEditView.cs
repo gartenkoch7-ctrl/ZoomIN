@@ -8,8 +8,9 @@ namespace ZoomIN.Core.Islands;
 /// </summary>
 /// <param name="Selected">Index of the selected island in the scene's set, or −1.</param>
 /// <param name="RubberBand">The rectangle being dragged out, or null.</param>
+/// <param name="Dragging">A drag runs (still images are not taken again for every step of it).</param>
 /// <param name="StartedAt">When the edit mode began (<see cref="System.Diagnostics.Stopwatch"/> ticks); the blink counts from it.</param>
-public sealed record IslandEditView(int Selected, PhysicalRect? RubberBand, long StartedAt)
+public sealed record IslandEditView(int Selected, PhysicalRect? RubberBand, long StartedAt, bool Dragging = false)
 {
     /// <summary>Half a blink period: the frames change colour this often.</summary>
     public const double BlinkSeconds = 0.5;

@@ -70,7 +70,7 @@ internal sealed class IslandLayer : IDisposable
         }
 
         var set = scene.Set;
-        _stills.Update(context, desktopTexture, set, monitorId, monitor, scene.Editing);
+        _stills.Update(context, desktopTexture, set, monitorId, monitor, scene.Edit?.Dragging == true);
         _time.Collect(context);
         _time.Begin(context);
         var frame = _phase == 1 ? s_blink : FrameColor.Default;

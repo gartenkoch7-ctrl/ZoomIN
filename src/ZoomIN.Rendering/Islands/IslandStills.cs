@@ -16,9 +16,10 @@ internal sealed class IslandStills : IDisposable
 {
     private readonly StillFrame[] _frames = new StillFrame[IslandRules.MaxCount];
 
-    // Per place: id of the island it holds (0 = free) and the source it was taken from.
+    // Per place: id of the island it holds (0 = free), the source and the take it was taken from.
     private readonly int[] _ids = new int[IslandRules.MaxCount];
     private readonly PhysicalRect[] _sources = new PhysicalRect[IslandRules.MaxCount];
+    private readonly int[] _takes = new int[IslandRules.MaxCount];
 
     public IslandStills(ID3D11Device device, ILogger log)
     {
@@ -32,9 +33,9 @@ internal sealed class IslandStills : IDisposable
     /// Takes missing images from <paramref name="desktop"/> (the monitor's captured desktop) and
     /// frees images of islands that are gone or live.
     /// </summary>
-    /// <param name="editing">The edit mode runs: a source that changes with every drag step is not
-    /// taken again each frame (a new texture per size); the island shows live until the drag is over.</param>
-    public void Update(ID3D11DeviceContext context, ID3D11Texture2D desktop, IslandSet set, string monitorId, PhysicalRect monitor, bool editing)
+    /// <param name="dragging">An edit drag runs: a source that changes with every step is not
+    /// taken again each frame (a new texture and log per size); the island shows live until the drag is over.</param>
+    public void Update(ID3D11DeviceContext context, ID3D11Texture2D desktop, IslandSet set, string monitorId, PhysicalRect monitor, bool dragging)
     {
         for (var place = 0; place < _ids.Length; place++)
         {
@@ -61,8 +62,8 @@ internal sealed class IslandStills : IDisposable
 
             // Four islands fill four places; a free one is always there. A failed capture (format)
             // counts as taken too, so it is neither retried nor logged every frame.
-            var taken = place >= 0 && _ids[place] == island.Id;
-            if (place < 0 || (taken && _sources[place] == island.Source) || (taken && editing && _frames[place].HasImage))
+            var taken = place >= 0 && _ids[place] == island.Id && _takes[place] == island.Take;
+            if (place < 0 || (taken && (_sources[place] == island.Source || dragging)))
             {
                 continue;
             }
@@ -71,6 +72,7 @@ internal sealed class IslandStills : IDisposable
             _frames[place].Capture(context, desktop, region);
             _ids[place] = island.Id;
             _sources[place] = island.Source;
+            _takes[place] = island.Take;
         }
     }
 

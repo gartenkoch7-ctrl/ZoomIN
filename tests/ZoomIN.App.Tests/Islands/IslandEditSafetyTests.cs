@@ -72,6 +72,7 @@ public sealed class IslandEditSafetyTests
         rig.Handler.Moved(new PhysicalPoint(inside.X + 300, inside.Y + 200));
 
         rig.Fence.Raise(Core.PointerFence.FenceTrigger.DisplayChange);
+        Assert.True(SpinWait.SpinUntil(() => !rig.Controller.IsEditing && !rig.Input.Capturing, TimeSpan.FromSeconds(5)));
 
         Assert.Equal(placed, rig.Islands.Scene.Set[0].TargetOrigin);
     }

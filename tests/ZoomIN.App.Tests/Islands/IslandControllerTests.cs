@@ -116,6 +116,7 @@ public sealed class IslandControllerTests
         rig.Controller.ToggleEdit();
 
         rig.Fence.Raise(trigger);
+        Assert.True(SpinWait.SpinUntil(() => rig.Level(TwoMonitors.Second) is null && !rig.Input.Capturing, TimeSpan.FromSeconds(5)));
 
         Assert.False(rig.Controller.IsEditing);
         Assert.Null(rig.Level(TwoMonitors.Second));

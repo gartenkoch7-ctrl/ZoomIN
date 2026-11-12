@@ -282,7 +282,9 @@ Plan: [b1-inseln.md](../plan/features/b1-inseln.md). Code: `Core/Islands/`, `Ren
 - **Standbild je Insel** (`IslandStills`, 4 Plätze à `StillFrame`): einmal kopiert, sobald die
   Insel als Standbild **zum ersten Mal gezeichnet** wird (nach dem Umschalten, nach einem Neustart
   oder Neuaufbau der Pipeline, z. B. Anzeigewechsel – das Bild wird nie gespeichert) und wenn ihre
-  Quelle sich ändert; frei, wenn sie weg oder wieder live ist. Wer bei 1× auf „Standbild“ schaltet,
+  Quelle sich ändert; frei, wenn sie weg oder wieder live ist. Jedes Umschalten auf „Standbild“ zählt `Island.Take` hoch und
+  erzwingt ein neues Bild, auch ohne gezeichneten Frame dazwischen. Freigegeben wird erst beim nächsten
+  Zeichnen auf dem Monitor. Wer bei 1× auf „Standbild“ schaltet,
   bekommt also das Bild beim nächsten Hineinzoomen. Während des Bearbeitens wird eine sich ändernde
   Quelle (Ecke ziehen) nicht je Schritt neu kopiert (neue Textur und Log je Frame); die Insel zeigt
   dann live und wird nach dem Ende neu aufgenommen. Eine fehlgeschlagene Kopie (Format) wird nicht

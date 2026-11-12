@@ -374,6 +374,11 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
   - Grenze: Klemmt der Zaun-Filter eine Bewegung am Monitorrand, versetzt er den Zeiger mit
     `SetCursorPos`, das kein Low-Level-Hook sieht. Die gezogene Insel folgt dann bis zum Loslassen
     nur bis zur letzten gesehenen Position; das Loslassen setzt sie richtig.
+  - Start und Ende laufen nacheinander (eigene Sperre), damit ein Ende nie zurückgibt, was ein neuer
+    Start gerade übernommen hat (`IslandEditTakeover`: 1×, Eingabe, Ziehfilter). Ein Ende wegen
+    Desktop- oder Anzeigewechsel läuft auf dem Thread-Pool, nicht im Wächter-Thread des Zauns: das
+    Zurückgeben des Filters kann diesen Thread beenden. Die Einstellungsseite aktualisiert die Liste
+    auf `IslandModel.Saved` statt mit einem Takt.
   - Die Sichtbarkeit (`Strg+Alt+I`) bleibt die des Nutzers: Beim Bearbeiten werden auch
     ausgeblendete Inseln gezeigt, danach sind sie wieder aus.
   - Inseln, die gerade nicht gezeichnet werden (Monitor fehlt, Bild ragt heraus), lassen sich nicht

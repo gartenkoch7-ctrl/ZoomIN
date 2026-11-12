@@ -53,9 +53,12 @@ internal sealed class IslandEditWatch : IDisposable
     // Win+L, UAC, Ctrl+Alt+Del or new monitors: never keep the clicks across them.
     private void OnFenceRecomputed(object? sender, FenceTrigger trigger)
     {
+        // On the thread pool, not on the fence's watcher thread: ending gives the drag filter back to the
+        // fence, which may retire (join) that very thread, and a start in progress may wait for the fence.
         if (trigger is FenceTrigger.DesktopSwitch or FenceTrigger.SessionUnlock or FenceTrigger.DisplayChange)
         {
-            Safely(() => _end(trigger.ToString()));
+            var reason = trigger.ToString();
+            _ = Task.Run(() => Safely(() => _end(reason)));
         }
     }
 

@@ -64,7 +64,8 @@ public sealed class IslandModel
     public void SetVisible(bool visible) => Publish(scene => scene with { Visible = visible }, save: true, commit: false);
 
     /// <summary>Live or still image for one island (settings page); false if it is gone.</summary>
-    public bool SetStill(int id, bool still) => Change(id, (set, index) => set.Replace(index, set[index] with { Still = still }));
+    public bool SetStill(int id, bool still) =>
+        Change(id, (set, index) => set.Replace(index, set[index] with { Still = still, Take = set[index].Take + (still ? 1 : 0) }));
 
     /// <summary>Removes one island (settings page); false if it is gone.</summary>
     public bool Remove(int id) => Change(id, (set, index) => set.RemoveAt(index));
@@ -108,7 +109,7 @@ public sealed class IslandModel
         var changed = false;
         Publish(scene =>
         {
-            var committed = _committed;
+            var committed = Fitted(_committed);
             var index = committed.IndexOf(id);
             changed = index >= 0;
             return changed ? scene with { Set = change(committed, index) } : scene;
