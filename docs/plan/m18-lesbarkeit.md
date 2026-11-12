@@ -83,7 +83,7 @@ E2 und E1 laufen in **einer** Spur hintereinander, weil beide diese Dateien änd
   - Profile aus 1.0 und mit M18-Feldern (`JsonProfileStoreTests`), Einstellungen mit Custom1–4 (`JsonSettingsStoreTests`)
 - [x] Benchmarks (`--job short --filter *`): alle 0 B
 - [ ] Sichtprüfung per KI-Debug-Schnappschuss, danach Nutzer
-- [ ] Release-Notes 1.2, Status hier und in der Roadmap; Merge nach `develop` nur mit Freigabe
+- [ ] Release-Notes 1.2 (offen); [x] Status hier und in der Roadmap; [x] Merge nach `develop` mit Freigabe (2026-11-12)
 
 ## Integration: Konflikte und Auflösung (2026-11-12)
 - `CenterMouse` aus Spur E entfällt. Es gilt M17s `MouseFollow` + `MouseMargin` (Schema 2). Caret-Form

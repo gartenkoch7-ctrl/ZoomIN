@@ -111,7 +111,7 @@ B1 gemergt, Merge-Review in sechs Runden, Integrationsbranch auf B1 vorgezogen).
         in `*Controller.cs` (`PointerMoverCallerTests`)
 - [ ] Test mit drei Monitoren (virtuelle Monitore, M3-Treiber) inkl. Lage 1 · 3 · 2
 - [ ] Sichtprüfung per KI-Debug-Schnappschuss, danach Nutzer
-- [ ] Release-Notes 1.3, Status hier und in der Roadmap; Merge nach `develop` nur mit Freigabe
+- [ ] Release-Notes 1.3 (offen); [x] Status hier und in der Roadmap; [x] Merge nach `develop` mit Freigabe (2026-11-12)
 
 ## Akzeptanzkriterien
 - [ ] Akzeptanzkriterien aller Feature-Pläne erfüllt
