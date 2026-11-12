@@ -58,6 +58,24 @@ public sealed class IslandEditCaptureEdgeTests
     }
 
     [Fact]
+    public void TouchpadWheel_PartsOfANotch_AddUpToWholeSteps()
+    {
+        var capture = new IslandEditCapture(_ => false);
+        var handler = new RecordingIslandHandler();
+        capture.Start(handler);
+
+        for (var i = 0; i < 6; i++)
+        {
+            Assert.True(capture.OnMouse(IslandEditCapture.Wheel, new(5, 5), 40u << 16)); // a third of a notch each
+        }
+
+        handler.WaitFor(2);
+        Thread.Sleep(50);
+        Assert.Equal(["wheel 1 5,5", "wheel 1 5,5"], handler.Calls);
+        capture.Stop();
+    }
+
+    [Fact]
     public void ExtraButtons_KeepTheirReleasesApart()
     {
         const uint First = 1u << 16;

@@ -44,6 +44,7 @@ public sealed class IslandEditCapture : IIslandEditInput
     private bool _deleteHeld;
     private uint _escapeAt;
     private uint _deleteAt;
+    private int _wheelRest;
     private volatile bool _hooksInstalled;
     private volatile bool _escapePass;
     private volatile bool _deletePass;
@@ -79,6 +80,7 @@ public sealed class IslandEditCapture : IIslandEditInput
         // Esc or Del held at the start belongs to whoever got its press: its repeats and release too.
         _escapePass = _isDown(EscapeKey);
         _deletePass = _isDown(DeleteKey);
+        _wheelRest = 0;
 
         // Low-level hooks report the physical buttons: with swapped buttons (left-handed) the primary
         // one, that drags, arrives as the right button.
@@ -108,7 +110,15 @@ public sealed class IslandEditCapture : IIslandEditInput
 
                 if (message == Wheel)
                 {
-                    session.Wheel((short)(mouseData >> 16) / WheelDelta, point);
+                    // Touchpads and fine wheels send parts of a notch: only whole notches change the level
+                    // (one step, one save, one announcement).
+                    _wheelRest += (short)(mouseData >> 16);
+                    var notches = (int)(_wheelRest / WheelDelta);
+                    if (notches != 0)
+                    {
+                        _wheelRest -= notches * (int)WheelDelta;
+                        session.Wheel(notches, point);
+                    }
                 }
 
                 return true;

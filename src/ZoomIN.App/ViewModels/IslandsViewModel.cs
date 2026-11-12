@@ -132,10 +132,31 @@ public sealed partial class IslandsViewModel : ObservableObject
             _log.IslandChangedOnPage(number, kind);
         }
 
-        if (changed && ReferenceEquals(before, _shown))
+        var after = _model.Committed;
+        if (changed && ReferenceEquals(before, _shown) && OnlyStillDiffers(before, after, row.Id))
         {
-            _shown = _model.Committed;
+            _shown = after;
         }
+    }
+
+    // Nothing else committed in between (another thread): otherwise the rows must be rebuilt.
+    private static bool OnlyStillDiffers(IslandSet before, IslandSet after, int id)
+    {
+        if (before.Count != after.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < before.Count; i++)
+        {
+            var expected = before[i].Id == id ? before[i] with { Still = after[i].Still, Take = after[i].Take } : before[i];
+            if (expected != after[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     // The number Windows shows for the display ("\\.\DISPLAY2" → 2, trailing digits as on the filter

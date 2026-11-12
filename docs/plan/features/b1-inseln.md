@@ -150,3 +150,32 @@ Details: [rendering-pipeline.md](../../kb/rendering-pipeline.md#inseln-m19-b1) u
 - **GPU** (RTX 3060 Ti, 1080p, 4×, 4 Inseln 600 × 160): +0,008–0,018 ms, ×10 ≈ 0,2 ms.
 - **Offen für den Menschen:** Sichtprüfung (Blinken, Griffe, gestricheltes Rechteck, Uhr läuft),
   Freigabetest Teams/OBS, Bildrate bei 4 Inseln am echten Monitor, Ansagen mit NVDA/Sprachausgabe.
+
+## Akzeptierte Abwägungen (Review-Schleife §9)
+Befunde der Reviews, die bewusst nicht als Code umgesetzt sind (Designvorschläge oder bekannte Grenzen):
+- **Standbild und Live-Daten:** Gewichte des intelligenten Invertierens und Bereiche des Filters pro
+  Fenster kommen vom Live-Bild, nicht vom Standbild.
+- **Standbild-Zeitpunkt:** aufgenommen beim ersten Zeichnen nach dem Umschalten, nach Neustart oder
+  Neuaufbau der Pipeline; freigegeben erst beim nächsten Zeichnen auf dem Monitor.
+- **Anzeigewechsel zur Laufzeit:** Inseln werden beim Start, beim Profilwechsel und beim Bearbeiten
+  eingepasst, nicht bei jedem Anzeigewechsel (kein Monitor-Ereignis in Core). Bis dahin ausgeblendet
+  bzw. für den kleineren Monitor eingepasst gezeichnet; gespeichert bleibt das Original.
+- **Verlorener Aktivitäts-Hook:** Entfernt Windows den Hook stillschweigend, merkt ZoomIN das nicht;
+  das 2-min-Sicherheitsnetz beendet den Modus.
+- **Zaun klemmt am Rand:** Die vom Zaun per `SetCursorPos` gesetzte Position sieht kein Low-Level-Hook;
+  die Insel folgt bis zum Loslassen nur bis zur letzten gesehenen Position.
+- **Halbe Pixel:** Bei Stufen wie 2,5× kann die Gegenkante beim Ecke-Ziehen einen halben Pixel springen.
+- **Esc beim Start losgelassen:** Ohne zweiten Blick (wie bei der Übersicht) kann das erste Esc an die
+  Anwendung gehen, wenn es genau beim Start losgelassen wurde.
+- **Architektur:** Zwei Sperren (Start/Ende, Eingabeschritt) statt eines einzigen Akteurs; Enden aus
+  fremden Threads laufen über den Thread-Pool. Ein Umbau zum Akteur wäre sauberer, ist aber kein Fehler.
+- **Kosten im Bearbeitungsmodus:** Jede Bewegung setzt den Leerlauf-Timer neu und vergleicht die
+  Szene; das gestrichelte Rechteck sind bis zu ~260 Rechteck-Draws. Nur während des Bearbeitens.
+- **Doppelter Code:** Monitornummer aus `\\.\DISPLAYn` (Zoom- und Filterseite), Punkt-Klemmen
+  (`IslandEditor`, `ModeGeometry`, `FenceGeometry`), Tasten-Wiederholungslücke (`OverviewKeyWatch`).
+  `PointerStyle` nutzt 1,01 noch als Zahl statt `ZoomLimits.UnzoomedUpTo`.
+- **P/Invoke in `Platform/Input`:** `GetSystemMetrics` wie die übrigen Hook-Klassen dort direkt über
+  CsWin32 (gelebte Ausnahme der Regel „nur in Interop/“).
+- **Monitorwechsel bei offener Einstellungsseite:** Die Zeilen aktualisieren Monitornummer und
+  „nicht angeschlossen“ erst bei der nächsten gespeicherten Änderung oder beim erneuten Öffnen.
+- **Dateigröße:** `IslandController.cs` liegt knapp unter 250 Zeilen.

@@ -132,7 +132,7 @@ internal sealed class IslandEditSession : IDisposable
     {
         var before = Published;
         Published = Editor.Set;
-        if (model.ShowEdit(before, Editor.Set, View(), save, save ? Editor.Set.WithUntouchedFrom(Fitted, Saved) : null))
+        if (model.ShowEdit(before, Editor.Set, View(), save, save ? Commit : null))
         {
             return true;
         }
