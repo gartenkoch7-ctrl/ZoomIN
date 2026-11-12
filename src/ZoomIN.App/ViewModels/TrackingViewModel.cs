@@ -176,36 +176,20 @@ public sealed partial class TrackingViewModel : ObservableObject
         }
     }
 
-    // A ComboBox reports index −1 (no selection) while it unloads: not a choice, nothing to apply.
-    partial void OnCaretShapeIndexChanged(int value)
-    {
-        if (value >= 0)
-        {
-            Apply();
-        }
-    }
+    partial void OnCaretShapeIndexChanged(int value) => ApplyChoice(value);
 
     partial void OnCaretColorChanged(string value) => Apply();
 
-    partial void OnFocusFrameShowIndexChanged(int value)
-    {
-        if (value >= 0)
-        {
-            Apply();
-        }
-    }
+    partial void OnFocusFrameShowIndexChanged(int value) => ApplyChoice(value);
 
-    partial void OnCaretShowIndexChanged(int value)
-    {
-        if (value >= 0)
-        {
-            Apply();
-        }
-    }
+    partial void OnCaretShowIndexChanged(int value) => ApplyChoice(value);
 
-    partial void OnCaretThicknessIndexChanged(int value)
+    partial void OnCaretThicknessIndexChanged(int value) => ApplyChoice(value);
+
+    // A ComboBox reports index −1 (no selection) while it unloads: not a choice, nothing to apply.
+    private void ApplyChoice(int index)
     {
-        if (value >= 0)
+        if (index >= 0)
         {
             Apply();
         }

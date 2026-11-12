@@ -2,7 +2,6 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
-using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Tracking;
@@ -16,14 +15,15 @@ namespace ZoomIN.Core.Settings;
 /// <summary>
 /// Persisted user settings (ADR-0004). M2–M4 keep only what zoom and input need; M7 adds the
 /// rest and the settings UI. Bump <see cref="CurrentSchemaVersion"/> and add a migration on
-/// breaking changes; new optional properties with defaults need no migration.
+/// breaking changes; new optional properties with defaults need no migration. Shortcuts and the
+/// other input settings shared by all profiles are in the base record <see cref="InputSettings"/>.
 /// </summary>
 /// <remarks>
 /// Properties use <c>set</c>, not <c>init</c>: the System.Text.Json source generator assigns
 /// default(T) to missing init-only properties, which would wipe the defaults below when an older
 /// file lacks a newer property (found in M3). Treat instances as immutable and use <c>with</c>.
 /// </remarks>
-public sealed record AppSettings
+public sealed record AppSettings : InputSettings
 {
     /// <summary>2 (M17): mouse follow mode instead of CenterMouse, see <see cref="SettingsMigration"/>.</summary>
     public const int CurrentSchemaVersion = 2;
@@ -238,40 +238,4 @@ public sealed record AppSettings
 
     /// <summary>Zoom while moving or resizing windows (G1): lift to 1× by default, for both.</summary>
     public WindowDragOptions WindowDrag { get; set; } = WindowDragOptions.Default;
-
-    // --- Input (shared by all profiles) ---
-    public HotkeyGesture ToggleHotkey { get; set; } = HotkeyGesture.ToggleZoom;
-
-    public HotkeyGesture ZoomInHotkey { get; set; } = HotkeyGesture.ZoomIn;
-
-    public HotkeyGesture ZoomOutHotkey { get; set; } = HotkeyGesture.ZoomOut;
-
-    public HotkeyGesture FullscreenHotkey { get; set; } = HotkeyGesture.Fullscreen;
-
-    public HotkeyGesture LensHotkey { get; set; } = HotkeyGesture.Lens;
-
-    public HotkeyGesture DockedHotkey { get; set; } = HotkeyGesture.Docked;
-
-    public HotkeyGesture FilterHotkey { get; set; } = HotkeyGesture.ToggleFilter;
-
-    public HotkeyGesture NextFilterHotkey { get; set; } = HotkeyGesture.NextFilter;
-
-    public HotkeyGesture LocateHotkey { get; set; } = HotkeyGesture.Locate;
-
-    public HotkeyGesture CrosshairHotkey { get; set; } = HotkeyGesture.ToggleCrosshair;
-
-    public HotkeyGesture TrackingHotkey { get; set; } = HotkeyGesture.ToggleTracking;
-
-    public HotkeyGesture ProfileHotkey { get; set; } = HotkeyGesture.NextProfile;
-
-    /// <summary>Filter for the active window on/off (ADR-0020); unassigned from the start.</summary>
-    public HotkeyGesture WindowFilterHotkey { get; set; }
-
-    /// <summary>Overview at the push of a key (B2, M17).</summary>
-    public HotkeyGesture OverviewHotkey { get; set; } = HotkeyGesture.Overview;
-
-    public HotkeyModifiers WheelModifiers { get; set; } = HotkeyModifiers.Control;
-
-    /// <summary>Key that shows highlights set to "only while held" (E1); shared by all profiles.</summary>
-    public MarkerHoldKey MarkerHoldKey { get; set; }
 }
