@@ -69,7 +69,10 @@ internal sealed class IslandStills : IDisposable
             }
 
             var region = new PhysicalRect(island.Source.X - monitor.X, island.Source.Y - monitor.Y, island.Source.Width, island.Source.Height);
-            _frames[place].Capture(context, desktop, region);
+            if (!_frames[place].Capture(context, desktop, region))
+            {
+                _frames[place].Release(); // never an old image mapped as if it showed the new source: live instead
+            }
             _ids[place] = island.Id;
             _sources[place] = island.Source;
             _takes[place] = island.Take;

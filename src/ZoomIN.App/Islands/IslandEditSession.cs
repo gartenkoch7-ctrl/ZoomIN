@@ -22,6 +22,7 @@ internal sealed class IslandEditSession : IDisposable
         Editor = editor;
         Operation = operation;
         Published = published;
+        Original = published;
         _time = time;
         StartedAt = time.GetTimestamp();
         _idleLimit = idleLimit;
@@ -40,6 +41,15 @@ internal sealed class IslandEditSession : IDisposable
 
     /// <summary>The set this edit mode last gave the model; any other set there came from outside.</summary>
     public IslandSet Published { get; private set; }
+
+    /// <summary>The islands before the run; kept if the run changed nothing (only fitting them is no change to save).</summary>
+    public IslandSet Original { get; }
+
+    /// <summary>A step finished a change (created, moved, resized, level, deleted).</summary>
+    public bool HasChanges { get; private set; }
+
+    /// <summary>What the run leaves behind: its islands, or the ones before it if it changed nothing.</summary>
+    public IslandSet Result => HasChanges ? Editor.Set : Original;
 
     /// <summary>What the render threads draw for the editor's state now.</summary>
     public IslandEditView View() => new(Editor.Selected, Editor.RubberBand, StartedAt, Editor.DragBounds is not null);
@@ -66,6 +76,7 @@ internal sealed class IslandEditSession : IDisposable
         // Also after "None": the editor's islands or selection may still differ from what is drawn
         // (a drag released where it began, a selection at the wheel's limit). Unchanged = no event.
         var saved = outcome is IslandEditOutcome.Created or IslandEditOutcome.Changed or IslandEditOutcome.LevelChanged or IslandEditOutcome.Deleted;
+        HasChanges |= saved;
         if (!Publish(model, saved))
         {
             return "changed";

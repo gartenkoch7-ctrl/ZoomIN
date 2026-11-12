@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.Logging;
 using ZoomIN.App.Islands;
 using ZoomIN.App.Settings;
 using ZoomIN.Core.Islands;
@@ -20,18 +21,21 @@ public sealed partial class IslandsViewModel : ObservableObject
     private readonly IslandVisibility _visibility;
     private readonly IMonitorProvider _monitors;
     private readonly ILocalizer _texts;
+    private readonly ILogger _log;
     private IslandSet? _shown;
     private bool _loading;
     private Action? _watching;
 
     public IslandsViewModel(
-        SettingsService settings, IslandController controller, IslandVisibility visibility, IMonitorProvider monitors, ILocalizer texts)
+        SettingsService settings, IslandController controller, IslandVisibility visibility, IMonitorProvider monitors, ILocalizer texts,
+        ILogger<IslandsViewModel> log)
     {
         _model = settings.Models.Islands;
         _controller = controller;
         _visibility = visibility;
         _monitors = monitors;
         _texts = texts;
+        _log = log;
         Refresh();
     }
 
@@ -97,7 +101,12 @@ public sealed partial class IslandsViewModel : ObservableObject
     public void Remove(IslandRow row)
     {
         ArgumentNullException.ThrowIfNull(row);
-        _model.Remove(row.Id);
+        if (_model.Remove(row.Id))
+        {
+            var number = Rows.IndexOf(row) + 1;
+            _log.IslandChangedOnPage(number, "removed");
+        }
+
         Refresh();
     }
 
@@ -114,7 +123,15 @@ public sealed partial class IslandsViewModel : ObservableObject
     private void OnStillChanged(IslandRow row)
     {
         var before = _model.Committed;
-        if (_model.SetStill(row.Id, row.Still) && ReferenceEquals(before, _shown))
+        var changed = _model.SetStill(row.Id, row.Still);
+        if (changed)
+        {
+            var number = Rows.IndexOf(row) + 1;
+            var kind = row.Still ? "still" : "live";
+            _log.IslandChangedOnPage(number, kind);
+        }
+
+        if (changed && ReferenceEquals(before, _shown))
         {
             _shown = _model.Committed;
         }

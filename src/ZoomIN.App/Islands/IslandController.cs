@@ -169,7 +169,7 @@ public sealed class IslandController : IDisposable
                     // A drag in progress is undone, not saved half way; a change from outside (profile
                     // switch, settings page) is kept instead of the edit mode's islands.
                     edit.Editor.CancelDrag();
-                    _model.EndEdit(edit.Published, edit.Editor.Set);
+                    _model.EndEdit(edit.Published, edit.Result);
                 }
             }
             finally

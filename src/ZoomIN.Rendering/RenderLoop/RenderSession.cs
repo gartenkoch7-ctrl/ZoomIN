@@ -188,7 +188,7 @@ internal sealed class RenderSession : IDisposable
         _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions, _alphas);
 
         // Islands (M19 B1) above the zoom and its highlights, below the overview frame and the pointer.
-        if (!request.OverlayOnly)
+        if (request.Islands is not null)
         {
             _islands.Draw(_gpu.Context, _duplicator.ShaderResource, _duplicator.Texture, _swapchain.RenderTarget, _monitor.DeviceName,
                 _monitor.Bounds, request.Islands, request.Effects, weights);

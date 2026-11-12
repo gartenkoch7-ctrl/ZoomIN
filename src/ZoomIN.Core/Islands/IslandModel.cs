@@ -41,13 +41,13 @@ public sealed class IslandModel
 
     /// <summary>
     /// The islands of a newly applied profile, with new ids (ids are never reused while ZoomIN runs:
-    /// still images and the settings rows belong to them). Ends nothing; a running edit mode sees the
-    /// change from outside and ends itself.
+    /// still images and the settings rows belong to them). The view of a running edit mode goes at once (it
+    /// belongs to the old islands); the edit mode sees the change from outside and ends itself.
     /// </summary>
     public void Replace(IslandSet set, bool visible)
     {
         ArgumentNullException.ThrowIfNull(set);
-        Publish(scene => scene with { Set = Fitted(set.Renumbered(scene.Set.NextId)), Visible = visible }, save: true);
+        Publish(scene => scene with { Set = Fitted(set.Renumbered(scene.Set.NextId)), Visible = visible, Edit = null }, save: true);
     }
 
     /// <summary>
@@ -103,7 +103,7 @@ public sealed class IslandModel
     }
 
     // Built on the committed islands, never on a drag in progress (which would be saved with it);
-    // a running edit mode sees the change from outside and ends without overwriting it.
+    // a running edit mode loses its view at once and ends without overwriting the change.
     private bool Change(int id, Func<IslandSet, int, IslandSet> change)
     {
         var changed = false;
@@ -112,7 +112,7 @@ public sealed class IslandModel
             var committed = Fitted(_committed);
             var index = committed.IndexOf(id);
             changed = index >= 0;
-            return changed ? scene with { Set = change(committed, index) } : scene;
+            return changed ? scene with { Set = change(committed, index), Edit = null } : scene;
         }, save: true);
         return changed;
     }

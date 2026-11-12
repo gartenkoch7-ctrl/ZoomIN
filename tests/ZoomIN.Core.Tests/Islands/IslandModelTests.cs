@@ -102,6 +102,17 @@ public sealed class IslandModelTests
     }
 
     [Fact]
+    public void ChangeFromOutside_DropsTheEditView_ItBelongsToTheOldIslands()
+    {
+        var model = new IslandModel(One(), visible: true);
+        model.ShowEdit(model.Scene.Set, model.Scene.Set, new IslandEditView(0, null, 0), save: false);
+
+        model.Replace(IslandSet.Empty, visible: true);
+
+        Assert.False(model.Scene.Editing);
+    }
+
+    [Fact]
     public void Replace_AfterFitTo_FitsTheProfilesIslands()
     {
         var model = new IslandModel(IslandSet.Empty, visible: true);

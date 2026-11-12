@@ -10,6 +10,9 @@ public sealed partial class ZoomPage : Page
     public ZoomPage()
     {
         InitializeComponent();
+
+        // Closing the settings window ends the page without a navigation.
+        Unloaded += (_, _) => Islands?.Unwatch();
     }
 
     public ZoomViewModel? Vm { get; private set; }

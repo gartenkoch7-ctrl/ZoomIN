@@ -28,6 +28,9 @@ internal static partial class IslandLog
     [LoggerMessage(EventId = 1746, Level = LogLevel.Information, Message = "Island removed ({Count} left)")]
     public static partial void IslandRemoved(this ILogger logger, int count);
 
+    [LoggerMessage(EventId = 1748, Level = LogLevel.Information, Message = "Island {Index} changed on the settings page: {Change}")]
+    public static partial void IslandChangedOnPage(this ILogger logger, int index, string change);
+
     [LoggerMessage(EventId = 1747, Level = LogLevel.Error, Message = "Island edit step {Step} failed")]
     public static partial void EditFailed(this ILogger logger, Exception exception, string step);
 }
