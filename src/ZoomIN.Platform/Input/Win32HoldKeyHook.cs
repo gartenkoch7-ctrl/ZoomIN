@@ -138,6 +138,7 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
     // the key state is covered by the second-check rule below.
     private void CheckKeyState()
     {
+        var logMissed = false;
         try
         {
             lock (_state)
@@ -161,8 +162,9 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
 
                     if (!_missedLogged)
                     {
+                        // Logged after the lock: the hook callback waits on it for every key.
                         _missedLogged = true;
-                        _log.HoldKeyHookMissedPress();
+                        logMissed = true;
                     }
 
                     _down = true;
@@ -178,6 +180,11 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
                     _down = false;
                     handler.HoldKeyUp();
                 }
+            }
+
+            if (logMissed)
+            {
+                _log.HoldKeyHookMissedPress();
             }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)

@@ -116,7 +116,8 @@ public sealed class EffectsModel
     public void UpdateCursor(Func<PointerStyle, PointerStyle> change)
     {
         ArgumentNullException.ThrowIfNull(change);
-        Update(e => e with { Cursor = change(e.Cursor).Normalized() });
+        // An equal style is no change: the same effects, so nothing is published or saved.
+        Update(e => change(e.Cursor).Normalized() is var next && next == e.Cursor ? e : e with { Cursor = next });
     }
 
     /// <summary>Strg+Alt+K: crosshair on/off.</summary>

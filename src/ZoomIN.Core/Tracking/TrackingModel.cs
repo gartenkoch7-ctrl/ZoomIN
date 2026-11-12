@@ -40,6 +40,12 @@ public sealed class TrackingModel
         {
             current = Volatile.Read(ref _options);
             next = change(current);
+
+            // Equal options (e.g. a ComboBox reporting −1 while unloading) are no change: no event, no save.
+            if (next == current)
+            {
+                return;
+            }
         }
         while (Interlocked.CompareExchange(ref _options, next, current) != current);
 
@@ -47,16 +53,5 @@ public sealed class TrackingModel
     }
 
     /// <summary>Strg+Alt+T.</summary>
-    public void ToggleEnabled()
-    {
-        TrackingOptions current, next;
-        do
-        {
-            current = Volatile.Read(ref _options);
-            next = current with { Enabled = !current.Enabled };
-        }
-        while (Interlocked.CompareExchange(ref _options, next, current) != current);
-
-        Changed?.Invoke();
-    }
+    public void ToggleEnabled() => UpdateOptions(o => o with { Enabled = !o.Enabled });
 }

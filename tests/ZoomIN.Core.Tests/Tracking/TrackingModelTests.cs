@@ -21,6 +21,18 @@ public sealed class TrackingModelTests
     }
 
     [Fact]
+    public void UpdateOptions_WithEqualOptions_RaisesNothing()
+    {
+        var model = new TrackingModel(TrackingOptions.Default);
+        var changes = 0;
+        model.Changed += () => changes++;
+
+        model.UpdateOptions(o => o with { CaretShow = o.CaretShow });
+
+        Assert.Equal(0, changes);
+    }
+
+    [Fact]
     public void ConcurrentUpdates_AreAllKept()
     {
         var model = new TrackingModel(TrackingOptions.Default with { PanSeconds = 0 });

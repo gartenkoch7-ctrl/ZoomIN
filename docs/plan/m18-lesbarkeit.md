@@ -138,6 +138,11 @@ E2 und E1 laufen in **einer** Spur hintereinander, weil beide diese Dateien änd
   Überblendung. Die Überblendung zu 0 erzwingt dann noch etwa 100 ms Frames, die nichts zeigen.
 - **Ungenutzte API:** `ReplacementTable.Any` und `EffectsModel.SetEnhancement` haben keinen
   Aufrufer im Produktivcode.
+- **Haltetaste wird gerade gehalten:** Stoppt der Hook in diesem Moment (Bedingung oder Tracking
+  geändert), zählt das als Ende des Haltens. Ein Strg-Tippen in den 500 ms danach kann verschluckt
+  werden.
+- **Aufräumen:** `CustomSchemes.Hex` und `SecureSettingsSanitizer.Color` reichen nur an
+  `RgbColor.NormalizedHex` weiter.
 - Das Review lief, bis eine Runde keine Codeänderung mehr ergab.
 
 ## Offen für Menschen

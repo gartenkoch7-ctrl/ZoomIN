@@ -81,11 +81,18 @@ public sealed class MarkerActivity : IHoldKeyHandler
         {
             // Already used up: the coming release must not count again for a separate tap. If the
             // release came meanwhile (key state timer: the hold no longer runs), its end is used up
-            // instead and cleared, so no Consumed is left behind for a later hold. Only if nothing
-            // else wrote in between (compare-exchange).
-            var endedBefore = Volatile.Read(ref _holdEnded);
-            var released = Volatile.Read(ref _holdSince) == 0;
-            Interlocked.CompareExchange(ref _holdEnded, released ? 0 : Consumed, endedBefore);
+            // instead and cleared, so no Consumed is left behind for a later hold.
+            if (Volatile.Read(ref _holdSince) == 0)
+            {
+                Interlocked.Exchange(ref _holdEnded, 0);
+            }
+            else
+            {
+                // A release after this point takes the Consumed marker in HoldKeyUp and records no end.
+                var endedBefore = Volatile.Read(ref _holdEnded);
+                Interlocked.CompareExchange(ref _holdEnded, Consumed, endedBefore);
+            }
+
             return true;
         }
 
