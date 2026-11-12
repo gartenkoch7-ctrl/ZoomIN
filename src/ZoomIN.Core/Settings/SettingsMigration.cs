@@ -38,7 +38,8 @@ public static class SettingsMigration
     /// The freeze shortcuts (G2, M19) came without a schema change, so a file without them gets their
     /// defaults: if the user already gave such a gesture to an older action, the new shortcut stays
     /// unassigned instead of failing as "unavailable" (as with the overview in schema 2). Applied at
-    /// every load, and only to the factory gestures: one the user recorded is never touched.
+    /// every load, and only to the factory gestures; another gesture the user recorded is never touched
+    /// (one that equals the factory gesture cannot be told apart and gives way like it).
     /// </summary>
     public static AppSettings WithoutFreezeClashes(AppSettings settings)
     {
