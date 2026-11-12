@@ -121,6 +121,8 @@ Schlüssel `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Accessibility\ATs\
   Ereignis 811 mit Benachrichtigung (4) = Sperre, (5) = Entsperren.
 
 ## Offen (Spike mit ZoomIN selbst)
+Plan zum Abschluss (Autostart, Kern-Modus, Prüf-Logs, Startzeit): [M10 „Abschluss“](../plan/m10-sichere-bildschirme.md#abschluss-grilling-2026-11-12), [ADR-0030](../adr/0030-autostart-ueber-erleichterte-bedienung.md).
+
 - Start belegt (dev.108, 12:53): Strg+Alt+Entf und Win+L starten ZoomIN als SYSTEM mit den
   Benutzereinstellungen. Sichtprüfung dev.109 (12:57, Nutzer): Strg+Alt+Entf und Sperre
   vergrößert, erstes Bild nach 1402–1423 ms.

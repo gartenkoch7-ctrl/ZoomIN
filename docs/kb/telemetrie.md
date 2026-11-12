@@ -69,11 +69,11 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 ## EventId-Bereiche
 | Bereich | Projekt |
 |---|---|
-| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1500 Maus folgen, 1520 Übersicht, 1540 Fenster-Verschieben, 1600 Schärfe/Fett – reserviert, noch ungenutzt, 1620 eigene Farbschemata, 1640–1659 Markierungen, 1720 eingefrorene Monitore und Monitorwechsel, 1740–1759 Inseln, 1760 Maus-Puffer und Achsensperre) |
-| 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe, 2900 Fenster-Verschieben, 2920 Übersicht, 2940 Zeigerzaun und Zeiger versetzen, 2950–2959 Haltetaste, 2960 Haltetaste der Achsensperre) |
+| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm (1120 Autostart, 1140 Kern-Modus, 1150 Prüfung – M10-Abschluss), 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1500 Maus folgen, 1520 Übersicht, 1540 Fenster-Verschieben, 1600 Schärfe/Fett – reserviert, noch ungenutzt, 1620 eigene Farbschemata, 1640–1659 Markierungen, 1720 eingefrorene Monitore und Monitorwechsel, 1740–1759 Inseln, 1760 Maus-Puffer und Achsensperre) |
+| 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm (2320 Autostart, 2340 Prüfung – M10-Abschluss), 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe, 2900 Fenster-Verschieben, 2920 Übersicht, 2940 Zeigerzaun und Zeiger versetzen, 2950–2959 Haltetaste, 2960 Haltetaste der Achsensperre) |
 | 3000–3999 | Rendering (3100 Übersicht, 3200 Schärfe/Fett, 3220 eigene Farbschemata, 3240–3259 Markierungen, 3300 Standbild, 3310 eingefrorene Monitore, 3320–3339 Inseln – reserviert, noch ungenutzt: der Render-Loop loggt nicht, Standbilder melden 3300/3301) |
 | 4000–4999 | Watchdog |
-| 5000–5999 | Setup |
+| 5000–5999 | Setup (5040 Autostart – M10-Abschluss) |
 | 6000–6999 | Core (noch keine) |
 | 9000–9099 | Tests |
 
