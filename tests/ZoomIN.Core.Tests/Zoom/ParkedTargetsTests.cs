@@ -64,6 +64,39 @@ public sealed class ParkedTargetsTests
         Assert.Equal(1, model.TargetFor("L"));
     }
 
+    [Fact]
+    public void SharedLevel_ThawsAtTheLevelTheOthersHaveNow_AndADisplayChangeThawsAt1x()
+    {
+        string[] three = ["A", "B", "C"];
+        var model = new ZoomModel(new ZoomLevels(), ZoomMode.Fullscreen, false, 0);
+        model.Toggle("A", three);
+        model.Frozen.Freeze(Frozen("A", model.TargetFor("A")));
+        model.Step(3, "B", three);
+        var now = model.TargetFor("B");
+
+        model.Frozen.UnfreezeAll();
+        Assert.Equal(now, model.TargetFor("A"));
+
+        model.Frozen.Freeze(Frozen("A", now));
+        model.Frozen.Unfreeze(_ => true, restoreLevel: false);
+        Assert.Equal(1, model.TargetFor("A"));
+    }
+
+    [Fact]
+    public void AThawedMonitor_HasItsTarget_BeforeTheThawIsVisible()
+    {
+        var model = new ZoomModel(new ZoomLevels(), ZoomMode.Fullscreen, true, 0);
+        model.Step(4, "R", s_all);
+        var level = model.TargetFor("R");
+        model.Frozen.Freeze(Frozen("R", level));
+        var seen = 0.0;
+        model.Frozen.Changed += () => seen = model.Frozen.IsFrozen("R") ? -1 : model.TargetFor("R");
+
+        model.Frozen.UnfreezeAll();
+
+        Assert.Equal(level, seen);
+    }
+
     private static FrozenMonitor Frozen(string id, double level) =>
         new(id, new PhysicalRect(0, 0, 10, 10), level, ZoomMode.Fullscreen, LensSize.Default, DockLayout.Default, false, RgbColor.Cyan);
 }

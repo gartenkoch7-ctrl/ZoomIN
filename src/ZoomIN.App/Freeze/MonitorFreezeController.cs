@@ -191,7 +191,8 @@ public sealed class MonitorFreezeController : IDisposable
     // Unfreezes first, then frees the area: the monitor follows the pointer again before it can get there.
     private void Lift(Func<FrozenMonitor, bool> which, string reason, bool announce = true)
     {
-        var removed = _frozen.Unfreeze(which);
+        // After a display change the monitor is gone or changed: it starts at 1× rather than at its old level.
+        var removed = _frozen.Unfreeze(which, restoreLevel: reason != "display_change");
         if (removed.Count == 0)
         {
             return;

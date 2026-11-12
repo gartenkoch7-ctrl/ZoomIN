@@ -39,14 +39,28 @@ public sealed class MonitorFreeze
     /// <summary>Unfreezes every monitor; returns the ones that were frozen.</summary>
     public IReadOnlyList<FrozenMonitor> UnfreezeAll() => Unfreeze(_ => true);
 
+    /// <summary>
+    /// Called under this lock with the monitors about to thaw and whether their level may come back,
+    /// before the new state is published: the zoom model restores their targets first, so a render
+    /// thread never sees a thawed monitor without its target (no dip to 1×).
+    /// </summary>
+    internal Action<IReadOnlyList<FrozenMonitor>, bool>? Thawing { get; set; }
+
     /// <summary>Unfreezes the monitors <paramref name="which"/> selects; returns them.</summary>
-    public IReadOnlyList<FrozenMonitor> Unfreeze(Func<FrozenMonitor, bool> which)
+    /// <param name="restoreLevel">False if the monitor is gone or changed (display change): it starts at 1×.</param>
+    public IReadOnlyList<FrozenMonitor> Unfreeze(Func<FrozenMonitor, bool> which, bool restoreLevel = true)
     {
         ArgumentNullException.ThrowIfNull(which);
         IReadOnlyList<FrozenMonitor> removed;
         lock (_gate)
         {
-            Volatile.Write(ref _state, _state.Without(which, out removed));
+            var next = _state.Without(which, out removed);
+            if (removed.Count > 0)
+            {
+                Thawing?.Invoke(removed, restoreLevel);
+            }
+
+            Volatile.Write(ref _state, next);
         }
 
         if (removed.Count > 0)

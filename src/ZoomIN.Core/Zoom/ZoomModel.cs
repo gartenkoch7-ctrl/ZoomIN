@@ -23,7 +23,7 @@ public sealed class ZoomModel
     private double _animationSeconds;
     private int _mode;
     private bool _perMonitor;
-    private readonly ParkedTargets _parked = new(); // under _gate: targets of frozen monitors (G2)
+    private readonly ParkedTargets _parked; // targets of frozen monitors (G2)
 
     public ZoomModel(ZoomLevels levels, ZoomMode mode, bool perMonitor, double animationSeconds)
     {
@@ -34,7 +34,8 @@ public sealed class ZoomModel
         _lens = LensSize.Default;
         _dock = DockLayout.Default;
         Temporary = new TemporaryZoom(_gate, () => Mode == ZoomMode.Docked);
-        Frozen.Changed += OnFrozenChanged;
+        _parked = new ParkedTargets(_gate, Frozen, () => Volatile.Read(ref _targets), targets => Volatile.Write(ref _targets, targets),
+            () => (Mode, DockedMonitor, _perMonitor), () => Changed?.Invoke());
     }
 
     /// <summary>Raised after every change, on the thread that caused it. Handlers must be fast.</summary>
@@ -232,18 +233,6 @@ public sealed class ZoomModel
         }
 
         Raise(cleared);
-    }
-
-    // A frozen monitor's target is parked, so commands and IsOn see only the free monitors; it comes
-    // back on thaw (see ParkedTargets). IsOn may change: tray, saving and the docked reservation listen.
-    private void OnFrozenChanged()
-    {
-        lock (_gate)
-        {
-            Volatile.Write(ref _targets, _parked.Update(Volatile.Read(ref _targets), Frozen.State, Mode, DockedMonitor));
-        }
-
-        Changed?.Invoke();
     }
 
     // Outside the lock: handlers may read the model.
