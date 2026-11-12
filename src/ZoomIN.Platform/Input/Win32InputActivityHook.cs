@@ -131,15 +131,11 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
         }
 
         _ctrlAlone = false;
-        if (!IsModifier(key) && !IsDown(VIRTUAL_KEY.VK_CONTROL) && !IsDown(VIRTUAL_KEY.VK_MENU) && !WindowsDown())
+        if (!ModifierKeys.Is(key) && !IsDown(VIRTUAL_KEY.VK_CONTROL) && !IsDown(VIRTUAL_KEY.VK_MENU) && !WindowsDown())
         {
             Forward(Signal.Typed);
         }
     }
-
-    private static bool IsModifier(VIRTUAL_KEY key) => key is VIRTUAL_KEY.VK_SHIFT or VIRTUAL_KEY.VK_LSHIFT or VIRTUAL_KEY.VK_RSHIFT
-        or VIRTUAL_KEY.VK_MENU or VIRTUAL_KEY.VK_LMENU or VIRTUAL_KEY.VK_RMENU or VIRTUAL_KEY.VK_LWIN or VIRTUAL_KEY.VK_RWIN
-        or VIRTUAL_KEY.VK_CAPITAL;
 
     private static bool AnyOtherModifier() => IsDown(VIRTUAL_KEY.VK_MENU) || IsDown(VIRTUAL_KEY.VK_SHIFT) || WindowsDown();
 

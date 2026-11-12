@@ -124,6 +124,15 @@ Monitorrand begrenzt), hält das, solange der Zoom dorthin gleitet; danach gilt 
   der Ansicht vor der Übersicht). Die Anfrage kommt **vor** dem Freigeben der 1×, damit das Gleiten
   schon zum Punkt geht. `OverviewPlacementTests` prüft, dass der Anker dann genau den Rahmen zeigt.
 
+## Einstellungen und Dateigröße (M18)
+- `AppSettings` erbt die gemeinsamen Eingabe-Einstellungen (Tastenkürzel, Mausrad-Modifier,
+  Haltetaste) vom abstrakten Basis-Record `InputSettings`. Grund ist nur die 300-Zeilen-Regel.
+  System.Text.Json schreibt geerbte Eigenschaften auf dieselbe oberste Ebene, das Dateiformat bleibt
+  gleich (`JsonSettingsStoreTests.Save_KeepsInheritedInputSettingsAtTheTopLevel`).
+- Verschachtelte Einstellungsobjekte würden das Format ändern und bräuchten eine Migration.
+- `SettingsService.SaveNow` speichert immer nur einmal gleichzeitig. Sonst schreiben Debounce-Timer,
+  Sofort-Speichern und das Löschen eines Schemas dieselbe `.tmp`-Datei des aktiven Profils.
+
 ## Muster
 - DI über `Microsoft.Extensions.DependencyInjection`, nur in App konfiguriert.
 - MVVM in App (`CommunityToolkit.Mvvm`).

@@ -20,8 +20,10 @@ public class FrameGeometryBenchmarks
     private readonly WindowRegions _windows = new(
         Enumerable.Range(0, WindowRegions.Max).Select(i => new PhysicalRect(i * 20, i * 10, 600, 400)).ToArray(),
         Enumerable.Range(0, WindowRegions.Max)
-            .Select(i => i == WindowRegions.Max - 1 ? WindowPalette.Smart : WindowPalette.For(ColorFilter.Inverted))
+            .Select(i => i == WindowRegions.Max - 1 ? WindowPalette.Smart : WindowPalette.For(FilterId.Inverted))
             .ToArray());
+
+    private readonly TextEnhancement _enhancement = new(0.6, 1);
 
     private int _frame;
 
@@ -50,6 +52,16 @@ public class FrameGeometryBenchmarks
         _frame++;
         var zoom = 1 + (_frame % 16);
         return _pointer.DrawsPointer(zoom) ? _pointer.ScaleFor(zoom) : 0;
+    }
+
+    /// <summary>"Schärfe"/"Fett" resolved for the zoom and smoothing (DesktopLayer, every frame; M18, D1).</summary>
+    [Benchmark]
+    public double TextEnhancementAt()
+    {
+        _frame++;
+        var zoom = 1 + (_frame % 8 * 0.25);
+        var frame = ModeGeometry.Compute(ZoomMode.Docked, _monitor, Cursor(), zoom, LensSize.Default, DockLayout.Default);
+        return _enhancement.At(frame, Smoothing.Text).BoldPixels;
     }
 
     private PhysicalPoint Cursor() => new(_frame % 3840, _frame % 2160);

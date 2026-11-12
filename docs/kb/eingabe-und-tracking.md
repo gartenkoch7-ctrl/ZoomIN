@@ -293,6 +293,91 @@ Globale Kürzel per `RegisterHotKey`, Mausrad per `WH_MOUSE_LL`.
   dann außermittig, aber sichtbar.
 - Mausbewegung über Schwellwert → gleitend zurück zum Maus-Fixpunkt.
 
+### Caret-Formen (E2, M18)
+- Formen: **Balken** (Werk, wie bis M17), **Keile** über und unter dem Caret, **Rahmen** um das
+  Zeichen, **Kreis** (Ring). Farbe wie auf der Zeigerseite (sechs Vorgaben + Farbwähler), Deckkraft
+  fest 85 %. Dicke dünn/mittel/dick, gehört zum Profil.
+- Geometrie rein in `Core/Tracking/CaretMarkerGeometry` (je Frame, ohne Allokation): Linienstärke
+  = Grundwert × Zoom (Zoom gedeckelt bei 8× wie beim Zeiger), Mindestwerte 2/4/8 px. „Mittel“ =
+  `max(4, Zoom)` – zusammen mit `max(Linie, Caretbreite)` sieht der Balken aus wie vor E2.
+- Keile: Höhe `2 × Linie + 0,2 × Caret-Höhe` (so wirkt die Dicke bei jedem Zoom), Breite doppelt so
+  groß, Spitze berührt den Caret. Shader `PSWedge` (Dreieck per Abstandsfunktion, gespiegelt wie der
+  Zeiger über `InnerOffset/InnerScale`). Kein Rückfall auf den Balken: Shader sind beim Build
+  kompiliert und durch `ShaderBytecodeTests` geprüft – ein Rückfall wäre toter Code und würde einen
+  echten Geräteverlust beim Start verdecken.
+- Rahmen: Die Caret-Kette liefert meist nur eine Linie. Ist der Caret mindestens 0,3 × so breit wie
+  hoch, gilt er als Zeichenzelle; sonst wird ein Zeichen von 0,5 × Höhe rechts vom Caret
+  angenommen.
+- Kreis: bestehender `PSRing`, Radius halbe Caret-Höhe + 2 Linien.
+- Am Rand der sichtbaren Fläche (Monitor, Lupe, Streifen) wird jedes Teil **verschoben, nicht
+  beschnitten** – Keile über der ersten Zeile bleiben ganz sichtbar (liegen dann aber über der
+  Zeile; Sichtprüfung offen). Gezeichnet wird nur, solange die Caret-Mitte in der Fläche liegt
+  (`InView`): Knapp jenseits des Lupenrands würde die Markierung sonst auf andere Buchstaben
+  geschoben oder über den unvergrößerten Desktop neben der Lupe gemalt.
+- „Mittel“ entspricht dem alten Balken für Carets ab 1 px Breite; ein Caret mit Breite 0 (manche
+  UIA-Anbieter) wird jetzt mit dem Zoom breiter (8× → 8 px statt 4 px).
+- Geschätzter Caret (`CaretEstimated`) wird weiter nicht markiert (`CaretMarkerGeometry.TryGetCaret`).
+
+### Anzeige-Bedingungen und Haltetaste (E1, M18)
+- Fadenkreuz, Caret-Markierung und Fokusrahmen haben je eine Bedingung (Profil): **immer** (Werk),
+  **nur in Ruhe**, **nur in Bewegung**, **nur bei gehaltener Taste**.
+- „In Ruhe“ = seit 1 s keine Mausbewegung und kein Tippen (Grenze: genau 1 s gilt als Ruhe).
+  „In Bewegung“ ist das Gegenteil – Tippen zählt auch, nicht nur die Maus.
+- Haltetaste (für alle Profile, Seite „Tastenkürzel“): Strg, Umschalt oder Alt, links oder rechts,
+  Werk **Umschalt rechts**. Der LL-Hook meldet seitenspezifische Codes (`VK_RSHIFT` usw.), nie
+  das allgemeine `VK_SHIFT`.
+- Gegen Aufblitzen beim Großschreiben: Die Taste zählt erst nach **250 ms**, und wird während des
+  Haltens eine andere (Nicht-Modifier-)Taste gedrückt, zählt dieses Halten gar nicht mehr, bis die
+  Taste losgelassen wird. Modifier zählen nicht als Tippen: Alt Gr schickt ein linkes Strg mit,
+  auch bei Tastenwiederholung, und würde sonst „Alt rechts halten“ abbrechen.
+- Eigener Hook `Platform/Input/Win32HoldKeyHook` (WH_KEYBOARD_LL, eigener Thread), getrennt vom
+  Aktivitäts-Hook, damit beide unabhängig geändert werden können. Er läuft nur, solange eine
+  Markierung auf „Haltetaste“ steht (`App/Markers/MarkerInput`), und lässt jede Taste unverändert
+  durch. Mausbewegung und Tippen kommen aus dem bestehenden Aktivitäts-Hook (`PointerActivity`).
+- Render-Thread: `MarkerActivity.Sample` (drei `long`: letzte Aktivität, Haltebeginn, letztes Haltesignal; ohne Lock) und `MarkerAlphas` entscheiden je
+  Frame. Statt eines veröffentlichten Sichtbarkeits-Snapshots (Plan) rechnet der Render-Thread
+  selbst – sonst bräuchte der Wechsel nach 1 s Ruhe einen eigenen Timer-Thread. Der Leerlauf-Pfad
+  (M14) läuft ohnehin jede Bildwiederholung, eine laufende Überblendung (100 ms) zählt als
+  Animation und erzwingt das Zeichnen.
+- Tastenwiederholung allein reicht nicht (Wiederholung aus bei „Filtertasten“, ein zweiter Modifier
+  übernimmt die Wiederholung) und ein Loslassen kann verloren gehen (Win+L, Fenster mit höheren
+  Rechten). Darum prüft der Hook während des Haltens alle 400 ms den echten Tastenzustand
+  (`GetAsyncKeyState`): gedrückt = Halten bestätigt, los = Halten beendet. Ein vom Hook nicht gesehenes Drücken oder Loslassen zählt erst bei zwei Prüfungen in Folge,
+  weil Windows den Tastenzustand erst nach den Hooks setzt. Kommt 1,5 s gar kein
+  Signal (Hook entfernt), zählt das Halten nicht mehr; der nächste Druck beginnt neu. Ein Wechsel
+  der Haltetaste vergisst ein laufendes Halten. Schlägt das Setzen des Hooks fehl, versucht es die
+  nächste Änderung einer Bedingung erneut (nicht jeder Schieberegler-Schritt). Entfernt Windows den
+  Hook still (zu langsam unter Last), merkt die Zustandsprüfung „Taste unten, Hook sah nichts“
+  (Log 2954) und folgt dann dem Tastenzustand – nur die Tipp-Erkennung fehlt dann.
+- Offen: „In Ruhe/In Bewegung“ zählen nur Mausbewegung und Tippen ohne Strg/Alt; Mausrad, Klicks
+  und Tastenkürzel zählen nicht als Aktivität.
+- Offen: Mausklicks und Mausrad beenden ein Halten nicht. Strg als Haltetaste + Strg+Mausrad-Zoom
+  oder Umschalt + Klick zeigt die Markierungen nach 250 ms – mit Nutzern prüfen.
+- Alt Gr schickt ein linkes Strg mit Scan-Code 0x21D; das zählt nie als Haltetaste „Strg links“.
+- Strg als Haltetaste: Das Loslassen nach einem echten Halten (≥ 250 ms) löst nicht zusätzlich die
+  Zeiger-Suchhilfe „Strg allein“ aus (`MarkerActivity.ConsumeHoldEnd`, 500 ms, einmalig) – egal,
+  welcher der beiden LL-Hooks das Loslassen zuerst sieht.
+- Alt als Haltetaste: Weil die Taste nie verschluckt wird, öffnet Alt allein beim Loslassen in vielen
+  Programmen das Menü. Steht im Hilfetext; Abhilfe nur durch Verschlucken, was ausgeschlossen ist.
+- Eine Markierung, die aus ist (oder Tracking aus, Fadenkreuz bei 1× nicht gezeigt), steht auf
+  Deckkraft 0: Ihre Bedingung startet keinen Hook und erzwingt keine Frames. Eingeschaltet blendet
+  sie in 100 ms ein, statt kurz voll aufzublitzen.
+- Sicherer Bildschirm: Der Sanitizer setzt alle drei Bedingungen auf „immer“ – dort sehen die
+  Hooks zu wenig.
+- Zusammenspiel mit der Übersicht (M18-Integration): Der Aktivitäts-Hook verschluckt während der
+  Übersicht nur Esc. Esc ist nie eine Haltetaste. Ob der Haltetasten-Hook das Esc noch sieht, hängt
+  von der Hook-Reihenfolge ab (zuletzt gesetzter Hook kommt zuerst). Sieht er es, zählt es als
+  „andere Taste“ und beendet ein laufendes Halten – wie jede andere Taste, hingenommen.
+- Übersicht und Markierungen teilen sich den `CursorPass`; `RenderSession` zeichnet erst die
+  Markierungen, dann den Übersichtsrahmen. Überblendung (E1) und Rahmenbewegung (B2) zählen beide als
+  Animation (`OverviewHighlightTests`).
+- Umschalt rechts (Werk) ist auch das Windows-Kürzel für die Anschlagverzögerung (8 s halten). Wer
+  die Haltetaste so lange hält, bekommt die Windows-Abfrage – hingenommen, im Hilfetext erwähnenswert.
+- Seiten „Fokus & Textcursor“ und „Mauszeiger“: Jede Einstellung ändert nur ihr eigenes Feld im
+  Modell (M17 A1, für Caret-Form, -Farbe, -Dicke und alle Bedingungen seit der M18-Integration).
+  Sonst würde ein Profilwechsel oder Strg+Alt+T/K bei offener Seite von älteren Seitenwerten
+  zurückgedreht.
+
 ### Fixpunkt ≠ Bildmitte (Ursache „Fokus landet am Rand“, behoben 2026-11-03)
 Die Geometrie (`ModeGeometry`) vergrößert um einen **Fixpunkt**, und der wird dort gezeigt, wo er
 auf dem Desktop liegt (ADR-0003). Bis dahin wurde die Fokusmitte direkt als Fixpunkt benutzt –

@@ -13,13 +13,17 @@ public sealed partial class FilterViewModel : ObservableObject
 {
     private readonly EffectsModel _effects;
     private readonly List<string> _monitorIds;
+
+    // Built-in filters and own schemes (M18) as they were when the page opened.
+    private readonly IReadOnlyList<FilterId> _order;
     private bool _loading = true;
 
-    public FilterViewModel(EffectsModel effects, ZoomCommands zoom)
+    public FilterViewModel(EffectsModel effects, ZoomCommands zoom, FilterNames names)
     {
         _effects = effects;
         var current = effects.Current;
-        FilterNames = ColorFilters.DisplayOrder.Select(f => Text.Get("Filter." + f)).ToList();
+        _order = current.Order;
+        FilterNames = names.Of(_order, current.Schemes);
         _monitorIds = [.. zoom.MonitorIds().Order(StringComparer.OrdinalIgnoreCase)];
         MonitorNames = [Text.Get("FilterMonitor.Shared"), .. _monitorIds.Select(MonitorName)];
         PerMonitor = current.PerMonitorFilter;
@@ -119,7 +123,7 @@ public sealed partial class FilterViewModel : ObservableObject
         var effects = _effects.Current;
         var choice = SelectedMonitor is { } id ? effects.FilterOf(id) : new MonitorFilter(effects.Filter.Enabled, effects.Filter.Filter);
         FilterOn = choice.Enabled;
-        FilterIndex = ColorFilters.DisplayIndexOf(choice.Filter);
+        FilterIndex = ColorFilters.IndexIn(_order, CustomSchemes.Resolve(choice.Filter, effects.Schemes));
     }
 
     private void ApplyChoice()
@@ -130,7 +134,7 @@ public sealed partial class FilterViewModel : ObservableObject
         }
 
         var effects = _effects;
-        var choice = new MonitorFilter(FilterOn, ColorFilters.DisplayOrder[FilterIndex]);
+        var choice = new MonitorFilter(FilterOn, _order[FilterIndex]);
         if (SelectedMonitor is { } id)
         {
             effects.SetMonitorFilter(id, choice);

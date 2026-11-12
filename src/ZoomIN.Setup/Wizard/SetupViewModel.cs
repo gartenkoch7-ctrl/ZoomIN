@@ -20,8 +20,8 @@ public sealed partial class SetupViewModel : ObservableObject
     public const int StepCount = 5;
 
     // Index in the colour filter list; 0 = off.
-    private static readonly ColorFilter?[] s_filters =
-        [null, ColorFilter.Inverted, ColorFilter.Grayscale, ColorFilter.YellowOnBlack, ColorFilter.BlackOnYellow, ColorFilter.WhiteOnBlue];
+    private static readonly FilterId?[] s_filters =
+        [null, FilterId.Inverted, FilterId.Grayscale, FilterId.YellowOnBlack, FilterId.BlackOnYellow, FilterId.WhiteOnBlue];
 
     private readonly SetupServices _services = Program.Services!;
     private readonly GitHubReleaseFeed _feed;

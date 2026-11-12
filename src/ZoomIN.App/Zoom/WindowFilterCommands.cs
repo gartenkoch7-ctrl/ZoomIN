@@ -31,13 +31,17 @@ public sealed class WindowFilterCommands(
 
         var center = new PhysicalPoint(window.Bounds.X + (window.Bounds.Width / 2), window.Bounds.Y + (window.Bounds.Height / 2));
         var monitorFiltered = effects.CurrentFor(monitors.MonitorAt(center)).Filter.Enabled;
-        var rule = WindowFilterToggle.Next(window.Kind, window.Palette, monitorFiltered, options);
-        using (Telemetry.Source.StartActivity("zoomin.windowfilter.toggle")?
-            .SetTag("process.name", window.Kind.Process)
-            .SetTag("zoomin.choice", rule.Choice.ToString()))
+        using var operation = Telemetry.Source.StartActivity("zoomin.windowfilter.toggle")?.SetTag("process.name", window.Kind.Process);
+
+        // The rule is built inside the update from the options of that moment, so a change on the
+        // settings page meanwhile (e.g. a deleted scheme and its automatic filter) is not undone.
+        WindowFilterRule? rule = null;
+        windows.UpdateOptions(o =>
         {
-            windows.SetOptions(options.WithRule(rule));
-        }
+            rule = WindowFilterToggle.Next(window.Kind, window.Palette, monitorFiltered, o);
+            return o.WithRule(rule);
+        });
+        operation?.SetTag("zoomin.choice", rule!.Choice.ToString());
 
         Toggled?.Invoke(rule);
         return rule;

@@ -13,9 +13,9 @@ public sealed class WindowFilterResolverTests
     [Fact]
     public void LightWindow_GetsTheAutomaticFilter_DarkOneTheMonitorFilter()
     {
-        var options = WindowFilterOptions.Default with { AutoFilter = ColorFilter.YellowOnBlack };
+        var options = WindowFilterOptions.Default with { AutoFilter = FilterId.YellowOnBlack };
 
-        Assert.Equal(WindowPalette.For(ColorFilter.YellowOnBlack), Resolve(s_word, WindowBrightness.Light, options));
+        Assert.Equal(WindowPalette.For(FilterId.YellowOnBlack), Resolve(s_word, WindowBrightness.Light, options));
         Assert.Equal(WindowPalette.Monitor, Resolve(s_word, WindowBrightness.Dark, options));
         Assert.Equal(WindowPalette.Monitor, Resolve(s_word, WindowBrightness.Pending, options));
         Assert.Equal(WindowPalette.Monitor, Resolve(s_word, WindowBrightness.Unknown, options));
@@ -25,10 +25,10 @@ public sealed class WindowFilterResolverTests
     public void UserChoice_WinsOverTheMeasurement()
     {
         var none = WindowFilterOptions.Default.WithRule(WindowFilterRule.For(s_word, WindowFilterChoice.None));
-        var gray = WindowFilterOptions.Default.WithRule(WindowFilterRule.For(s_word, WindowFilterChoice.Filter, ColorFilter.Grayscale));
+        var gray = WindowFilterOptions.Default.WithRule(WindowFilterRule.For(s_word, WindowFilterChoice.Filter, FilterId.Grayscale));
 
         Assert.Equal(WindowPalette.Original, Resolve(s_word, WindowBrightness.Light, none));
-        Assert.Equal(WindowPalette.For(ColorFilter.Grayscale), Resolve(s_word, WindowBrightness.Dark, gray));
+        Assert.Equal(WindowPalette.For(FilterId.Grayscale), Resolve(s_word, WindowBrightness.Dark, gray));
     }
 
     [Fact]

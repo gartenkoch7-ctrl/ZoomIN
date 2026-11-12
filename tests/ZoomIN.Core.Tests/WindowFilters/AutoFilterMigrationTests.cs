@@ -10,36 +10,36 @@ public sealed class AutoFilterMigrationTests
     public void OldSettings_WithTheOldFactoryValue_BecomeSmart()
     {
         // Written before the revision existed: missing in the JSON = 0.
-        var old = new WindowFilterOptions { AutoFilter = ColorFilter.Inverted };
+        var old = new WindowFilterOptions { AutoFilter = FilterId.Inverted };
 
         var options = old.Normalized();
 
-        Assert.Equal(ColorFilter.InvertedSmart, options.AutoFilter);
+        Assert.Equal(FilterId.InvertedSmart, options.AutoFilter);
         Assert.Equal(WindowFilterOptions.CurrentAutoFilterRevision, options.AutoFilterRevision);
     }
 
     [Fact]
     public void OldSettings_WithAnOwnChoice_KeepIt()
     {
-        var old = new WindowFilterOptions { AutoFilter = ColorFilter.Grayscale };
+        var old = new WindowFilterOptions { AutoFilter = FilterId.Grayscale };
 
-        Assert.Equal(ColorFilter.Grayscale, old.Normalized().AutoFilter);
+        Assert.Equal(FilterId.Grayscale, old.Normalized().AutoFilter);
     }
 
     [Fact]
     public void InvertedChosenAfterTheMigration_Stays()
     {
-        var chosen = WindowFilterOptions.Default.Normalized() with { AutoFilter = ColorFilter.Inverted };
+        var chosen = WindowFilterOptions.Default.Normalized() with { AutoFilter = FilterId.Inverted };
 
-        Assert.Equal(ColorFilter.Inverted, chosen.Normalized().AutoFilter);
-        Assert.Equal(ColorFilter.Inverted, chosen.Normalized().Normalized().AutoFilter);
+        Assert.Equal(FilterId.Inverted, chosen.Normalized().AutoFilter);
+        Assert.Equal(FilterId.Inverted, chosen.Normalized().Normalized().AutoFilter);
     }
 
     [Fact]
     public void Model_TakesTheMigratedValue()
     {
-        var model = new WindowFilterModel(new WindowFilterOptions { AutoFilter = ColorFilter.Inverted });
+        var model = new WindowFilterModel(new WindowFilterOptions { AutoFilter = FilterId.Inverted });
 
-        Assert.Equal(ColorFilter.InvertedSmart, model.Options.AutoFilter);
+        Assert.Equal(FilterId.InvertedSmart, model.Options.AutoFilter);
     }
 }

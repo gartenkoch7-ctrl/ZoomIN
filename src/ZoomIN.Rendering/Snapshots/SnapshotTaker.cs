@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Vortice.Direct3D11;
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Modes;
 using ZoomIN.Core.Viewport;
 using ZoomIN.Rendering.RenderLoop;
 
@@ -24,7 +25,7 @@ internal sealed class SnapshotTaker(DebugSnapshots snapshots, string deviceName,
     /// <param name="weights">Smart inversion weights of this frame, or null.</param>
     public void TakeIfRequested(
         ID3D11Device device, ID3D11DeviceContext context, ID3D11ShaderResourceView? desktop, ID3D11RenderTargetView result,
-        ID3D11ShaderResourceView? weights, PhysicalRect bounds, PhysicalRect source, in FrameRequest request)
+        ID3D11ShaderResourceView? weights, PhysicalRect bounds, in ModeFrame frame, in FrameRequest request)
     {
         var pending = snapshots.Pending;
         if (pending is null || pending.Generation == _taken)
@@ -40,14 +41,14 @@ internal sealed class SnapshotTaker(DebugSnapshots snapshots, string deviceName,
             return;
         }
 
-        Take(pending, device, context, desktop, result, weights, bounds, source, request);
+        Take(pending, device, context, desktop, result, weights, bounds, frame, request);
     }
 
     // Separate method: the closure for Task.Run would otherwise be allocated on every frame,
     // because C# creates it where the captured variable is declared (checked by a 0 B test).
     private void Take(
         DebugSnapshotRequest pending, ID3D11Device device, ID3D11DeviceContext context, ID3D11ShaderResourceView desktop,
-        ID3D11RenderTargetView result, ID3D11ShaderResourceView? weights, PhysicalRect bounds, PhysicalRect source, in FrameRequest request)
+        ID3D11RenderTargetView result, ID3D11ShaderResourceView? weights, PhysicalRect bounds, in ModeFrame frame, in FrameRequest request)
     {
         // Counted until the files are complete, so the KI-Debug reader deletes the folder only after.
         snapshots.WriteStarted();
@@ -64,7 +65,7 @@ internal sealed class SnapshotTaker(DebugSnapshots snapshots, string deviceName,
                 weightImage = TextureReader.ReadWeights(device, context, weightTexture);
             }
 
-            var info = SnapshotInfo.Describe(deviceName, bounds, source, request, weights is not null);
+            var info = SnapshotInfo.Describe(deviceName, bounds, frame, request, weights is not null);
             _ = Task.Run(() => Write(pending, original, drawn, weightImage, info));
         }
         catch (Exception ex) when (ex is InvalidOperationException or SharpGen.Runtime.SharpGenException)

@@ -17,18 +17,18 @@ public sealed class EffectsModelTests
         model.NextFilter(Display1);
 
         Assert.True(model.Current.Filter.Enabled);
-        Assert.Equal(ColorFilter.InvertedSmart, model.Current.Filter.Filter);
+        Assert.Equal(FilterId.InvertedSmart, model.Current.Filter.Filter);
         Assert.Same(model.Current, model.CurrentFor(Display2));
     }
 
     [Fact]
     public void NextFilter_WrapsAroundToFirst()
     {
-        var model = new EffectsModel(s_shared with { Filter = FilterSettings.Default with { Filter = ColorFilter.WhiteOnBlue } });
+        var model = new EffectsModel(s_shared with { Filter = FilterSettings.Default with { Filter = FilterId.WhiteOnBlue } });
 
         model.NextFilter(Display1);
 
-        Assert.Equal(ColorFilter.Inverted, model.Current.Filter.Filter);
+        Assert.Equal(FilterId.Inverted, model.Current.Filter.Filter);
     }
 
     [Fact]
@@ -62,19 +62,19 @@ public sealed class EffectsModelTests
         Assert.True(model.CurrentFor(Display1).Filter.Enabled);
         Assert.False(model.CurrentFor(Display2).Filter.Enabled);
         Assert.False(model.Current.Filter.Enabled);
-        Assert.Equal(new MonitorFilter(true, ColorFilter.Inverted), model.Current.MonitorFilters[Display1]);
+        Assert.Equal(new MonitorFilter(true, FilterId.Inverted), model.Current.MonitorFilters[Display1]);
     }
 
     [Fact]
     public void NextFilter_PerMonitor_StartsFromSharedFilter()
     {
-        var shared = DisplayEffects.Default with { Filter = FilterSettings.Default with { Enabled = true, Filter = ColorFilter.Grayscale } };
+        var shared = DisplayEffects.Default with { Filter = FilterSettings.Default with { Enabled = true, Filter = FilterId.Grayscale } };
         var model = new EffectsModel(shared);
 
         model.NextFilter(Display2);
 
-        Assert.Equal(ColorFilter.GrayscaleInverted, model.CurrentFor(Display2).Filter.Filter);
-        Assert.Equal(ColorFilter.Grayscale, model.CurrentFor(Display1).Filter.Filter);
+        Assert.Equal(FilterId.GrayscaleInverted, model.CurrentFor(Display2).Filter.Filter);
+        Assert.Equal(FilterId.Grayscale, model.CurrentFor(Display1).Filter.Filter);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public sealed class EffectsModelTests
         var model = new EffectsModel(DisplayEffects.Default);
         model.SetFilter(FilterSettings.Default with { Contrast = 2.0 });
 
-        model.SetMonitorFilter(Display1, new MonitorFilter(true, ColorFilter.YellowOnBlack));
+        model.SetMonitorFilter(Display1, new MonitorFilter(true, FilterId.YellowOnBlack));
 
         var own = model.CurrentFor(Display1);
         Assert.Equal(2.0, own.Filter.Contrast);
@@ -101,7 +101,7 @@ public sealed class EffectsModelTests
         model.SetPerMonitorFilter(false);
 
         Assert.False(model.CurrentFor(Display1).Filter.Enabled);
-        Assert.Equal(new MonitorFilter(false, ColorFilter.Inverted), model.Current.FilterOf(Display1));
+        Assert.Equal(new MonitorFilter(false, FilterId.Inverted), model.Current.FilterOf(Display1));
 
         model.SetPerMonitorFilter(true);
 
@@ -111,9 +111,9 @@ public sealed class EffectsModelTests
     [Fact]
     public void FilterOf_WithoutOwnEntry_ReturnsShared()
     {
-        var effects = DisplayEffects.Default with { Filter = FilterSettings.Default with { Enabled = true, Filter = ColorFilter.WhiteOnBlue } };
+        var effects = DisplayEffects.Default with { Filter = FilterSettings.Default with { Enabled = true, Filter = FilterId.WhiteOnBlue } };
 
-        Assert.Equal(new MonitorFilter(true, ColorFilter.WhiteOnBlue), effects.FilterOf(Display1));
+        Assert.Equal(new MonitorFilter(true, FilterId.WhiteOnBlue), effects.FilterOf(Display1));
         Assert.False(effects.HasOwnFilter(Display1, out _));
     }
 
@@ -123,12 +123,12 @@ public sealed class EffectsModelTests
         var model = new EffectsModel(DisplayEffects.Default);
         var profile = DisplayEffects.Default with
         {
-            MonitorFilters = new Dictionary<string, MonitorFilter> { [Display2] = new(true, ColorFilter.BlackOnYellow) },
+            MonitorFilters = new Dictionary<string, MonitorFilter> { [Display2] = new(true, FilterId.BlackOnYellow) },
         };
 
         model.Replace(profile);
 
-        Assert.Equal(ColorFilter.BlackOnYellow, model.CurrentFor(Display2).Filter.Filter);
+        Assert.Equal(FilterId.BlackOnYellow, model.CurrentFor(Display2).Filter.Filter);
         Assert.True(model.CurrentFor(Display2).Filter.Enabled);
         Assert.False(model.CurrentFor(Display1).Filter.Enabled);
     }

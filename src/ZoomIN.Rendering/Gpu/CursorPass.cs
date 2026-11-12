@@ -19,6 +19,7 @@ internal sealed class CursorPass : IDisposable
     private readonly ID3D11PixelShader _pointerShader;
     private readonly ID3D11PixelShader _ringShader;
     private readonly ID3D11PixelShader _rectShader;
+    private readonly ID3D11PixelShader _wedgeShader;
     private readonly ID3D11SamplerState _sampler;
     private readonly ID3D11BlendState _blend;
     private readonly ID3D11Buffer _constants;
@@ -43,6 +44,7 @@ internal sealed class CursorPass : IDisposable
         _pointerShader = device.CreatePixelShader(ShaderSource.Load("Cursor.hlsl", "PSCursor", "ps_4_0"));
         _ringShader = device.CreatePixelShader(ShaderSource.Load("Cursor.hlsl", "PSRing", "ps_4_0"));
         _rectShader = device.CreatePixelShader(ShaderSource.Load("Cursor.hlsl", "PSRect", "ps_4_0"));
+        _wedgeShader = device.CreatePixelShader(ShaderSource.Load("Cursor.hlsl", "PSWedge", "ps_4_0"));
         _sampler = device.CreateSamplerState(new SamplerDescription(
             Filter.MinMagMipLinear, TextureAddressMode.Border, TextureAddressMode.Border, TextureAddressMode.Border,
             0, 1, ComparisonFunction.Never, new Color4(0, 0, 0, 0)));
@@ -99,6 +101,11 @@ internal sealed class CursorPass : IDisposable
         float width, float height, in CursorConstants constants) =>
         Draw(context, target, _rectShader, null, x, y, width, height, constants);
 
+    /// <summary>Caret wedge (E2): a triangle filling the viewport, tip at the bottom or (mirrored) at the top.</summary>
+    public void DrawWedge(ID3D11DeviceContext context, ID3D11RenderTargetView target, float x, float y,
+        float width, float height, in CursorConstants constants) =>
+        Draw(context, target, _wedgeShader, null, x, y, width, height, constants);
+
     /// <summary>Ends a layer: blending off again, which the magnify pass of the next frame expects.</summary>
     public void End(ID3D11DeviceContext context)
     {
@@ -121,6 +128,7 @@ internal sealed class CursorPass : IDisposable
         _constants.Dispose();
         _blend.Dispose();
         _sampler.Dispose();
+        _wedgeShader.Dispose();
         _rectShader.Dispose();
         _ringShader.Dispose();
         _pointerShader.Dispose();

@@ -45,9 +45,10 @@ Spur C: E2 Caret-Formen ─► E1 Anzeige-Bedingungen ───────┘
 | B | C1–C3 | `feat/m18-c-farbschemata` | sofort | – | App 1620–1639, Rendering 3220–3239 |
 | C | E2, danach E1 | `feat/m18-e-markierungen` | sofort | – | E2: App 1640–1649, Rendering 3240–3249 · E1: App 1650–1659, Platform 2950–2959, Rendering 3250–3259 |
 
-**Merge-Reihenfolge:** A → B → C.
-- D1 legt die Pass-Struktur in `DesktopLayer` fest.
-- C passt danach nur den Inhalt der Konstantenpuffer und die Palette an.
+**Merge-Reihenfolge (tatsächlich):** C → D1 → E, also Spur B → A → C.
+- Der D1-Branch wurde auf C aufgebaut (`Magnify.hlsl`: `PSEnhanced` teilt `Shade` mit Palette und
+  Ersetzen) und enthält C schon. Darum kam C zuerst.
+- Ursprünglich geplant war A → B → C.
 
 **Exklusiv:**
 - `DesktopLayer.cs` (Pass-Struktur): Spur A
@@ -70,16 +71,141 @@ E2 und E1 laufen in **einer** Spur hintereinander, weil beide diese Dateien änd
 **Nutzen:** etwa 2–3 Wochen statt 4–5 hintereinander.
 
 ## Aufgaben (Integration)
-- [ ] D1-Spike auswerten. Bestanden → Spur A, sonst D1 im Plan als „verworfen“ mit Begründung
-- [ ] Integrationsbranch anlegen, Spuren starten (Worktree je Spur)
-- [ ] Mergen A → B → C, nach jedem Merge Build + Tests + WARP-Shadertests
-- [ ] GPU-Budget aller neuen Schritte zusammen messen (Frame ≤ 2 ms Onboard, hochgerechnet)
-- [ ] Gesamt-Review (§9) bis ohne Befunde
-- [ ] Wechselwirkungen prüfen:
-  - Schärfen mit Invertieren, intelligentem Invertieren und eigenen Schemata
-  - Caret-Form mit den Anzeige-Bedingungen
+- [x] D1-Spike auswerten. Bestanden → Spur A, sonst D1 im Plan als „verworfen“ mit Begründung
+- [x] Integrationsbranch anlegen (von `feat/m17-ruhige-ansicht`, weil M17 noch nicht in `develop` ist), Spuren starten (Worktree je Spur)
+- [x] Mergen C → D1 → E, nach jedem Merge Build + Tests + WARP-Shadertests
+- [ ] GPU-Budget aller neuen Schritte zusammen messen (Frame ≤ 2 ms Onboard, hochgerechnet) – braucht echte GPU (`ZOOMIN_GPU_TIMING=1`)
+- [x] Gesamt-Review (§9): vier Runden, Rest siehe „angenommene Kompromisse“
+- [x] Wechselwirkungen prüfen (Tests):
+  - Schärfen mit Invertieren, intelligentem Invertieren (D1-Spur) und eigenen Schemata (`EnhanceSchemeTests`)
+  - Caret-Form mit den Anzeige-Bedingungen und der Übersicht (`OverviewHighlightTests`)
+  - Haltetaste gegen Esc der Übersicht (`HoldKeyCodesTests`)
+  - Profile aus 1.0 und mit M18-Feldern (`JsonProfileStoreTests`), Einstellungen mit Custom1–4 (`JsonSettingsStoreTests`)
+- [x] Benchmarks (`--job short --filter *`): alle 0 B
 - [ ] Sichtprüfung per KI-Debug-Schnappschuss, danach Nutzer
 - [ ] Release-Notes 1.2, Status hier und in der Roadmap; Merge nach `develop` nur mit Freigabe
+
+## Integration: Konflikte und Auflösung (2026-11-12)
+- `CenterMouse` aus Spur E entfällt. Es gilt M17s `MouseFollow` + `MouseMargin` (Schema 2). Caret-Form
+  und Bedingungen stehen daneben in `TrackingOptions`, `TrackingMapping`, `AppSettings` und `ProfileFields`.
+- M17 hat `RenderSession` aufgeteilt. Die Änderungen der Spuren am Konstruktor (`PassCostProbe`,
+  `EnhanceCost`, `HighlightMetrics`) stehen jetzt in `RenderResources`. Überblendung (E1) und
+  Übersichtsrahmen (B2) halten beide das Zeichnen am Laufen.
+- `AppSettings` war über 250 Zeilen. Die gemeinsamen Eingabe-Einstellungen stehen jetzt im
+  Basis-Record `InputSettings`, das JSON-Format bleibt gleich.
+- Texte: Für die Maus gelten die Texte von M17, für die Caret-Markierung die Formulierung von E.
+- EventIds: keine Doppelbelegung (App 1620–1626, 1640, 1650–1651; Platform 2950–2954;
+  Rendering 3200–3201, 3220–3221).
+
+## Integration: angenommene Kompromisse
+- **Gelöschtes Schema, Profil nicht umgeschrieben:** Ist eine Profildatei beim Löschen gesperrt
+  (Log 1625), zeigt sie weiter auf den Platz. Ein später neu angelegtes Schema auf diesem Platz
+  erscheint dann in dem Profil. Dasselbe gilt für exportierte Profile, denn Schema-Definitionen
+  sind global. Auch ein Profilwechsel genau während des Löschens kann den Platz zurückbringen.
+  Selten, darum hingenommen.
+- **Strg als Haltetaste:** Ein Halten bei gedrückter Umschalttaste meldet kein „Strg allein“.
+  Ein echtes Strg-Tippen innerhalb von 500 ms danach kann trotzdem verschluckt werden.
+  Der Abgleich zweier Hooks bleibt so, wie Spur E ihn gebaut hat.
+- **Zwei Uhren:** `MarkerActivity` nutzt `TimeProvider`, der Render-Thread `Stopwatch`. Das passt nur
+  mit `TimeProvider.System`; so steht es am Konstruktor.
+- **Angedockt bei kleiner Zoomstufe:** Die Ansicht kann je Achse anders vergrößern. `FrameMapping`
+  rechnet seit M6 mit der waagrechten Achse, Caret-Formen also auch. Das ist kein M18-Fehler.
+- **Profilwechsel:** `EffectsModel.Replace` normalisiert die gemeinsamen Schemata bei jedem
+  Profilwechsel neu. Das kostet etwas Zeit, gilt aber nicht für den Render-Loop.
+- **Schema-Editor:** Jeder Tastendruck im Namen veröffentlicht neue Effekte. Das ist
+  UI-Rate, kein Bild ändert sich.
+- **Haltetaste:** Umschalt rechts löst nach 8 s die Windows-Anschlagverzögerung aus. Alt allein
+  öffnet Menüs. Der Hook läuft auch bei Zoom aus, solange eine Bedingung „Haltetaste“ ist.
+- **Überblendung:** Sie läuft auf allen Monitoren, auch ohne Caret dort. Das sind einige
+  Zusatz-Frames je Wechsel von Ruhe und Bewegung.
+- **Ältere Muster, nicht M18:** `TrayMenuSync` nutzt die Fassade `Text` statt `ILocalizer`. Kommt mit
+  M14 Schritt 6.
+- **Weitere Punkte:** Die Caret-Vorschau rechnet in XAML-Einheiten. Testhilfen stehen in
+  `MarkerAlphas` und `EnhanceCost`. `TextEnhancement.WorksWith` wird doppelt geprüft.
+- **Duplikate aus den Spuren:**
+  - `TextEnhance.hlsli` kopiert die Catmull-Rom-Abtastung aus `Magnify.hlsl`. Ein Kommentar
+    verlangt, beide gemeinsam zu ändern.
+  - `CustomSchemeService.SameScheme` vergleicht Schemata inhaltlich. Die Record-Gleichheit vergleicht
+    die Ersetzungsliste nur als Referenz.
+- **Ruhe und Bewegung:** Der Zustand zwischen „Halten beendet“ und „Strg tippen“ kann in einem
+  Fenster von Mikrosekunden noch ein Tippen verschlucken (Runde 5 hat den häufigeren Fall behoben).
+- **Aktivität:** Mausrad und Klicks zählen nicht als Aktivität und beenden kein Halten (KB, „Offen“).
+  Strg als Haltetaste plus Strg+Mausrad zeigt die Markierungen deshalb nach 250 ms.
+  „Strg allein“ unterscheidet nicht zwischen links und rechts.
+- **Fadenkreuz:** Wird es aus- oder unter seine Zoomschwelle geschaltet, verschwindet es ohne
+  Überblendung. Die Überblendung zu 0 erzwingt dann noch etwa 100 ms Frames, die nichts zeigen.
+- **Ungenutzte API:** `ReplacementTable.Any` und `EffectsModel.SetEnhancement` haben keinen
+  Aufrufer im Produktivcode.
+- **Haltetaste wird gerade gehalten:** Stoppt der Hook in diesem Moment (Bedingung oder Tracking
+  geändert), zählt das als Ende des Haltens. Ein Strg-Tippen in den 500 ms danach kann verschluckt
+  werden.
+- **Aufräumen:** `CustomSchemes.Hex` und `SecureSettingsSanitizer.Color` reichen nur an
+  `RgbColor.NormalizedHex` weiter.
+- **Offene Einstellungsseite:** Sie zeigt nach einem Profilwechsel per Kürzel weiter die Werte von
+  vorher, auch in der Caret-Vorschau. Das gilt für alle Seiten seit M7. Geändert wird trotzdem nur
+  das jeweilige Feld.
+- **Lesepfade:** `MarkerInput` und die Kürzel-Seite lesen die Haltetaste über
+  `SettingsService.Current`, das alle Modelle abbildet. Das passiert auf UI-Rate, nicht im
+  Render-Loop.
+- **Fensterregeln:** `WindowRuleRow.IndexOf` prüft die Rückfall-Regel über die Listenreihenfolge
+  statt über `CustomSchemes.Resolve`. Der Code-Kommentar begründet das.
+- **Synchrone Arbeit:**
+  - `MarkerInput` startet und stoppt den Hook-Thread synchron im Änderungs-Ereignis, also auf dem
+    Kürzel- oder UI-Thread. Das dauert Millisekunden.
+  - Das Löschen eines Schemas schreibt die gespeicherten Profile auf dem UI-Thread.
+- **Aufräumen:** `DisplayEffects.Recompute` und `ReplaceSlotOf` prüfen „hat Ersetzungen“ doppelt.
+- **Ausschalten ohne Überblendung:** Das gilt für alle Markierungen, nicht nur für das Fadenkreuz.
+  Die Zeichenstellen prüfen weiter „an/aus“, `MarkerAlphas` blendet trotzdem 100 ms aus.
+- **Linke Strg plus rechte Alt:** Bei linker Strg als Haltetaste zählt dieselbe Kombination echt
+  gehalten nicht im Tastenzustand. Grund ist die Alt-Gr-Erkennung.
+- **Kostenmessung D1:** `EnhanceCost` misst nach jedem Überschreiten von 1,5× neu. Das passiert nur,
+  solange jemand die Metrik abonniert.
+- **Haltetaste wechseln:** Ein Wechsel der Haltetaste vergisst ein laufendes Halten. Ein gerade
+  erst beendetes Halten bleibt aber für 500 ms gemerkt.
+- **Ungenutzt:** `WindowFilterModel.SetOptions` wird nur noch von Tests aufgerufen. Mit derselben
+  Instanz tut es jetzt nichts.
+- **Zweiter Tastatur-Hook:** Die Haltetaste hat einen eigenen LL-Hook neben dem Aktivitäts-Hook.
+  Das ist eine Entscheidung der Spur E (KB), damit sich beide getrennt ändern lassen. Er läuft nur,
+  solange eine Bedingung „Haltetaste“ ist.
+- **Alt-Gr-Zeichen:** Sie zählen wie alle Eingaben mit Strg/Alt nicht als Tippen, auch nicht für
+  „in Bewegung“ und „in Ruhe“ (KB, „Offen“).
+- **Doppelte Prüfung:** `CustomSchemeService.Update` prüft vor dem atomaren Schritt, ob das Schema
+  existiert, und der Schritt prüft es noch einmal.
+- **Andere Taste während des Haltens:** Sie beendet das Halten, auch wenn die Markierung schon
+  sichtbar ist (etwa Umschalt+Tab). Das hat Spur E so entschieden, gegen Aufblitzen bei längerem
+  Großschreiben (KB).
+- **Hold-Key-Telemetrie und -Wechsel:**
+  - Eine beim Hook-Start schon gehaltene Taste zählt nicht in `hold_key_presses`.
+  - Die Kürzel-Seite zeigt die Haltetaste vom Öffnen der Seite.
+- **D1-Kostenmessung:** `PassCostProbe` versucht nach jedem Neustart wieder einmal neu. Das kostet
+  nur Zeit, solange jemand die Metrik abonniert.
+- **Rückfall „Invertieren“:** `ColorFilters` und `EffectsModel.NextFilter` setzen ihn selbst um,
+  statt `CustomSchemes.Resolve` zu nutzen.
+- **Ältere Muster, nicht M18:** `FilterViewModel.ApplyChoice` schreibt Ein/Aus und Filter von der
+  Seite zurück (seit M5/M7). Ein Kürzel bei offener Filterseite kann so überschrieben werden.
+- **Von Windows entfernter Hook:** Er wird nicht neu gesetzt. Die Zustandsprüfung übernimmt, nur
+  „andere Taste“ fehlt dann (KB, Log 2954). Neu gesetzt wird er bei der nächsten Änderung einer
+  Bedingung.
+- **Mauszeiger-Seite:** Außer der Anzeige-Bedingung schreiben ihre Regler weiter den ganzen Stil
+  von der Seite zurück (seit M5). Strg+Alt+K bei offener Seite kann so überschrieben werden.
+- **Unbekannte Werte:** Ein unbekannter Auto-Filter wird in `WindowFilterOptions.Normalized` zu
+  „Intelligent invertieren“. `CustomSchemes.Resolve` macht daraus „Invertieren“. So entsteht er
+  nur durch Handbearbeitung.
+- **Log-Kategorien:** `SchemePaletteWatch` und `EnhanceWatch` loggen mit dem Logger von `ZoomEngine`
+  (Kategorie `ZoomEngine`). Die EventIds 3200/3201 und 3220/3221 sind trotzdem eindeutig.
+- **Haltetaste als Zustandsmaschine:** Sie ist über die Review-Runden gewachsen. Vorschlag für
+  später: Der Tastenzustand wird die einzige Quelle für „gehalten“, Tastenereignisse ziehen nur den
+  Start vor oder machen das Halten ungültig.
+- **Farbumwandlung doppelt:** `CustomSchemesPage.BrushOf` wiederholt die Umwandlung aus `ColorChooser`.
+- Das Review lief, bis eine Runde keine Codeänderung mehr ergab.
+
+## Offen für Menschen
+- Sichtprüfung mit echter GPU:
+  - Schärfe/Fett mit eigenem Schema
+  - Caret-Formen bei 1×/8× und in der Übersicht
+  - Überblendung der Bedingungen
+- GPU-Budget aller M18-Schritte zusammen auf echter Hardware.
+- App-Matrix für die Haltetaste: Alt-Menüs, Umschalt beim Großschreiben, Alt Gr.
 
 ## Akzeptanzkriterien
 - [ ] Akzeptanzkriterien aller Feature-Pläne erfüllt

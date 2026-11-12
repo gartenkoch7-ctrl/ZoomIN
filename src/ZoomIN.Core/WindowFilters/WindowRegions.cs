@@ -52,13 +52,16 @@ public sealed class WindowRegions
     {
         var matrices = effects.WindowMatrices;
         var monitorMatrix = matrices[WindowPalette.Monitor];
+        var monitorReplace = effects.ReplaceSlotOf(WindowPalette.Monitor);
         for (var i = 0; i < Count; i++)
         {
-            // Smart and "keep hue" share a matrix but not a look (ADR-0024).
+            // Smart and "keep hue" share a matrix but not a look (ADR-0024); so do own schemes
+            // with different colour replacements (M18).
             var entry = _palette[i];
             if (entry != WindowPalette.Monitor
                 && RectMath.Intersects(_rects[i], monitor)
-                && (matrices[entry] != monitorMatrix || (entry == WindowPalette.Smart) != effects.IsSmart))
+                && (matrices[entry] != monitorMatrix || (entry == WindowPalette.Smart) != effects.IsSmart
+                    || effects.ReplaceSlotOf(entry) != monitorReplace))
             {
                 return true;
             }

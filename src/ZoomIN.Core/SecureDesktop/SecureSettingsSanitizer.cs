@@ -61,9 +61,14 @@ public static class SecureSettingsSanitizer
             DockFraction = Number(s.DockFraction, 0.15, 0.7, d.DockFraction),
             ColorFilter = Defined(s.ColorFilter, d.ColorFilter),
             MonitorFilters = Filters(s.MonitorFilters),
+
+            // At most 4 schemes with bounded names, colours and replacements (M18).
+            CustomSchemes = CustomSchemes.Normalized(s.CustomSchemes),
             Contrast = Number(s.Contrast, 0.5, 3, d.Contrast),
             Brightness = Number(s.Brightness, -0.5, 0.5, d.Brightness),
             Smoothing = Defined(s.Smoothing, d.Smoothing),
+            TextSharpness = Number(s.TextSharpness, 0, TextEnhancement.MaxSharpness, d.TextSharpness),
+            TextBold = Number(s.TextBold, 0, TextEnhancement.MaxBoldPixels, d.TextBold),
             CursorMaxScale = Number(s.CursorMaxScale, 1, 8, d.CursorMaxScale),
             CursorUnzoomedScale = Number(s.CursorUnzoomedScale, 1, 4, d.CursorUnzoomedScale),
             CursorColorMode = Defined(s.CursorColorMode, d.CursorColorMode),
@@ -82,6 +87,16 @@ public static class SecureSettingsSanitizer
             MouseFollow = Defined(s.MouseFollow, d.MouseFollow),
             CenterMouse = null, // schema 1 only; the copy is written as schema 2
             MouseMargin = Number(s.MouseMargin, 0, TrackingOptions.MaxMouseMargin, d.MouseMargin),
+            CaretMarkerShape = Defined(s.CaretMarkerShape, d.CaretMarkerShape),
+            CaretMarkerColor = Color(s.CaretMarkerColor, d.CaretMarkerColor),
+            CaretMarkerThickness = Defined(s.CaretMarkerThickness, d.CaretMarkerThickness),
+
+            // Show conditions (E1) need the input hooks, which see little on the secure desktop:
+            // there every highlight is simply always shown (plan decision).
+            CrosshairShow = ShowCondition.Always,
+            CaretMarkerShow = ShowCondition.Always,
+            FocusFrameShow = ShowCondition.Always,
+            MarkerHoldKey = Defined(s.MarkerHoldKey, d.MarkerHoldKey),
             AnimationMilliseconds = Math.Clamp(s.AnimationMilliseconds, 0, 500),
             ToggleHotkey = Hotkey(s.ToggleHotkey, d.ToggleHotkey),
             ZoomInHotkey = Hotkey(s.ZoomInHotkey, d.ZoomInHotkey),
@@ -119,8 +134,7 @@ public static class SecureSettingsSanitizer
         string.IsNullOrWhiteSpace(value) || value.Length > MaxTextLength ? fallback : value;
 
     // Normalised through RgbColor so only "#RRGGBB" survives.
-    private static string Color(string? value, string fallback) =>
-        RgbColor.ParseOrDefault(value, RgbColor.ParseOrDefault(fallback, RgbColor.White)).ToHex();
+    private static string Color(string? value, string fallback) => RgbColor.NormalizedHex(value, fallback);
 
     private static Dictionary<string, double> Levels(IReadOnlyDictionary<string, double>? levels)
     {

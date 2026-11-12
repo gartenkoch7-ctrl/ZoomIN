@@ -75,7 +75,30 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   gleicher Inhalt → kein Wecken. Render-Thread: `ChangesMonitor` (65 ns bei 64 Bereichen, 0 B) entscheidet über
   Pause; `WindowConstants.Fill` + Upload in `b1` nur bei neuem Snapshot oder neuen Effekten.
 - **Shader:** Quell-UV gegen die Rechtecke (Monitor-UV), erstes Treffer-Rechteck wählt die Matrix
-  aus `Palette` (9 Einträge), sonst Monitor-Matrix. Gilt auch beim Zoom, weil im Quellraum geprüft.
+  aus `Palette`, sonst Monitor-Matrix. Gilt auch beim Zoom, weil im Quellraum geprüft.
+  Palette seit M18: **14 feste Einträge** (`WindowPalette.Count`, `PALETTE_SIZE`): 0 Monitor,
+  1 Original, 2–9 die eingebauten Filter (Enum-Reihenfolge, 9 = intelligent), 10–13 die vier Plätze
+  der eigenen Schemata (`FilterId.Custom1–4`). Ein Index bedeutet immer dasselbe, auch wenn ein Platz
+  leer ist (leerer Platz = Matrix „Invertiert“, wie ein gelöschtes Schema).
+
+## Eigene Farbschemata (M18, C1–C3)
+- Die Art eines Schemas ist eine **Matrix** wie jeder Filter (`SchemeMatrices`, Herleitung in
+  [farbschemata.md](farbschemata.md)); Kontrast/Helligkeit kommen wie gewohnt dazu.
+- **Farbe ersetzen** ist keine Matrix: Schritt `ReplaceColors` (`Shaders/ColorReplace.hlsli`)
+  **nach der Abtastung, vor `Apply(...)`** und vor der intelligenten Gewichtung. Je Schema bis zu
+  3 Ersetzungen; Abstand in YCbCr (Rec. 709), Gewicht `w = 1 − smoothstep(r/2, r, d)`, Pixel wird um
+  `(neu − alt)·w` verschoben (Kanten und Schattierungen wandern mit). Radius `r = 0,01 + 0,5·Toleranz`.
+  CPU-Referenz mit derselben Formel: `ReplacementTable.Apply` (Tests vergleichen beide).
+- **Constant Buffer `b1`** (3,2 KB statt 2,5 KB): nach der Palette `ReplaceCounts[4]` (uint4, x = Anzahl
+  je Platz), `ReplaceFrom[12]` (YCbCr + Radius), `ReplaceShift[12]` (RGB). Im Kopf `MonitorScheme`
+  (Platz + 1 des Monitorfilters, 0 = keiner) und `ReplaceActive` – 1 nur, wenn auf diesem Monitor der Monitorfilter oder ein Bereich Ersetzungen nutzt; **0 überspringt den Schritt ganz**.
+  Befüllt von `WindowConstants.Fill` aus `DisplayEffects.Replacements` (beim Settings-Wechsel gebaut, 0 B je Frame).
+- **Pausieren:** Ein „Nur ersetzen“-Fenster hat dieselbe Matrix wie der ungefilterte Monitor; `ChangesMonitor`
+  vergleicht deshalb auch `DisplayEffects.ReplaceSlotOf(entry)`.
+- **Gemessen (RTX 3060 Ti, 1080p, 2026-11-11):** Magnify 0,081 ms, mit 3 Ersetzungen auf dem ganzen
+  Monitor 0,089 ms → **+0,008 ms**, hochgerechnet ×10 ≈ 0,08 ms Onboard; Gesamtframe ≈ 0,9 ms ≤ 2 ms.
+  Die Palette mit 14 statt 10 Einträgen ändert die Bereichsschleife nicht (64 Bereiche wie bisher).
+  Messung: `ZOOMIN_GPU_TIMING=1 dotnet test --project tests/ZoomIN.Rendering.Tests --filter-class "*SchemeGpuTimeTests"`.
 - **Gemessen (Dev-PC, 2026-11-06):** Aktualisieren 0,10 ms bei 16 sichtbaren Fenstern; ein Blick
   16,5 ms (1200×800) bzw. 17 ms (ganzer Monitor) – GDI wartet auf den nächsten DWM-Frame; ein
   sichtbares Fenster ist nach ≈ 0,6 s entschieden (Blicke bei 250 und 600 ms).
@@ -221,6 +244,80 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   Ein Lambda für `Task.Run` in derselben Methode ließ C# die Closure **bei jedem Aufruf** anlegen
   (32 B/Frame) – der teure Teil steht deshalb in einer eigenen Methode.
 - PNG ohne Bibliothek: `PngWriter` (RGBA8, Filter 0, ein zlib-IDAT, CRC-32).
+
+## Schärfen und Fett (M18, D1)
+Plan: [d1-schaerfen-fetter.md](../plan/features/d1-schaerfen-fetter.md). Code: `Shaders/TextEnhance.hlsli`,
+`Magnify.hlsl` `PSEnhanced`, `Core/Filters/TextEnhancement.cs`, `Rendering/TextEnhance/`.
+
+### Spike (2026-11-11, Branch `spike/d1-schaerfen-fetter`, nicht gemergt)
+- **Verglichen:** (A) im vorhandenen Durchgang (`PSEnhanced`, auf der Quelle vor Farbmatrix und
+  intelligentem Invertieren) und (B) eigener Durchgang auf einem Offscreen-Ziel in Monitorgröße.
+- **GPU-Zeit** 1080p, RTX 3060 Ti, Schärfe 60 %/Fett 1 px: A erste Fassung (Unschärfemaske + 20
+  eigene Abtastungen) +0,14 ms ✘; **A Runde 2** (9 Bikubik-Abtastungen + 4 für Fett) **+0,026–0,029
+  ms** ✔; B +0,146–0,155 ms ✘ (allein Schreiben/Lesen des Offscreen-Ziels 0,016–0,020 ms).
+  Faustwert: eine zusätzliche bilineare Abtastung je Pixel kostet bei 1080p ≈ 7 µs.
+- B verbreiterte die Nähte des intelligenten Invertierens (helle Kante an der dunklen Zeilenleiste):
+  Enhance gehört **vor** das Invertieren. → **Entscheidung: Variante A**, `DesktopLayer` bleibt ein
+  Durchgang, kein Offscreen-Ziel.
+
+### Umsetzung (2026-11-12)
+- `PSEnhanced` wird nur gebunden, wenn `TextEnhancement.At(Zoom, Glättung)` etwas liefert: Schärfe
+  oder Fett > 0, Glättung „Text-optimiert“ und Zoom ≥ 1,5×. Sonst läuft `PSMain` unverändert
+  (0 Zusatzkosten, bitgleich). Die Werte stehen im Konstantenpuffer b0 (`MagnifyConstants`, 128 B).
+  Nur der vergrößerte Bereich wird verbessert; die 1×-Fläche um Lupe/angedockten Bereich nicht.
+  Als Zoom zählt die weniger vergrößerte Achse der gezeichneten Ansicht (angedockt können sich die
+  Achsen stark unterscheiden, z. B. 2,3× quer und 1,2× hoch → aus).
+- **Schärfe = Catmull-Rom an umgerechneter Position.** Zwischen zwei Texeln wird die Mitte
+  schneller durchlaufen, an den Texelmitten entstehen kleine Plateaus (bei 100 % ein Drittel Texel
+  Übergang). Gleiche 9 Abtastungen, kostet nichts. *Abweichung vom Spike:* Der dort genutzte
+  schärfere Keys-Kern (`a = −0,5 − Schärfe`) macht Kanten **nicht** steiler – seine Steigung an
+  einer Kante ist `1,5 + a/2` (Catmull-Rom 1,25, `a = −1,5` nur 0,75); er wirkte nur über
+  Überschwinger und dunklere Striche. Nachgewiesen im WARP-Test (Kante gleich breit).
+- **Keine Begrenzung auf den Wertebereich der Abtastungen:** Die mittleren Abtastungen sind
+  Mischungen zweier Texel, ihr Bereich ist enger als der echte – die Begrenzung schnitt echte
+  Catmull-Rom-Werte ab und machte jede Kante weicher (Strichmitte 65 statt 62). Ohne sie bleibt das
+  leichte Überschwingen von Catmull-Rom wie heute; die Umrechnung erzeugt kein neues. Fett zieht
+  helle Überschwinger am Papier sogar auf den Papierton zurück.
+- **Fett = Minimum/Maximum der Leuchtdichte** über ein Kreuz aus 4 bilinearen Abtastungen im
+  Abstand „Fett px“ (Ausgabepixel, aus `ddx/ddy` der Uv – exakt, weil Uv linear ist). Ob der Strich
+  dunkel oder hell ist, entscheidet die Umgebung (Mittel der 9 Abtastungen gegen die Mitte des
+  Bereichs) – gleich vor und nach jedem invertierenden Filter.
+  - Kontrast-Prüfung über 9 Abtastungen **und** Kreuz zusammen: Die 9 allein übersehen einen
+    Strich ein Texel weiter (der Bilinear-Trick mischt ihn mit kleinem Gewicht ein, es entstand
+    eine Lücke im verbreiterten Strich), das Kreuz allein bei kleinem Fett-Wert.
+  - **Reichweite höchstens ½ Texel** (`BOLD_MAX_TEXELS`): Weiter sprangen die 4 Abtastungen über
+    den Rand eines 1-Texel-Strichs, und neben einer helleren Lücke erschien eine Geisterkopie
+    (gesehen bei 2× mit 3 px). Bei 2× wirkt Fett also höchstens 1 px, bei 4× 2 px, ab 6× voll.
+  - Vor dem Skalieren wird der Catmull-Rom-Wert auf 0–1 begrenzt: Ein Überschwinger über Weiß
+    (zwischen zwei weißen Texeln 1,125) teilte sonst durch `1 − 1,125` und machte helle Schrift
+    auf dunklem Grund fleckig schwarz (WARP-Test `Bold_WhiteStrokeOnBlack…`).
+  - **Grenze:** Ist ein Strich so breit wie die halbe Umgebung (2 Texel bei 4 × 4), ist hell und
+    dunkel gleich vertreten; dann gewinnt „dunkel“. Dunkle Schrift wird dort richtig breiter, helle
+    Schrift auf dunklem Grund an diesen Stellen etwas schmaler. Gilt nur für native dunkle
+    Oberflächen; mit Invertier-Filter ist die Quelle hell und alles stimmt.
+- **Risiko 1, ClearType-Säume** *(selbst entschieden, Vorgabe Nutzer)*: Nur die Leuchtdichte des
+  dunkelsten/hellsten Werts wird übernommen; der Pixel wird zu Schwarz bzw. Weiß hin skaliert und
+  behält seinen Farbton, die Sättigung kann nur sinken. Test: Fett erzeugt keine zusätzlichen
+  farbigen Pixel. Folge: Der verbreiterte Rand farbiger Schrift wird grau-dunkel, nicht farbig.
+- **Risiko 2, Fotos** *(selbst entschieden)*: Die 4 Eck-Abtastungen des Bikubik-Fensters (4 × 4
+  Texel, liegen immer auf Texelmitten) werden zuerst gelesen. Sind 3–4 davon farbig (Chroma-Schwellen
+  wie `Ambient.hlsl`, 0,10–0,25), gilt der Pixel als Foto: **Schärfe und Fett sind dort aus**
+  (`smoothstep(2, 3, farbige Ecken)`: bis 2 voll, ab 3 aus). Ohne Zusatz-Abtastung. Bekannte Grenze: Text auf kräftig
+  farbiger Fläche (blaue Schaltfläche) wird ebenfalls nicht verbessert; graue Fotos werden verbessert.
+- **Risiko 3, Glättung** *(selbst entschieden)*: Nur bei „Text-optimiert“. Bei „Weich“/„Pixel“
+  sind die Regler deaktiviert, die Beschreibung sagt „Wirkt nur mit der Glättung ‚Text-optimiert‘“;
+  kein stilles Umschalten. Die Werte bleiben gespeichert und wirken wieder, sobald „Text-optimiert“
+  gewählt ist.
+- **Risiko 4, unter 1,5×** *(selbst entschieden)*: aus (`TextEnhancement.MinZoom`).
+- **Sichtbare Eigenheiten** (WARP-Bögen mit echter 9-pt-ClearType-Schrift): Schärfe 100 % zeigt die
+  Texel des Quellbilds deutlicher, auch ClearType-Farbpixel als kleine farbige Flecken (wie
+  „Pixel“, nur kleiner). Fett 3 px bei 4× füllt kleine Punzen (e, a). Bewertung durch den Nutzer offen.
+- **GPU-Zeit** (`EnhanceGpuTimeTests`, `ZOOMIN_GPU_TIMING=1`, 1080p, 5 Läufe, RTX 3060 Ti):
+  +0,018–0,030 ms bei 60 %/1 px und 100 %/3 px, 2×/4×/8×, ohne und mit intelligentem Invertieren
+  (Magnify aus 0,071–0,090 ms). ×10 Onboard **hochgerechnet** ≈ 0,3 ms ≤ 0,5 ms. Im Betrieb misst
+  `EnhanceCost` dasselbe nach jeder Änderung und nach einer Pause (`zoomin.render.enhance_gpu_ms`),
+  nur mit Zuhörer, auf genau der gezeichneten Ansicht (bei Lupe nur deren Fläche).
+- Der Debug-Schnappschuss (`-info.txt`) nennt Glättung, Schärfe, Fett und ob sie bei diesem Zoom wirken.
 
 ## Shader-Regeln
 - HLSL-Dateien in `ZoomIN.Rendering/Shaders/`. Seit M14 Schritt 4 übersetzt sie der Build mit

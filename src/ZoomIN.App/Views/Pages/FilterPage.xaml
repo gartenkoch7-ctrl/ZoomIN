@@ -27,6 +27,9 @@
                 <ComboBox MinWidth="240" ItemsSource="{x:Bind Vm.FilterNames}" SelectedIndex="{x:Bind Vm.FilterIndex, Mode=TwoWay}" />
             </c:SettingCard>
 
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Schemes.Card.Desc')}" Glyph="&#xE790;" Header="{x:Bind loc:Text.Get('Schemes.Card')}">
+                <Button Click="OnCustomSchemes" Content="{x:Bind loc:Text.Get('Schemes.Open')}" />
+            </c:SettingCard>
             <c:SettingCard Description="{x:Bind loc:Text.Get('WinFilter.Card.Desc')}" Glyph="&#xE737;" Header="{x:Bind loc:Text.Get('WinFilter.Title')}">
                 <Button Click="OnWindowFilter" Content="{x:Bind loc:Text.Get('WinFilter.Open')}" />
             </c:SettingCard>

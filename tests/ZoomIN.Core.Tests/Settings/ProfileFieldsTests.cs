@@ -2,6 +2,7 @@ using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Settings;
+using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.Core.Tests.Settings;
@@ -22,7 +23,7 @@ public sealed class ProfileFieldsTests
         {
             Language = AppLanguage.German,
             LastMode = ZoomMode.Lens,
-            ColorFilter = ColorFilter.YellowOnBlack,
+            ColorFilter = FilterId.YellowOnBlack,
             FilterEnabled = true,
             PanMilliseconds = 0,
         };
@@ -30,12 +31,29 @@ public sealed class ProfileFieldsTests
         var result = ProfileFields.ApplyDisplay(current, profile);
 
         Assert.Equal(ZoomMode.Lens, result.LastMode);
-        Assert.Equal(ColorFilter.YellowOnBlack, result.ColorFilter);
+        Assert.Equal(FilterId.YellowOnBlack, result.ColorFilter);
         Assert.True(result.FilterEnabled);
         Assert.Equal(0, result.PanMilliseconds);
         Assert.Equal(AppLanguage.English, result.Language);
         Assert.Equal(current.ToggleHotkey, result.ToggleHotkey);
         Assert.True(result.CheckForUpdates);
+    }
+
+    [Fact]
+    public void ApplyDisplay_TakesTheCaretMarkerLook()
+    {
+        var profile = new AppSettings
+        {
+            CaretMarkerShape = CaretMarkerShape.Circle,
+            CaretMarkerColor = "#00E676",
+            CaretMarkerThickness = CaretMarkerThickness.Thin,
+        };
+
+        var result = ProfileFields.ApplyDisplay(new AppSettings(), profile);
+
+        Assert.Equal(CaretMarkerShape.Circle, result.CaretMarkerShape);
+        Assert.Equal("#00E676", result.CaretMarkerColor);
+        Assert.Equal(CaretMarkerThickness.Thin, result.CaretMarkerThickness);
     }
 
     [Theory]

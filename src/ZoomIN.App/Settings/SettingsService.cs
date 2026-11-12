@@ -23,6 +23,10 @@ public sealed class SettingsService : IDisposable
     private readonly WindowDragZoom _windowDrag;
     private readonly Timer _saveTimer;
     private readonly Lock _gate = new();
+
+    // One save at a time: the debounce timer, an immediate save (zoom on/off, deleting a scheme) and
+    // Dispose would otherwise write the same ".tmp" file of the active profile together (M18 review).
+    private readonly Lock _saveGate = new();
     private AppSettings _shared;
     private bool _savedZoomOn;
 
@@ -90,10 +94,13 @@ public sealed class SettingsService : IDisposable
 
     public void SaveNow()
     {
-        var settings = Current;
-        Volatile.Write(ref _savedZoomOn, settings.ZoomOn);
-        _store.Save(settings);
-        _profiles.Save(settings.ActiveProfile, settings);
+        lock (_saveGate)
+        {
+            var settings = Current;
+            Volatile.Write(ref _savedZoomOn, settings.ZoomOn);
+            _store.Save(settings);
+            _profiles.Save(settings.ActiveProfile, settings);
+        }
     }
 
     public void Dispose()
