@@ -77,7 +77,9 @@ public sealed class AxisLock : IPointerMoveFilter
         {
             LockAxis.Horizontal => Math.Abs(current.Y - _anchor.Y) > 1,
             LockAxis.Vertical => Math.Abs(current.X - _anchor.X) > 1,
-            _ => Math.Abs(current.X - _last.X) > 1 || Math.Abs(current.Y - _last.Y) > 1,
+            // Before the axis is chosen only a jump counts: Windows clipping the point at a desktop
+            // edge or a foreign ClipCursor moves it a few pixels, which must not restart the 8 px.
+            _ => Math.Abs(current.X - _last.X) > Threshold || Math.Abs(current.Y - _last.Y) > Threshold,
         };
         if (moved)
         {

@@ -25,9 +25,15 @@ internal sealed class BufferSetup(EdgeBuffer buffer, IMonitorProvider monitors, 
     private bool _disposed;
 
     /// <summary>Sets the level, or with null keeps it, and reads the monitors; returns how many are known.</summary>
-    public int Configure(EdgeBufferLevel? level) => Configure(level, retry: false);
+    public int Configure(EdgeBufferLevel? level) => Configure(level, retry: false, confirm: false);
 
-    private int Configure(EdgeBufferLevel? level, bool retry)
+    /// <summary>
+    /// After a display change: reads now and once more a second later, because Windows may still
+    /// report part of the old layout (an old edge could sit in the middle of a real monitor).
+    /// </summary>
+    public int Refresh() => Configure(null, retry: false, confirm: true);
+
+    private int Configure(EdgeBufferLevel? level, bool retry, bool confirm)
     {
         lock (_gate)
         {
@@ -40,11 +46,10 @@ internal sealed class BufferSetup(EdgeBuffer buffer, IMonitorProvider monitors, 
             _level = level ?? _level;
             var bounds = monitors.AllBounds();
 
-            // Empty or one monitor while Windows is still enumerating: an old layout could put an
-            // edge in the middle of a real monitor, so the buffer rests (it needs two) and reads
-            // again a few times. With really one monitor that costs ten cheap reads.
+            // Empty or one monitor while Windows is still enumerating: the buffer rests (it needs
+            // two) and reads again a few times. With really one monitor that costs ten cheap reads.
             buffer.Configure(bounds, _level);
-            if (bounds.Count >= 2 || _level == EdgeBufferLevel.Off || _disposed)
+            if (_level == EdgeBufferLevel.Off || _disposed || (bounds.Count >= 2 && !confirm))
             {
                 _retries = 0;
             }
@@ -77,7 +82,7 @@ internal sealed class BufferSetup(EdgeBuffer buffer, IMonitorProvider monitors, 
     {
         try
         {
-            var count = Configure(null, retry: true);
+            var count = Configure(null, retry: true, confirm: false);
             log.Reapplied(FenceTrigger.DisplayChange, count);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)

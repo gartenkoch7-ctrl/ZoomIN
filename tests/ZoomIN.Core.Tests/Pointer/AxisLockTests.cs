@@ -108,6 +108,16 @@ public sealed class AxisLockTests
     }
 
     [Fact]
+    public void ClippedByWindows_BeforeTheAxisIsChosen_KeepsCounting()
+    {
+        _lock.SetHeld(true);
+        Move(500, 0, 503, -3); // pushed past the top edge: Windows keeps the pointer at y = 0
+
+        Assert.Equal(new PhysicalPoint(509, 0), Move(503, 0, 509, -3));
+        Assert.Equal(LockAxis.Horizontal, _lock.Axis);
+    }
+
+    [Fact]
     public void Lock_IsCounted()
     {
         var before = PointerConstraintMetrics.AxisLocks(LockAxis.Vertical);

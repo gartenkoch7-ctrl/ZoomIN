@@ -182,7 +182,7 @@ public sealed class PointerConstraintController : IDisposable
                 return;
             }
 
-            var monitors = _bufferSetup.Configure(null);
+            var monitors = _bufferSetup.Refresh();
             if (Volatile.Read(ref _applied) is { AxisLock: true } && trigger is FenceTrigger.DesktopSwitch or FenceTrigger.SessionUnlock)
             {
                 _axis.KeysMissed();

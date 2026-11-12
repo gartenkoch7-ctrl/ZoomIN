@@ -342,7 +342,9 @@ an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten
   Monitor, beginnt die Druckzeit dort von vorn.
 - **Monitore beim Anzeigewechsel:** Liefert Windows mitten im Aufzählen keine vollständige Liste,
   ruht der Puffer (eine alte Anordnung könnte eine Kante mitten in einen echten Monitor legen)
-  und liest die Monitore jede Sekunde neu, bis zu zehnmal je Anlass (`BufferSetup`). Das gilt auch
+  und liest die Monitore jede Sekunde neu, bis zu zehnmal je Anlass (`BufferSetup`). Nach jedem
+  Anzeigewechsel liest er sie zur Bestätigung eine Sekunde später noch einmal, weil Windows
+  zunächst noch Teile der alten Anordnung melden kann. Das gilt auch
   für nur einen gelesenen Monitor (ein zweiter kann noch fehlen). Ein fehlgeschlagenes Anwenden
   wird erst bei der nächsten Änderung einer A6-Einstellung wiederholt, nicht bei jeder anderen.
 - **Eingefrorene Monitore:** Der Puffer gibt eine Bewegung frei, danach wirken die gesperrten
@@ -371,7 +373,8 @@ an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten
   am echten Gerät prüfen). Injizierte neutrale Codes (`VK_SHIFT`, `VK_CONTROL`, `VK_MENU`)
   werden nach Scancode bzw. Erweiterungs-Flag links oder rechts zugeordnet. Nach so einem
   unechten Loslassen meldet `GetAsyncKeyState` die Taste eine Weile als oben; die Prüfung wartet
-  dann bis zu vier Takte (2 s), bevor sie die Sperre löst. Injizierte Tasten mit Erweiterungs-Flag
+  dann bis zu vier Takte (2 s), bevor sie die Sperre löst; kommt danach Windows' unechtes
+  Drücken (die Taste ist also noch gehalten), rastet die Sperre wieder ein. Injizierte Tasten mit Erweiterungs-Flag
   (Tastenumbelegung, Hilfsprogramme) gelten nicht als unecht. Die Tastenwiederholung beim Halten zählt nur
   einmal. Der Hook läuft nur, solange die Achsensperre eingeschaltet ist. Ein eigener Hook statt
   des Tastatur-Hooks von `Win32InputActivityHook`, weil dieser mit B1 geteilt ist; nach der
@@ -391,7 +394,9 @@ an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten
   entfernten Tastatur-Hook erkennt die Haltetaste nicht (offen; die Achsensperre reagiert dann
   nicht mehr, sperrt aber auch nichts).
 - **Zeiger von außen versetzt** (Kürzel mit `SetCursorPos`, anderes Programm), während die Achse
-  gilt: Die Sperre übernimmt die neue Zeile bzw. Spalte, statt den Zeiger zurückzuziehen.
+  gilt: Die Sperre übernimmt die neue Zeile bzw. Spalte, statt den Zeiger zurückzuziehen. Vor der
+  Wahl der Achse zählt nur ein Sprung über 8 px; dass Windows den Punkt an einer Bildschirmkante
+  oder einem fremden `ClipCursor` um wenige Pixel zurücksetzt, startet die 8 px nicht neu.
 - **Ecke:** Ein Drücken, das schräg an einer Ecke begann, bleibt beim Entlanggleiten an einer der
   beiden Kanten erhalten; erst ein Rückzug von allen gedrückten Kanten beginnt von vorn.
 - **Ein Monitor:** Der Puffer-Filter bleibt auch mit nur einem Monitor angemeldet (er tut dann

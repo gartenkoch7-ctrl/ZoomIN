@@ -18,6 +18,7 @@ internal sealed class HeldKeyState(Func<int, bool> isDown, TimeSpan checkInterva
     private bool _held;
     private bool _fakeUp;
     private int _fakeUpChecks;
+    private bool _fakeReleased;
     private int _failures;
 
     public bool IsWatching
@@ -78,7 +79,16 @@ internal sealed class HeldKeyState(Func<int, bool> isDown, TimeSpan checkInterva
             if (fake)
             {
                 // Windows' own Shift up (NumLock) also sets the key state to up while the user
-                // still holds Shift: the check must not take that for a missed release.
+                // still holds Shift: the check must not take that for a missed release. If the
+                // check released it anyway (fake up held too long), Windows' fake down afterwards
+                // means the key is still held: engage again, Shift does not repeat after another key.
+                if (down && _fakeReleased && !_held)
+                {
+                    _fakeReleased = false;
+                    Press(watch);
+                    return;
+                }
+
                 _fakeUp = up || (_fakeUp && !down);
                 _fakeUpChecks = 0;
                 return;
@@ -86,13 +96,12 @@ internal sealed class HeldKeyState(Func<int, bool> isDown, TimeSpan checkInterva
 
             _fakeUp = false;
             _fakeUpChecks = 0;
+            _fakeReleased = false;
 
             // Key repeat sends further "down" events while held; only the first one counts.
             if (down && !_held)
             {
-                _held = true;
-                _timer?.Change(checkInterval, checkInterval);
-                Notify(watch, true);
+                Press(watch);
             }
             else if (up && _held)
             {
@@ -121,8 +130,9 @@ internal sealed class HeldKeyState(Func<int, bool> isDown, TimeSpan checkInterva
                 return false;
             }
 
-            _fakeUpChecks = 0;
+            var afterFake = _fakeUp;
             Release();
+            _fakeReleased = afterFake;
             return true;
         }
     }
@@ -131,11 +141,20 @@ internal sealed class HeldKeyState(Func<int, bool> isDown, TimeSpan checkInterva
     public int TakeFailures() => Interlocked.Exchange(ref _failures, 0);
 
     // Under _state.
+    private void Press(Watch watch)
+    {
+        _held = true;
+        _timer?.Change(checkInterval, checkInterval);
+        Notify(watch, true);
+    }
+
+    // Under _state.
     private void Release()
     {
         // A fake up from before (e.g. before a desktop switch) must not delay the next check.
         _fakeUp = false;
         _fakeUpChecks = 0;
+        _fakeReleased = false;
         if (!_held)
         {
             return;

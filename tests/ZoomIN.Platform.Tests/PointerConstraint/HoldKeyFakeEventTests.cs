@@ -55,6 +55,23 @@ public sealed class HoldKeyFakeEventTests : IDisposable
     }
 
     [Fact]
+    public void FakeDownAfterAForcedRelease_EngagesAgain()
+    {
+        _watch.Start(AxisLockKey.LeftShift, _changes.Add);
+        _watch.OnKey(LeftShift, 0x2A, extended: false, down: true, up: false);
+        _watch.OnKey(LeftShift, 0x2A, extended: true, down: false, up: true);
+        for (var i = 0; i < 4; i++)
+        {
+            _watch.Check(); // numpad arrow held for 2 s: released to be safe
+        }
+
+        // The arrow is let go and Windows restores the Shift it took away: still held.
+        _watch.OnKey(LeftShift, 0x2A, extended: true, down: true, up: false);
+
+        Assert.Equal([true, false, true], _changes);
+    }
+
+    [Fact]
     public void InjectedExtendedRightShift_Counts()
     {
         _watch.Start(AxisLockKey.RightShift, _changes.Add);
