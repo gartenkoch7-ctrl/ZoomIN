@@ -91,6 +91,13 @@ public sealed partial class DiagnosticsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool CanCreatePackage { get; set; } = true;
 
+    /// <summary>The package also gets the secure instance's logs, after an administrator prompt (M10).</summary>
+    [ObservableProperty]
+    public partial bool IncludeSecureLogs { get; set; }
+
+    /// <summary>The option is offered: only where an elevated copy is available.</summary>
+    public bool CanIncludeSecureLogs => _package.CanIncludeSecureLogs;
+
     /// <summary>"Reset now": back to the default level and one day.</summary>
     public void ResetRaised()
     {
@@ -103,11 +110,17 @@ public sealed partial class DiagnosticsViewModel : ObservableObject
         CanCreatePackage = false;
         PackageStatus = Text.Get("Diag.Creating");
         var options = _settings.Current.Telemetry();
+        var includeSecureLogs = IncludeSecureLogs && CanIncludeSecureLogs;
         try
         {
-            var path = await Task.Run(() => _package.Create(options));
-            PackageStatus = Text.Format("Diag.Created", Path.GetFileName(path));
-            FileReveal.Reveal(path);
+            var package = await Task.Run(() => _package.Create(options, includeSecureLogs));
+            var name = Path.GetFileName(package.Path);
+
+            // Asked for, but not in it (prompt declined, refused or failed): say so, not just "saved".
+            PackageStatus = package.SecureLogs is null or SecureLogsResult.Copied
+                ? Text.Format("Diag.Created", name)
+                : Text.Format("Diag.CreatedWithoutSecure", name);
+            FileReveal.Reveal(package.Path);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

@@ -72,6 +72,9 @@ internal sealed class RenderSession : IDisposable
     /// <summary>The overlay is on screen.</summary>
     public bool IsVisible => _shown;
 
+    /// <summary>Desktop Duplication has delivered a copy of the desktop (start timings, M10).</summary>
+    public bool HasImage => _duplicator.HasImage;
+
     /// <summary>The pointer locator was still animating in the last frame.</summary>
     public bool LocatorActive { get; private set; }
 

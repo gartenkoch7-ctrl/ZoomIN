@@ -73,6 +73,15 @@ public static class Program
             return RunFlow(TelemetryRole.Elevated, traceParent, services => services.GetRequiredService<ISecureDesktopSwitch>().ApplyElevated(secureDesktopOn));
         }
 
+        if (args is [SecureLogCopyRule.Switch, ..])
+        {
+            // Elevated, from the diagnostics package (M10): SYSTEM's logs into the user's diagnostics
+            // folder. Without telemetry on purpose: its log file would be written as administrator
+            // into the user's own %LocalAppData%\ZoomIN\logs, which the user can redirect with a link.
+            // Never on to the app: its exit code 0 would read as "copied".
+            return SecureLogCopyRule.TryParse(args, out var secureLogTarget) ? new SecureLogCopy(Folders).Run(secureLogTarget) : SecureLogCopy.Refused;
+        }
+
         if (UpdateCommand.TryParse(args, out var update))
         {
             return RunFlow(TelemetryRole.Update, traceParent, services => services.GetRequiredService<UpdateRunner>().Run(update));

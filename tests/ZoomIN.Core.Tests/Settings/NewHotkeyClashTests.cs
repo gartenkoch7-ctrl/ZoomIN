@@ -81,7 +81,7 @@ public sealed class NewHotkeyClashTests
             s.ToggleHotkey, s.ZoomInHotkey, s.ZoomOutHotkey, s.FullscreenHotkey, s.LensHotkey, s.DockedHotkey, s.FilterHotkey,
             s.NextFilterHotkey, s.LocateHotkey, s.CrosshairHotkey, s.TrackingHotkey, s.ProfileHotkey, s.OverviewHotkey,
             s.IslandsHotkey, s.IslandEditHotkey, s.FreezeMonitorHotkey, s.NextMonitorHotkey,
-            HotkeyGesture.ExitSecureDesktop, HotkeyGesture.LensWider, HotkeyGesture.LensNarrower, HotkeyGesture.LensTaller, HotkeyGesture.LensShorter,
+            HotkeyGesture.ExitSecureDesktop, HotkeyGesture.SecureDesktopSnapshot, HotkeyGesture.LensWider, HotkeyGesture.LensNarrower, HotkeyGesture.LensTaller, HotkeyGesture.LensShorter,
         ];
 
         Assert.All(factory, gesture => Assert.NotEqual(default(HotkeyGesture), gesture));

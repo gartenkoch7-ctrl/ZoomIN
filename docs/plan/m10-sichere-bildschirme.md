@@ -259,6 +259,10 @@ Tray-App außerhalb des Jobs weiterlaufen lassen?
 
 - **Akzeptanz:** Log „first magnified image after … ms“ ≤ 1000 ms bei UAC und bei Win+L
   (Testbuild). Hot Path geändert → Benchmark `0 B`.
+- [x] C1 umgesetzt (Spur C, `feat/m10-c-pruefung`). Ursache: Log 1107 wartete auf den Status, der nur
+  einmal je Sekunde kommt; dazu glitt die Stufe von 1×. Rauchtest (normaler Desktop, Zoom an):
+  erstes Bild ≈ 545 ms nach Prozessstart. `MilestoneBenchmarks` 0 B. Offen: Messung als SYSTEM bei
+  UAC/Win+L im Testbuild.
 
 **Paket C2 – Prüf-Logs und Schnappschuss (Stufe 3, Opus, `high`)**
 
@@ -269,6 +273,10 @@ Tray-App außerhalb des Jobs weiterlaufen lassen?
 | `App/SecureDesktop/SecureDesktopHost.cs` | ändern | Kurzbefehl `Strg+Alt+Umschalt+D` (nur im sicheren Modus, wie das Beenden-Kürzel) → `DebugSnapshots` in SYSTEMs Ordner `…\ZoomIN\debug` | Test gegen die AltGr-Regel | 20 |
 
 - **Akzeptanz:** Ein Rauchtest als normaler Benutzer (`--secure-desktop`) schreibt alle Prüfzeilen.
+- [x] C2 umgesetzt (Spur C). Abweichungen: Overlay oben per Z-Reihenfolge (`EnumWindows`), weil
+  `WindowFromPoint` das click-through Overlay überspringt; Logs in `Checks/SecureChecksLog.cs`
+  (1150–1169); Desktop/Job/Wächter/Kürzel schon beim Start, Overlay-Zeilen nach dem ersten Bild.
+  Rauchtest: alle Prüfzeilen geschrieben (Stufe „Ausführlich“ nötig für die Info-Zeilen).
 
 **Paket C3 – SYSTEM-Logs im Diagnosepaket (Stufe 3, Opus, `high`, Sicherheitsprüfung)**
 
@@ -279,6 +287,11 @@ Tray-App außerhalb des Jobs weiterlaufen lassen?
 | Diagnose-Seite, `Texts*` | ändern | Kontrollkästchen „Logs von Anmelde- und Sperrbildschirm (Adminrechte)“ | – | 20 |
 
 - **Akzeptanz:** `/security-review` ohne Befund.
+- [x] C3 umgesetzt (Spur C). `/security-review`: zwei Befunde behoben (Telemetrie des erhöhten
+  Schritts im Benutzerordner; pfadbasiertes Anlegen trotz gehaltenem Ordner → `NtCreateFile` relativ
+  mit `OBJ_DONT_REPARSE`), Nachprüfung ohne Befund. Offen (vorbestehend): die übrigen erhöhten
+  Rollen loggen weiter in `%LocalAppData%\ZoomIN\logs` des Benutzers. DI-Zeile für die Integration:
+  `ISecureLogsRequest` → `ElevatedSecureLogsRequest` in `ServiceRegistration.Tray`.
 
 **Paket D – KB, Telemetrie-Katalog, Häkchen (Stufe 1, Haiku, `low`)**
 - `telemetrie.md`: Bereiche und Einträge eintragen.

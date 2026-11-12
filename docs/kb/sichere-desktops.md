@@ -120,6 +120,78 @@ Schlüssel `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Accessibility\ATs\
 - Prüfen, ob wirklich gesperrt wurde: Ereignisanzeige `Microsoft-Windows-Winlogon/Operational`,
   Ereignis 811 mit Benachrichtigung (4) = Sperre, (5) = Entsperren.
 
+## Startzeit, Prüf-Logs, Schnappschuss, SYSTEM-Logs (M10-Abschluss, Spur C, 2026-11-12)
+- **Ursache der ~1 s Lücke (aus dem Code):** Log 1107 wartete auf `ZoomController.Status.IsVisible`.
+  Der Render-Thread veröffentlicht seinen Status aber nur **einmal je Sekunde** (`FrameStatistics.SecondElapsed`,
+  damit der Frame ohne Lock bleibt). Die Sekunde beginnt mit `RunSession`, also mit „Zoom pipeline ready“
+  – genau die gemessenen ~430 ms + 1000 ms. Das Bild selbst kam früher; gemessen wurde zu spät.
+- Dazu glitt die Stufe bisher von 1× hoch (Standard 150 ms bis 95 %, bis zum Einrasten ~2,4 × so lange).
+  Jetzt setzt `SecureStartWatch.SkipZoomAnimation` die Animationszeit vor dem Einschalten auf 0 und
+  stellt sie 1 s nach dem ersten Bild auf der Stufe (Zeit für die übrigen Monitore) bzw. nach 10 s
+  zurück.
+- Neue Messung: `RenderMilestones` (in `RenderModels`, ohne DI, Uhr `TimeProvider.System`) hält
+  Pipeline bereit, erste Desktopkopie, erstes gezeigtes Bild und erreichte Stufe. Nur die sichere
+  Instanz schaltet sie scharf (`Arm`); der Render-Thread prüft je Frame nur, bis alles gesetzt ist,
+  in der Tray-App gar nicht (Benchmark `MilestoneBenchmarks`: 0 B, < 1 ns). Daraus Log 1107 und
+  1150 und die Kinder `zoomin.secure.start.pipeline`/`.capture`/`.present`/`.zoom_in`. Die Kopie
+  wird erst nach ihrem Frame gestempelt; ein langes `.capture` heißt: Desktop Duplication kam spät.
+- **Messung (2026-11-12 18:33, Debug-Build, normaler Desktop, Bildschirm an, Zoom an, ein Monitor):**
+  Prozessstart → Engine-Start ~360 ms (davon `zoomin.secure.settings` 169 ms) → Pipeline +160 ms →
+  erste Desktopkopie +22 ms → erstes Bild und Zoomstufe im selben Frame (`.present`/`.zoom_in` 0 ms).
+  **Erstes vergrößertes Bild ≈ 545 ms nach Prozessstart** (Ziel ≤ 1 s); eine frische Duplication
+  liefert ihr erstes Bild bei eingeschaltetem Bildschirm sofort. Bestätigung als SYSTEM bei UAC/Win+L
+  steht aus (Testbuild, Log 1107/1150 bei Stufe „Ausführlich“, sonst die Abläufe im `.trace.jsonl`).
+- **Falle beim Rauchtest:** Ist der Bildschirm aus (Nutzer lange inaktiv, hier 17 min), komponiert DWM
+  nichts; eine neu angelegte Desktop Duplication liefert dann **kein einziges** Bild (`AcquireNextFrame`
+  nur `WAIT_TIMEOUT`, auch nicht mit `LastPresentTime == 0`). Der Rauchtest meldet dann 1106 nach 10 s.
+  Startzeiten nur bei eingeschaltetem Bildschirm messen. Offen: Liefert eine frische Duplication bei
+  **statischem**, aber eingeschaltetem Bild sofort ein erstes Bild? Die Zeit 1150 „first desktop copy“
+  im Testbuild beantwortet das.
+- Prüf-Logs 1151–1162 (`SecureDesktopChecks`): Desktop, Job, Wächter und Kürzel gleich beim Start (Windows beendet die Instanz beim Desktopwechsel ohne Vorwarnung, oft nach Sekunden); die Overlay-Prüfungen nach dem ersten Bild (+1 s), sonst nach 10 s oder beim Beenden-Kürzel.
+  `WindowFromPoint` überspringt das Overlay (WS_EX_LAYERED + WS_EX_TRANSPARENT ist für die
+  Trefferprüfung unsichtbar), darum läuft `Win32SecureDesktopProbe` die Z-Reihenfolge ab
+  (`GetTopWindow`/`GW_HWNDNEXT`, sichtbar und nicht „cloaked“) und nimmt das erste Fenster, dessen
+  Rechteck die Monitormitte enthält. Geprüft nur auf Monitoren, deren Mitte ein eigenes Overlay deckt.
+- Die Prüfzeilen sind Information (wie 1105/1107): Bei Stufe „Normal“ (ab Warnung) erscheinen nur
+  die Warnungen. Für die Checkliste vorher „Ausführlich“ wählen.
+- Watchdog-PID: `IWatchdogLauncher.Start` gibt sie jetzt zurück (ShellExecute liefert das Handle).
+- Strg+Alt+Umschalt+D (nur sicherer Modus, wie Strg+Alt+Umschalt+Z): Debug-Schnappschuss in
+  `folders.Debug()\secure-snapshot-<Zeit>` – als SYSTEM in dessen Profil, nur für Admins lesbar.
+  AltGr+D erzeugt auf deutscher Tastatur kein Zeichen. Jeder am Anmeldebildschirm kann das Kürzel
+  drücken: Es bleiben höchstens 3 Schnappschüsse, ältere löscht der nächste. Offen: Belegt der
+  Benutzer Strg+Alt+Umschalt+D (oder +Z) mit einem eigenen Kürzel, fehlt es auf der Sperre (Log 1166/1104);
+  der Kürzel-Editor kennt die festen Kürzel des sicheren Modus nicht. Ebenfalls offen:
+  `HotkeyRules` kennt nur deutsche AltGr-Zeichen; auf US-International tippt AltGr+Umschalt+D „Ð“
+  (und +Z „Æ“) – dort blockieren beide Kürzel ein Zeichen im Kennwortfeld.
+- Rauchtest als normaler Benutzer (dev-Build, Terminal-Panel, nicht die Agent-Shell): Desktop
+  `Default`, nicht im Job, Wächter läuft (nicht im Job), 16 Kürzel „unavailable“ (die Tray-App hält
+  sie – erwartet), Beenden- und Schnappschuss-Kürzel registriert.
+- **SYSTEM-Logs ins Diagnosepaket:** Kontrollkästchen auf der Diagnoseseite → `ElevatedSecureLogsRequest`
+  startet `ZoomIN.exe --copy-secure-logs <Diagnose>\secure-logs-<GUID>` mit „runas“. Der erhöhte
+  Schritt (`SecureLogCopy`) schreibt als Admin in einen Ordner des Benutzers, darum:
+  - Ziel nur genau `<eigener Diagnoseordner>\secure-logs-<32 hex>` (`SecureLogCopyRule`), Laufwerk fest.
+  - Diagnoseordner wird ohne Folgen von Reparse-Points geöffnet; `GetFinalPathNameByHandle` muss dem
+    erwarteten Pfad entsprechen (kein Junction irgendwo). Danach **nur noch über das Handle**:
+    Zielordner und jede Datei entstehen mit `NtCreateFile` relativ zum Handle (`RootDirectory`,
+    `FILE_CREATE`, `FILE_OPEN_REPARSE_POINT`, `OBJ_DONT_REPARSE`; `Interop/NtFiles`). Falle
+    (Sicherheitsprüfung): Teilen nur Lesen verhindert zwar Umbenennen und Löschen, aber nicht, dass
+    der Benutzer den (leeren) Ordner zum Mount Point macht – `FSCTL_SET_REPARSE_POINT` braucht nur
+    `FILE_WRITE_ATTRIBUTES`, und das regeln Freigabemodi nicht. Pfadbasiertes `CreateDirectory` danach
+    wäre umleitbar.
+  - Zielordner mit eigener Zugriffsliste (Besitzer Administratoren, geschützt; Benutzer nur Lesen und
+    Löschen, also kein Eintrag und kein Link darin); existiert der Name in irgendeiner Form, Abbruch
+    (Exit-Code 2). Nur `*.log`/`*.jsonl` aus SYSTEMs `logs` und `debug`, neueste zuerst, zusammen
+    höchstens 20 MB.
+  - Der Schritt startet **keine Telemetrie**: Ihr Log läge als Administrator im `%LocalAppData%\ZoomIN\logs`
+    des Benutzers, das er per Junction/Objekt-Link umleiten kann (Anlegen/Anhängen und Löschen
+    beliebiger Dateien als Admin). Das Ergebnis meldet der Exit-Code, die Tray-App loggt 2340.
+    **Offen (vorbestehend, nicht Spur C):** Die übrigen erhöhten Rollen (`--secure-desktop-setting`,
+    `--apply-update`, Deinstallation) loggen weiter dorthin – eigene Aufgabe vor `v1.0.0`.
+  - Das Paket legt sie unter `secure/` ab und löscht die Kopie danach. Abgelehnte UAC-Abfrage →
+    Vermerk in `ZoomIN-Info.txt`.
+  - Grenze: Bei Erhöhung mit einem **anderen** Admin-Konto (Over-the-shoulder) ist der Diagnoseordner
+    des erhöhten Kontos ein anderer → Ziel abgelehnt, Vermerk „copying them failed“.
+
 ## Offen (Spike mit ZoomIN selbst)
 Plan zum Abschluss (Autostart, Kern-Modus, Prüf-Logs, Startzeit): [M10 „Abschluss“](../plan/m10-sichere-bildschirme.md#abschluss-grilling-2026-11-12), [ADR-0030](../adr/0030-autostart-ueber-erleichterte-bedienung.md).
 

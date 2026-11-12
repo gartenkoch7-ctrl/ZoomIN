@@ -232,3 +232,12 @@ WM_MBUTTONUP
 WM_XBUTTONDOWN
 WM_XBUTTONUP
 WM_MOUSEHWHEEL
+
+// SecureDesktop/Win32SecureDesktopProbe (M10 checks), SecureDesktop/SecureLogCopy
+GetThreadDesktop
+GetUserObjectInformation
+GetWindowDisplayAffinity
+IsProcessInJob
+WaitForSingleObject
+GetCurrentProcess
+CreateFile

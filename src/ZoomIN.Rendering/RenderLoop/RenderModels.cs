@@ -26,4 +26,7 @@ public sealed record RenderModels(
 
     /// <summary>Islands above the zoom and their edit mode (M19 B1).</summary>
     public IslandModel Islands { get; init; } = new(IslandSet.Empty, visible: true);
+
+    /// <summary>First desktop copy, first shown frame and first frame at the zoom level (M10 start timings).</summary>
+    public RenderMilestones Milestones { get; init; } = new(TimeProvider.System);
 }

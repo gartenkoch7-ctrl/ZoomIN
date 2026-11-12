@@ -6,7 +6,11 @@ namespace ZoomIN.Core.Diagnostics;
 /// </summary>
 public interface IDiagnosticsPackage
 {
-    /// <summary>Writes a new package into the diagnostics folder and returns its path.</summary>
+    /// <summary>The logs of the secure instance can be added (an elevated copy is available, M10).</summary>
+    bool CanIncludeSecureLogs { get; }
+
+    /// <summary>Writes a new package into the diagnostics folder.</summary>
     /// <param name="options">The recording level, as shown in the info file.</param>
-    string Create(TelemetryOptions options);
+    /// <param name="includeSecureLogs">Ask for administrator rights and add the secure instance's logs.</param>
+    DiagnosticsPackageResult Create(TelemetryOptions options, bool includeSecureLogs = false);
 }

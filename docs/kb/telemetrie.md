@@ -82,6 +82,7 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 |---|---|---|
 | `zoomin.app.start` | app | Prozessstart bis Tray-App bereit |
 | `zoomin.secure.start` | secure | Prozessstart bis Engine läuft bzw. erstes vergrößertes Bild (Tag `zoomin.secure.zoom_on`) |
+| `zoomin.secure.start.pipeline`, `.capture`, `.present`, `.zoom_in` | secure | Kinder von `zoomin.secure.start` (M10-Abschluss), lückenlos hintereinander: Engine-Start → Pipeline bereit → erste Desktopkopie (Warten auf Desktop Duplication) → erstes gezeigtes Bild → Zoomstufe erreicht. Die Kopie wird nach ihrem Frame gestempelt, `.present` ist darum kurz. Nachträglich aus `RenderMilestones` angelegt, nur wenn der Zoom an startet |
 | `zoomin.watchdog.run` | watchdog | Überwachung, bis die App endet |
 | `zoomin.update.run`, `zoomin.elevated.run`, `zoomin.uninstall.run` | jeweilige Rolle | ganzer Lauf; Exit-Code ≠ 0 → Status Error |
 | `zoomin.setup.install` | setup | Installation im Assistenten (Tag `zoomin.version`) |
@@ -104,7 +105,7 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.settings.load` | app, setup | `settings.json` lesen (Tag `zoomin.settings.result`: `ok`, `missing`, `unreadable` → Error) |
 | `zoomin.settings.save` | app, setup | `settings.json` schreiben (Fehler: Ausnahmetyp) |
 | `zoomin.profile.switch` | app | Profilwechsel (ohne Profilnamen – die vergibt der Nutzer frei) |
-| `zoomin.diagnostics.package` | app | Diagnosepaket erstellen (Tag `zoomin.diagnostics.files`) |
+| `zoomin.diagnostics.package` | app | Diagnosepaket erstellen (Tags `zoomin.diagnostics.files`, `zoomin.diagnostics.secure_logs`: `not_requested`, `copied`, `declined`, `failed`) |
 | `zoomin.debug.snapshot` | app | Debug-Schnappschuss eines Monitors schreiben (Tag `zoomin.monitor`; Fehler: Ausnahmetyp) |
 | `zoomin.windowfilter.toggle` | app | Kürzel „Filter für aktives Fenster“ (Tags `process.name`, `zoomin.choice`: `None`, `Filter`) |
 | `zoomin.view.overview` | app | Übersicht (M17 B2) vom Kürzel bis zum Hineinzoomen, Esc oder Abbruch; eigener Wurzel-Ablauf über Threads hinweg. Tags `zoomin.monitor`, `zoomin.mode`, `zoomin.overview.level_before` (Stufe vorher), am Ende `zoomin.overview.kind` (`tap`, `hold`) und `zoomin.overview.end` (`zoom_in`, `escape`, `cancelled`) |
@@ -178,11 +179,31 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1104 | Warnung | Exit shortcut for the secure desktop is unavailable |
 | 1105 | Info | Secure desktop engine running after {Milliseconds} ms (zoom on: {ZoomOn}) |
 | 1106 | Warnung | Secure desktop: no magnified image after {Seconds} s |
-| 1107 | Info | Secure desktop: first magnified image after {Milliseconds} ms |
+| 1107 | Info | Secure desktop: first magnified image after {Milliseconds} ms (ab M10-Abschluss aus `RenderMilestones`: das Overlay ist wirklich sichtbar, nur wenn der Zoom an startet; vorher aus dem Status, der nur einmal je Sekunde kam) |
 | 1108 | Info | Secure desktop support switched {State} |
 | 1109 | Fehler | Changing the secure desktop registration failed |
 | 1110 | Fehler | Starting the secure desktop switch failed |
 | 1140 | Info | Secure desktop runs the core engine (scope {Scope}) |
+| 1150 | Info | Secure desktop start: pipeline after {PipelineMs} ms, first desktop copy after {CaptureMs} ms, first image after {ShownMs} ms, zoom level after {ZoomMs} ms (ab Prozessstart; nur wenn der Zoom an startet) |
+| 1151 | Info | Secure desktop check: desktop {Desktop} (`Winlogon`, `Default`) |
+| 1152 | Info | Secure desktop check: overlay on top at the centre of monitor {Monitor} |
+| 1153 | Warnung | Secure desktop check: overlay not on top at the centre of monitor {Monitor} (top window class {WindowClass}) – nur Fensterklasse, kein Titel |
+| 1154 | Info | Secure desktop check: overlay 0x{Window:X} excluded from capture |
+| 1155 | Warnung | Secure desktop check: overlay 0x{Window:X} not excluded from capture (display affinity {Affinity}) |
+| 1156 | Info | Secure desktop check: no overlay on screen |
+| 1157 | Info | Secure desktop check: process in a job: {InJob} (`yes`, `no`, `unknown`) |
+| 1158 | Info | Secure desktop check: watchdog {ProcessId} running, in a job: {InJob} |
+| 1159 | Warnung | Secure desktop check: no watchdog known (not started, or the shell gave no id) |
+| 1160 | Warnung | Secure desktop check: shortcut {Gesture} unavailable (je Kürzel, das Windows abgelehnt hat) |
+| 1161 | Info | Secure desktop check: {Unavailable} shortcut(s) unavailable, exit shortcut registered: {Exit}, snapshot shortcut registered: {Snapshot} |
+| 1162 | Fehler | Secure desktop checks failed |
+| 1163 | Info | Secure desktop snapshot requested (Strg+Alt+Umschalt+D) |
+| 1164 | Info | Secure desktop snapshot: {Saved} monitor(s) saved in {Folder} (nur Ordnername) |
+| 1165 | Warnung | Secure desktop snapshot: nothing saved (no monitor drew in time) |
+| 1166 | Warnung | Snapshot shortcut for the secure desktop is unavailable |
+| 1167 | Warnung | Secure desktop: zoom level not reached after {Seconds} s (ein Bild kam, aber nie auf der gespeicherten Stufe; `zoomin.secure.start` endet mit Error) |
+| 1168 | Fehler | Secure desktop snapshot failed |
+| 1169 | Warnung | Secure desktop check: watchdog {ProcessId} is not running (in a job: {InJob}) – statt 1158, wenn der Wächter schon fehlt |
 | 1201 | Info | Setup: release list unavailable: {Reason} |
 | 1202 | Warnung | Setup {Version} not started: {Reason} |
 | 1203 | Info | Setup {Version} started |
@@ -261,6 +282,9 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2312 | Info | Secure desktop: no signed-in user in session {Session} (error {Error}) |
 | 2313 | Info | Secure desktop: no user shell in session {Session} |
 | 2314 | Info | Secure desktop: using the token of the user's shell |
+| 2340 | Info | Secure logs for the diagnostics package: {Result} (exit code {ExitCode}) – `copied`, `declined`; schreibt die Tray-App. Der erhöhte Schritt `--copy-secure-logs` hat bewusst kein eigenes Log (es läge im Ordner des Benutzers, den er umleiten kann) |
+| 2341 | Fehler | Starting the secure log copy failed |
+| 2342 | Warnung | Secure logs for the diagnostics package not copied: {Result} (exit code {ExitCode}) – `refused` (Exit-Code 2: Ziel abgelehnt), `failed` (1, oder −1: nicht gestartet bzw. nicht rechtzeitig beendet) |
 | 2401 | Info | Settings backed up to {Folder} |
 | 2402 | Fehler | Settings backup failed |
 | 2403 | Warnung | Profile {File} is unreadable: {Reason} |

@@ -62,6 +62,19 @@ public sealed class ContainerTests : IDisposable
         Assert.NotNull(provider);
     }
 
+    // The secure host adds its checks itself (M10); they must resolve on top of the secure role.
+    [Fact]
+    public void SecureRole_WithChecks_ResolvesItsWholeGraph()
+    {
+        var folders = new TestFolders(_folder);
+        using var telemetry = TelemetryHost.Start(TelemetryRole.App, folders);
+        var services = ServiceRegistration.SecureDesktop(telemetry, folders).AddSecureChecks();
+
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+
+        Assert.NotNull(provider);
+    }
+
     private static ConstructorInfo SingleConstructor(Type type)
     {
         var constructors = type.GetConstructors(BindingFlags.Public | BindingFlags.Instance);
