@@ -45,6 +45,7 @@ public sealed class EdgeBufferLayoutTests
         // Sliding right along the taskbar with the hand drifting down: the target lies below both.
         Assert.Equal(new PhysicalPoint(1919, 1079), Move(0, 1919, 1079, 1925, 1085));
         Assert.True(_buffer.IsPressing);
+        Move(100, 1919, 1079, 1925, 1085);
         Assert.Equal(new PhysicalPoint(1925, 1079), Move(200, 1919, 1079, 1925, 1085));
     }
 
@@ -56,6 +57,7 @@ public sealed class EdgeBufferLayoutTests
 
         // Mostly down with a slight drift right: towards the monitor below, not the one on the right.
         Assert.Equal(new PhysicalPoint(1919, 1079), Move(0, 1919, 1079, 1920, 1090));
+        Move(100, 1919, 1079, 1920, 1090);
         Assert.Equal(new PhysicalPoint(1919, 1090), Move(200, 1919, 1079, 1920, 1090));
     }
 
@@ -80,6 +82,7 @@ public sealed class EdgeBufferLayoutTests
         // Moved by a shortcut onto the next monitor's right edge, still pushing right.
         Assert.Equal(new PhysicalPoint(3839, 10), Move(300, 3839, 10, 3845, 10));
         Assert.Equal(new PhysicalPoint(3839, 10), Move(450, 3839, 10, 3845, 10));
+        Move(600, 3839, 10, 3845, 10);
         Assert.Equal(new PhysicalPoint(3845, 10), Move(700, 3839, 10, 3845, 10));
     }
 
@@ -95,7 +98,7 @@ public sealed class EdgeBufferLayoutTests
 
         Assert.Equal(new PhysicalPoint(1919, 500), Move(10, 1919, 500, 1925, 500));
         Assert.True(_buffer.IsPressing);
-        Move(200, 1919, 500, 1925, 500);
+        Move(210, 1919, 500, 1925, 500);
         Assert.Equal(new PhysicalPoint(1925, 500), Move(410, 1919, 500, 1925, 500));
     }
 
@@ -106,6 +109,7 @@ public sealed class EdgeBufferLayoutTests
         _buffer.Configure([leftOfPrimary, Left], EdgeBufferLevel.Light);
 
         Assert.Equal(new PhysicalPoint(0, 10), Move(0, 0, 10, -4, 10));
+        Move(100, 0, 10, -4, 10);
         Assert.Equal(new PhysicalPoint(-4, 10), Move(200, 0, 10, -4, 10));
     }
 

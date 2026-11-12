@@ -184,9 +184,10 @@ public sealed class PointerConstraintController : IDisposable
 
             var applied = Volatile.Read(ref _applied);
             var monitors = 0;
-            if (applied is { Buffer: not EdgeBufferLevel.Off } && trigger == FenceTrigger.DisplayChange)
+            if (trigger == FenceTrigger.DisplayChange)
             {
-                // Only a display change moves monitors; Win+L or UAC keep the layout.
+                // Only a display change moves monitors; Win+L or UAC keep the layout. Also while
+                // the buffer is off: an Apply switching it on right now must not keep an old layout.
                 monitors = _bufferSetup.Refresh();
             }
 

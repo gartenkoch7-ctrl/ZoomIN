@@ -20,8 +20,14 @@ public sealed class EdgeBuffer : IPointerMoveFilter
     /// <summary>Pixels the pointer may wobble back from the pressed edge without starting over.</summary>
     public const double RetreatTolerance = 3;
 
-    /// <summary>Longer without an outward move and the pressing starts over.</summary>
+    /// <summary>Longer without an outward move and the pressing starts over (at most half the press time).</summary>
     public static readonly TimeSpan MaxPause = TimeSpan.FromMilliseconds(250);
+
+    /// <summary>
+    /// Allowed pause for a press time: half of it, at most <see cref="MaxPause"/>. Otherwise two
+    /// separate nudges could cross at Light (0.2 s) without any pressing in between.
+    /// </summary>
+    public static TimeSpan MaxPauseFor(TimeSpan press) => press / 2 < MaxPause ? press / 2 : MaxPause;
 
     private readonly TimeProvider _time;
     private Setup? _setup;
@@ -50,7 +56,7 @@ public sealed class EdgeBuffer : IPointerMoveFilter
     {
         ArgumentNullException.ThrowIfNull(monitors);
         var press = PointerConstraintOptions.PressTime(level);
-        var setup = press <= TimeSpan.Zero || monitors.Count < 2 ? null : new Setup([.. monitors], Ticks(press), Ticks(MaxPause));
+        var setup = press <= TimeSpan.Zero || monitors.Count < 2 ? null : new Setup([.. monitors], Ticks(press), Ticks(MaxPauseFor(press)));
 
         // Unchanged (e.g. refreshed after a desktop switch): keep the old one, a press in progress goes on.
         var old = Volatile.Read(ref _setup);

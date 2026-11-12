@@ -74,6 +74,7 @@ public sealed class EdgeBufferTests
         _buffer.Configure([Left, Right], EdgeBufferLevel.Light);
 
         Assert.Equal(new PhysicalPoint(1920, 10), Move(0, 1920, 10, 1915, 10));
+        Move(100, 1920, 10, 1915, 10);
         Assert.Equal(new PhysicalPoint(1915, 10), Move(200, 1920, 10, 1915, 10));
     }
 
@@ -108,6 +109,16 @@ public sealed class EdgeBufferTests
         Move(100, x, y, backX, backY);
 
         Assert.False(_buffer.IsPressing);
+    }
+
+    [Fact]
+    public void TwoSeparateNudges_DoNotCrossAtLight()
+    {
+        _buffer.Configure([Left, Right], EdgeBufferLevel.Light);
+        Move(0, 1919, 10, 1925, 10);
+
+        // 210 ms later a second nudge: the pause is longer than half the press time, so no press.
+        Assert.Equal(new PhysicalPoint(1919, 10), Move(210, 1919, 10, 1925, 10));
     }
 
     [Fact]

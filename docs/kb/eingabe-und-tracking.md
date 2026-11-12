@@ -329,7 +329,7 @@ an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten
   auf einen anderen endet am Rand (letzter Pixel `Right − 1`), bis der Zeiger die Druckzeit der
   Stufe lang gegen den Rand drückt: Leicht 0,2 s, Mittel 0,4 s, Stark 0,8 s. „Drücken“ = weitere
   Bewegungen zeigen nach außen. Es beginnt von vorn bei einem Rückzug vom Rand um mehr als 3 px
-  (Zittern zählt nicht; Entlanggleiten am Rand auch nicht, zählt aber auch nicht als Drücken), bei einer Pause über 250 ms ohne Druck und bei einer neuen
+  (Zittern zählt nicht; Entlanggleiten am Rand auch nicht, zählt aber auch nicht als Drücken), bei einer Pause ohne Druck über die halbe Druckzeit (höchstens 250 ms; bei Leicht also 100 ms, damit zwei einzelne Stupser nicht hinüberführen) und bei einer neuen
   Richtung ohne gemeinsame Komponente (an einer Ecke wackelt die Hand zwischen „rechts“ und
   „rechts unten“, das bleibt ein Drücken). Nach dem Hinüberwechseln gilt der Puffer auf dem neuen
   Monitor wieder, in beide Richtungen.
