@@ -44,19 +44,21 @@ Lupe.
   Vorschau.
 
 ## Aufgaben
-- [ ] Core: `CaretMarkerStyle`, `CaretMarkerGeometry`, Mapping in `TrackingMapping.cs`
-- [ ] Tests (Core ≥ 90 %): jede Form bei 1×, 4×, 16×; Rand des Monitors; geschätzter Caret zeichnet
+- [x] Core: `CaretMarkerStyle`, `CaretMarkerGeometry`, Mapping in `TrackingMapping.cs`
+- [x] Tests (Core ≥ 90 %): jede Form bei 1×, 4×, 16×; Rand des Monitors; geschätzter Caret zeichnet
       nichts
-- [ ] Benchmark `CaretMarkerGeometry` und Snapshot-Pfad `0 B`
-- [ ] Rendering: `HighlightLayer` liest den Stil, Shader-Modi für Keile und Kreis
-- [ ] WARP-Tests: Pixel der Keile über und unter dem Caret, Ring um den Mittelpunkt, Farbe korrekt
-- [ ] UI-Karte, Texte DE/EN, vollständig per Tastatur und Bildschirmleser bedienbar
+- [x] Benchmark `CaretMarkerGeometry` und Snapshot-Pfad `0 B`
+- [x] Rendering: `HighlightLayer` liest den Stil, Shader-Modi für Keile und Kreis
+- [x] WARP-Tests: Pixel der Keile über und unter dem Caret, Ring um den Mittelpunkt, Farbe korrekt
+- [x] UI-Karte, Texte DE/EN, vollständig per Tastatur und Bildschirmleser bedienbar
       (Vorschau mit Textbeschreibung)
-- [ ] Logs App **1640–1649** (Stil geändert: Form, Dicke), Rendering **3240–3249** (Shader-Modus
-      fehlt/Fallback auf Balken)
-- [ ] Messwert `zoomin.highlight.caret_shape` als Tag des bestehenden Zeichen-Messwerts, beim Start
-      angelegt (nicht pro Frame neu)
-- [ ] Katalog `telemetrie.md`, KB `eingabe-und-tracking.md` (Caret-Formen)
+- [x] Logs App **1640–1649** (Stil geändert: Form, Dicke), Rendering **3240–3249** (Shader-Modus
+      fehlt/Fallback auf Balken). *Umsetzung:* 3240–3249 bleibt frei – Shader sind beim Build
+      kompiliert und geprüft, ein Rückfall wäre toter Code und würde Geräteverlust verdecken.
+- [x] Messwert `zoomin.highlight.caret_shape` als Tag des bestehenden Zeichen-Messwerts, beim Start
+      angelegt (nicht pro Frame neu). *Umsetzung:* Einen Zeichen-Messwert gab es noch nicht; neu
+      ist der Zähler `zoomin.highlight.caret_frames` mit diesem Tag.
+- [x] Katalog `telemetrie.md`, KB `eingabe-und-tracking.md` (Caret-Formen)
 
 ## Parallelisierung
 - **Exklusiv (Spur C):** `HighlightLayer.cs`, `Cursor.hlsl` (nur die Caret-Modi),

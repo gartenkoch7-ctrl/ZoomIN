@@ -23,10 +23,12 @@ public sealed class TrayMenuSync
     private readonly MonitorFreezeController _freeze;
     private readonly MonitorSwitchController _switch;
     private readonly ILocalizer _texts;
+    private readonly FilterNames _filterNames;
 
     public TrayMenuSync(
         ITrayIcon tray, SettingsService settings, ProfileService profiles, ZoomCommands zoom,
-        WindowFilterCommands windowFilter, MonitorFreezeController freeze, MonitorSwitchController monitorSwitch, ILocalizer texts)
+        WindowFilterCommands windowFilter, MonitorFreezeController freeze, MonitorSwitchController monitorSwitch, ILocalizer texts,
+        FilterNames filterNames)
     {
         _tray = tray;
         _settings = settings;
@@ -36,6 +38,7 @@ public sealed class TrayMenuSync
         _freeze = freeze;
         _switch = monitorSwitch;
         _texts = texts;
+        _filterNames = filterNames;
     }
 
     public void Start()
@@ -67,10 +70,10 @@ public sealed class TrayMenuSync
         }
     }
 
-    private static string WindowFilterStatus(WindowFilterRule? rule) => rule switch
+    private string WindowFilterStatus(WindowFilterRule? rule) => rule switch
     {
         null => Text.Get("WinFilter.Status.Nothing"),
-        { Choice: WindowFilterChoice.Filter } => Text.Format("WinFilter.Status.On", rule.Process, Text.Get("Filter." + rule.Filter)),
+        { Choice: WindowFilterChoice.Filter } => Text.Format("WinFilter.Status.On", rule.Process, _filterNames.Of(rule.Filter, _settings.Models.Effects.Current.Schemes)),
         _ => Text.Format("WinFilter.Status.Off", rule.Process),
     };
 

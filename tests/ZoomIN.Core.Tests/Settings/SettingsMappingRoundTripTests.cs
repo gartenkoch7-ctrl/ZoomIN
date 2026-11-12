@@ -19,13 +19,15 @@ public sealed class SettingsMappingRoundTripTests
     private static readonly AppSettings s_settings = new AppSettings() with
     {
         FilterEnabled = true,
-        ColorFilter = ColorFilter.YellowOnBlack,
+        ColorFilter = FilterId.YellowOnBlack,
         PerMonitorFilter = false,
-        MonitorFilters = new Dictionary<string, MonitorFilter> { [@"\\.\DISPLAY2"] = new(true, ColorFilter.Inverted) },
+        MonitorFilters = new Dictionary<string, MonitorFilter> { [@"\\.\DISPLAY2"] = new(true, FilterId.Inverted) },
         Contrast = 1.4,
         Brightness = -0.1,
         Smoothing = Smoothing.Pixel,
         ProtectPhotos = false,
+        TextSharpness = 0.6,
+        TextBold = 1.5,
         CursorMaxScale = 6,
         CursorUnzoomedScale = 2,
         CursorOverrideWindows = true,
@@ -44,6 +46,7 @@ public sealed class SettingsMappingRoundTripTests
         CrosshairColor = "#AABBCC",
         CrosshairWidth = 5,
         CrosshairOpacity = 0.5,
+        CrosshairShow = ShowCondition.HoldKey,
         HideCursorWhileTyping = true,
         TrackingEnabled = false,
         TrackFocus = false,
@@ -54,6 +57,11 @@ public sealed class SettingsMappingRoundTripTests
         CaretMarker = false,
         MouseFollow = MouseFollowMode.Fixpoint,
         MouseMargin = 0.35,
+        CaretMarkerShape = CaretMarkerShape.Wedges,
+        CaretMarkerColor = "#00E5FF",
+        CaretMarkerThickness = CaretMarkerThickness.Thick,
+        FocusFrameShow = ShowCondition.Idle,
+        CaretMarkerShow = ShowCondition.Moving,
         LastMode = ZoomMode.Lens,
         PerMonitorZoom = false,
         AnimationMilliseconds = 250,
@@ -75,10 +83,10 @@ public sealed class SettingsMappingRoundTripTests
         var back = EffectsMapping.Apply(new AppSettings(), EffectsMapping.Create(s_settings));
 
         AssertSame(s_settings, back, "FilterEnabled", "ColorFilter", "PerMonitorFilter", "MonitorFilters", "Contrast", "Brightness",
-            "Smoothing", "ProtectPhotos", "CursorMaxScale", "CursorUnzoomedScale", "CursorOverrideWindows", "CursorGrowWithZoom",
+            "Smoothing", "ProtectPhotos", "TextSharpness", "TextBold", "CursorMaxScale", "CursorUnzoomedScale", "CursorOverrideWindows", "CursorGrowWithZoom",
             "CursorColorMode", "CursorColor", "CursorRim", "CursorRimColor", "CursorRimWidth", "LocatorColor", "LocatorSize",
             "LocatorSeconds", "LocatorTriggers", "CrosshairEnabled", "CrosshairAlways", "CrosshairColor", "CrosshairWidth",
-            "CrosshairOpacity", "HideCursorWhileTyping");
+            "CrosshairOpacity", "CrosshairShow", "HideCursorWhileTyping");
     }
 
     [Fact]
@@ -87,7 +95,8 @@ public sealed class SettingsMappingRoundTripTests
         var back = TrackingMapping.Apply(new AppSettings(), TrackingMapping.Create(s_settings));
 
         AssertSame(s_settings, back, "TrackingEnabled", "TrackFocus", "TrackCaret", "PanMilliseconds", "CaretMargin", "FocusFrame",
-            "CaretMarker", "MouseFollow", "MouseMargin");
+            "CaretMarker", "MouseFollow", "MouseMargin", "CaretMarkerShape", "CaretMarkerColor", "CaretMarkerThickness", "FocusFrameShow",
+            "CaretMarkerShow");
     }
 
     [Fact]

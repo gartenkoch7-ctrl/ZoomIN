@@ -38,6 +38,7 @@ internal sealed class RenderSession : IDisposable
     private readonly SnapshotTaker _snapshots;
     private readonly AnchorController _anchors = new();
     private readonly FrameChangeTracker _changes = new();
+    private readonly MarkerAlphas _alphas = new();
     private readonly int _displayGeneration;
     private PhysicalPoint _lastCursor;
     private PhysicalPoint _lastAnchor;
@@ -166,7 +167,7 @@ internal sealed class RenderSession : IDisposable
         // Frozen: the anchor of the moment of freezing; mouse, focus, caret and placements wait. It is also
         // where a pipeline rebuilt meanwhile goes on from after the thaw (instead of the monitor's middle).
         var anchor = frozen is not null
-            ? StartAt(frozen.AnchorOr(_lastAnchor))
+            ? _anchors.StartAt(frozen.AnchorOr(_lastAnchor))
             : _anchors.Next(new AnchorInput(
                 Stopwatch.GetTimestamp(), hasCursor ? cursor : _lastCursor, _cursorInside, _monitor.Bounds,
                 request.AnchorMode, request.Zoom, request.Lens, request.Dock, request.Tracking, request.TrackingOptions, request.Placement));
@@ -178,7 +179,10 @@ internal sealed class RenderSession : IDisposable
         var shape = _pointer.Shapes.TryGetCurrent(out var handle) ? handle : 0;
         // The desktop layer (and its smoothing) only runs while the desktop is drawn.
         // The overview frame also counts: it follows the mouse even while that is on another monitor.
-        var animating = LocatorActive || (!request.OverlayOnly && _desktop.SmartSettling) || _overview.NeedsRedraw;
+        // A highlight fading in or out under its show condition (E1) also needs the frame drawn.
+        var fading = _alphas.Update(request.Effects.Cursor, request.Zoom, request.TrackingOptions, request.Activity,
+            Stopwatch.GetTimestamp(), Stopwatch.Frequency);
+        var animating = LocatorActive || fading || (!request.OverlayOnly && _desktop.SmartSettling) || _overview.NeedsRedraw;
         var changes = _changes.Compare(newImage, request, frame, _cursorInside, _lastCursor, shape,
             animating, _snapshots.IsRequested, _shown);
         if (!changes.NeedsRedraw)
@@ -208,19 +212,19 @@ internal sealed class RenderSession : IDisposable
                 _monitor.Bounds, frame, request.Effects, windows, windowsFiltered, newImage);
         }
 
-        // Focus frame and caret marker pause on a frozen monitor; the pointer cannot be there.
+        // Focus frame and caret markers (M18) pause on a frozen monitor; the pointer cannot be there.
         if (frozen is null)
         {
-            _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions);
+            _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions, _alphas);
         }
 
         _overview.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame);
         _frozen.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frozen);
         LocatorActive = _cursorInside && _cursorLayer.Draw(
             _gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Mode, request.Zoom, _lastCursor,
-            request.Effects, request.LocateRequestedAt, request.PointerHidden);
+            request.Effects, request.LocateRequestedAt, request.PointerHidden, _alphas.Crosshair);
         _snapshots.TakeIfRequested(_gpu.Device, _gpu.Context, request.OverlayOnly ? null : image,
-            _swapchain.RenderTarget, weights, _monitor.Bounds, frame.Source, request);
+            _swapchain.RenderTarget, weights, _monitor.Bounds, frame, request);
         Present();
         _changes.Presented(request, frame, _cursorInside, _lastCursor, shape);
 
@@ -235,12 +239,6 @@ internal sealed class RenderSession : IDisposable
     }
 
     public void Dispose() => _resources.Dispose();
-
-    private PhysicalPoint StartAt(PhysicalPoint anchor)
-    {
-        _anchors.StartAt(anchor);
-        return anchor;
-    }
 
     private void Present()
     {

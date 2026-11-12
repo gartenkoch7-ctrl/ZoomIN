@@ -51,9 +51,10 @@ internal sealed class FrameChangeTracker
     }
 
     // By reference for the snapshots (immutable, a change is a new object), by value for the rest.
-    // A frozen monitor (G2) gets constant tracking, locator and pointer values from MonitorRenderer. A
-    // still image keeps the window regions it was taken with, so theirs are not compared then.
-    // FrozenStill is copied into the request: a still image given up on (it then shows live) is a change.
+    // Activity is left out: it changes with every mouse move; the highlight fades report their own
+    // changes (MarkerAlphas, E1). A frozen monitor (G2) gets constant tracking, locator and pointer
+    // values from MonitorRenderer. A still image keeps the window regions it was taken with, so theirs
+    // are not compared then. FrozenStill is copied into the request: a still image given up on is a change.
     private static bool SameRequest(in FrameRequest a, in FrameRequest b) =>
         a.Mode == b.Mode
         && a.Zoom == b.Zoom

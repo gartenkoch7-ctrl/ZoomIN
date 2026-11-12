@@ -124,6 +124,18 @@
                     <ComboBoxItem Content="{x:Bind loc:Text.Get('Crosshair.Always')}" />
                 </ComboBox>
             </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('MarkerShow.Crosshair.Desc')}" Glyph="&#xE7B3;" Header="{x:Bind loc:Text.Get('MarkerShow')}">
+                <ComboBox
+                    MinWidth="200"
+                    AutomationProperties.Name="{x:Bind loc:Text.Get('MarkerShow.Crosshair')}"
+                    IsEnabled="{x:Bind Vm.CrosshairOn, Mode=OneWay}"
+                    SelectedIndex="{x:Bind Vm.CrosshairShowIndex, Mode=TwoWay}">
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Show.Always')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Show.Idle')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Show.Moving')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Show.HoldKey')}" />
+                </ComboBox>
+            </c:SettingCard>
             <c:SettingCard Glyph="&#xE2B1;" Header="{x:Bind loc:Text.Get('PointerCrosshairColor')}">
                 <c:ColorChooser Color="{x:Bind Vm.CrosshairColor, Mode=TwoWay}" IsEnabled="{x:Bind Vm.CrosshairOn, Mode=OneWay}" />
             </c:SettingCard>
@@ -144,6 +156,30 @@
                     Minimum="20"
                     Step="5"
                     Value="{x:Bind Vm.CrosshairOpacity, Mode=TwoWay}" />
+            </c:SettingCard>
+
+            <!-- Mouse buffer and axis lock (A6): global settings, not part of "Reset" or the profile. -->
+            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('Constraint.Title')}" />
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Constraint.Buffer.Desc')}" Glyph="&#xE7F4;" Header="{x:Bind loc:Text.Get('Constraint.Buffer')}">
+                <ComboBox MinWidth="200" SelectedIndex="{x:Bind Constraint.BufferIndex, Mode=TwoWay}">
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Constraint.Buffer.Off')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Constraint.Buffer.Light')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Constraint.Buffer.Medium')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Constraint.Buffer.Strong')}" />
+                </ComboBox>
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Constraint.Axis.Desc')}" Glyph="&#xE8AB;" Header="{x:Bind loc:Text.Get('Constraint.Axis')}">
+                <ToggleSwitch IsOn="{x:Bind Constraint.AxisLock, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Constraint.Key.Desc')}" Glyph="&#xE765;" Header="{x:Bind loc:Text.Get('Constraint.Key')}">
+                <ComboBox MinWidth="200" IsEnabled="{x:Bind Constraint.AxisLock, Mode=OneWay}" SelectedIndex="{x:Bind Constraint.KeyIndex, Mode=TwoWay}">
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Constraint.Key.LeftShift')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Constraint.Key.RightShift')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Constraint.Key.LeftControl')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Constraint.Key.RightControl')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Constraint.Key.LeftAlt')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Constraint.Key.RightAlt')}" />
+                </ComboBox>
             </c:SettingCard>
 
             <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('PointerGroupMore')}" />

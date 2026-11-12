@@ -19,6 +19,7 @@ public sealed class SnapshotTakerTests
     private const int Size = 32;
     private const string Monitor = @"\\.\DISPLAY1";
     private static readonly PhysicalRect s_monitor = new(0, 0, Size, Size);
+    private static readonly ModeFrame s_frame = new(s_monitor, s_monitor, false);
 
     [Fact]
     public async Task Request_SavesOriginalResultWeightsAndInfo_Once()
@@ -37,8 +38,8 @@ public sealed class SnapshotTakerTests
         try
         {
             snapshots.Request(folder);
-            taker.TakeIfRequested(gpu.Device, gpu.Context, image.View, target.View, ambient.Weights, s_monitor, s_monitor, Request());
-            taker.TakeIfRequested(gpu.Device, gpu.Context, image.View, target.View, ambient.Weights, s_monitor, s_monitor, Request());
+            taker.TakeIfRequested(gpu.Device, gpu.Context, image.View, target.View, ambient.Weights, s_monitor, s_frame, Request());
+            taker.TakeIfRequested(gpu.Device, gpu.Context, image.View, target.View, ambient.Weights, s_monitor, s_frame, Request());
             var result = await done.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 
             Assert.True(result.Saved, result.Reason);
@@ -70,7 +71,7 @@ public sealed class SnapshotTakerTests
 
         snapshots.Request(Path.GetTempPath());
         new SnapshotTaker(snapshots, Monitor, NullLogger.Instance)
-            .TakeIfRequested(gpu.Device, gpu.Context, null, target.View, null, s_monitor, s_monitor, Request());
+            .TakeIfRequested(gpu.Device, gpu.Context, null, target.View, null, s_monitor, s_frame, Request());
 
         Assert.False(seen?.Saved);
         Assert.Equal("nothing_drawn", seen?.Reason);
@@ -84,12 +85,12 @@ public sealed class SnapshotTakerTests
         using var target = RenderTarget.Create(gpu.Device, Size);
         var taker = new SnapshotTaker(new DebugSnapshots(), Monitor, NullLogger.Instance);
         var request = Request();
-        taker.TakeIfRequested(gpu.Device, gpu.Context, image.View, target.View, null, s_monitor, s_monitor, request);
+        taker.TakeIfRequested(gpu.Device, gpu.Context, image.View, target.View, null, s_monitor, s_frame, request);
 
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var i = 0; i < 1_000; i++)
         {
-            taker.TakeIfRequested(gpu.Device, gpu.Context, image.View, target.View, null, s_monitor, s_monitor, request);
+            taker.TakeIfRequested(gpu.Device, gpu.Context, image.View, target.View, null, s_monitor, s_frame, request);
         }
 
         Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
@@ -97,7 +98,7 @@ public sealed class SnapshotTakerTests
 
     private static FrameRequest Request() => new(
         ZoomMode.Fullscreen, ZoomMode.Fullscreen, 1, LensSize.Default, DockLayout.Default,
-        new DisplayEffects(new FilterSettings(true, ColorFilter.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default),
+        new DisplayEffects(new FilterSettings(true, FilterId.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default),
         0, TrackingSnapshot.Empty, TrackingOptions.Default, false,
         new WindowRegions([new PhysicalRect(0, 0, 16, 16)], [WindowPalette.Smart]), true);
 }

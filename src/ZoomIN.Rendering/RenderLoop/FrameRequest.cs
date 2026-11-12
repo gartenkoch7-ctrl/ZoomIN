@@ -18,6 +18,7 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// <param name="Placement">Latest "centre the view here" request for this monitor (M17), passed to the anchor.</param>
 /// <param name="ViewHeld">A temporary level (window drag) holds the monitor below the user's level, also while gliding there:
 /// the overview keeps the view from before it.</param>
+/// <param name="Activity">Mouse, typing and hold key for the show conditions of the highlights (E1).</param>
 /// <param name="Frozen">The monitor is frozen (G2): anchor, level and mode stay, no pointer or marks; null = live.</param>
 /// <param name="FrozenStill">Frozen with a still image that is (to be) shown, read once per frame: <see cref="FrozenMonitor.StillUnavailable"/> may change during a freeze.</param>
 internal readonly record struct FrameRequest(
@@ -37,6 +38,7 @@ internal readonly record struct FrameRequest(
     double OverviewLevel = 1,
     ViewPlacement Placement = default,
     bool ViewHeld = false,
+    MarkerActivitySample Activity = default,
     FrozenMonitor? Frozen = null,
     bool FrozenStill = false)
 {

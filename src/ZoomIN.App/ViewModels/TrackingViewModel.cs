@@ -1,21 +1,26 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
+using ZoomIN.App.Markers;
 using ZoomIN.App.Settings;
+using ZoomIN.Core.Localization;
+using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Tracking;
 
 namespace ZoomIN.App.ViewModels;
 
-/// <summary>Focus, caret and mouse tracking options (M6, mouse follow M17 A1). Applies live.</summary>
+/// <summary>Focus, caret and mouse tracking options (M6, mouse follow M17 A1) and the caret marker look (E2, E1). Applies live.</summary>
 public sealed partial class TrackingViewModel : ObservableObject
 {
     private readonly TrackingModel _tracking;
     private readonly ILogger _log;
+    private readonly ILocalizer _texts;
     private readonly bool _ready;
     private bool _restoring;
 
-    public TrackingViewModel(TrackingModel tracking, ILogger<TrackingViewModel> log)
+    public TrackingViewModel(TrackingModel tracking, ILocalizer texts, ILogger<TrackingViewModel> log)
     {
         _tracking = tracking;
+        _texts = texts;
         _log = log;
         var o = tracking.Options;
         TrackingEnabled = o.Enabled;
@@ -27,8 +32,22 @@ public sealed partial class TrackingViewModel : ObservableObject
         CaretMarker = o.CaretMarker;
         MouseFollowIndex = (int)o.MouseFollow;
         MouseMargin = Math.Round(o.MouseMargin * 100);
+        CaretShapeIndex = (int)o.CaretStyle.Shape;
+        CaretColor = o.CaretStyle.Color.ToHex();
+        CaretThicknessIndex = (int)o.CaretStyle.Thickness;
+        FocusFrameShowIndex = (int)o.FocusFrameShow;
+        CaretShowIndex = (int)o.CaretShow;
         _ready = true;
     }
+
+    /// <summary>Raised after the caret marker look changed; the page redraws its preview.</summary>
+    public event Action? CaretStyleChanged;
+
+    /// <summary>The caret marker look as the model holds it; the page refreshes its preview only on its own changes.</summary>
+    public CaretMarkerStyle CaretStyle => _tracking.Options.CaretStyle;
+
+    /// <summary>What the preview shows, in words, for screen readers.</summary>
+    public string CaretDescription => Describe(CaretStyle);
 
     [ObservableProperty]
     public partial bool TrackingEnabled { get; set; }
@@ -65,21 +84,49 @@ public sealed partial class TrackingViewModel : ObservableObject
 
     // The combo box reports -1 while its items are rebuilt; that is no choice of the user.
     private MouseFollowMode MouseFollow =>
-        Enum.IsDefined((MouseFollowMode)MouseFollowIndex) ? (MouseFollowMode)MouseFollowIndex : _tracking.Options.MouseFollow;
+        ComboChoice.Or(MouseFollowIndex, _tracking.Options.MouseFollow);
 
-    partial void OnTrackingEnabledChanged(bool value) => Apply();
+    [ObservableProperty]
+    public partial int CaretShapeIndex { get; set; }
 
-    partial void OnFocusChanged(bool value) => Apply();
+    [ObservableProperty]
+    public partial string CaretColor { get; set; } = string.Empty;
 
-    partial void OnCaretChanged(bool value) => Apply();
+    [ObservableProperty]
+    public partial int CaretThicknessIndex { get; set; }
 
-    partial void OnPanMsChanged(double value) => Apply();
+    /// <summary>When the focus frame is shown (E1).</summary>
+    [ObservableProperty]
+    public partial int FocusFrameShowIndex { get; set; }
 
-    partial void OnMarginChanged(double value) => Apply();
+    /// <summary>When the caret marker is shown (E1).</summary>
+    [ObservableProperty]
+    public partial int CaretShowIndex { get; set; }
 
-    partial void OnFocusFrameChanged(bool value) => Apply();
+    // Every handler changes only its own field (M17 A1, M18 review): the page's other values may be
+    // older than the model, e.g. after Strg+Alt+T or a profile switch while the page is open.
+    partial void OnTrackingEnabledChanged(bool value) => ApplyOnly(o => o with { Enabled = value });
 
-    partial void OnCaretMarkerChanged(bool value) => Apply();
+    partial void OnFocusChanged(bool value) => ApplyOnly(o => o with { Focus = value });
+
+    partial void OnCaretChanged(bool value) => ApplyOnly(o => o with { Caret = value });
+
+    partial void OnPanMsChanged(double value) => ApplyOnly(o => o with { PanSeconds = value / 1000 });
+
+    partial void OnMarginChanged(double value) => ApplyOnly(o => o with { CaretMargin = value / 100 });
+
+    partial void OnFocusFrameChanged(bool value) => ApplyOnly(o => o with { FocusFrame = value });
+
+    partial void OnCaretMarkerChanged(bool value)
+    {
+        ApplyOnly(o => o with { CaretMarker = value });
+        if (_ready)
+        {
+            // The preview shows the marker only while it is switched on.
+            OnPropertyChanged(nameof(CaretDescription));
+            CaretStyleChanged?.Invoke();
+        }
+    }
 
     partial void OnMouseFollowIndexChanged(int value)
     {
@@ -119,22 +166,58 @@ public sealed partial class TrackingViewModel : ObservableObject
 
     partial void OnMouseMarginChanged(double value) => ApplyOnly(o => o with { MouseMargin = value / 100 });
 
-    // Only the changed field (M17 A1): the page's other values may be older than the model, e.g.
-    // after Strg+Alt+T or a profile switch while the page is open.
+    // A ComboBox reports index −1 (no selection) while it unloads: ComboChoice keeps the current value.
+    partial void OnCaretShapeIndexChanged(int value) => ApplyStyle(s => s with { Shape = ComboChoice.Or(value, s.Shape) });
+
+    // An unreadable colour (while typing) keeps the current one.
+    partial void OnCaretColorChanged(string value) => ApplyStyle(s => s with { Color = RgbColor.ParseOrDefault(value, s.Color) });
+
+    partial void OnCaretThicknessIndexChanged(int value) => ApplyStyle(s => s with { Thickness = ComboChoice.Or(value, s.Thickness) });
+
+    partial void OnFocusFrameShowIndexChanged(int value) =>
+        ApplyOnly(o => o with { FocusFrameShow = ComboChoice.Or(value, o.FocusFrameShow) });
+
+    partial void OnCaretShowIndexChanged(int value) => ApplyOnly(o => o with { CaretShow = ComboChoice.Or(value, o.CaretShow) });
+
     private void ApplyOnly(Func<TrackingOptions, TrackingOptions> change)
     {
         if (_ready)
         {
-            _tracking.SetOptions(change(_tracking.Options));
+            _tracking.UpdateOptions(change);
         }
     }
 
-    private void Apply()
+    private void ApplyStyle(Func<CaretMarkerStyle, CaretMarkerStyle> change)
     {
-        if (_ready)
+        if (!_ready)
         {
-            _tracking.SetOptions(new TrackingOptions(
-                TrackingEnabled, Focus, Caret, PanMs / 1000, Margin / 100, FocusFrame, CaretMarker, MouseFollow, MouseMargin / 100));
+            return;
         }
+
+        var before = _tracking.Options.CaretStyle;
+        ApplyOnly(o => o with { CaretStyle = change(o.CaretStyle) });
+        var after = _tracking.Options.CaretStyle;
+        if (before.Shape != after.Shape || before.Thickness != after.Thickness)
+        {
+            _log.CaretStyleChanged(after.Shape, after.Thickness);
+        }
+
+        if (before != after)
+        {
+            OnPropertyChanged(nameof(CaretDescription));
+            CaretStyleChanged?.Invoke();
+        }
+    }
+
+    private string Describe(CaretMarkerStyle style)
+    {
+        if (!CaretMarker)
+        {
+            return _texts.Get("CaretMarker.PreviewOff");
+        }
+
+        var color = RgbColor.PresetName(style.Color) is { } name ? _texts.Get("Color." + name) : style.Color.ToHex();
+        return _texts.Format(
+            "CaretMarker.Preview", _texts.Get("CaretShape." + style.Shape), color, _texts.Get("CaretThickness." + style.Thickness));
     }
 }

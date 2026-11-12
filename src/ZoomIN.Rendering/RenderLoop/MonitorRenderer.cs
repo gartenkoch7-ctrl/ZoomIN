@@ -183,7 +183,7 @@ internal sealed class MonitorRenderer : IDisposable
                 frozen is null ? _effects.LocateRequestedAt : 0, frozen is null ? _tracking.Snapshot : TrackingSnapshot.Empty, _tracking.Options,
                 frozen is null && _effects.PointerHiddenByTyping, // frozen: no locator, marks or pointer, so their news change nothing (G2)
                 windows, windowsFiltered, overview, _model.TargetFor(_deviceName), _models.ViewRequests.PlacementFor(_deviceName),
-                lowered, frozen, frozen is { Still: true, StillUnavailable: false });
+                lowered, frozen is null ? _models.Markers.Sample : default, frozen, frozen is { Still: true, StillUnavailable: false });
             var wasVisible = session.IsVisible;
             _stats.Record(session.RenderFrame(request), !wasVisible && session.IsVisible);
 

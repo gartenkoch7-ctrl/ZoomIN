@@ -118,12 +118,12 @@ public sealed class WindowTrackerTests
     {
         using var white = TestWindow.White(s_whiteBounds);
         var kind = new WindowKind(Process.GetCurrentProcess().ProcessName.ToLowerInvariant() + ".exe", TestWindow.WhiteClass);
-        var options = WindowFilterOptions.Default.WithRule(WindowFilterRule.For(kind, WindowFilterChoice.Filter, ColorFilter.Grayscale));
+        var options = WindowFilterOptions.Default.WithRule(WindowFilterRule.For(kind, WindowFilterChoice.Filter, FilterId.Grayscale));
         var model = new WindowFilterModel(options);
         using var tracker = NewTracker(model);
 
         tracker.Update();
-        Assert.Equal(WindowPalette.For(ColorFilter.Grayscale), PaletteOf(tracker, white.Handle));
+        Assert.Equal(WindowPalette.For(FilterId.Grayscale), PaletteOf(tracker, white.Handle));
 
         model.SetOptions(options with { Enabled = false });
         tracker.Update();

@@ -7,6 +7,7 @@ using ZoomIN.Rendering.Freeze;
 using ZoomIN.Rendering.Still;
 using ZoomIN.Rendering.Gpu;
 using ZoomIN.Rendering.Overlay;
+using ZoomIN.Rendering.TextEnhance;
 
 namespace ZoomIN.Rendering.RenderLoop;
 
@@ -48,12 +49,13 @@ internal sealed class RenderResources : IDisposable
                 var pass = Own(new MagnifyPass(Gpu.Device));
                 var cursorPass = Own(new CursorPass(Gpu.Device));
                 CursorLayer = new CursorLayer(cursorPass, pointer.Shapes, pointer.SystemCursor);
-                Highlights = new HighlightLayer(cursorPass);
+                Highlights = new HighlightLayer(cursorPass, new HighlightMetrics(deviceName));
                 OverviewLayer = new OverviewLayer(cursorPass);
                 Frozen = Own(new FrozenLayer(cursorPass, new StillFrame(Gpu.Device, log), deviceName, log));
                 var smart = Own(SmartInvertLayer.Create(Gpu.Device, Monitor.Width, Monitor.Height, deviceName, health, log));
                 Desktop = new DesktopLayer(
-                    pass, smart, Own(new GpuPassTimer(Gpu.Device, deviceName, "magnify")), Own(new SmartCostProbe(Gpu.Device)));
+                    pass, smart, Own(new GpuPassTimer(Gpu.Device, deviceName, "magnify")), Own(new PassCostProbe(Gpu.Device)),
+                    Own(new EnhanceCost(Gpu.Device, deviceName)));
             }
         }
         catch

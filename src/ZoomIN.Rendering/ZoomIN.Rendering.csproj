@@ -28,6 +28,7 @@
   <ItemGroup>
     <ShaderEntry Include="Magnify.hlsl" Entry="VSMain" Profile="vs_4_0" />
     <ShaderEntry Include="Magnify.hlsl" Entry="PSMain" Profile="ps_4_0" />
+    <ShaderEntry Include="Magnify.hlsl" Entry="PSEnhanced" Profile="ps_4_0" />
     <ShaderEntry Include="Ambient.hlsl" Entry="VSMain" Profile="vs_4_0" />
     <ShaderEntry Include="Ambient.hlsl" Entry="PSMain" Profile="ps_4_0" />
     <ShaderEntry Include="PhotoFill.hlsl" Entry="PSMain" Profile="ps_4_0" />
@@ -35,6 +36,7 @@
     <ShaderEntry Include="Cursor.hlsl" Entry="PSCursor" Profile="ps_4_0" />
     <ShaderEntry Include="Cursor.hlsl" Entry="PSRing" Profile="ps_4_0" />
     <ShaderEntry Include="Cursor.hlsl" Entry="PSRect" Profile="ps_4_0" />
+    <ShaderEntry Include="Cursor.hlsl" Entry="PSWedge" Profile="ps_4_0" />
     <ShaderInclude Include="Shaders\*.hlsli" />
   </ItemGroup>
 

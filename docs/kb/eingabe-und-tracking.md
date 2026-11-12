@@ -319,6 +319,107 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
 - **Offen:** Ausnahmeliste für Spiele und Fernsteuerung (ADR-0028), injizierte Bewegungen
   (`LLMHF_INJECTED`) werden derzeit wie echte behandelt.
 
+## Maus-Puffer und Achsensperre (M19 A6)
+Zwei Filter der Zaun-Filterkette (`IPointerMoveFilter`), global eingestellt
+(`AppSettings.PointerConstraint`, nicht im Profil), ab Werk beide aus. Nur die Tray-App nutzt sie,
+der sichere Bildschirm nicht. `PointerConstraintController` (App) meldet einen Filter beim Zaun nur
+an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten ist wie in Windows.
+
+- **Maus-Puffer** (`Core/Pointer/EdgeBuffer`, Reihenfolge 300): Eine Bewegung von einem Monitor
+  auf einen anderen endet am Rand (letzter Pixel `Right − 1`), bis der Zeiger die Druckzeit der
+  Stufe lang gegen den Rand drückt: Leicht 0,2 s, Mittel 0,4 s, Stark 0,8 s. „Drücken“ = weitere
+  Bewegungen zeigen nach außen. Es beginnt von vorn bei einem Rückzug vom Rand um mehr als 3 px
+  (Zittern zählt nicht; Entlanggleiten am Rand auch nicht, zählt aber auch nicht als Drücken), bei einer Pause ohne Druck über die halbe Druckzeit (höchstens 250 ms; bei Leicht also 100 ms, damit zwei einzelne Stupser nicht hinüberführen) und bei einer neuen
+  Richtung ohne gemeinsame Komponente (an einer Ecke wackelt die Hand zwischen „rechts“ und
+  „rechts unten“, das bleibt ein Drücken). Nach dem Hinüberwechseln gilt der Puffer auf dem neuen
+  Monitor wieder, in beide Richtungen.
+- **Ziel auf keinem Monitor:** Schräg über eine Ecke (z. B. an der Taskleiste nach rechts, die
+  Hand zieht leicht nach unten) zählt als Drücken entlang der Achse, die auf einen Nachbarn führt,
+  wie Windows es abschneiden würde; die stärker gedrückte Achse zuerst. Sonst (Lücke versetzter
+  Monitore oder ein Monitor, den die Liste noch nicht kennt) entscheidet Windows: Der Puffer lässt
+  die Bewegung durch, damit er den Zeiger nie einsperrt.
+- **Drücken gehört zu einem Monitor:** Wechselt der Zeiger (z. B. per Kürzel) auf einen anderen
+  Monitor, beginnt die Druckzeit dort von vorn.
+- **Monitore beim Anzeigewechsel:** Liefert Windows mitten im Aufzählen keine vollständige Liste,
+  ruht der Puffer (eine alte Anordnung könnte eine Kante mitten in einen echten Monitor legen)
+  und liest die Monitore jede Sekunde neu, bis zu zehnmal je Anlass (`BufferSetup`). Nach jedem
+  Anzeigewechsel liest er sie zur Bestätigung eine Sekunde später noch einmal, weil Windows
+  zunächst noch Teile der alten Anordnung melden kann. Das gilt auch
+  für nur einen gelesenen Monitor (ein zweiter kann noch fehlen). Ein fehlgeschlagenes Anwenden
+  wird erst bei der nächsten Änderung einer A6-Einstellung wiederholt, nicht bei jeder anderen.
+- **Eingefrorene Monitore:** Der Puffer gibt eine Bewegung frei, danach wirken die gesperrten
+  Bereiche des Zauns. Ein eingefrorener Monitor bleibt also gesperrt, der Puffer gilt nur zwischen
+  freien Monitoren.
+- **Achsensperre** (`Core/Pointer/AxisLock`, Reihenfolge 200): Solange die gewählte Haltetaste
+  gedrückt ist, sind die ersten 8 px (physische Pixel, je Achse) frei. Dann gewinnt die größere
+  Achse, bei Gleichstand waagrecht (Leserichtung), und der Zeiger bleibt auf der Zeile bzw. Spalte,
+  in der die Taste gedrückt wurde (er springt die wenigen Pixel der freien Strecke zurück). Loslassen
+  gibt ihn bei der nächsten Bewegung frei; ein neues Drücken wählt die Achse neu.
+- **Kein `ClipCursor`-Band** (Abweichung vom Plan): Die Achse ist ein Filter im Zaun-Hook statt
+  eines 1 px hohen `ClipCursor`-Rechtecks. So gibt es nur einen Mechanismus, die gesperrten
+  Bereiche wirken auch hier zuletzt, und ein fremder `ClipCursor` (Spiel, Fernsteuerung) wird von
+  der Achsensperre nie überschrieben. Windows' Zurücksetzen von `ClipCursor` (Desktopwechsel,
+  Anzeigewechsel) betrifft die Filter nicht; den Hook hält der Zaun am Leben (`HookLost`).
+- **Haltetaste** (`Platform/PointerConstraint/Win32HoldKeyWatch`): eigener `WH_KEYBOARD_LL`-Hook
+  auf eigenem Thread, nur lesend, nichts wird verschluckt. Er unterscheidet links und rechts
+  (`VK_LSHIFT`/`VK_RSHIFT`, `VK_LCONTROL`/`VK_RCONTROL`, `VK_LMENU`/`VK_RMENU`; Alt Gr meldet
+  `VK_RMENU` plus ein unechtes `VK_LCONTROL` mit Scancode `0x21D`, das ignoriert wird, damit
+  Alt Gr nicht als gehaltenes Strg links zählt). Ebenso ignoriert werden die unechten
+  Umschalt-Ereignisse, die Windows bei eingeschaltetem NumLock um Ziffernblock- und
+  Navigationstasten legt (Scancode mit Bit `0x200` oder erweitertes `0x2A`): Umschalt
+  halten und eine Pfeiltaste des Ziffernblocks drücken löst die Sperre nicht. Ein erweitertes
+  `0x36` (rechts) gilt nicht als unecht, weil manche Layouts das echte Umschalt rechts so melden;
+  mit „Umschalt rechts“ kann eine graue Pfeiltaste die Achse daher neu wählen lassen (offen,
+  am echten Gerät prüfen). Injizierte neutrale Codes (`VK_SHIFT`, `VK_CONTROL`, `VK_MENU`)
+  werden nach Scancode bzw. Erweiterungs-Flag links oder rechts zugeordnet. Nach so einem
+  unechten Loslassen meldet `GetAsyncKeyState` die Taste eine Weile als oben; die Prüfung wartet
+  dann bis zu vier Takte (2 s), bevor sie die Sperre löst; kommt danach Windows' unechtes
+  Drücken (die Taste ist also noch gehalten), rastet die Sperre wieder ein. Injizierte Tasten mit Erweiterungs-Flag
+  (Tastenumbelegung, Hilfsprogramme) gelten nicht als unecht. Die Tastenwiederholung beim Halten zählt nur
+  einmal. Der Hook läuft nur, solange die Achsensperre eingeschaltet ist. Ein eigener Hook statt
+  des Tastatur-Hooks von `Win32InputActivityHook`, weil dieser mit B1 geteilt ist; nach der
+  Integration lässt er sich dort als Beobachter einhängen (wie `OverviewKeyWatch`). Injizierte
+  Tasten (Bildschirmtastatur) zählen bewusst mit.
+- **Verpasstes Loslassen:** Lässt man die Taste auf dem Sperrbildschirm oder bei einer UAC-Abfrage
+  los, sieht der Hook das nie. Deshalb prüft ein Takt alle 0,5 s, nur solange die Taste als
+  gehalten gilt, `GetAsyncKeyState`; ist die Taste nicht gedrückt, gilt sie als losgelassen
+  (Log 2963). Die erste Prüfung kommt 0,5 s nach dem Drücken, lange nachdem Windows den
+  Tastenzustand gesetzt hat. Zusätzlich gilt
+  die Haltetaste nach `DesktopSwitch` und `SessionUnlock` des Zauns als losgelassen
+  (`IHoldKeyWatch.Reset`); eine noch gehaltene Taste rastet mit ihrer nächsten Wiederholung wieder
+  ein. Drücken, Loslassen und Prüfung laufen unter einer kleinen Sperre, damit sich ein Drücken
+  und ein gleichzeitiges Abschalten nie zu „gehalten ohne Taste“ verschränken.
+- **Tastatur-Hook verweigert:** wird nicht behalten (Log 2962); der nächste Start oder `Reset`
+  (nach Desktopwechsel) versucht es erneut. Einen von Windows wegen Zeitüberschreitung still
+  entfernten Tastatur-Hook erkennt die Haltetaste nicht (offen; die Achsensperre reagiert dann
+  nicht mehr, sperrt aber auch nichts).
+- **Zeiger von außen versetzt** (Kürzel mit `SetCursorPos`, anderes Programm), während die Achse
+  gilt: Die Sperre übernimmt die neue Zeile bzw. Spalte, statt den Zeiger zurückzuziehen. Vor der
+  Wahl der Achse zählt nur ein Sprung über 8 px; dass Windows den Punkt an einer Bildschirmkante
+  oder einem fremden `ClipCursor` um wenige Pixel zurücksetzt, startet die 8 px nicht neu.
+- **Ecke:** Ein Drücken, das schräg an einer Ecke begann, bleibt beim Entlanggleiten an einer der
+  beiden Kanten erhalten; erst ein Rückzug von allen gedrückten Kanten beginnt von vorn.
+- **Strg als Haltetaste und Suchhilfe „Strg allein“:** Der Aktivitäts-Hook wertet ein Strg, das
+  ohne andere Taste losgelassen wird, als Auslöser der Suchhilfe; eine Mausbewegung dazwischen
+  zählt dort nicht. Mit Strg als Haltetaste zeigt jede Nutzung der Achsensperre also die
+  Suchhilfe, wenn dieser Auslöser an ist (offen, braucht eine Änderung im geteilten
+  `Win32InputActivityHook`; bis dahin Umschalt oder Alt als Haltetaste wählen).
+- **Ein Monitor:** Der Puffer-Filter bleibt auch mit nur einem Monitor angemeldet (er tut dann
+  nichts): Nur ein angemeldeter Filter hält den Zaun-Wächter, der Anzeigewechsel meldet. Sonst
+  käme der Puffer nach dem Anstecken eines zweiten Monitors nicht zurück.
+- **Sperren:** Der Controller ruft den Zaun unter seiner eigenen Sperre auf; seine Reaktion auf
+  `Recomputed` nimmt diese Sperre deshalb nie (der Zaun kann beim Abmelden des letzten Filters
+  genau diesen Wächter-Thread beenden und auf ihn warten).
+- **Hook-Pfad:** Beide Filter rechnen nur, `0 B` (`PointerConstraintAllocationTests`,
+  `PointerConstraintBenchmarks`), zählen nur Zahlen (beobachtbare Zähler
+  `zoomin.pointer.buffer_blocked`, `zoomin.pointer.axis_lock`), loggen nie und keine Koordinaten.
+- **Umschalt + Ziehen** markiert in vielen Programmen Text, Alt öffnet beim Loslassen oft das Menü:
+  darauf weist die Einstellungskarte hin, die Haltetaste ist frei wählbar.
+- **Offen:** Absolute Eingaben (Stift, Touch, Fernsteuerung) auf einen anderen Monitor hält der
+  Puffer ebenfalls zurück, bis die Druckzeit um ist; ein Stifttipp auf den Nachbarmonitor landet
+  dann am Rand. Dafür bräuchte der Filter die Herkunft der Bewegung (`dwExtraInfo`,
+  `LLMHF_INJECTED`), die die Zaun-Schnittstelle heute nicht weitergibt.
+
 ## Monitor einfrieren und Monitorwechsel (M19 G2)
 - **Kürzel:** `Strg+Alt+H` friert den Monitor unter dem Zeiger ein; ist schon einer eingefroren,
   hebt dasselbe Kürzel **alle** auf. `Strg+Alt+N` setzt den Zeiger auf den nächsten freien
@@ -377,6 +478,15 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
   den Zustand. Der Monitor mit dem angedockten Streifen wird nicht eingefroren (Hinweis): Der
   Streifen reserviert Bildschirmfläche nach dem Live-Modus, und Zoombefehle gingen im Modus
   Angedockt an ihn statt an den Monitor, auf dem man arbeitet.
+- **Mit A6 (Puffer, Achsensperre):** Die gesperrten Bereiche wirken in `FenceDecision` immer nach
+  den Filtern; ein Puffer am Rand zu einem eingefrorenen Monitor hält den Zeiger also höchstens auf,
+  hinüber kommt er nie. A6 sperrt keine Bereiche, daher braucht `LandingPoint` nur die eingefrorenen;
+  `SetCursorPos` läuft nicht durch den Low-Level-Hook, die Filter halten den Sprung nicht auf. Sperrt
+  später ein weiterer Besitzer (B1) Bereiche, müsste der Zaun eine Abfrage dafür anbieten.
+- **Mit M18 (Markierungen, Haltetaste):** Auf einem eingefrorenen Monitor zeichnet `RenderSession`
+  weder Fokusrahmen noch Caret-Markierung; das Fadenkreuz kommt mit dem Zeiger, der dort nie ist.
+  `MonitorRenderer` gibt ihm eine leere Aktivität (Maus, Tippen, Haltetaste), sodass deren
+  Neuigkeiten ihn nicht neu zeichnen; Schärfe/Fett wirken auf das eingefrorene Bild wie sonst.
 - **Ansagen:** „Monitor 2 eingefroren“, „Einfrieren aufgehoben“, „Monitor 3“ (Windows-Nummer aus
   dem Gerätenamen, `MonitorNames.Number`).
 
@@ -434,6 +544,91 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
 - Am Monitorrand bleibt die Ansicht stehen (nie Fläche jenseits des Desktops); der Fokus steht
   dann außermittig, aber sichtbar.
 - Mausbewegung über Schwellwert → gleitend zurück zum Maus-Fixpunkt.
+
+### Caret-Formen (E2, M18)
+- Formen: **Balken** (Werk, wie bis M17), **Keile** über und unter dem Caret, **Rahmen** um das
+  Zeichen, **Kreis** (Ring). Farbe wie auf der Zeigerseite (sechs Vorgaben + Farbwähler), Deckkraft
+  fest 85 %. Dicke dünn/mittel/dick, gehört zum Profil.
+- Geometrie rein in `Core/Tracking/CaretMarkerGeometry` (je Frame, ohne Allokation): Linienstärke
+  = Grundwert × Zoom (Zoom gedeckelt bei 8× wie beim Zeiger), Mindestwerte 2/4/8 px. „Mittel“ =
+  `max(4, Zoom)` – zusammen mit `max(Linie, Caretbreite)` sieht der Balken aus wie vor E2.
+- Keile: Höhe `2 × Linie + 0,2 × Caret-Höhe` (so wirkt die Dicke bei jedem Zoom), Breite doppelt so
+  groß, Spitze berührt den Caret. Shader `PSWedge` (Dreieck per Abstandsfunktion, gespiegelt wie der
+  Zeiger über `InnerOffset/InnerScale`). Kein Rückfall auf den Balken: Shader sind beim Build
+  kompiliert und durch `ShaderBytecodeTests` geprüft – ein Rückfall wäre toter Code und würde einen
+  echten Geräteverlust beim Start verdecken.
+- Rahmen: Die Caret-Kette liefert meist nur eine Linie. Ist der Caret mindestens 0,3 × so breit wie
+  hoch, gilt er als Zeichenzelle; sonst wird ein Zeichen von 0,5 × Höhe rechts vom Caret
+  angenommen.
+- Kreis: bestehender `PSRing`, Radius halbe Caret-Höhe + 2 Linien.
+- Am Rand der sichtbaren Fläche (Monitor, Lupe, Streifen) wird jedes Teil **verschoben, nicht
+  beschnitten** – Keile über der ersten Zeile bleiben ganz sichtbar (liegen dann aber über der
+  Zeile; Sichtprüfung offen). Gezeichnet wird nur, solange die Caret-Mitte in der Fläche liegt
+  (`InView`): Knapp jenseits des Lupenrands würde die Markierung sonst auf andere Buchstaben
+  geschoben oder über den unvergrößerten Desktop neben der Lupe gemalt.
+- „Mittel“ entspricht dem alten Balken für Carets ab 1 px Breite; ein Caret mit Breite 0 (manche
+  UIA-Anbieter) wird jetzt mit dem Zoom breiter (8× → 8 px statt 4 px).
+- Geschätzter Caret (`CaretEstimated`) wird weiter nicht markiert (`CaretMarkerGeometry.TryGetCaret`).
+
+### Anzeige-Bedingungen und Haltetaste (E1, M18)
+- Fadenkreuz, Caret-Markierung und Fokusrahmen haben je eine Bedingung (Profil): **immer** (Werk),
+  **nur in Ruhe**, **nur in Bewegung**, **nur bei gehaltener Taste**.
+- „In Ruhe“ = seit 1 s keine Mausbewegung und kein Tippen (Grenze: genau 1 s gilt als Ruhe).
+  „In Bewegung“ ist das Gegenteil – Tippen zählt auch, nicht nur die Maus.
+- Haltetaste (für alle Profile, Seite „Tastenkürzel“): Strg, Umschalt oder Alt, links oder rechts,
+  Werk **Umschalt rechts**. Der LL-Hook meldet seitenspezifische Codes (`VK_RSHIFT` usw.), nie
+  das allgemeine `VK_SHIFT`.
+- Gegen Aufblitzen beim Großschreiben: Die Taste zählt erst nach **250 ms**, und wird während des
+  Haltens eine andere (Nicht-Modifier-)Taste gedrückt, zählt dieses Halten gar nicht mehr, bis die
+  Taste losgelassen wird. Modifier zählen nicht als Tippen: Alt Gr schickt ein linkes Strg mit,
+  auch bei Tastenwiederholung, und würde sonst „Alt rechts halten“ abbrechen.
+- Eigener Hook `Platform/Input/Win32HoldKeyHook` (WH_KEYBOARD_LL, eigener Thread), getrennt vom
+  Aktivitäts-Hook, damit beide unabhängig geändert werden können. Er läuft nur, solange eine
+  Markierung auf „Haltetaste“ steht (`App/Markers/MarkerInput`), und lässt jede Taste unverändert
+  durch. Mausbewegung und Tippen kommen aus dem bestehenden Aktivitäts-Hook (`PointerActivity`).
+- Render-Thread: `MarkerActivity.Sample` (drei `long`: letzte Aktivität, Haltebeginn, letztes Haltesignal; ohne Lock) und `MarkerAlphas` entscheiden je
+  Frame. Statt eines veröffentlichten Sichtbarkeits-Snapshots (Plan) rechnet der Render-Thread
+  selbst – sonst bräuchte der Wechsel nach 1 s Ruhe einen eigenen Timer-Thread. Der Leerlauf-Pfad
+  (M14) läuft ohnehin jede Bildwiederholung, eine laufende Überblendung (100 ms) zählt als
+  Animation und erzwingt das Zeichnen.
+- Tastenwiederholung allein reicht nicht (Wiederholung aus bei „Filtertasten“, ein zweiter Modifier
+  übernimmt die Wiederholung) und ein Loslassen kann verloren gehen (Win+L, Fenster mit höheren
+  Rechten). Darum prüft der Hook während des Haltens alle 400 ms den echten Tastenzustand
+  (`GetAsyncKeyState`): gedrückt = Halten bestätigt, los = Halten beendet. Ein vom Hook nicht gesehenes Drücken oder Loslassen zählt erst bei zwei Prüfungen in Folge,
+  weil Windows den Tastenzustand erst nach den Hooks setzt. Kommt 1,5 s gar kein
+  Signal (Hook entfernt), zählt das Halten nicht mehr; der nächste Druck beginnt neu. Ein Wechsel
+  der Haltetaste vergisst ein laufendes Halten. Schlägt das Setzen des Hooks fehl, versucht es die
+  nächste Änderung einer Bedingung erneut (nicht jeder Schieberegler-Schritt). Entfernt Windows den
+  Hook still (zu langsam unter Last), merkt die Zustandsprüfung „Taste unten, Hook sah nichts“
+  (Log 2954) und folgt dann dem Tastenzustand – nur die Tipp-Erkennung fehlt dann.
+- Offen: „In Ruhe/In Bewegung“ zählen nur Mausbewegung und Tippen ohne Strg/Alt; Mausrad, Klicks
+  und Tastenkürzel zählen nicht als Aktivität.
+- Offen: Mausklicks und Mausrad beenden ein Halten nicht. Strg als Haltetaste + Strg+Mausrad-Zoom
+  oder Umschalt + Klick zeigt die Markierungen nach 250 ms – mit Nutzern prüfen.
+- Alt Gr schickt ein linkes Strg mit Scan-Code 0x21D; das zählt nie als Haltetaste „Strg links“.
+- Strg als Haltetaste: Das Loslassen nach einem echten Halten (≥ 250 ms) löst nicht zusätzlich die
+  Zeiger-Suchhilfe „Strg allein“ aus (`MarkerActivity.ConsumeHoldEnd`, 500 ms, einmalig) – egal,
+  welcher der beiden LL-Hooks das Loslassen zuerst sieht.
+- Alt als Haltetaste: Weil die Taste nie verschluckt wird, öffnet Alt allein beim Loslassen in vielen
+  Programmen das Menü. Steht im Hilfetext; Abhilfe nur durch Verschlucken, was ausgeschlossen ist.
+- Eine Markierung, die aus ist (oder Tracking aus, Fadenkreuz bei 1× nicht gezeigt), steht auf
+  Deckkraft 0: Ihre Bedingung startet keinen Hook und erzwingt keine Frames. Eingeschaltet blendet
+  sie in 100 ms ein, statt kurz voll aufzublitzen.
+- Sicherer Bildschirm: Der Sanitizer setzt alle drei Bedingungen auf „immer“ – dort sehen die
+  Hooks zu wenig.
+- Zusammenspiel mit der Übersicht (M18-Integration): Der Aktivitäts-Hook verschluckt während der
+  Übersicht nur Esc. Esc ist nie eine Haltetaste. Ob der Haltetasten-Hook das Esc noch sieht, hängt
+  von der Hook-Reihenfolge ab (zuletzt gesetzter Hook kommt zuerst). Sieht er es, zählt es als
+  „andere Taste“ und beendet ein laufendes Halten – wie jede andere Taste, hingenommen.
+- Übersicht und Markierungen teilen sich den `CursorPass`; `RenderSession` zeichnet erst die
+  Markierungen, dann den Übersichtsrahmen. Überblendung (E1) und Rahmenbewegung (B2) zählen beide als
+  Animation (`OverviewHighlightTests`).
+- Umschalt rechts (Werk) ist auch das Windows-Kürzel für die Anschlagverzögerung (8 s halten). Wer
+  die Haltetaste so lange hält, bekommt die Windows-Abfrage – hingenommen, im Hilfetext erwähnenswert.
+- Seiten „Fokus & Textcursor“ und „Mauszeiger“: Jede Einstellung ändert nur ihr eigenes Feld im
+  Modell (M17 A1, für Caret-Form, -Farbe, -Dicke und alle Bedingungen seit der M18-Integration).
+  Sonst würde ein Profilwechsel oder Strg+Alt+T/K bei offener Seite von älteren Seitenwerten
+  zurückgedreht.
 
 ### Fixpunkt ≠ Bildmitte (Ursache „Fokus landet am Rand“, behoben 2026-11-03)
 Die Geometrie (`ModeGeometry`) vergrößert um einen **Fixpunkt**, und der wird dort gezeigt, wo er

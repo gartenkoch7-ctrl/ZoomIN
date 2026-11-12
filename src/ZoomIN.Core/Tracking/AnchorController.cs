@@ -80,7 +80,7 @@ public sealed class AnchorController
     /// Where the view starts if this controller has not run yet and the mouse is elsewhere, instead of
     /// the monitor's middle: a pipeline rebuilt while its monitor was frozen (G2) goes on from the frozen view.
     /// </summary>
-    public void StartAt(PhysicalPoint anchor) => _startAt = anchor;
+    public PhysicalPoint StartAt(PhysicalPoint anchor) => (_startAt = anchor).Value;
 
     private void Initialize(in AnchorInput input)
     {

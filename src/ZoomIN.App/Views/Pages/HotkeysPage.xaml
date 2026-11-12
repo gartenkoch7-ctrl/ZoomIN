@@ -44,6 +44,22 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+
+            <!-- E1: the hold key for highlights set to "only while the key is held". -->
+            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('HoldKey.Group')}" />
+            <c:SettingCard Description="{x:Bind loc:Text.Get('HoldKey.Desc')}" Glyph="&#xE7B3;" Header="{x:Bind loc:Text.Get('HoldKey')}">
+                <ComboBox
+                    MinWidth="200"
+                    AutomationProperties.Name="{x:Bind loc:Text.Get('HoldKey')}"
+                    SelectedIndex="{x:Bind Vm.HoldKeyIndex, Mode=TwoWay}">
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('HoldKey.RightShift')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('HoldKey.LeftShift')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('HoldKey.RightCtrl')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('HoldKey.LeftCtrl')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('HoldKey.RightAlt')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('HoldKey.LeftAlt')}" />
+                </ComboBox>
+            </c:SettingCard>
         </StackPanel>
     </ScrollViewer>
 </Page>

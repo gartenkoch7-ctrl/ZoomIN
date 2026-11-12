@@ -21,7 +21,7 @@ public sealed class SecureSettingsSanitizerTests
             Contrast = 1.5,
             CursorColor = "#FF00FF",
             MonitorZoomLevels = new Dictionary<string, double> { [@"\\.\DISPLAY1"] = 4 },
-            MonitorFilters = new Dictionary<string, MonitorFilter> { [@"\\.\DISPLAY2"] = new(true, ColorFilter.YellowOnBlack) },
+            MonitorFilters = new Dictionary<string, MonitorFilter> { [@"\\.\DISPLAY2"] = new(true, FilterId.YellowOnBlack) },
         };
 
         var result = SecureSettingsSanitizer.Sanitize(settings);
@@ -31,7 +31,7 @@ public sealed class SecureSettingsSanitizerTests
         Assert.Equal(1.5, result.Contrast);
         Assert.Equal("#FF00FF", result.CursorColor);
         Assert.Equal(4, result.MonitorZoomLevels[@"\\.\DISPLAY1"]);
-        Assert.Equal(ColorFilter.YellowOnBlack, result.MonitorFilters[@"\\.\DISPLAY2"].Filter);
+        Assert.Equal(FilterId.YellowOnBlack, result.MonitorFilters[@"\\.\DISPLAY2"].Filter);
     }
 
     [Fact]
@@ -78,11 +78,17 @@ public sealed class SecureSettingsSanitizerTests
         var result = SecureSettingsSanitizer.Sanitize(new AppSettings
         {
             LastMode = (ZoomMode)99,
-            ColorFilter = (ColorFilter)99,
+            ColorFilter = (FilterId)99,
             LocatorTriggers = (LocatorTriggers)0xFF,
             MouseFollow = (MouseFollowMode)99,
+            CaretMarkerShape = (CaretMarkerShape)99,
+            CaretMarkerThickness = (CaretMarkerThickness)99,
+            CaretMarkerColor = new string('c', 500),
         });
 
+        Assert.Equal(new AppSettings().CaretMarkerShape, result.CaretMarkerShape);
+        Assert.Equal(new AppSettings().CaretMarkerThickness, result.CaretMarkerThickness);
+        Assert.Equal(new AppSettings().CaretMarkerColor, result.CaretMarkerColor);
         Assert.Equal(MouseFollowMode.Margin, result.MouseFollow);
         Assert.Equal(ZoomMode.Fullscreen, result.LastMode);
         Assert.Equal(new AppSettings().ColorFilter, result.ColorFilter);
@@ -94,7 +100,7 @@ public sealed class SecureSettingsSanitizerTests
     {
         var levels = Enumerable.Range(0, 100).ToDictionary(i => $"M{i}", _ => 2.0);
         levels[new string('x', 500)] = 2;
-        var filters = new Dictionary<string, MonitorFilter> { ["A"] = null!, ["B"] = new(true, (ColorFilter)42) };
+        var filters = new Dictionary<string, MonitorFilter> { ["A"] = null!, ["B"] = new(true, (FilterId)42) };
 
         var result = SecureSettingsSanitizer.Sanitize(new AppSettings
         {

@@ -18,4 +18,8 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// <param name="ViewRequests">"Centre the view on P" requests (M17), handed to the anchor as its placement.</param>
 public sealed record RenderModels(
     ZoomModel Zoom, EffectsModel Effects, TrackingModel Tracking, WindowFilterModel Windows, DebugSnapshots Snapshots, SmartInvertHealth SmartInvert,
-    OverviewModel Overview, ViewCenterRequests ViewRequests);
+    OverviewModel Overview, ViewCenterRequests ViewRequests)
+{
+    /// <summary>Mouse, typing and hold key for the show conditions of the highlights (E1).</summary>
+    public MarkerActivity Markers { get; init; } = new();
+}

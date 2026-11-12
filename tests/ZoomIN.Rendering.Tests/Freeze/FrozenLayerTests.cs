@@ -14,6 +14,7 @@ using ZoomIN.Rendering.RenderLoop;
 using ZoomIN.Rendering.Still;
 using ZoomIN.Rendering.Tests.Gpu;
 using ZoomIN.Rendering.Tests.RenderLoop;
+using ZoomIN.Rendering.TextEnhance;
 
 namespace ZoomIN.Rendering.Tests.Freeze;
 
@@ -29,7 +30,7 @@ public sealed class FrozenLayerTests
     [Fact]
     public void Live_AnchorStays_ContentChanges()
     {
-        using var rig = new Rig();
+        using var rig = new FrozenLayerRig();
         var frozen = Frozen(still: false);
         rig.Layer.Begin(frozen);
 
@@ -46,7 +47,7 @@ public sealed class FrozenLayerTests
     [Fact]
     public void Still_KeepsTheImage_UntilTheFreezeEnds()
     {
-        using var rig = new Rig();
+        using var rig = new FrozenLayerRig();
         var frozen = Frozen(still: true);
         rig.Layer.Begin(frozen);
         Assert.False(rig.Layer.HoldsStill(frozen));
@@ -72,7 +73,7 @@ public sealed class FrozenLayerTests
     [Fact]
     public void RebuiltPipeline_DoesNotPassANewerDesktopOffAsTheStillImage()
     {
-        using var rig = new Rig();
+        using var rig = new FrozenLayerRig();
         var frozen = Frozen(still: true);
         rig.Layer.Begin(frozen);
         Assert.True(rig.Layer.TryCapture(frozen, rig.Gpu.Context, rig.Source, current: true, WindowRegions.Empty));
@@ -89,7 +90,7 @@ public sealed class FrozenLayerTests
     [Fact]
     public void SystemPointer_IsShownOnceAfterTheFreezeMovedItAway_AndWhileItIsOnTheFrozenMonitor()
     {
-        using var rig = new Rig();
+        using var rig = new FrozenLayerRig();
         var frozen = Frozen(still: false);
 
         // The jump comes first (frame still live), the freeze is seen a frame later.
@@ -110,7 +111,7 @@ public sealed class FrozenLayerTests
     [Fact]
     public void PointerArrivingOnTheFrozenMonitor_IsReportedOncePerArrival()
     {
-        using var rig = new Rig();
+        using var rig = new FrozenLayerRig();
         var reports = 0;
         var frozen = new FrozenMonitor(@"\\.\DISPLAY1", s_monitor, 2, ZoomMode.Fullscreen, LensSize.Default, DockLayout.Default, false,
             RgbColor.Cyan, _ => reports++);
@@ -127,7 +128,7 @@ public sealed class FrozenLayerTests
     [Fact]
     public void Border_IsDrawnInTheFrameColour_OnlyAtTheEdge()
     {
-        using var rig = new Rig();
+        using var rig = new FrozenLayerRig();
         var frozen = Frozen(still: false);
         rig.Gpu.Context.ClearRenderTargetView(rig.Target.View, new Vortice.Mathematics.Color4(0, 0, 0, 0));
 
@@ -142,7 +143,7 @@ public sealed class FrozenLayerTests
     [Fact]
     public void PerFrameCalls_DoNotAllocate()
     {
-        using var rig = new Rig();
+        using var rig = new FrozenLayerRig();
         var frozen = Frozen(still: true);
         void Frame()
         {
@@ -172,78 +173,4 @@ public sealed class FrozenLayerTests
 
     private static FrozenMonitor Frozen(bool still) =>
         new(@"\\.\DISPLAY1", s_monitor, 2, ZoomMode.Fullscreen, LensSize.Default, DockLayout.Default, still, new RgbColor(0, 0, 255));
-
-    private sealed class Rig : IDisposable
-    {
-        private readonly CursorPass _cursor;
-        private readonly MagnifyPass _magnify;
-        private readonly SmartInvertLayer _smart;
-        private readonly GpuPassTimer _timer;
-        private readonly SmartCostProbe _probe;
-        private readonly DesktopLayer _desktop;
-
-        public Rig()
-        {
-            Gpu = GpuDevice.CreateWarp();
-            Source = Gpu.Device.CreateTexture2D(
-                new Texture2DDescription(Format.B8G8R8A8_UNorm, Size, Size, arraySize: 1, mipLevels: 1, bindFlags: BindFlags.ShaderResource));
-            View = Gpu.Device.CreateShaderResourceView(Source);
-            Fill(Red);
-            Target = RenderTarget.Create(Gpu.Device, Size);
-            _cursor = new CursorPass(Gpu.Device);
-            _magnify = new MagnifyPass(Gpu.Device);
-            _smart = SmartInvertLayer.Create(Gpu.Device, Size, Size, @"\\.\DISPLAY1", new SmartInvertHealth(), NullLogger.Instance);
-            _timer = new GpuPassTimer(Gpu.Device, @"\\.\DISPLAY1", "magnify");
-            _probe = new SmartCostProbe(Gpu.Device);
-            _desktop = new DesktopLayer(_magnify, _smart, _timer, _probe);
-            Layer = new FrozenLayer(_cursor, new StillFrame(Gpu.Device, NullLogger.Instance), @"\\.\DISPLAY1", NullLogger.Instance);
-        }
-
-        public GpuDevice Gpu { get; }
-
-        public ID3D11Texture2D Source { get; }
-
-        public ID3D11ShaderResourceView View { get; }
-
-        public RenderTarget Target { get; }
-
-        public FrozenLayer Layer { get; }
-
-        public void Fill(uint color)
-        {
-            var data = Enumerable.Repeat(color, Size * Size).ToArray();
-            var handle = GCHandle.Alloc(data, GCHandleType.Pinned);
-            try
-            {
-                Gpu.Context.UpdateSubresource(Source, 0, null, handle.AddrOfPinnedObject(), Size * 4, 0);
-            }
-            finally
-            {
-                handle.Free();
-            }
-        }
-
-        /// <summary>Draws the frozen view at 2× around <paramref name="anchor"/>; returns the middle pixel as 0xAARRGGBB.</summary>
-        public uint Draw(PhysicalPoint anchor)
-        {
-            var frame = ModeGeometry.Compute(ZoomMode.Fullscreen, s_monitor, anchor, 2, LensSize.Default, DockLayout.Default);
-            _desktop.Draw(Gpu.Context, Layer.Desktop(View), Target.View, Size, Size, s_monitor, frame, DisplayEffects.Default, WindowRegions.Empty, false);
-            var pixel = Target.ReadBack(Gpu.Device, Gpu.Context).At(Size / 2, Size / 2);
-            return ((uint)pixel.A << 24) | ((uint)pixel.R << 16) | ((uint)pixel.G << 8) | pixel.B;
-        }
-
-        public void Dispose()
-        {
-            Layer.Dispose();
-            _probe.Dispose();
-            _timer.Dispose();
-            _smart.Dispose();
-            _magnify.Dispose();
-            _cursor.Dispose();
-            Target.Dispose();
-            View.Dispose();
-            Source.Dispose();
-            Gpu.Dispose();
-        }
-    }
 }

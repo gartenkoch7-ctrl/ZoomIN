@@ -56,7 +56,7 @@ public sealed class BaselineGpuTimeTests
         using var ambient = new AmbientPass(gpu.Device, width, height);
         var monitor = new PhysicalRect(0, 0, width, height);
         var source = ViewportCalculator.SourceRect(monitor, new PhysicalPoint(width / 3, height / 3), zoom);
-        var effects = new DisplayEffects(new FilterSettings(true, ColorFilter.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default);
+        var effects = new DisplayEffects(new FilterSettings(true, FilterId.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default);
         var windows = default(WindowConstants);
         WindowConstants.Fill(ref windows, WindowRegions.Empty, monitor, effects);
         pass.UpdateWindows(gpu.Context, windows);

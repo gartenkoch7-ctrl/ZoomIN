@@ -1,4 +1,5 @@
 using ZoomIN.Core.Filters;
+using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Viewport;
 using ZoomIN.Core.WindowFilters;
 using ZoomIN.Rendering.Gpu;
@@ -32,7 +33,24 @@ public sealed class MagnifyPassAllocationTests
     }
 
     [Fact]
-    public void WindowRegions_FillUploadAndDraw_DoNotAllocate()
+    public void WindowRegions_FillUploadAndDraw_DoNotAllocate() => AssertFillUploadDrawFree(DisplayEffects.Default, WindowPalette.For(FilterId.Inverted));
+
+    [Fact]
+    public void OwnSchemesWithReplacements_FillUploadAndDraw_DoNotAllocate()
+    {
+        var replacements = new[] { new ColorReplacement(), new ColorReplacement { From = "#00FF00" }, new ColorReplacement { From = "#0000FF" } };
+        var schemes = Enumerable.Range(0, CustomSchemes.Max)
+            .Select(i => new CustomScheme { Id = CustomSchemes.IdOf(i), Kind = (SchemeKind)i, Replacements = replacements })
+            .ToList();
+        var effects = new DisplayEffects(new FilterSettings(true, FilterId.Custom2, 1, 0), Smoothing.Text, PointerStyle.Default)
+        {
+            Schemes = schemes,
+        };
+
+        AssertFillUploadDrawFree(effects, WindowPalette.For(FilterId.Custom4));
+    }
+
+    private static void AssertFillUploadDrawFree(DisplayEffects effects, byte entry)
     {
         using var gpu = GpuDevice.CreateWarp();
         using var image = TestImage.Create(gpu.Device, Size);
@@ -44,11 +62,10 @@ public sealed class MagnifyPassAllocationTests
         for (var i = 0; i < rects.Length; i++)
         {
             rects[i] = new PhysicalRect(i, i, 20, 20);
-            palette[i] = WindowPalette.For(ColorFilter.Inverted);
+            palette[i] = entry;
         }
 
         var regions = new WindowRegions(rects, palette);
-        var effects = DisplayEffects.Default;
         var windows = default(WindowConstants);
         var constants = MagnifyConstants.Fullscreen(monitor, monitor, effects.Matrix, Smoothing.Text);
         WindowConstants.Fill(ref windows, regions, monitor, effects); // warm-up / JIT

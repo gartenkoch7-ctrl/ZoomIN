@@ -7,12 +7,13 @@ using ZoomIN.Core.WindowFilters;
 using ZoomIN.Rendering.Gpu;
 using ZoomIN.Rendering.RenderLoop;
 using ZoomIN.Rendering.Tests.RenderLoop;
+using ZoomIN.Rendering.TextEnhance;
 
 namespace ZoomIN.Rendering.Tests.Gpu;
 
 /// <summary>
 /// M14 step 5: the budget covers the whole smart inversion – ambient pass plus what it adds to the
-/// magnify pass, measured once per pipeline by SmartCostProbe.
+/// magnify pass, measured once per pipeline by PassCostProbe.
 /// </summary>
 [Collection(MeterTests.Name)]
 public sealed class SmartCostBudgetTests
@@ -75,9 +76,9 @@ public sealed class SmartCostBudgetTests
     public void Probe_WaitsForTheGpuToWarmUp_AndRestartsFromScratch()
     {
         using var gpu = GpuDevice.CreateWarp();
-        using var probe = new SmartCostProbe(gpu.Device);
+        using var probe = new PassCostProbe(gpu.Device);
 
-        for (var i = 0; i < SmartCostProbe.WarmupFrames - 1; i++)
+        for (var i = 0; i < PassCostProbe.WarmupFrames - 1; i++)
         {
             probe.Tick();
         }
@@ -101,10 +102,11 @@ public sealed class SmartCostBudgetTests
         using var pass = new MagnifyPass(gpu.Device);
         using var smart = SmartInvertLayer.Create(gpu.Device, Size, Size, Monitor, new SmartInvertHealth(), NullLogger.Instance);
         using var timer = new GpuPassTimer(gpu.Device, Monitor, "magnify");
-        using var probe = new SmartCostProbe(gpu.Device);
-        var layer = new DesktopLayer(pass, smart, timer, probe);
+        using var probe = new PassCostProbe(gpu.Device);
+        using var enhance = new EnhanceCost(gpu.Device, Monitor);
+        var layer = new DesktopLayer(pass, smart, timer, probe, enhance);
         var monitor = new PhysicalRect(0, 0, Size, Size);
-        var effects = new DisplayEffects(new FilterSettings(true, ColorFilter.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default);
+        var effects = new DisplayEffects(new FilterSettings(true, FilterId.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default);
         var frame = ModeGeometry.Compute(ZoomMode.Fullscreen, monitor, new PhysicalPoint(32, 32), 2, LensSize.Default, DockLayout.Default);
 
         // Flush stands in for Present. WARP runs behind the CPU, so the queries come back many

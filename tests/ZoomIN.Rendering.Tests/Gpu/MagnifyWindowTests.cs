@@ -13,7 +13,7 @@ public sealed class MagnifyWindowTests
     private static readonly PhysicalRect s_monitor = new(0, 0, Size, Size);
     private static readonly Bgra s_cyan = new(255, 255, 0, 255);
     private static readonly Bgra s_yellow = new(0, 255, 255, 255);
-    private static readonly byte s_inverted = WindowPalette.For(ColorFilter.Inverted);
+    private static readonly byte s_inverted = WindowPalette.For(FilterId.Inverted);
 
     [Fact]
     public void Palette_MatchesTheShader()
@@ -46,7 +46,7 @@ public sealed class MagnifyWindowTests
     [Fact]
     public void InvertedMonitor_InvertedWindowIsNotInvertedTwice_OriginalWindowStaysOriginal()
     {
-        var invertedMonitor = new DisplayEffects(new FilterSettings(true, ColorFilter.Inverted, 1, 0), Smoothing.Pixel, PointerStyle.Default);
+        var invertedMonitor = new DisplayEffects(new FilterSettings(true, FilterId.Inverted, 1, 0), Smoothing.Pixel, PointerStyle.Default);
         var pixels = Render(
             Regions((new PhysicalRect(32, 0, 16, 64), s_inverted), (new PhysicalRect(48, 0, 16, 64), WindowPalette.Original)),
             invertedMonitor);

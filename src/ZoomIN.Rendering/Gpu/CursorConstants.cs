@@ -63,4 +63,9 @@ internal readonly struct CursorConstants
     /// <param name="color">Premultiplied colour.</param>
     public static CursorConstants ForRect(float thicknessU, float thicknessV, FrameColor color) =>
         new(0, 0, default, thicknessU, thicknessV, 0, 0, color, default);
+
+    /// <param name="pointsUp">Tip at the top (wedge below the caret); otherwise at the bottom.</param>
+    /// <param name="color">Premultiplied colour.</param>
+    public static CursorConstants ForWedge(bool pointsUp, FrameColor color) =>
+        new(0, 0, default, 0, 0, 0, 0, color, default, flipV: pointsUp);
 }
