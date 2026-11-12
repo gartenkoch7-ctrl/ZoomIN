@@ -102,6 +102,11 @@ public static class SecureSettingsSanitizer
 
             // Overview not on the secure desktop for now (B2 plan: low-level hook and UIAccess there unchecked).
             OverviewHotkey = default,
+
+            // No freezing on the secure desktop: a pointer fence there would make the sign-in or
+            // UAC prompt hard to reach, and the frozen view does not carry over anyway (G2).
+            FreezeMonitorHotkey = default,
+            NextMonitorHotkey = default,
             WheelModifiers = Wheel(s.WheelModifiers, d.WheelModifiers),
         };
     }

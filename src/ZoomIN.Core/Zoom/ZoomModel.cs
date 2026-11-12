@@ -1,4 +1,5 @@
 using ZoomIN.Core.Modes;
+using ZoomIN.Core.Monitors;
 
 namespace ZoomIN.Core.Zoom;
 
@@ -39,6 +40,12 @@ public sealed class ZoomModel
 
     /// <summary>Temporary levels per monitor (overview, window drag); never saved.</summary>
     public TemporaryZoom Temporary { get; }
+
+    /// <summary>
+    /// Frozen monitors (G2): each keeps its anchor, level and mode from the moment of freezing and
+    /// ignores <see cref="Temporary"/> levels. Lock-free to read; never saved.
+    /// </summary>
+    public MonitorFreeze Frozen { get; } = new();
 
     public ZoomMode Mode => (ZoomMode)Volatile.Read(ref _mode);
 

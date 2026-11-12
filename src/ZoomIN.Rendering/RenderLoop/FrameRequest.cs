@@ -1,5 +1,6 @@
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Modes;
+using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Overview;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.WindowFilters;
@@ -17,6 +18,7 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// <param name="Placement">Latest "centre the view here" request for this monitor (M17), passed to the anchor.</param>
 /// <param name="ViewHeld">A temporary level (window drag) holds the monitor below the user's level, also while gliding there:
 /// the overview keeps the view from before it.</param>
+/// <param name="Frozen">The monitor is frozen (G2): anchor, level and mode stay, no pointer or marks; null = live.</param>
 internal readonly record struct FrameRequest(
     ZoomMode Mode,
     ZoomMode AnchorMode,
@@ -33,8 +35,12 @@ internal readonly record struct FrameRequest(
     OverviewSession? Overview = null,
     double OverviewLevel = 1,
     ViewPlacement Placement = default,
-    bool ViewHeld = false)
+    bool ViewHeld = false,
+    FrozenMonitor? Frozen = null)
 {
-    /// <summary>Not magnified and no colour filter: only pointer, crosshair or locator are drawn.</summary>
-    public bool OverlayOnly => Zoom <= 1.01 && !Effects.Filter.ChangesColors && !WindowsFiltered;
+    /// <summary>
+    /// Not magnified and no colour filter: only pointer, crosshair or locator are drawn. A frozen
+    /// still image is drawn at 1× too, or the live desktop would show through.
+    /// </summary>
+    public bool OverlayOnly => Zoom <= 1.01 && !Effects.Filter.ChangesColors && !WindowsFiltered && Frozen is not { Still: true };
 }

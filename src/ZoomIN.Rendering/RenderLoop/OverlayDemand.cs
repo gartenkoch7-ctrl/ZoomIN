@@ -65,5 +65,5 @@ internal sealed class OverlayDemand
     /// <summary>After a pipeline failure: retry soon if the monitor should show anything, else wait for a change.</summary>
     public bool NeededAfterFailure() =>
         _zoom.EffectiveTargetFor(_deviceName) > ZoomLimits.Min || NeedsOverlayUnzoomed(_effects.CurrentFor(_deviceName))
-        || _models.Windows.Regions.Count > 0 || Overview is not null;
+        || _models.Windows.Regions.Count > 0 || Overview is not null || _zoom.Frozen.IsFrozen(_deviceName);
 }

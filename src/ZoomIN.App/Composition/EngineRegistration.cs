@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using ZoomIN.App.Freeze;
 using ZoomIN.App.Localization;
 using ZoomIN.App.Overview;
 using ZoomIN.App.Settings;
@@ -106,6 +107,7 @@ internal static class EngineRegistration
         services.AddSingleton<OverviewController>();
         services.AddSingleton<OverviewDebug>();
         services.AddSingleton<WindowDragSync>();
+        services.AddSingleton<MonitorFreezeController>();
         services.AddSingleton<ZoomController>();
         return services;
     }

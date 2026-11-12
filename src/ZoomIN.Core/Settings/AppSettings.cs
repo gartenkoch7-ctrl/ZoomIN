@@ -4,6 +4,7 @@ using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
+using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Updates;
@@ -244,6 +245,15 @@ public sealed record AppSettings
 
     /// <summary>Overview at the push of a key (B2, M17).</summary>
     public HotkeyGesture OverviewHotkey { get; set; } = HotkeyGesture.Overview;
+
+    // Frozen monitors (G2, M19): shared by all profiles; nothing frozen is ever saved.
+    public HotkeyGesture FreezeMonitorHotkey { get; set; } = HotkeyGesture.FreezeMonitor;
+
+    public HotkeyGesture NextMonitorHotkey { get; set; } = HotkeyGesture.NextMonitor;
+
+    public FrozenContent FrozenContent { get; set; } = FrozenContent.Live;
+
+    public string FrozenFrameColor { get; set; } = RgbColor.Cyan.ToHex();
 
     public HotkeyModifiers WheelModifiers { get; set; } = HotkeyModifiers.Control;
 }

@@ -3,6 +3,8 @@ using Vortice.DXGI;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Rendering.Capture;
+using ZoomIN.Rendering.Freeze;
+using ZoomIN.Rendering.Still;
 using ZoomIN.Rendering.Gpu;
 using ZoomIN.Rendering.Overlay;
 
@@ -48,6 +50,7 @@ internal sealed class RenderResources : IDisposable
                 CursorLayer = new CursorLayer(cursorPass, pointer.Shapes, pointer.SystemCursor);
                 Highlights = new HighlightLayer(cursorPass);
                 OverviewLayer = new OverviewLayer(cursorPass);
+                Frozen = Own(new FrozenLayer(cursorPass, new StillFrame(Gpu.Device, log), deviceName, log));
                 var smart = Own(SmartInvertLayer.Create(Gpu.Device, Monitor.Width, Monitor.Height, deviceName, health, log));
                 Desktop = new DesktopLayer(
                     pass, smart, Own(new GpuPassTimer(Gpu.Device, deviceName, "magnify")), Own(new SmartCostProbe(Gpu.Device)));
@@ -75,6 +78,9 @@ internal sealed class RenderResources : IDisposable
     public HighlightLayer Highlights { get; }
 
     public OverviewLayer OverviewLayer { get; }
+
+    /// <summary>Frozen monitor (G2): kept anchor, still image and border.</summary>
+    public FrozenLayer Frozen { get; }
 
     public DesktopLayer Desktop { get; }
 

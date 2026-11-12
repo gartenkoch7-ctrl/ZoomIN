@@ -50,6 +50,17 @@
                 <ToggleSwitch IsEnabled="{x:Bind Drag.Acts, Mode=OneWay}" IsOn="{x:Bind Drag.OnResize, Mode=TwoWay}" />
             </c:SettingCard>
 
+            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('Freeze.Group')}" />
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Freeze.Content.Desc')}" Glyph="&#xE7F4;" Header="{x:Bind loc:Text.Get('Freeze.Content')}">
+                <ComboBox MinWidth="200" SelectedIndex="{x:Bind Freeze.ContentIndex, Mode=TwoWay}">
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Freeze.Live')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Freeze.Still')}" />
+                </ComboBox>
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Freeze.Color.Desc')}" Glyph="&#xE790;" Header="{x:Bind loc:Text.Get('Freeze.Color')}">
+                <c:ColorChooser Color="{x:Bind Freeze.FrameColor, Mode=TwoWay}" />
+            </c:SettingCard>
+
             <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.ModeLens}" />
             <c:SettingCard Description="{x:Bind loc:Text.Get('ZoomLensSize.Desc')}" Glyph="&#xE721;" Header="{x:Bind loc:Text.Get('ZoomLensWidthTitle')}">
                 <c:ValueSlider Format="{}{0:0} %" Maximum="90" Minimum="10" Step="5" Value="{x:Bind Vm.LensWidth, Mode=TwoWay}" />

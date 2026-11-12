@@ -57,6 +57,17 @@ public sealed class OverlayDemandTests
     }
 
     [Fact]
+    public void AFrozenMonitor_IsRetriedSoonAfterAFailure()
+    {
+        var models = Models();
+        var demand = new OverlayDemand(First, models);
+        models.Zoom.Frozen.Freeze(new Core.Monitors.FrozenMonitor(
+            First, default, 1, ZoomMode.Fullscreen, LensSize.Default, DockLayout.Default, false, Core.Pointer.RgbColor.Cyan));
+
+        Assert.True(demand.NeededAfterFailure());
+    }
+
+    [Fact]
     public void PerFrameChecks_DoNotAllocate()
     {
         var models = Models();

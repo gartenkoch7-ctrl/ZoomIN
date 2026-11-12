@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using ZoomIN.App.Freeze;
 using ZoomIN.App.Localization;
 using ZoomIN.App.Overview;
 using ZoomIN.App.Settings;
+using ZoomIN.App.Tests.Freeze;
 using ZoomIN.App.Tests.Overview;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Filters;
@@ -32,6 +34,8 @@ public sealed class HotkeyBindingsTests
         Assert.Contains(HotkeyGesture.ZoomIn, hotkeys.Registered.Keys);
         Assert.False(hotkeys.Registered[HotkeyGesture.Overview].Repeat);
         Assert.True(hotkeys.Registered[HotkeyGesture.ZoomIn].Repeat);
+        Assert.False(hotkeys.Registered[HotkeyGesture.FreezeMonitor].Repeat);
+        Assert.False(hotkeys.Registered[HotkeyGesture.NextMonitor].Repeat);
         Assert.False(hotkeys.Registered[HotkeyGesture.ToggleZoom].Repeat);
 
         hotkeys.Registered[HotkeyGesture.ToggleZoom].Action();
@@ -81,8 +85,11 @@ public sealed class HotkeyBindingsTests
         var hotkeys = new FakeHotkeys(taken);
         var overview = new OverviewController(service, zoom, monitors, new FixedCursor(), new FakeOverviewKeys(), new RecordingAnnouncer(),
             AppTexts.CreateLocalizer(), TimeProvider.System, NullLogger<OverviewController>.Instance);
+        var fence = new FakeFence();
+        var freeze = new MonitorFreezeController(service, monitors, new FixedCursor(), fence, new FakeMover(new MovableCursor(), fence),
+            new RecordingAnnouncer(), AppTexts.CreateLocalizer(), NullLogger<MonitorFreezeController>.Instance);
         var bindings = new HotkeyBindings(
-            service, new ProfileService(service, new NoProfiles()), hotkeys, zoom, windowFilter, overview, NullLogger<HotkeyBindings>.Instance);
+            service, new ProfileService(service, new NoProfiles()), hotkeys, zoom, windowFilter, overview, freeze, NullLogger<HotkeyBindings>.Instance);
         return (bindings, hotkeys, models);
     }
 

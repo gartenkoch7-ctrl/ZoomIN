@@ -16,11 +16,15 @@ public sealed partial class ZoomPage : Page
     /// <summary>Zoom while moving windows (G1).</summary>
     public WindowDragViewModel? Drag { get; private set; }
 
+    /// <summary>Frozen monitors (G2).</summary>
+    public FreezeViewModel? Freeze { get; private set; }
+
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         var services = (PageServices)e.Parameter;
         Vm = services.Create<ZoomViewModel>();
         Drag = services.Create<WindowDragViewModel>();
+        Freeze = services.Create<FreezeViewModel>();
         Bindings.Update();
     }
 }

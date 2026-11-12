@@ -8,6 +8,7 @@ using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Viewport;
 using ZoomIN.Core.WindowFilters;
 using ZoomIN.Rendering.Capture;
+using ZoomIN.Rendering.Freeze;
 using ZoomIN.Rendering.Gpu;
 using ZoomIN.Rendering.Overlay;
 using ZoomIN.Rendering.Snapshots;
@@ -33,11 +34,13 @@ internal sealed class RenderSession : IDisposable
     private readonly HighlightLayer _highlights;
     private readonly OverviewLayer _overview;
     private readonly DesktopLayer _desktop;
+    private readonly FrozenLayer _frozen;
     private readonly SnapshotTaker _snapshots;
     private readonly AnchorController _anchors = new();
     private readonly FrameChangeTracker _changes = new();
     private readonly int _displayGeneration;
     private PhysicalPoint _lastCursor;
+    private PhysicalPoint _lastAnchor;
     private bool _cursorInside;
     private bool _shown;
     private bool _holdsFrameSlot;
@@ -61,7 +64,9 @@ internal sealed class RenderSession : IDisposable
         _highlights = _resources.Highlights;
         _overview = _resources.OverviewLayer;
         _desktop = _resources.Desktop;
+        _frozen = _resources.Frozen;
         _lastCursor = new PhysicalPoint(_monitor.Bounds.X + (_monitor.Width / 2), _monitor.Bounds.Y + (_monitor.Height / 2));
+        _lastAnchor = _lastCursor;
     }
 
     /// <summary>The overlay is on screen.</summary>
@@ -116,8 +121,11 @@ internal sealed class RenderSession : IDisposable
 
         // Without zoom or filter the desktop is not copied at all: Windows shows it, ZoomIN only
         // draws on a transparent overlay (pointer page: pointer at 1×, crosshair, locator).
+        // A frozen monitor with a still image reads no new capture frame once the image is taken (G2).
+        var frozen = request.Frozen;
+        _frozen.Begin(frozen);
         var newImage = false;
-        if (!request.OverlayOnly)
+        if (!request.OverlayOnly && !_frozen.HoldsStill(frozen))
         {
             newImage = _duplicator.Update();
 
@@ -128,21 +136,29 @@ internal sealed class RenderSession : IDisposable
                 Present();
                 return FrameOutcome.Presented;
             }
+
+            newImage |= _frozen.TryCapture(frozen, _gpu.Context, _duplicator.Texture);
         }
 
+        var image = _frozen.Desktop(_duplicator.ShaderResource);
+
         // Read the cursor as late as possible: it decides what is shown under the pointer.
-        // A monitor without the mouse keeps its last view (M3 decision).
+        // A monitor without the mouse keeps its last view (M3 decision); a frozen one never has it.
         var hasCursor = _pointer.Position.TryGetPosition(out var cursor);
-        _cursorInside = hasCursor && _monitor.Bounds.Contains(cursor);
+        _cursorInside = hasCursor && frozen is null && _monitor.Bounds.Contains(cursor);
         if (_cursorInside)
         {
             _lastCursor = cursor;
         }
 
         // The anchor is the mouse, or the focus/caret while the user works with the keyboard (M6).
-        var anchor = _anchors.Next(new AnchorInput(
-            Stopwatch.GetTimestamp(), hasCursor ? cursor : _lastCursor, _cursorInside, _monitor.Bounds,
-            request.AnchorMode, request.Zoom, request.Lens, request.Dock, request.Tracking, request.TrackingOptions, request.Placement));
+        // Frozen: the anchor of the moment of freezing; mouse, focus, caret and placements wait.
+        var anchor = frozen is not null
+            ? FrozenLayer.Anchor(frozen, _lastAnchor)
+            : _anchors.Next(new AnchorInput(
+                Stopwatch.GetTimestamp(), hasCursor ? cursor : _lastCursor, _cursorInside, _monitor.Bounds,
+                request.AnchorMode, request.Zoom, request.Lens, request.Dock, request.Tracking, request.TrackingOptions, request.Placement));
+        _lastAnchor = anchor;
 
         var frame = ModeGeometry.Compute(request.Mode, _monitor.Bounds, anchor, request.Zoom, request.Lens, request.Dock);
         _overview.Update(frame, request.Overview, _monitor.Bounds, hasCursor ? cursor : _lastCursor, request.OverviewLevel, request.Lens, request.Dock,
@@ -173,16 +189,22 @@ internal sealed class RenderSession : IDisposable
         }
         else
         {
-            weights = _desktop.Draw(_gpu.Context, _duplicator.ShaderResource, _swapchain.RenderTarget, _swapchain.Width, _swapchain.Height,
+            weights = _desktop.Draw(_gpu.Context, image, _swapchain.RenderTarget, _swapchain.Width, _swapchain.Height,
                 _monitor.Bounds, frame, request.Effects, request.Windows, request.WindowsFiltered, newImage);
         }
 
-        _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions);
+        // Focus frame and caret marker pause on a frozen monitor; the pointer cannot be there.
+        if (frozen is null)
+        {
+            _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions);
+        }
+
         _overview.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame);
+        _frozen.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frozen);
         LocatorActive = _cursorInside && _cursorLayer.Draw(
             _gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Mode, request.Zoom, _lastCursor,
             request.Effects, request.LocateRequestedAt, request.PointerHidden);
-        _snapshots.TakeIfRequested(_gpu.Device, _gpu.Context, request.OverlayOnly ? null : _duplicator.ShaderResource,
+        _snapshots.TakeIfRequested(_gpu.Device, _gpu.Context, request.OverlayOnly ? null : image,
             _swapchain.RenderTarget, weights, _monitor.Bounds, frame.Source, request);
         Present();
         _changes.Presented(request, frame, _cursorInside, _lastCursor, shape);

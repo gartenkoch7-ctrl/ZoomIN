@@ -138,17 +138,21 @@ internal sealed class MonitorRenderer : IDisposable
             Volatile.Write(ref _heartbeat, Stopwatch.GetTimestamp());
             // The monitor's own colour filter, if it has one (per-monitor filter).
             var effects = _effects.CurrentFor(_deviceName);
-            animator.SetTarget(_demand.EffectiveTarget(out var lowered)); // one snapshot per frame
+
+            // Frozen (G2): the level of the moment of freezing; temporary levels and the overview pass it by.
+            var frozen = _model.Frozen.For(_deviceName);
+            var lowered = false;
+            animator.SetTarget(frozen?.Level ?? _demand.EffectiveTarget(out lowered)); // one snapshot per frame
             var unzoomed = animator.IsSettled && animator.Current == ZoomLimits.Min;
             var windows = _windows.Regions;
             var windowsFiltered = session.FiltersWindows(windows, effects);
-            var overview = _demand.Overview;
+            var overview = frozen is null ? _demand.Overview : null;
 
             // Filters work at 1× too (M5 decision); so do the pointer options (larger or coloured
             // pointer, crosshair, hiding while typing); the locator needs a few frames as well.
             // The filter per window pauses the overlay while no window here needs it (ADR-0020).
-            // The overview frame is drawn at 1× too (B2).
-            if (unzoomed && overview is null && !_demand.NeedsOverlayUnzoomed(effects) && !windowsFiltered && !session.LocatorActive
+            // The overview frame is drawn at 1× too (B2), so is the border of a frozen monitor (G2).
+            if (unzoomed && overview is null && frozen is null && !_demand.NeedsOverlayUnzoomed(effects) && !windowsFiltered && !session.LocatorActive
                 && !_demand.LocatorRequested(effects))
             {
                 if (session.IsVisible)
@@ -173,11 +177,12 @@ internal sealed class MonitorRenderer : IDisposable
             animator.Advance(delta, _model.AnimationSeconds);
 
             // Unzoomed: the whole monitor, no lens or strip.
-            var mode = unzoomed ? ZoomMode.Fullscreen : _model.Mode;
-            var request = new FrameRequest(mode, _demand.AnchorMode(mode, unzoomed, overview, lowered), animator.Current, _model.Lens, _model.Dock, effects,
+            var mode = unzoomed ? ZoomMode.Fullscreen : frozen?.Mode ?? _model.Mode;
+            var request = new FrameRequest(mode, _demand.AnchorMode(mode, unzoomed, overview, lowered), animator.Current,
+                frozen?.Lens ?? _model.Lens, frozen?.Dock ?? _model.Dock, effects,
                 _effects.LocateRequestedAt, _tracking.Snapshot, _tracking.Options, _effects.PointerHiddenByTyping,
                 windows, windowsFiltered, overview, _model.TargetFor(_deviceName), _models.ViewRequests.PlacementFor(_deviceName),
-                lowered);
+                lowered, frozen);
             var wasVisible = session.IsVisible;
             _stats.Record(session.RenderFrame(request), !wasVisible && session.IsVisible);
 
