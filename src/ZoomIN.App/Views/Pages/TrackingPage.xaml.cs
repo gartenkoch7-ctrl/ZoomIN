@@ -49,6 +49,8 @@ public sealed partial class TrackingPage : Page
         {
             Vm.CaretStyleChanged -= RenderPreview;
         }
+
+        base.OnNavigatedFrom(e);
     }
 
     private void RenderPreview()

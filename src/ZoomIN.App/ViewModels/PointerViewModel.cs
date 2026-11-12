@@ -180,8 +180,7 @@ public sealed partial class PointerViewModel : ObservableObject
             CrosshairWidth = CrosshairWidth,
             CrosshairOpacity = CrosshairOpacity / 100,
             HideWhileTyping = HideWhileTyping,
-            CrosshairShow = CrosshairShowIndex >= 0 && Enum.IsDefined((ShowCondition)CrosshairShowIndex)
-                ? (ShowCondition)CrosshairShowIndex : Style.CrosshairShow,
+            CrosshairShow = ComboChoice.Or(CrosshairShowIndex, Style.CrosshairShow),
         };
     }
 }

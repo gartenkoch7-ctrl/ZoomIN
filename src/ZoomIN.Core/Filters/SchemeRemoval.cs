@@ -53,7 +53,8 @@ public static class SchemeRemoval
             fallbacks++;
         }
 
-        return options with { Rules = rules, AutoFilter = auto };
+        // Nothing chose the scheme: the same options, so the model raises no change and saves nothing.
+        return fallbacks == 0 ? options : options with { Rules = rules, AutoFilter = auto };
     }
 
     /// <summary>A stored profile whose choices of the scheme in <paramref name="id"/> fall back.</summary>

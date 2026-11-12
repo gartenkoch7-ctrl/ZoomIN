@@ -86,7 +86,7 @@ public sealed partial class TrackingViewModel : ObservableObject
 
     // The combo box reports -1 while its items are rebuilt; that is no choice of the user.
     private MouseFollowMode MouseFollow =>
-        Enum.IsDefined((MouseFollowMode)MouseFollowIndex) ? (MouseFollowMode)MouseFollowIndex : _tracking.Options.MouseFollow;
+        ComboChoice.Or(MouseFollowIndex, _tracking.Options.MouseFollow);
 
     [ObservableProperty]
     public partial int CaretShapeIndex { get; set; }
@@ -210,8 +210,8 @@ public sealed partial class TrackingViewModel : ObservableObject
             TrackingEnabled, Focus, Caret, PanMs / 1000, Margin / 100, FocusFrame, CaretMarker, MouseFollow, MouseMargin / 100)
         {
             CaretStyle = _style,
-            FocusFrameShow = Condition(FocusFrameShowIndex, current.FocusFrameShow),
-            CaretShow = Condition(CaretShowIndex, current.CaretShow),
+            FocusFrameShow = ComboChoice.Or(FocusFrameShowIndex, current.FocusFrameShow),
+            CaretShow = ComboChoice.Or(CaretShowIndex, current.CaretShow),
         });
         if (before.Shape != _style.Shape || before.Thickness != _style.Thickness)
         {
@@ -224,9 +224,6 @@ public sealed partial class TrackingViewModel : ObservableObject
             CaretStyleChanged?.Invoke();
         }
     }
-
-    private static ShowCondition Condition(int index, ShowCondition current) =>
-        index >= 0 && Enum.IsDefined((ShowCondition)index) ? (ShowCondition)index : current;
 
     private string Describe(CaretMarkerStyle style)
     {

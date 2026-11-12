@@ -91,8 +91,8 @@ public sealed partial class HotkeysViewModel : ObservableObject
     // −1 = no selection (the ComboBox unloads): not a choice. The constructor only shows the setting.
     partial void OnHoldKeyIndexChanged(int value)
     {
-        var key = (MarkerHoldKey)value;
-        if (_ready && value >= 0 && Enum.IsDefined(key) && key != _settings.Current.MarkerHoldKey)
+        var key = ComboChoice.Or(value, _settings.Current.MarkerHoldKey);
+        if (_ready && key != _settings.Current.MarkerHoldKey)
         {
             _settings.Update(s => s with { MarkerHoldKey = key });
         }

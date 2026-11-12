@@ -27,12 +27,18 @@ internal sealed class SchemePaletteWatch : IDisposable
     {
         _effects = effects;
         _log = log;
-        var current = effects.Current;
-        _schemes = current.Schemes;
-        _layout = Layout(current.Schemes);
-        _replacements = Replacements(current.Replacements);
-        s_count.Record(current.Schemes.Count);
-        _effects.Changed += OnChanged;
+
+        // Subscribed first and read under the lock (as EnhanceWatch): a change on another thread
+        // in between is then either part of the start state or logged against it, never lost.
+        lock (_gate)
+        {
+            _effects.Changed += OnChanged;
+            var current = effects.Current;
+            _schemes = current.Schemes;
+            _layout = Layout(current.Schemes);
+            _replacements = Replacements(current.Replacements);
+            s_count.Record(current.Schemes.Count);
+        }
     }
 
     public void Dispose() => _effects.Changed -= OnChanged;

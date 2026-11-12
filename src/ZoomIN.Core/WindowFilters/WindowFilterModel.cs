@@ -42,6 +42,7 @@ public sealed class WindowFilterModel
     /// <summary>
     /// Changes the options from their current state in one step, so a shortcut on another thread and
     /// a change on the settings page cannot overwrite each other (M18: deleting an own scheme).
+    /// A change that returns the current options as they are does nothing: no event, no save.
     /// </summary>
     public void UpdateOptions(Func<WindowFilterOptions, WindowFilterOptions> change)
     {
@@ -50,7 +51,13 @@ public sealed class WindowFilterModel
         do
         {
             current = Volatile.Read(ref _options);
-            next = change(current).Normalized();
+            var changed = change(current);
+            if (ReferenceEquals(changed, current))
+            {
+                return;
+            }
+
+            next = changed.Normalized();
         }
         while (Interlocked.CompareExchange(ref _options, next, current) != current);
 
