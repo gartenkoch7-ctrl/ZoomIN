@@ -133,6 +133,10 @@ internal sealed class FrozenLayer : IDisposable
     public ID3D11ShaderResourceView Desktop(ID3D11ShaderResourceView live) =>
         _stillFor is not null && _still.ShaderResource is { } still ? still : live;
 
+    /// <summary>The same image as a texture: still images of islands on the frozen monitor are copied from it (B1).</summary>
+    public ID3D11Texture2D DesktopTexture(ID3D11Texture2D live) =>
+        _stillFor is not null && _still.Texture is { } still ? still : live;
+
     /// <summary>The border around a frozen monitor, in its frame colour.</summary>
     public void Draw(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor, FrozenMonitor? frozen)
     {

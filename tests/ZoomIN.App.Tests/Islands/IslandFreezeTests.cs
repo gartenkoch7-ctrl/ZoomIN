@@ -21,7 +21,12 @@ public sealed class IslandFreezeTests
         rig.PointerTo(Two);
         rig.Controller.ToggleFreeze();
         var level = rig.Frozen.For(Two)!.Level;
-        Assert.Same(rig.Models.Islands.Scene, rig.Frozen.For(Two)!.Islands); // its islands freeze with it
+        // Its islands freeze with it: hiding them now (Ctrl+Alt+I) waits for the thaw there.
+        var scene = rig.Models.Islands.Scene;
+        rig.Models.Islands.SetVisible(false);
+        Assert.Same(scene, rig.Frozen.For(Two)!.Islands);
+        Assert.True(rig.Frozen.For(Two)!.Islands!.Visible);
+        rig.Models.Islands.SetVisible(true);
         using var islands = Islands(rig);
 
         islands.ToggleEdit();

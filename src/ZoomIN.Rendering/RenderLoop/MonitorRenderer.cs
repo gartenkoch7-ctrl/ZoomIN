@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
+using ZoomIN.Core.Islands;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.WindowFilters;
@@ -147,7 +148,8 @@ internal sealed class MonitorRenderer : IDisposable
             var windows = _windows.Regions;
             var windowsFiltered = session.FiltersWindows(windows, effects);
             var overview = frozen is null ? _demand.Overview : null;
-            var islands = _demand.Islands(animator.Current, frozen); // a frozen monitor's islands freeze with it (G2)
+            var userMode = _demand.Mode(frozen); // one read per frame
+            var islands = _demand.Islands(animator.Current, userMode, frozen); // a frozen monitor's islands freeze with it (G2)
 
             // Filters work at 1× too (M5 decision); so do the pointer options (larger or coloured
             // pointer, crosshair, hiding while typing); the locator needs a few frames as well.
@@ -181,14 +183,15 @@ internal sealed class MonitorRenderer : IDisposable
             var delta = Math.Min(Stopwatch.GetElapsedTime(lastFrame, now).TotalSeconds, 0.1);
             lastFrame = now;
             animator.Advance(delta, _model.AnimationSeconds);
-            islands = _demand.Islands(animator.Current, frozen); // for the zoom this frame is drawn at
+            islands = _demand.Islands(animator.Current, userMode, frozen); // for the zoom this frame is drawn at
             if (islands is null)
             {
-                session.PruneIslands(_models.Islands.Scene.Set); // the last still island may just have gone
+                // The last still island may just have gone; a frozen monitor keeps the stills of its own islands.
+                session.PruneIslands(frozen is null ? _models.Islands.Scene.Set : frozen.Islands?.Set ?? IslandSet.Empty);
             }
 
             // Unzoomed: the whole monitor, no lens or strip.
-            var mode = unzoomed ? ZoomMode.Fullscreen : frozen?.Mode ?? _model.Mode;
+            var mode = unzoomed ? ZoomMode.Fullscreen : userMode;
             var request = new FrameRequest(mode, _demand.AnchorMode(mode, unzoomed, overview, lowered), animator.Current,
                 frozen?.Lens ?? _model.Lens, frozen?.Dock ?? _model.Dock, effects,
                 frozen is null ? _effects.LocateRequestedAt : 0, frozen is null ? _tracking.Snapshot : TrackingSnapshot.Empty, _tracking.Options,

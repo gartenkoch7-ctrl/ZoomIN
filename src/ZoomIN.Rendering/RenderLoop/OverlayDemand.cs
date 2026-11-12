@@ -64,17 +64,20 @@ internal sealed class OverlayDemand
     public ZoomMode AnchorMode(ZoomMode frameMode, bool unzoomed, OverviewSession? overview, bool lowered) =>
         unzoomed && (overview is not null || lowered) ? _zoom.Mode : frameMode;
 
+    /// <summary>The mode the monitor zooms in: the frozen one (G2), else the user's.</summary>
+    public ZoomMode Mode(FrozenMonitor? frozen) => frozen?.Mode ?? _zoom.Mode;
+
     /// <summary>
     /// The islands this monitor draws at <paramref name="zoom"/> (M19 B1), or null: in fullscreen while
     /// zoomed in, and on every monitor while they are edited (also at 1×). A frozen monitor (G2) shows
     /// the islands it froze with, in its frozen mode (<see cref="FrozenMonitor.Islands"/>): later changes
     /// (shortcut, settings page, profile, edit mode) wait for the thaw. Lock-free, 0 B.
     /// </summary>
+    /// <param name="mode">This frame's <see cref="Mode"/>, read once per frame.</param>
     /// <param name="frozen">This frame's freeze of the monitor, or null.</param>
-    public IslandScene? Islands(double zoom, FrozenMonitor? frozen)
+    public IslandScene? Islands(double zoom, ZoomMode mode, FrozenMonitor? frozen)
     {
         var scene = frozen is null ? _models.Islands.Scene : frozen.Islands;
-        var mode = frozen?.Mode ?? _zoom.Mode;
         return scene is not null && scene.ShowsOn(_deviceName, mode == ZoomMode.Fullscreen && zoom > ZoomLimits.UnzoomedUpTo)
             ? scene
             : null;

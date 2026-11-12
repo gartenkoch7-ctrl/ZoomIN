@@ -5,6 +5,7 @@ using ZoomIN.App.Overview;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.AgentDebug;
 using ZoomIN.Core.Filters;
+using ZoomIN.Core.Modes;
 using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Viewport;
 using ZoomIN.Core.WindowFilters;
@@ -43,7 +44,10 @@ public sealed class AgentStateReport(
             if (zoom.Frozen.For(id) is { } frozen)
             {
                 var ignored = temporary.Length > 0 ? string.Create(CultureInfo.InvariantCulture, $", temporary {ceiling:0.00} ignored") : string.Empty;
-                var islands = frozen.Islands is { Visible: true } kept ? kept.Set.Count : 0; // as they were when it froze (B1)
+                // The islands it shows as they were when it froze (B1): its own, in fullscreen above 1×.
+                var islands = frozen.Islands is { Visible: true } kept && frozen.Mode == ZoomMode.Fullscreen && frozen.Level > ZoomLimits.UnzoomedUpTo
+                    ? kept.Set.Items.Count(island => island.MonitorId == id)
+                    : 0;
                 temporary = string.Create(
                     CultureInfo.InvariantCulture, $" (frozen: shows {frozen.Level:0.00} {frozen.Mode}, {frozen.ImageKind}, {islands} frozen islands{ignored})");
             }

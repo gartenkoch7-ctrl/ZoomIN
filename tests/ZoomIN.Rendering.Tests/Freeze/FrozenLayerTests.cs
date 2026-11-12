@@ -61,12 +61,16 @@ public sealed class FrozenLayerTests
 
         Assert.Equal(Red, rig.Draw(new PhysicalPoint(16, 32)));
 
+        // Islands (B1) copy their still images from the same held image, not from the live desktop.
+        Assert.NotSame(rig.Source, rig.Layer.DesktopTexture(rig.Source));
+
         // A new freeze of the same monitor takes a new image; no freeze shows the live desktop again.
         var again = Frozen(still: true);
         rig.Layer.Begin(again);
         Assert.False(rig.Layer.HoldsStill(again));
         rig.Layer.Begin(null);
         Assert.Same(rig.View, rig.Layer.Desktop(rig.View));
+        Assert.Same(rig.Source, rig.Layer.DesktopTexture(rig.Source));
         Assert.Equal(Green, rig.Draw(new PhysicalPoint(16, 32)));
     }
 

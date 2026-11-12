@@ -1,4 +1,4 @@
-﻿using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Islands;
 using ZoomIN.Core.Modes;
@@ -25,19 +25,19 @@ public sealed class IslandDemandTests
     {
         var models = Models(ZoomMode.Fullscreen);
 
-        Assert.Null(new OverlayDemand(First, models).Islands(1, null));
-        Assert.Same(models.Islands.Scene, new OverlayDemand(First, models).Islands(2, null));
-        Assert.Null(new OverlayDemand(Second, models).Islands(2, null));
+        Assert.Null(new OverlayDemand(First, models).Islands(1, ZoomMode.Fullscreen, null));
+        Assert.Same(models.Islands.Scene, new OverlayDemand(First, models).Islands(2, ZoomMode.Fullscreen, null));
+        Assert.Null(new OverlayDemand(Second, models).Islands(2, ZoomMode.Fullscreen, null));
 
         models.Islands.SetVisible(false);
-        Assert.Null(new OverlayDemand(First, models).Islands(2, null));
+        Assert.Null(new OverlayDemand(First, models).Islands(2, ZoomMode.Fullscreen, null));
     }
 
     [Theory]
     [InlineData(ZoomMode.Lens)]
     [InlineData(ZoomMode.Docked)]
     public void Islands_NotInLensOrDocked(ZoomMode mode) =>
-        Assert.Null(new OverlayDemand(First, Models(mode)).Islands(4, null));
+        Assert.Null(new OverlayDemand(First, Models(mode)).Islands(4, mode, null));
 
     [Fact]
     public void EditMode_DrawsOnEveryMonitor_AtOneTimes_AndKeepsARetry()
@@ -46,7 +46,7 @@ public sealed class IslandDemandTests
         models.Islands.ShowEdit(models.Islands.Scene.Set, models.Islands.Scene.Set, new IslandEditView(-1, null, 0), save: false);
         var second = new OverlayDemand(Second, models);
 
-        Assert.NotNull(second.Islands(1, null));
+        Assert.NotNull(second.Islands(1, ZoomMode.Lens, null));
         Assert.True(second.NeededAfterFailure());
     }
 
@@ -59,19 +59,19 @@ public sealed class IslandDemandTests
         var frozen = Freeze(models, before);
         var first = new OverlayDemand(First, models);
 
-        Assert.Same(before, first.Islands(2, frozen));
-        Assert.Null(first.Islands(2, null)); // live: the lens shows no islands
+        Assert.Same(before, first.Islands(2, first.Mode(frozen), frozen));
+        Assert.Null(first.Islands(2, first.Mode(null), null)); // live: the lens shows no islands
 
         // Hidden, edited or switched elsewhere meanwhile: the frozen monitor keeps its picture.
         models.Islands.SetVisible(false);
         models.Islands.ShowEdit(models.Islands.Scene.Set, models.Islands.Scene.Set, new IslandEditView(-1, null, 0), save: false);
-        Assert.Same(before, first.Islands(2, frozen));
-        Assert.Same(before, new OverlayDemand(First, models).Islands(2, frozen)); // also after a pipeline rebuild
+        Assert.Same(before, first.Islands(2, first.Mode(frozen), frozen));
+        Assert.Same(before, new OverlayDemand(First, models).Islands(2, ZoomMode.Fullscreen, frozen)); // also after a pipeline rebuild
         Assert.True(first.NeededAfterFailure());
 
         // Frozen again: the islands as they are now, without the edit frames; frozen without any: none.
-        Assert.Null(first.Islands(3, Freeze(models, models.Islands.Scene)));
-        Assert.Null(first.Islands(3, Freeze(models, null)));
+        Assert.Null(first.Islands(3, ZoomMode.Fullscreen, Freeze(models, models.Islands.Scene)));
+        Assert.Null(first.Islands(3, ZoomMode.Fullscreen, Freeze(models, null)));
     }
 
     [Fact]
@@ -84,20 +84,20 @@ public sealed class IslandDemandTests
 
         Assert.NotNull(frozen.Islands);
         Assert.Null(frozen.Islands.Edit);
-        Assert.Same(frozen.Islands, new OverlayDemand(First, models).Islands(2, frozen));
-        Assert.Null(new OverlayDemand(First, models).Islands(1, frozen)); // no edit mode at 1× on it
+        Assert.Same(frozen.Islands, new OverlayDemand(First, models).Islands(2, ZoomMode.Fullscreen, frozen));
+        Assert.Null(new OverlayDemand(First, models).Islands(1, ZoomMode.Fullscreen, frozen)); // no edit mode at 1× on it
     }
 
     [Fact]
     public void Islands_ReadPerFrame_DoNotAllocate()
     {
         var demand = new OverlayDemand(First, Models(ZoomMode.Fullscreen));
-        demand.Islands(2, null);
+        demand.Islands(2, ZoomMode.Fullscreen, null);
 
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var i = 0; i < 1000; i++)
         {
-            demand.Islands(1 + (i % 3), null);
+            demand.Islands(1 + (i % 3), ZoomMode.Fullscreen, null);
         }
 
         Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);

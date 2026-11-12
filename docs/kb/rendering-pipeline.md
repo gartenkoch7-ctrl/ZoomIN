@@ -276,7 +276,9 @@ Plan: [b1-inseln.md](../plan/features/b1-inseln.md). Code: `Core/Islands/`, `Ren
   Modus des Einfrierens bis zum Auftauen, auch nach einem Neuaufbau der Pipeline. Ausblenden
   (`Strg+Alt+I`), Einstellungsseite, Profilwechsel und Bearbeiten ändern ihn also erst danach.
   Standbilder entfernter Inseln gibt `MonitorRenderer` auf jedem Frame und vor jedem Schlaf ohne
-  Inseln frei (`PruneIslands`), ein Monitor mit Inseln beim Zeichnen. `IslandLayer.Draw` tastet dasselbe Bild ab wie das
+  Inseln frei (`PruneIslands`), ein Monitor mit Inseln beim Zeichnen. Ein eingefrorener Monitor
+  prüft dabei gegen seine eigene, eingefrorene Inselliste. Standbild-Inseln auf ihm kopiert
+  `IslandStills` aus derselben Textur wie das Hauptbild (`FrozenLayer.DesktopTexture`). `IslandLayer.Draw` tastet dasselbe Bild ab wie das
   Hauptbild (`FrozenLayer.Desktop`), mit Standbild also das Standbild. Solange es gehalten wird,
   liest der Monitor keinen neuen Capture-Frame, und Standbild-Inseln passen dazu. Beim Einfrieren
   mit „live“ bleiben auch die Inseln live. Die vorübergehende 1× des Bearbeitens übergeht ein

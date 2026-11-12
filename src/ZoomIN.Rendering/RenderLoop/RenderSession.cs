@@ -224,11 +224,10 @@ internal sealed class RenderSession : IDisposable
         }
 
         // Islands (M19 B1) above the zoom and its highlights, below the overview frame and the pointer. On a
-        // frozen monitor they read its still image (G2); while that is held the capture texture is not
-        // updated either, so still islands taken then match it.
+        // frozen monitor they read its still image (G2), live ones and still ones alike.
         if (request.Islands is not null)
         {
-            _islands.Draw(_gpu.Context, image, _duplicator.Texture, _swapchain.RenderTarget, _monitor.DeviceName,
+            _islands.Draw(_gpu.Context, image, _frozen.DesktopTexture(_duplicator.Texture), _swapchain.RenderTarget, _monitor.DeviceName,
                 _monitor.Bounds, request.Islands, request.Effects, weights);
         }
 

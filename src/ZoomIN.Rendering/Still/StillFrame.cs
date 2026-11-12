@@ -36,6 +36,9 @@ internal sealed class StillFrame : IDisposable
 
     public bool HasImage => ShaderResource is not null;
 
+    /// <summary>The kept image as a texture (to copy parts of it, e.g. islands on a frozen monitor); null like <see cref="ShaderResource"/>.</summary>
+    public ID3D11Texture2D? Texture => _texture;
+
     /// <summary>Size of the kept image in pixels.</summary>
     public int Width { get; private set; }
 
