@@ -146,6 +146,15 @@ public sealed class MonitorFreezeController : IDisposable
         _operations.Start(monitor);
         _fence.Forbid(FenceOwner.FrozenMonitors, _frozen.State.Areas());
 
+        // A display change between reading the layout and this first Forbid reached no fence watcher
+        // (it starts with the first area): the monitor has other bounds now, so this freeze ends.
+        if (_monitors.BoundsOf(id) != monitor.Bounds)
+        {
+            Lift(m => ReferenceEquals(m, monitor), "display_change", announce: false, restoreLevel: false);
+            Refuse("layout_unavailable", "Freeze.LayoutUnavailable");
+            return;
+        }
+
         // A mouse moving on while the shortcut was pressed may have brought the pointer back before the
         // fence stood (the hook lets a pointer inside a forbidden area move freely): same command, move again.
         if (_cursor.TryGetPosition(out var now) && monitor.Bounds.Contains(now) && !_mover.MoveTo(point, PointerMoveReason.FreezeMonitor))
@@ -197,7 +206,18 @@ public sealed class MonitorFreezeController : IDisposable
     // Unfreezes first, then frees the area: the monitor follows the pointer again before it can get there.
     private void Lift(Func<FrozenMonitor, bool> which, string reason, bool announce = true, bool restoreLevel = true)
     {
-        var removed = _frozen.Unfreeze(which, restoreLevel);
+        IReadOnlyList<FrozenMonitor> removed;
+        try
+        {
+            removed = _frozen.Unfreeze(which, restoreLevel);
+        }
+        catch
+        {
+            // A listener of the thaw failed (e.g. saving the settings): the area is free again all the same.
+            _fence.Forbid(FenceOwner.FrozenMonitors, _frozen.State.Areas());
+            throw;
+        }
+
         if (removed.Count == 0)
         {
             return;

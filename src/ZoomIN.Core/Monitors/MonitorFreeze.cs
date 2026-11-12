@@ -55,12 +55,18 @@ public sealed class MonitorFreeze
         lock (_gate)
         {
             var next = _state.Without(which, out removed);
-            if (removed.Count > 0)
+            try
             {
-                Thawing?.Invoke(removed, restoreLevel);
+                if (removed.Count > 0)
+                {
+                    Thawing?.Invoke(removed, restoreLevel);
+                }
             }
-
-            Volatile.Write(ref _state, next);
+            finally
+            {
+                // Published even if restoring the targets failed: a monitor must never stay frozen for good.
+                Volatile.Write(ref _state, next);
+            }
         }
 
         if (removed.Count > 0)
