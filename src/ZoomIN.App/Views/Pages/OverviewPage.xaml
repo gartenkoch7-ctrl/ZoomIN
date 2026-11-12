@@ -49,6 +49,7 @@
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="{x:Bind loc:Text.Get('Overview.Zoom')}" />
                         <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind loc:Text.Get('Overview.Zoom.Desc')}" TextWrapping="Wrap" />
+                        <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind loc:Text.Get('Overview.ViewOverview.Desc')}" TextWrapping="Wrap" />
                     </StackPanel>
                     <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal" Spacing="12">
                         <Button

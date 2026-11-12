@@ -24,17 +24,17 @@ internal sealed class MonitorRenderer : IDisposable
     private readonly TrackingModel _tracking;
     private readonly WindowFilterModel _windows;
     private readonly RenderModels _models;
+    private readonly OverlayDemand _demand;
     private readonly PointerServices _pointer;
     private readonly ILogger _log;
     private readonly Action _requestRebuild;
     private readonly RenderMetrics _metrics;
     private readonly FrameStatistics _stats;
-    private readonly AutoResetEvent _wake = new(false);
+    private readonly RenderWakeup _wakeup = new();
     private readonly Thread _thread;
     private readonly Lock _statusGate = new();
     private ZoomStatus _status = ZoomStatus.Idle;
     private volatile bool _stopRequested;
-    private volatile bool _sleeping;
     private long _heartbeat;
 
     public MonitorRenderer(
@@ -46,6 +46,7 @@ internal sealed class MonitorRenderer : IDisposable
         _tracking = models.Tracking;
         _windows = models.Windows;
         _models = models;
+        _demand = new OverlayDemand(deviceName, models);
         _pointer = pointer;
         _log = log;
         _requestRebuild = requestRebuild;
@@ -72,7 +73,7 @@ internal sealed class MonitorRenderer : IDisposable
     /// <paramref name="limit"/> (e.g. stuck in a driver call). Sleeping while idle does not count.
     /// </summary>
     public bool IsHung(TimeSpan limit) =>
-        _thread.IsAlive && !_sleeping && Stopwatch.GetElapsedTime(Volatile.Read(ref _heartbeat)) > limit;
+        _thread.IsAlive && !_wakeup.IsSleeping && Stopwatch.GetElapsedTime(Volatile.Read(ref _heartbeat)) > limit;
 
     public void Start()
     {
@@ -80,18 +81,19 @@ internal sealed class MonitorRenderer : IDisposable
         _thread.Start();
     }
 
-    public void Wake() => _wake.Set();
+    /// <summary>Any thread; safe after <see cref="Dispose"/> (a rebuild may still hold the old list).</summary>
+    public void Wake() => _wakeup.Wake();
 
     public void Dispose()
     {
         _stopRequested = true;
-        _wake.Set();
+        _wakeup.Wake();
         if (_thread.IsAlive && Thread.CurrentThread != _thread)
         {
             _thread.Join(TimeSpan.FromSeconds(3));
         }
 
-        _wake.Dispose();
+        _wakeup.Dispose();
     }
 
     private void Run()
@@ -120,9 +122,7 @@ internal sealed class MonitorRenderer : IDisposable
                 _log.PipelineFailed(ex, _deviceName);
                 _metrics.Restarted("failure");
                 SetStatus(ZoomStatus.Idle with { LastError = ex.Message });
-                var needed = _model.TargetFor(_deviceName) > ZoomLimits.Min || NeedsOverlayUnzoomed(_effects.CurrentFor(_deviceName))
-                    || _windows.Regions.Count > 0;
-                Sleep(needed ? RetryDelay : Timeout.InfiniteTimeSpan);
+                Sleep(_demand.NeededAfterFailure() ? RetryDelay : Timeout.InfiniteTimeSpan);
             }
         }
     }
@@ -138,19 +138,22 @@ internal sealed class MonitorRenderer : IDisposable
             Volatile.Write(ref _heartbeat, Stopwatch.GetTimestamp());
             // The monitor's own colour filter, if it has one (per-monitor filter).
             var effects = _effects.CurrentFor(_deviceName);
-            animator.SetTarget(_model.TargetFor(_deviceName));
+            animator.SetTarget(_demand.EffectiveTarget(out var lowered)); // one snapshot per frame
             var unzoomed = animator.IsSettled && animator.Current == ZoomLimits.Min;
             var windows = _windows.Regions;
             var windowsFiltered = session.FiltersWindows(windows, effects);
+            var overview = _demand.Overview;
 
             // Filters work at 1× too (M5 decision); so do the pointer options (larger or coloured
             // pointer, crosshair, hiding while typing); the locator needs a few frames as well.
             // The filter per window pauses the overlay while no window here needs it (ADR-0020).
-            if (unzoomed && !NeedsOverlayUnzoomed(effects) && !windowsFiltered && !session.LocatorActive && !LocatorRequested(effects))
+            // The overview frame is drawn at 1× too (B2).
+            if (unzoomed && overview is null && !_demand.NeedsOverlayUnzoomed(effects) && !windowsFiltered && !session.LocatorActive
+                && !_demand.LocatorRequested(effects))
             {
                 if (session.IsVisible)
                 {
-                    session.Hide();
+                    session.Hide(keepView: lowered);
                     SetStatus(ZoomStatus.Idle with { IsCaptureExcluded = true });
                 }
 
@@ -171,9 +174,10 @@ internal sealed class MonitorRenderer : IDisposable
 
             // Unzoomed: the whole monitor, no lens or strip.
             var mode = unzoomed ? ZoomMode.Fullscreen : _model.Mode;
-            var request = new FrameRequest(mode, animator.Current, _model.Lens, _model.Dock, effects,
+            var request = new FrameRequest(mode, _demand.AnchorMode(mode, unzoomed, overview, lowered), animator.Current, _model.Lens, _model.Dock, effects,
                 _effects.LocateRequestedAt, _tracking.Snapshot, _tracking.Options, _effects.PointerHiddenByTyping,
-                windows, windowsFiltered);
+                windows, windowsFiltered, overview, _model.TargetFor(_deviceName), _models.ViewRequests.PlacementFor(_deviceName),
+                lowered);
             var wasVisible = session.IsVisible;
             _stats.Record(session.RenderFrame(request), !wasVisible && session.IsVisible);
 
@@ -204,20 +208,8 @@ internal sealed class MonitorRenderer : IDisposable
     // Waiting on purpose is not a hang: the render watchdog ignores sleeping threads.
     private void Sleep(TimeSpan timeout)
     {
-        _sleeping = true;
-        _wake.WaitOne(timeout);
-        _sleeping = false;
+        _wakeup.Sleep(timeout);
         Volatile.Write(ref _heartbeat, Stopwatch.GetTimestamp());
-    }
-
-    private bool NeedsOverlayUnzoomed(DisplayEffects effects) =>
-        effects.Filter.ChangesColors || effects.Cursor.NeedsOverlayUnzoomed || _effects.PointerHiddenByTyping;
-
-    // A locator request keeps an otherwise idle monitor rendering until the ring is gone.
-    private bool LocatorRequested(DisplayEffects effects)
-    {
-        var at = _effects.LocateRequestedAt;
-        return at != 0 && Stopwatch.GetElapsedTime(at).TotalSeconds < effects.Cursor.LocatorSeconds;
     }
 
     private void SetStatus(ZoomStatus status)

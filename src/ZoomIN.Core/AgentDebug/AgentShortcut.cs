@@ -14,4 +14,6 @@ public enum AgentShortcut
     ToggleWindowFilter,
     ToggleCrosshair,
     ToggleTracking,
+    Overview,
+    OverviewEscape,
 }

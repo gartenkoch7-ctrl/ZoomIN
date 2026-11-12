@@ -13,9 +13,14 @@ public sealed partial class ZoomPage : Page
 
     public ZoomViewModel? Vm { get; private set; }
 
+    /// <summary>Zoom while moving windows (G1).</summary>
+    public WindowDragViewModel? Drag { get; private set; }
+
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        Vm = ((PageServices)e.Parameter).Create<ZoomViewModel>();
+        var services = (PageServices)e.Parameter;
+        Vm = services.Create<ZoomViewModel>();
+        Drag = services.Create<WindowDragViewModel>();
         Bindings.Update();
     }
 }

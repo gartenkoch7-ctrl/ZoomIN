@@ -4,6 +4,7 @@ using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Settings;
+using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Updates;
 using ZoomIN.Core.WindowFilters;
 using ZoomIN.Core.Zoom;
@@ -78,6 +79,9 @@ public static class SecureSettingsSanitizer
             CrosshairOpacity = Number(s.CrosshairOpacity, 0.2, 1, d.CrosshairOpacity),
             PanMilliseconds = Math.Clamp(s.PanMilliseconds, 0, 1000),
             CaretMargin = Number(s.CaretMargin, 0, 0.4, d.CaretMargin),
+            MouseFollow = Defined(s.MouseFollow, d.MouseFollow),
+            CenterMouse = null, // schema 1 only; the copy is written as schema 2
+            MouseMargin = Number(s.MouseMargin, 0, TrackingOptions.MaxMouseMargin, d.MouseMargin),
             AnimationMilliseconds = Math.Clamp(s.AnimationMilliseconds, 0, 500),
             ToggleHotkey = Hotkey(s.ToggleHotkey, d.ToggleHotkey),
             ZoomInHotkey = Hotkey(s.ZoomInHotkey, d.ZoomInHotkey),
@@ -95,6 +99,9 @@ public static class SecureSettingsSanitizer
             // Filter per window off on the secure desktop (ADR-0020): no window tracking there.
             WindowFilter = new WindowFilterOptions { Enabled = false },
             WindowFilterHotkey = default,
+
+            // Overview not on the secure desktop for now (B2 plan: low-level hook and UIAccess there unchecked).
+            OverviewHotkey = default,
             WheelModifiers = Wheel(s.WheelModifiers, d.WheelModifiers),
         };
     }

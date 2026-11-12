@@ -2,6 +2,7 @@ using ZoomIN.App.Zoom;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
+using ZoomIN.Core.WindowDrag;
 using ZoomIN.Core.Zoom;
 using ZoomIN.Rendering.RenderLoop;
 
@@ -19,23 +20,26 @@ public sealed class SettingsService : IDisposable
     private readonly RenderModels _models;
     private readonly ISettingsStore _store;
     private readonly IProfileStore _profiles;
+    private readonly WindowDragZoom _windowDrag;
     private readonly Timer _saveTimer;
     private readonly Lock _gate = new();
     private AppSettings _shared;
     private bool _savedZoomOn;
 
-    public SettingsService(AppSettings initial, RenderModels models, ISettingsStore store, IProfileStore profiles)
+    public SettingsService(AppSettings initial, RenderModels models, ISettingsStore store, IProfileStore profiles, WindowDragZoom windowDrag)
     {
         _shared = initial;
         _savedZoomOn = initial.ZoomOn;
         _models = models;
         _store = store;
         _profiles = profiles;
+        _windowDrag = windowDrag;
         _saveTimer = new Timer(_ => SaveNow());
         _models.Zoom.Changed += OnZoomChanged;
         _models.Effects.Changed += ScheduleSave;
         _models.Tracking.Changed += ScheduleSave;
         _models.Windows.OptionsChanged += ScheduleSave;
+        _windowDrag.OptionsChanged += ScheduleSave;
     }
 
     /// <summary>Raised after shared settings changed (language, hotkeys, …), on the caller's thread.</summary>
@@ -57,6 +61,7 @@ public sealed class SettingsService : IDisposable
             var settings = ZoomMapping.Apply(shared, _models.Zoom);
             settings = EffectsMapping.Apply(settings, _models.Effects);
             settings = TrackingMapping.Apply(settings, _models.Tracking);
+            settings = WindowDragMapping.Apply(settings, _windowDrag);
 
             // Shared by all profiles (ADR-0020): ApplyDisplay never takes it from a profile.
             return settings with { WindowFilter = _models.Windows.Options };
@@ -80,6 +85,7 @@ public sealed class SettingsService : IDisposable
         ZoomMapping.ApplyTo(_models.Zoom, profile);
         _models.Effects.Replace(EffectsMapping.Effects(profile));
         _models.Tracking.SetOptions(TrackingMapping.Options(profile));
+        _windowDrag.Options = WindowDragMapping.Options(profile);
     }
 
     public void SaveNow()
@@ -96,6 +102,7 @@ public sealed class SettingsService : IDisposable
         _models.Effects.Changed -= ScheduleSave;
         _models.Tracking.Changed -= ScheduleSave;
         _models.Windows.OptionsChanged -= ScheduleSave;
+        _windowDrag.OptionsChanged -= ScheduleSave;
         _saveTimer.Dispose();
         SaveNow();
     }

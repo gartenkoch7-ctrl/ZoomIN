@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Reflection;
 using System.Text;
+using ZoomIN.App.Overview;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.AgentDebug;
 using ZoomIN.Core.Filters;
@@ -17,7 +18,7 @@ namespace ZoomIN.App.AgentDebug;
 /// </summary>
 public sealed class AgentStateReport(
     ZoomModel zoom, EffectsModel effects, WindowFilterModel windows, WindowFilterCommands windowFilter,
-    IWindowFilterSource windowSource, IMonitorProvider monitors)
+    IWindowFilterSource windowSource, IMonitorProvider monitors, OverviewDebug overview)
 {
     public string Build()
     {
@@ -31,9 +32,16 @@ public sealed class AgentStateReport(
         {
             var filter = effects.CurrentFor(id).Filter;
             var bounds = monitors.BoundsOf(id) is { } b ? RectText.Format(b) : "(unknown)";
-            Line(text, string.Create(CultureInfo.InvariantCulture, $"  {id} {bounds}: zoom {zoom.TargetFor(id):0.00}, monitor filter {(filter.Enabled ? filter.Filter.ToString() : "off")}"));
+            // A temporary level (overview, window drag) caps what the monitor shows (M17). One read
+            // of target and ceiling each, so the line never contradicts itself.
+            var target = zoom.TargetFor(id);
+            var temporary = zoom.Temporary.TryGetCeiling(id, out var ceiling)
+                ? string.Create(CultureInfo.InvariantCulture, $" (temporary {ceiling:0.00}, shows {Math.Min(target, ceiling):0.00})")
+                : string.Empty;
+            Line(text, string.Create(CultureInfo.InvariantCulture, $"  {id} {bounds}: zoom {target:0.00}{temporary}, monitor filter {(filter.Enabled ? filter.Filter.ToString() : "off")}"));
         }
 
+        Line(text, overview.Describe());
         var options = windows.Options;
         Line(text, $"Filter per window: {(options.Enabled ? "on" : "off")}, automatic filter {options.AutoFilter}, "
             + $"sensitivity {options.Sensitivity} (light from {options.ThresholdPercent} %)");

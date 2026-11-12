@@ -16,6 +16,8 @@ public static class AgentShortcuts
         ("toggle_window_filter", AgentShortcut.ToggleWindowFilter),
         ("toggle_crosshair", AgentShortcut.ToggleCrosshair),
         ("toggle_tracking", AgentShortcut.ToggleTracking),
+        ("overview", AgentShortcut.Overview),
+        ("overview_escape", AgentShortcut.OverviewEscape),
     ];
 
     public static IReadOnlyList<string> Names { get; } = Array.ConvertAll(s_names, n => n.Name);

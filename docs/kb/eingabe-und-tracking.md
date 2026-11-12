@@ -30,8 +30,9 @@ Springt der Viewport zum Tastaturfokus/Caret, stimmen Bild und Mausposition nich
 überein. MVP-Verhalten: Beim Fokus-Tracking wird die Maus **nicht** bewegt; sobald die Maus
 bewegt wird, übernimmt wieder der Cursor-Fixpunkt. ⚠️ Mit Nutzern testen.
 
-## Mauszeiger in der Mitte (Standard, ADR-0018)
-`TrackingOptions.CenterMouse` (Seite „Verfolgung“, standardmäßig an): `AnchorController` legt den
+## Mauszeiger in der Mitte (ADR-0018)
+Modus `MouseFollowMode.Center` (bis 1.0 der Schalter `CenterMouse`, Werkswert; seit M17 ist
+„Randabstand“ der Werkswert, ADR-0018 gilt weiter): `AnchorController` legt den
 Fixpunkt mit `ViewCentering.AnchorFor` so, dass die Maus in der **Bildmitte** angezeigt wird
 (Vollbild, Lupe). Am Monitorrand bleibt die Ansicht stehen und der Zeiger rückt zum Rand.
 Angedockt ist unverändert. Klicks treffen trotzdem: Der Systemzeiger ist beim Zoomen
@@ -40,7 +41,69 @@ Klick landet genau an diesem Desktop-Punkt. Ein Input-Transform ist dafür **nic
 - Folge: Pro Mauspixel wandert der Inhalt um `z` Bildschirmpixel (der Zeiger steht still).
 - Tests: `MouseCenteringTests` (Mitte, Klickpunkt unter dem Zeiger über den ganzen Monitor,
   Monitorrand, Zoomwechsel, Rückkehr vom Fokus). Benchmark `AnchorCenterMouse` 19 ns, 0 B.
-- Aus = Fixpunkt an der Maus (ADR-0003).
+- Modus „Fixpunkt“ = Fixpunkt an der Maus (ADR-0003).
+
+## Randabstand (Werkswert seit M17, Feature A1, ADR-0029)
+`TrackingOptions.MouseFollow = Margin`, Abstand `MouseMargin` 0–0,5 (Werk 0,2), Seite
+„Fokus & Textcursor“ → „Maus folgen“. Rechnung in `Core/Tracking/MouseFollowTarget`.
+- Liegt die Maus im inneren Bereich des sichtbaren Ausschnitts (Ausschnitt minus Abstand je
+  Seite), bleibt der Anker **bitgenau** stehen – das Bild ruht, der gezeichnete Zeiger wandert.
+- Sonst wird die Ausschnittsmitte um die kleinste Verschiebung bewegt, die die Maus genau auf den
+  Abstand bringt, und mit `ViewCentering.AnchorFor` in einen Fixpunkt umgerechnet – wie beim
+  Caret mit `CaretMargin`. Kein Verzögern, kein Springen: am Rand läuft das Bild 1:1 mit.
+- Pro Achse: Eine Achse ohne Schub behält ihren Ankerwert exakt. Schübe ≤ 1e-6 px gelten als
+  Rundung. Sonst würde der Rückweg Ausschnitt → Anker jedes Frame um Bruchteile eines Pixels
+  wackeln, und der Render-Loop käme am Monitorrand nie in den Leerlauf.
+- Monitorrand: `AnchorFor` klemmt, die Ansicht steht, der Zeiger rückt in den Rand (kein Zittern,
+  Test `AtTheMonitorEdge_TheViewStops_WithoutJitter`).
+- Zoomwechsel (Vollbild; die Lupe bleibt stehen, sonst wanderte ihr Fenster): Der Anker wird so umgerechnet, dass der Zeiger auf dem Bildschirm stehen bleibt
+  (Vollbild und Lupe zeigen `x` bei `p + z·(x − p)`, also `p' = (z'·m − s) / (z' − 1)`). Ab 1×
+  ergibt das die Maus selbst: Hineinzoomen beginnt am Zeiger wie beim Fixpunkt.
+- Moduswechsel (z. B. Vollbild → Lupe): Der Anker startet an der Maus, die Lupe öffnet also am
+  Zeiger; der alte Anker gehört zu einer anderen Geometrie.
+- Messwert `zoomin.tracking.mouse_push` zählt nur Mausschritte (nicht angedockt, nicht bei 1×,
+  nicht während sich der Zoom ändert).
+- Rückkehr von Fokus/Caret (Maus > 8 px bewegt): Der Randabstand rechnet vom aktuellen Ziel aus,
+  liegt die Maus im Bild, bewegt sich nichts.
+- 0,5 = kein Innenbereich, der Zeiger bleibt in der Mitte (wie „Mitte“); 0 = erst ganz am Rand.
+- Lupe: gleiche Regel auf dem kleinen Quellausschnitt der Lupe; die Lupe steht still, solange der
+  Zeiger innen bleibt. Angedockt: unverändert (Umgebung der Maus).
+- Klicks: Der Zeiger wird an seinem angezeigten Desktop-Punkt gezeichnet (ADR-0018). Test
+  `MouseMarginClickTests` fährt den ganzen Monitor ab, auch mit Zoomwechseln und Sprüngen.
+- `ViewPlacement` in `AnchorInput` (für M17 B2 „hineinzoomen am Rahmen“): setzt den Maus-Anker so,
+  dass ein Punkt bei der Zielzoomstufe mittig steht; bis der Zoom dort ankommt, wird nicht auf
+  den Zeiger umgerechnet. Danach gilt der Randabstand. In „Mitte“/„Fixpunkt“ übernimmt die Maus
+  sofort wieder.
+- Integration M17 (Übersicht × Fenster-Ziehen × Randabstand):
+  - Eine vorübergehende 1× (Übersicht, Fenster-Ziehen) ist für den Anker **kein Moduswechsel**:
+    Der Renderer zeichnet 1× als Vollbild, gibt dem Anker aber den Modus des Nutzers
+    (`FrameRequest.AnchorMode`). Sonst sprang die Lupe nach der Übersicht zur Maus.
+  - Der Halt einer Platzierung endet bei „Zoom entfernt sich“ erst, nachdem er sich ihr genähert
+    hat: Die Übersicht stellt die Platzierung **vor** der Freigabe der 1×, ein Frame dazwischen sah
+    den Zoom noch fallen (schnelles Doppel-Antippen). Weiter endet er nach 0,25 s ohne Fortschritt.
+  - Die Platzierung gilt für die Stufe, zu der der Monitor wirklich gleitet: Nutzerstufe, gesenkt
+    durch Stufen anderer Besitzer (Fenster-Ziehen „Senken“).
+  - Solange eine vorübergehende Stufe den Monitor unter die Nutzerstufe drückt (auch während des
+    Gleitens), merkt sich die Übersicht keinen neuen „Ausschnitt davor“: Übersicht während eines
+    Fenster-Ziehens startet vom Ausschnitt vor dem Ziehen, Esc kehrt dorthin zurück.
+  - Esc-Durchlass: Liest `Watch` Esc noch als gedrückt (Loslassen steckt noch im Hook), hebt der
+    zweite Blick nach 100 ms den Durchlass auf – aber nur den von `Watch`, nie den einer
+    Windows-Tastenkombination (Besitzer im Zustand, `Interlocked.CompareExchange`).
+- Migration: Einstellungen mit `SchemaVersion` 1 werden beim ersten Start **einmal** auf
+  Randabstand gestellt (`SettingsMigration`, Log 1500), sofort gespeichert und der Hinweis
+  (Windows-Benachrichtigung, Klick öffnet die Seite, Log 1502) einmal gezeigt. `CenterMouse` wird
+  nur noch gelesen. Profile aus 1.0 haben kein `MouseFollow` und bekommen beim Laden den
+  Werkswert Randabstand (Test `JsonProfileStoreTests`). Hatte der Nutzer `Strg+Alt+O` schon einer
+  anderen Aktion gegeben, bleibt das neue Übersicht-Kürzel (B2) nach der Migration frei, statt als
+  „nicht verfügbar“ zu melden (Integration M17).
+- Tray-Hinweise (gelernt mit A1): Windows zeigt einen Ballon je Symbol, ein neuer ersetzt den
+  angezeigten sofort, und ein Klick meldet nur „Ballon geklickt“ (NIN_BALLOONUSERCLICK), ohne zu
+  sagen, welcher. Der Klick gehört darum zum zuletzt gezeigten Hinweis
+  (`ITrayIcon.Notify(…, clicked)`). Hinweise laufen über den Tray-Thread, damit sie nach dem
+  Anlegen des Symbols kommen (direkt nach dem Start schlug NIM_MODIFY sonst stumm fehl); ohne
+  Symbol warten sie, bis es (wieder) angelegt ist. Beim
+  Start mit dem Randabstand-Hinweis entfällt die UIAccess-Benachrichtigung einmal.
+- Benchmark `AnchorMargin` siehe `performance.md`.
 
 ## Später: Input-Transform
 `MagSetInputTransform` bildet Eingaben aufs vergrößerte Bild ab und erlaubt weitere
@@ -256,6 +319,51 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
 - **Offen:** Ausnahmeliste für Spiele und Fernsteuerung (ADR-0028), injizierte Bewegungen
   (`LLMHF_INJECTED`) werden derzeit wie echte behandelt.
 
+## Übersicht auf Knopfdruck (M17 B2)
+- `Strg+Alt+O` (anpassbar, auf dem sicheren Bildschirm nicht belegt). **Antippen** (< 300 ms):
+  Der Monitor unter der Maus gleitet auf 1× (vorübergehende Stufe, Besitzer `Overview`), ein
+  Rahmen in der Lupenrahmen-Farbe zeigt den bisherigen Ausschnitt und folgt der Maus. Erneut
+  antippen → am Rahmen hineinzoomen. **Halten** (≥ 300 ms): Loslassen zoomt am Rahmen hinein.
+  **Esc** → zurück zur alten Stelle und Stufe. Angedockt und ohne Zoom wirkt das Kürzel nicht.
+- `RegisterHotKey` meldet kein Loslassen. Das Loslassen von `O` oder einem seiner Modifier
+  (links/rechts) meldet `OverviewKeyWatch` auf dem vorhandenen `WH_KEYBOARD_LL` des
+  `Win32InputActivityHook`. War die Taste beim Start der Beobachtung schon los (sehr kurzes
+  Tippen), wird das sofort gemeldet. Windows aktualisiert den Tastenzustand erst, nachdem der Hook
+  zurückkehrt; deshalb wird 100 ms später noch einmal nachgesehen. Geht das Loslassen trotzdem
+  verloren, gilt es als Antippen. Der Zeitpunkt des Loslassens wird im Hook genommen, damit ein
+  später Thread-Pool-Lauf aus einem Antippen kein Halten macht.
+- **Esc** verschluckt der Hook nur, solange eine Übersicht läuft – samt Tastenwiederholung und
+  Loslassen desselben Drucks, auch wenn die Übersicht inzwischen endete. Sonst erreicht Esc die
+  Anwendung. Es ist die einzige Taste, die ZoomIN je verschluckt. Win+Esc und
+  Strg+Umschalt+Esc (Task-Manager) bleiben bei Windows, samt Wiederholung und Loslassen – außer diese
+  Umschalt bzw. Win gehören zum Kürzel oder dessen Haupttaste wird noch gehalten. Strg, Alt oder Umschalt allein
+  (Reste des Kürzels nach dem Antippen) beenden die Übersicht; Strg+Esc und Alt+Esc wirken erst nach
+  ihrem Ende. Ein Esc beendet die Beobachtung: ein danach gemeldetes Loslassen zählt nicht mehr.
+  War Esc beim Start schon gedrückt,
+  gehören Wiederholung und Loslassen weiter der Anwendung. Kommt 2,5 s lang kein Esc-Ereignis (das
+  Loslassen ging verloren, z. B. beim Desktopwechsel), gilt der nächste Druck als neu.
+- Die Hook-Signale gehen sofort in eine Warteschlange (der Hook kehrt sofort zurück) und werden auf
+  dem Thread-Pool **der Reihe nach** abgearbeitet (`OverviewKeySignals`): Esc beim Halten und
+  danach das Loslassen bleiben ein Esc. Signale einer beendeten Übersicht verwirft `OverviewModel`
+  anhand der Übersichts-Id unter seinem Lock.
+- Der Rahmen richtet sich nach der Maus-Verfolgung: „Randabstand“ verschiebt ihn relativ zur
+  Ansicht vorher, „Mitte“ zentriert ihn auf die Maus, „Fixpunkt“ zeigt den Fixpunkt-Ausschnitt um
+  die Maus – jeweils das, was nach dem Hineinzoomen zu sehen ist.
+- **Rahmen** (`OverviewFrame`): Größe = Ausschnitt bei der aktuellen Stufe des Nutzers (ein
+  Mausrad-Schritt während der Übersicht ändert sie unsichtbar, der Rahmen zeigt die neue Größe).
+  Er beginnt als der vorher gezeigte Ausschnitt (der Render-Thread hält ihn im ersten Frame der
+  Übersicht fest) und wird um die Mausbewegung seither verschoben. Im Monitor gehalten, die Maus
+  auf einem anderen Monitor schiebt ihn nur bis zum Rand.
+- **Hineinzoomen/Esc** stellt eine Anfrage „Ansicht auf P zentrieren“ (`ViewCenterRequests`,
+  siehe [architektur.md](architektur.md#ansicht-auf-einen-punkt-zentrieren-m17-viewcenterrequests))
+  und gibt dann die 1× frei. Der Anker (A1, `ViewPlacement`) setzt sie im Modus „Randabstand“ um;
+  in „Mitte“ und „Fixpunkt“ folgt die Ansicht sofort der Maus, der Rahmen liegt dort ohnehin um sie.
+- Beendet wird die Übersicht auch von jedem Zoom-Befehl des Nutzers, der die Stufe löscht (Zoom
+  aus, Modus, Schritt auf 1×), und von einer Anzeigeänderung.
+- Bildschirmleser: „Übersicht an/aus“ als UIA-Benachrichtigung (`UiaAnnouncer`, eigenes
+  verborgenes Fenster, nur wenn ein Client lauscht). Ob NVDA/Sprachausgabe sie aus dem
+  Hintergrund vorlesen, ist noch nicht geprüft.
+
 ## Fokus & Caret – Verhalten (M6)
 - Fokus-Schwenk weich (~200 ms) oder sofort, einstellbar. **Jeder** Fokuswechsel wird in die
   Bildmitte gelegt, auch wenn das Element schon sichtbar war (Entscheidung 2026-11-03).
@@ -288,3 +396,78 @@ Fensters (`GetWindowDpiAwarenessContext` → `SetThreadDpiAwarenessContext`) und
 `LogicalToPhysicalPointForPerMonitorDPI`. Für Per-Monitor-Apps ändert sich nichts.
 ⚠️ Nicht automatisch getestet – Sichttest mit einer alten Win32-App bei 150 % Skalierung.
 UIA-Rechtecke (`CurrentBoundingRectangle`) sind für einen Per-Monitor-Client bereits physisch.
+
+## Fenster-Verschieben erkennen (G1, Mini-Spike 2026-11-11)
+Ziel: Solange ein Fenster gezogen wird, geht der Monitor unter dem Zeiger vorübergehend auf 1×
+(Plan [G1](../plan/features/g1-zoom-beim-verschieben.md)). Gemessen mit einem eigenen
+Win32-Testfenster (WS_OVERLAPPEDWINDOW) und eigenem Hook-Thread, keine fremde App angefasst.
+
+**Ereignisse:** `EVENT_SYSTEM_MOVESIZESTART/END` (0x000A/0x000B, out-of-context) kommen für
+Ziehen mit der Maus und für Alt+Leertaste → Verschieben/Größe ändern. `GetGUIThreadInfo` zeigt
+während der Schleife `GUI_INMOVESIZE` und `hwndMoveSize` = Fenster, danach nicht mehr. Ein
+`SC_MOVE|HTCAPTION` ohne gedrückte Taste löst gar nichts aus.
+
+**Verschieben oder Größe – Ergebnis:**
+| Weg | Trefferzone (`WM_NCHITTEST` am Zeiger beim Start) | Erste Rechteckänderung |
+|---|---|---|
+| Titelleiste ziehen | 2 = Titel → Verschieben | gleiche Größe |
+| Rand/Ecke ziehen | 10–17 → Größe | andere Größe |
+| Alt+Leertaste → Verschieben | 2 (Windows setzt den Zeiger auf die Titelleiste) | gleiche Größe |
+| Alt+Leertaste → Größe ändern | 1 = Client (Zeiger in der Fenstermitte) → **unklar** | andere Größe |
+| Maximiertes Fenster an der Titelleiste ziehen | 2 → Verschieben | **andere** Größe (Wiederherstellen) |
+| App startet das Ziehen selbst aus dem Client (`WM_NCLBUTTONDOWN` mit HTCAPTION) | 1 → unklar | gleiche Größe |
+
+- **Entscheidung:** erst die Trefferzone (`DragHitTest`, `SendMessageTimeout` mit
+  `SMTO_BLOCK|SMTO_ABORTIFHUNG`, 100 ms, Punkt per `PhysicalToLogicalPointForPerMonitorDPI` im
+  DPI-Raum des Fensters); ist sie unklar, die erste Rechteckänderung. Keine der beiden allein
+  reicht: Die Trefferzone versagt bei Alt+Leertaste → Größe und bei Apps, die selbst ziehen; die
+  Rechteckänderung irrt beim maximierten Fenster. UIPI blockt die Nachricht an Fenster mit
+  Adminrechten → unklar → erste Änderung.
+- **Erste Änderung im Detail:** gleiche Größe = Verschieben; neue Größe nur dann Größe ändern, wenn
+  eine Kante liegen blieb (die gegenüber dem gezogenen Rand). Ein maximiertes (`IsZoomed`) oder
+  angedocktes Fenster bekommt beim Verschieben seine normale Größe (`GetWindowPlacement`) an neuer Stelle
+  → Verschieben. Grenze: Das Ereignis kommt etwas verspätet; unter Last kann der Zeiger
+  die Randzone schon verlassen haben (dann unklar → erste Änderung, beim Umriss-Ziehen evtl.
+  falsche Zone).
+- **Erst bei der ersten Änderung handeln:** Ein einfacher Klick auf eine Titelleiste betritt
+  dieselbe Schleife (MOVESIZESTART/END ohne Bewegung). Würde schon der Start den Zoom heben, gliche
+  jeder Klick auf eine Titelleiste einem Zoom-Flackern. Die Quelle meldet den Start deshalb erst
+  bei der ersten Rechteckänderung (`EVENT_OBJECT_LOCATIONCHANGE`, nur für Prozess und Thread des
+  gezogenen Fensters, nur während des Ziehens).
+- **Umriss-Ziehen** („Fensterinhalt beim Ziehen anzeigen“ aus, `SPI_GETDRAGFULLWINDOWS`): Das
+  Fenster bewegt sich erst beim Loslassen, also kommen keine Änderungen. Dann zählt der Zeiger,
+  sobald er die Ziehschwelle (`SM_CXDRAG`/`SM_CYDRAG`) überschreitet
+  (Timer 50 ms). Mit gedrückter Maustaste zählt sie ab dem Start, sonst ab der ersten Abfrage,
+  weil Alt+Leertaste → Verschieben den Zeiger selbst umsetzt; die
+  Verschiebung beim Loslassen startet nichts. Die Art kommt dann nur aus der Trefferzone (sonst
+  „unbekannt“, zählt nur, wenn beide Schalter an sind). Code: `DragStartProbe`.
+- **Monitorwechsel:** aus dem Zeiger (`MonitorFromPoint` bei jeder Fensteränderung), nicht aus
+  dem Fensterrechteck. Gemeldet wird nur ein Wechsel.
+- **Sicherung:** Ein Fenster, das beim Ziehen abstürzt, sendet kein END. Ein Timer (250 ms, nur
+  während des Ziehens) prüft `GUI_INMOVESIZE` und beendet sonst das Ziehen („lost“).
+- **Nur wenn es etwas bewirkt:** Bei Zoom aus, Modus Angedockt, Aktion „unverändert“ oder beiden
+  Schaltern aus wird kein Fenster geprüft (keine Trefferzone, kein Standort-Hook, kein Timer, kein
+  Ablauf); nur der globale MOVESIZE-Hook bleibt.
+- **Monitoranordnung:** Ein Wechsel fällt nur auf, wenn der Zeiger eine beim Start unbekannte
+  Monitor-ID erreicht (Gerätenamen bleiben oft gleich). Reicht, weil Stufen nur während des Ziehens
+  leben und das Ende alle freigibt.
+- Eigener Thread `ZoomIN Window Drag` (`Platform/WindowDrag`), nicht die Hooks des Filters pro
+  Fenster (`WindowEventHooks` hat eine statische Instanz für seinen Thread und listet nach jedem
+  Ereignis alle Fenster).
+
+**App-Matrix:** Automatisch nur mit eigenen Fenstern geprüft (Agents dürfen keine Nutzer-Apps
+bedienen). Erwartung aus der Technik, Sichtprüfung durch einen Menschen offen:
+| App | Erwartung | Geprüft |
+|---|---|---|
+| Win32 mit Systemtitelleiste (Testfenster) | Start/Ende, Verschieben/Größe sicher | ✓ Spike |
+| Explorer | Systemschleife → wie oben | offen |
+| Edge/Chrome: Fenster ziehen | eigene Titelleiste antwortet auf `WM_NCHITTEST` mit Titel → Verschieben | offen |
+| Edge/Chrome: Tab herausziehen | Chromium zieht das neue Fenster mit der Systemschleife (`SC_MOVE`) → Start bei der ersten Bewegung; sonst bekannte Einschränkung | offen |
+| Teams (neu, WebView2), VS Code (Electron) | eigene Titelleiste per `WM_NCHITTEST` → wie Chrome | offen |
+| Office | Systemschleife | offen |
+| Windows-Terminal | eigene Titelleiste per `WM_NCHITTEST` | offen |
+| Einstellungen-App (UWP, ApplicationFrameHost) | Systemschleife am Rahmenfenster | offen |
+| Fenster mit Adminrechten | Ereignisse kommen, Trefferzone blockiert → erste Änderung entscheidet | offen |
+
+Apps, die ihr Fenster selbst per `SetWindowPos` verschieben (ohne Systemschleife), melden kein
+MOVESIZESTART und bleiben bekannte Einschränkung (Plan B nur nach Rücksprache).

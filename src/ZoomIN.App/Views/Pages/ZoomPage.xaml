@@ -31,6 +31,25 @@
                 </ComboBox>
             </c:SettingCard>
 
+            <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('Drag.Title')}" />
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Drag.Action.Desc')}" Glyph="&#xE7C4;" Header="{x:Bind loc:Text.Get('Drag.Action')}">
+                <ComboBox MinWidth="200" SelectedIndex="{x:Bind Drag.ActionIndex, Mode=TwoWay}">
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Drag.Lift')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Drag.Lower')}" />
+                    <ComboBoxItem Content="{x:Bind loc:Text.Get('Drag.Unchanged')}" />
+                </ComboBox>
+            </c:SettingCard>
+            <!-- Range and step as WindowDragOptions.MinLowerLevel/MaxLowerLevel/LowerLevelStep. -->
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Drag.Level.Desc')}" Glyph="&#xE71F;" Header="{x:Bind loc:Text.Get('Drag.Level')}" Visibility="{x:Bind Drag.IsLower, Mode=OneWay}">
+                <c:ValueSlider Format="{}{0:0.0} ×" Maximum="8" Minimum="1.5" Step="0.5" Value="{x:Bind Drag.LowerLevel, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Drag.OnMove.Desc')}" Glyph="&#xE7C2;" Header="{x:Bind loc:Text.Get('Drag.OnMove')}">
+                <ToggleSwitch IsEnabled="{x:Bind Drag.Acts, Mode=OneWay}" IsOn="{x:Bind Drag.OnMove, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Drag.OnResize.Desc')}" Glyph="&#xE740;" Header="{x:Bind loc:Text.Get('Drag.OnResize')}">
+                <ToggleSwitch IsEnabled="{x:Bind Drag.Acts, Mode=OneWay}" IsOn="{x:Bind Drag.OnResize, Mode=TwoWay}" />
+            </c:SettingCard>
+
             <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.ModeLens}" />
             <c:SettingCard Description="{x:Bind loc:Text.Get('ZoomLensSize.Desc')}" Glyph="&#xE721;" Header="{x:Bind loc:Text.Get('ZoomLensWidthTitle')}">
                 <c:ValueSlider Format="{}{0:0} %" Maximum="90" Minimum="10" Step="5" Value="{x:Bind Vm.LensWidth, Mode=TwoWay}" />
