@@ -111,6 +111,7 @@ internal sealed class MonitorRenderer : IDisposable
             {
                 // The monitor set may have changed: the engine rebuilds all renderers.
                 _log.DisplayChanged(_deviceName, ex.Message);
+
                 _metrics.Restarted("display_changed");
                 _requestRebuild();
                 return;
@@ -121,7 +122,7 @@ internal sealed class MonitorRenderer : IDisposable
                 _metrics.Restarted("failure");
                 SetStatus(ZoomStatus.Idle with { LastError = ex.Message });
                 var needed = _model.EffectiveTargetFor(_deviceName) > ZoomLimits.Min || NeedsOverlayUnzoomed(_effects.CurrentFor(_deviceName))
-                    || _windows.Regions.Count > 0;
+                    || _windows.Regions.Count > 0 || _models.Overview.Current?.MonitorId == _deviceName;
                 Sleep(needed ? RetryDelay : Timeout.InfiniteTimeSpan);
             }
         }
@@ -142,11 +143,13 @@ internal sealed class MonitorRenderer : IDisposable
             var unzoomed = animator.IsSettled && animator.Current == ZoomLimits.Min;
             var windows = _windows.Regions;
             var windowsFiltered = session.FiltersWindows(windows, effects);
+            var overview = _models.Overview.Current is { } running && running.MonitorId == _deviceName ? running : null;
 
             // Filters work at 1× too (M5 decision); so do the pointer options (larger or coloured
             // pointer, crosshair, hiding while typing); the locator needs a few frames as well.
             // The filter per window pauses the overlay while no window here needs it (ADR-0020).
-            if (unzoomed && !NeedsOverlayUnzoomed(effects) && !windowsFiltered && !session.LocatorActive && !LocatorRequested(effects))
+            // The overview frame is drawn at 1× too (B2).
+            if (unzoomed && overview is null && !NeedsOverlayUnzoomed(effects) && !windowsFiltered && !session.LocatorActive && !LocatorRequested(effects))
             {
                 if (session.IsVisible)
                 {
@@ -173,7 +176,7 @@ internal sealed class MonitorRenderer : IDisposable
             var mode = unzoomed ? ZoomMode.Fullscreen : _model.Mode;
             var request = new FrameRequest(mode, animator.Current, _model.Lens, _model.Dock, effects,
                 _effects.LocateRequestedAt, _tracking.Snapshot, _tracking.Options, _effects.PointerHiddenByTyping,
-                windows, windowsFiltered);
+                windows, windowsFiltered, overview, _model.TargetFor(_deviceName), _models.ViewRequests.PlacementFor(_deviceName));
             var wasVisible = session.IsVisible;
             _stats.Record(session.RenderFrame(request), !wasVisible && session.IsVisible);
 

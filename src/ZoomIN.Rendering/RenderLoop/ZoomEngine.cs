@@ -2,6 +2,7 @@ using Vortice.DXGI;
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
+using ZoomIN.Core.Overview;
 using ZoomIN.Core.Zoom;
 using ZoomIN.Rendering.Capture;
 
@@ -43,6 +44,8 @@ public sealed class ZoomEngine : IZoomOutput
         _effects.Changed += Wake;
         _effects.Signaled += Wake;
         _models.Windows.RegionsChanged += Wake;
+        _models.Overview.Started += OnOverview;
+        _models.Overview.Ended += OnOverview;
         _watchdog = new Timer(_ => CheckForHangs(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
@@ -83,6 +86,8 @@ public sealed class ZoomEngine : IZoomOutput
         _effects.Changed -= Wake;
         _effects.Signaled -= Wake;
         _models.Windows.RegionsChanged -= Wake;
+        _models.Overview.Started -= OnOverview;
+        _models.Overview.Ended -= OnOverview;
         lock (_gate)
         {
             _disposed = true;
@@ -98,9 +103,15 @@ public sealed class ZoomEngine : IZoomOutput
         }
     }
 
+    // The frame appears or goes away even when no zoom level changes (e.g. after a cancel).
+    private void OnOverview<T>(T _) => Wake();
+
     /// <summary>Called from a render thread; the rebuild runs elsewhere so that thread can end.</summary>
     private void RequestRebuild()
     {
+        // The overview running now ends with the rebuild (its monitor may be gone); one the user
+        // starts after this point stays. Its handlers take locks, so not on the render thread.
+        var overview = _models.Overview.Current;
         if (Interlocked.Exchange(ref _rebuildPending, 1) == 1)
         {
             return;
@@ -108,6 +119,7 @@ public sealed class ZoomEngine : IZoomOutput
 
         _ = Task.Run(async () =>
         {
+            CancelOverview(overview);
             await Task.Delay(SettleDelay).ConfigureAwait(false);
             lock (_gate)
             {
@@ -121,6 +133,23 @@ public sealed class ZoomEngine : IZoomOutput
                 StartRenderers();
             }
         });
+    }
+
+    private void CancelOverview(OverviewSession? overview)
+    {
+        if (overview is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _models.Overview.Cancel(overview);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _log.OverviewCancelFailed(ex, overview.MonitorId);
+        }
     }
 
     private void StartRenderers()

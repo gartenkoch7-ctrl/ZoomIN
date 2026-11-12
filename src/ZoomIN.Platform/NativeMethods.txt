@@ -194,6 +194,14 @@ GetStockObject
 UnregisterClass
 UpdateWindow
 
+// Shell/UiaAnnouncer (overview announcement, M17 B2)
+UiaHostProviderFromHwnd
+UiaRaiseNotificationEvent
+UiaClientsAreListening
+IRawElementProviderSimple
+NotificationKind
+NotificationProcessing
+
 // WindowDrag/WindowDragWatcher (G1: zoom while moving windows)
 SendMessageTimeout
 WM_NCHITTEST

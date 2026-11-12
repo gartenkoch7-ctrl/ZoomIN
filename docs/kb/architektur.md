@@ -106,6 +106,24 @@ pro Monitor und **Besitzer** (`TemporaryZoomOwner.Overview`, `.WindowDrag`) eine
 - Pro Frame: ein zusätzlicher Wörterbuch-Lookup ohne Lock, `0 B`
   (`AllocationTests.ZoomModel_Reads_DoNotAllocate`, Benchmark `ModelReadTemporary`).
 
+## Ansicht auf einen Punkt zentrieren (M17, `ViewCenterRequests`)
+Naht zwischen Funktionen und dem Anker (B2 Übersicht, A1 Randabstand). Eine Funktion ruft
+`ViewCenterRequests.Request(monitor, P, Zoom, At)`; der Render-Thread dieses Monitors gibt
+`PlacementFor(monitor)` als `AnchorInput.Placement` (`ViewPlacement`, A1) an den
+`AnchorController`. Der verankert so, dass `P` bei der Zielstufe `Zoom` in der Bildmitte steht (am
+Monitorrand begrenzt), hält das, solange der Zoom dorthin gleitet; danach gilt der Randabstand.
+- Liegt in `RenderModels.ViewRequests` (ein Objekt je Prozess). Neueste Anfrage gewinnt. `At` ist
+  ein Stopwatch-Zeitstempel und steigt immer (`Request` erzwingt das): ein neuerer Wert ist für den
+  Anker eine neue Anfrage; ein Renderer nimmt die beim Start vorhandene nicht als neu.
+- Pro Frame ohne Lock und ohne Allokation (`OverviewAllocationTests`, Benchmark
+  `ViewRequestCheck`). Weg: `MonitorRenderer` → `FrameRequest.Placement` → `RenderSession` →
+  `AnchorInput`.
+- Wirkt nur im Modus „Randabstand“ (Standard), nicht angedockt. In „Mitte“ und „Fixpunkt“
+  entscheidet sofort die Maus – dort liegt die Ansicht ohnehin um die Maus.
+- Schreiber heute: Übersicht beim Hineinzoomen (Rahmenmitte, Stufe des Nutzers) und bei Esc (Mitte
+  der Ansicht vor der Übersicht). Die Anfrage kommt **vor** dem Freigeben der 1×, damit das Gleiten
+  schon zum Punkt geht. `OverviewPlacementTests` prüft, dass der Anker dann genau den Rahmen zeigt.
+
 ## Muster
 - DI über `Microsoft.Extensions.DependencyInjection`, nur in App konfiguriert.
 - MVVM in App (`CommunityToolkit.Mvvm`).

@@ -1,9 +1,13 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using ZoomIN.App.Localization;
+using ZoomIN.App.Overview;
 using ZoomIN.App.Settings;
+using ZoomIN.App.Tests.Overview;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Monitors;
+using ZoomIN.Core.Overview;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Viewport;
@@ -26,6 +30,7 @@ public sealed class HotkeyBindingsTests
 
         Assert.Contains(HotkeyGesture.ToggleZoom, hotkeys.Registered.Keys);
         Assert.Contains(HotkeyGesture.ZoomIn, hotkeys.Registered.Keys);
+        Assert.False(hotkeys.Registered[HotkeyGesture.Overview].Repeat);
         Assert.True(hotkeys.Registered[HotkeyGesture.ZoomIn].Repeat);
         Assert.False(hotkeys.Registered[HotkeyGesture.ToggleZoom].Repeat);
 
@@ -67,14 +72,17 @@ public sealed class HotkeyBindingsTests
     {
         var models = new RenderModels(
             ZoomMapping.Create(settings), EffectsMapping.Create(settings), TrackingMapping.Create(settings),
-            new WindowFilterModel(WindowFilterOptions.Default), new Core.Diagnostics.DebugSnapshots(), new SmartInvertHealth());
+            new WindowFilterModel(WindowFilterOptions.Default), new Core.Diagnostics.DebugSnapshots(), new SmartInvertHealth(),
+            new OverviewModel(TimeProvider.System), new ViewCenterRequests());
         var service = new SettingsService(settings, models, new NoSettingsStore(), new NoProfiles(), WindowDragMapping.Create(settings, models.Zoom));
         var monitors = new OneMonitor();
         var zoom = new ZoomCommands(models.Zoom, models.Effects, monitors, new FixedCursor());
         var windowFilter = new WindowFilterCommands(models.Windows, models.Effects, new NoWindows(), monitors);
         var hotkeys = new FakeHotkeys(taken);
+        var overview = new OverviewController(service, zoom, monitors, new FixedCursor(), new FakeOverviewKeys(), new RecordingAnnouncer(),
+            AppTexts.CreateLocalizer(), TimeProvider.System, NullLogger<OverviewController>.Instance);
         var bindings = new HotkeyBindings(
-            service, new ProfileService(service, new NoProfiles()), hotkeys, zoom, windowFilter, NullLogger<HotkeyBindings>.Instance);
+            service, new ProfileService(service, new NoProfiles()), hotkeys, zoom, windowFilter, overview, NullLogger<HotkeyBindings>.Instance);
         return (bindings, hotkeys, models);
     }
 

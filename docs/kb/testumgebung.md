@@ -55,7 +55,8 @@ GitHub-Issue-Vorlage „Hardware-Bericht“.
   laufende ZoomIN die Pipe `ZoomIN.AgentDebug.<Sitzung>` an (nur derselbe Benutzer).
 - Der Agent startet `ZoomIN.Mcp.exe` als MCP-Server (stdio, `.mcp.json` im Repo). Werkzeuge:
   `get_state` (Zustand als Text), `take_snapshot` (Bilder direkt im Ergebnis, mit `crop` und
-  `max_width`) und `run_shortcut` (Zoom, Modus, Filter, Filter für das aktive Fenster).
+  `max_width`) und `run_shortcut` (Zoom, Modus, Filter, Filter für das aktive Fenster, Übersicht:
+  `overview` wie Antippen von Strg+Alt+O, `overview_escape` wie Esc; `get_state` zeigt Phase und Rahmen).
 - Ohne MCP-Client geht es auch von Hand: JSON-RPC-Zeilen auf stdin von `ZoomIN.Mcp.exe` (`scripts/agent-debug.ps1`)
   (`initialize`, `notifications/initialized`, `tools/call`), Bilder kommen als base64-PNG.
 - Die Bilder werden über die Pipe geschickt und der Ordner danach gelöscht. Es bleibt kein

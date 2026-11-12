@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Reflection;
 using System.Text;
+using ZoomIN.App.Overview;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.AgentDebug;
 using ZoomIN.Core.Filters;
@@ -17,7 +18,7 @@ namespace ZoomIN.App.AgentDebug;
 /// </summary>
 public sealed class AgentStateReport(
     ZoomModel zoom, EffectsModel effects, WindowFilterModel windows, WindowFilterCommands windowFilter,
-    IWindowFilterSource windowSource, IMonitorProvider monitors)
+    IWindowFilterSource windowSource, IMonitorProvider monitors, OverviewDebug overview)
 {
     public string Build()
     {
@@ -40,6 +41,7 @@ public sealed class AgentStateReport(
             Line(text, string.Create(CultureInfo.InvariantCulture, $"  {id} {bounds}: zoom {target:0.00}{temporary}, monitor filter {(filter.Enabled ? filter.Filter.ToString() : "off")}"));
         }
 
+        Line(text, overview.Describe());
         var options = windows.Options;
         Line(text, $"Filter per window: {(options.Enabled ? "on" : "off")}, automatic filter {options.AutoFilter}, "
             + $"sensitivity {options.Sensitivity} (light from {options.ThresholdPercent} %)");

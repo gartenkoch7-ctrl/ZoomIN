@@ -22,7 +22,7 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:HotkeyRow">
-                        <c:SettingCard Description="{x:Bind Warning, Mode=OneWay}" Glyph="&#xE765;" Header="{x:Bind Name}">
+                        <c:SettingCard Description="{x:Bind Description, Mode=OneWay}" Glyph="&#xE765;" Header="{x:Bind Name}">
                             <StackPanel Orientation="Horizontal" Spacing="16">
                                 <Border
                                     MinWidth="140"

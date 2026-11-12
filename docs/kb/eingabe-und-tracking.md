@@ -222,6 +222,50 @@ Schema und Standardbelegung: [ADR-0008](../adr/0008-tastenkuerzel-strg-alt.md)
 (Strg+Alt+Taste ohne AltGr-Belegung, Strg+Mausrad mit Vorrang vor Anwendungen).
 Globale Kürzel per `RegisterHotKey`, Mausrad per `WH_MOUSE_LL`.
 
+## Übersicht auf Knopfdruck (M17 B2)
+- `Strg+Alt+O` (anpassbar, auf dem sicheren Bildschirm nicht belegt). **Antippen** (< 300 ms):
+  Der Monitor unter der Maus gleitet auf 1× (vorübergehende Stufe, Besitzer `Overview`), ein
+  Rahmen in der Lupenrahmen-Farbe zeigt den bisherigen Ausschnitt und folgt der Maus. Erneut
+  antippen → am Rahmen hineinzoomen. **Halten** (≥ 300 ms): Loslassen zoomt am Rahmen hinein.
+  **Esc** → zurück zur alten Stelle und Stufe. Angedockt und ohne Zoom wirkt das Kürzel nicht.
+- `RegisterHotKey` meldet kein Loslassen. Das Loslassen von `O` oder einem seiner Modifier
+  (links/rechts) meldet `OverviewKeyWatch` auf dem vorhandenen `WH_KEYBOARD_LL` des
+  `Win32InputActivityHook`. War die Taste beim Start der Beobachtung schon los (sehr kurzes
+  Tippen), wird das sofort gemeldet. Windows aktualisiert den Tastenzustand erst, nachdem der Hook
+  zurückkehrt; deshalb wird 100 ms später noch einmal nachgesehen. Geht das Loslassen trotzdem
+  verloren, gilt es als Antippen. Der Zeitpunkt des Loslassens wird im Hook genommen, damit ein
+  später Thread-Pool-Lauf aus einem Antippen kein Halten macht.
+- **Esc** verschluckt der Hook nur, solange eine Übersicht läuft – samt Tastenwiederholung und
+  Loslassen desselben Drucks, auch wenn die Übersicht inzwischen endete. Sonst erreicht Esc die
+  Anwendung. Es ist die einzige Taste, die ZoomIN je verschluckt. Win+Esc und
+  Strg+Umschalt+Esc (Task-Manager) bleiben bei Windows, samt Wiederholung und Loslassen – außer diese
+  Umschalt bzw. Win gehören zum Kürzel oder dessen Haupttaste wird noch gehalten. Strg, Alt oder Umschalt allein
+  (Reste des Kürzels nach dem Antippen) beenden die Übersicht; Strg+Esc und Alt+Esc wirken erst nach
+  ihrem Ende. Ein Esc beendet die Beobachtung: ein danach gemeldetes Loslassen zählt nicht mehr.
+  War Esc beim Start schon gedrückt,
+  gehören Wiederholung und Loslassen weiter der Anwendung. Kommt 2,5 s lang kein Esc-Ereignis (das
+  Loslassen ging verloren, z. B. beim Desktopwechsel), gilt der nächste Druck als neu.
+- Die Hook-Signale gehen sofort in eine Warteschlange (der Hook kehrt sofort zurück) und werden auf
+  dem Thread-Pool **der Reihe nach** abgearbeitet (`OverviewKeySignals`): Esc beim Halten und
+  danach das Loslassen bleiben ein Esc. Signale einer beendeten Übersicht verwirft `OverviewModel`
+  anhand der Übersichts-Id unter seinem Lock.
+- Der Rahmen richtet sich nach der Maus-Verfolgung: „Randabstand“ verschiebt ihn relativ zur
+  Ansicht vorher, „Mitte“ zentriert ihn auf die Maus, „Fixpunkt“ zeigt den Fixpunkt-Ausschnitt um
+  die Maus – jeweils das, was nach dem Hineinzoomen zu sehen ist.
+- **Rahmen** (`OverviewFrame`): Größe = Ausschnitt bei der aktuellen Stufe des Nutzers (ein
+  Mausrad-Schritt während der Übersicht ändert sie unsichtbar, der Rahmen zeigt die neue Größe).
+  Er beginnt als der vorher gezeigte Ausschnitt (der Render-Thread hält ihn im ersten Frame der
+  Übersicht fest) und wird um die Mausbewegung seither verschoben. Im Monitor gehalten, die Maus
+  auf einem anderen Monitor schiebt ihn nur bis zum Rand.
+- **Hineinzoomen/Esc** stellt eine Anfrage „Ansicht auf P zentrieren“ (`ViewCenterRequests`,
+  siehe [architektur.md](architektur.md#ansicht-auf-einen-punkt-zentrieren-m17-viewcenterrequests))
+  und gibt dann die 1× frei. Der Anker (A1, `ViewPlacement`) setzt sie im Modus „Randabstand“ um;
+  in „Mitte“ und „Fixpunkt“ folgt die Ansicht sofort der Maus, der Rahmen liegt dort ohnehin um sie.
+- Beendet wird die Übersicht auch von jedem Zoom-Befehl des Nutzers, der die Stufe löscht (Zoom
+  aus, Modus, Schritt auf 1×), und von einer Anzeigeänderung.
+- Bildschirmleser: „Übersicht an/aus“ als UIA-Benachrichtigung (`UiaAnnouncer`, eigenes
+  verborgenes Fenster, nur wenn ein Client lauscht). Ob NVDA/Sprachausgabe sie aus dem
+  Hintergrund vorlesen, ist noch nicht geprüft.
 ## Fokus & Caret – Verhalten (M6)
 - Fokus-Schwenk weich (~200 ms) oder sofort, einstellbar. **Jeder** Fokuswechsel wird in die
   Bildmitte gelegt, auch wenn das Element schon sichtbar war (Entscheidung 2026-11-03).

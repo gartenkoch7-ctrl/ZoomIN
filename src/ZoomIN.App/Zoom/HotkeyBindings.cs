@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using ZoomIN.App.Overview;
 using ZoomIN.App.Settings;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
@@ -9,7 +10,7 @@ namespace ZoomIN.App.Zoom;
 /// <summary>Which shortcut does what: the gesture → action table, registered with Windows (ADR-0008).</summary>
 public sealed class HotkeyBindings(
     SettingsService settings, ProfileService profiles, IHotkeyService hotkeys, ZoomCommands zoom,
-    WindowFilterCommands windowFilter, ILogger<HotkeyBindings> log)
+    WindowFilterCommands windowFilter, OverviewController overview, ILogger<HotkeyBindings> log)
 {
     /// <summary>Hotkeys that could not be registered because another application owns them.</summary>
     public IReadOnlyList<HotkeyGesture> Unavailable { get; private set; } = [];
@@ -60,6 +61,7 @@ public sealed class HotkeyBindings(
         Add(s.TrackingHotkey, models.Tracking.ToggleEnabled);
         Add(s.ProfileHotkey, profiles.Next);
         Add(s.WindowFilterHotkey, () => windowFilter.Toggle());
+        Add(s.OverviewHotkey, () => overview.Press());
         Unavailable = unavailable;
     }
 

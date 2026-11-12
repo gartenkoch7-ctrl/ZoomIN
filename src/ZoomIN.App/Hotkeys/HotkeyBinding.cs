@@ -5,8 +5,10 @@ namespace ZoomIN.App.Hotkeys;
 
 /// <summary>One editable shortcut: its label key and where it lives in <see cref="AppSettings"/>.</summary>
 /// <param name="Optional">May stay unassigned (Del removes it), like the window filter shortcut.</param>
+/// <param name="HintKey">Text key of an explanation shown under the name, or null.</param>
 public sealed record HotkeyBinding(
-    string TextKey, Func<AppSettings, HotkeyGesture> Get, Func<AppSettings, HotkeyGesture, AppSettings> Set, bool Optional = false)
+    string TextKey, Func<AppSettings, HotkeyGesture> Get, Func<AppSettings, HotkeyGesture, AppSettings> Set, bool Optional = false,
+    string? HintKey = null)
 {
     public static IReadOnlyList<HotkeyBinding> All { get; } =
     [
@@ -23,5 +25,6 @@ public sealed record HotkeyBinding(
         new("Act.Tracking", s => s.TrackingHotkey, (s, g) => s with { TrackingHotkey = g }),
         new("Act.Profile", s => s.ProfileHotkey, (s, g) => s with { ProfileHotkey = g }),
         new("Act.WindowFilter", s => s.WindowFilterHotkey, (s, g) => s with { WindowFilterHotkey = g }, Optional: true),
+        new("Act.Overview", s => s.OverviewHotkey, (s, g) => s with { OverviewHotkey = g }, Optional: true, HintKey: "Act.Overview.Hint"),
     ];
 }
