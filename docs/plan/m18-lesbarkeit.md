@@ -184,6 +184,14 @@ E2 und E1 laufen in **einer** Spur hintereinander, weil beide diese Dateien änd
   statt `CustomSchemes.Resolve` zu nutzen.
 - **Ältere Muster, nicht M18:** `FilterViewModel.ApplyChoice` schreibt Ein/Aus und Filter von der
   Seite zurück (seit M5/M7). Ein Kürzel bei offener Filterseite kann so überschrieben werden.
+- **Von Windows entfernter Hook:** Er wird nicht neu gesetzt. Die Zustandsprüfung übernimmt, nur
+  „andere Taste“ fehlt dann (KB, Log 2954). Neu gesetzt wird er bei der nächsten Änderung einer
+  Bedingung.
+- **Mauszeiger-Seite:** Außer der Anzeige-Bedingung schreiben ihre Regler weiter den ganzen Stil
+  von der Seite zurück (seit M5). Strg+Alt+K bei offener Seite kann so überschrieben werden.
+- **Unbekannte Werte:** Ein unbekannter Auto-Filter wird in `WindowFilterOptions.Normalized` zu
+  „Intelligent invertieren“. `CustomSchemes.Resolve` macht daraus „Invertieren“. So entsteht er
+  nur durch Handbearbeitung.
 - **Farbumwandlung doppelt:** `CustomSchemesPage.BrushOf` wiederholt die Umwandlung aus `ColorChooser`.
 - Das Review lief, bis eine Runde keine Codeänderung mehr ergab.
 

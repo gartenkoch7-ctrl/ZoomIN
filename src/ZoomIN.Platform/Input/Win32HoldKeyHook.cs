@@ -117,7 +117,7 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
     private static bool IsPressed(MarkerHoldKey key) =>
         IsDown(HoldKeyCodes.For(key)) && !(key == MarkerHoldKey.LeftCtrl && IsDown(VIRTUAL_KEY.VK_RMENU));
 
-    private static bool IsDown(VIRTUAL_KEY key) => PInvoke.GetAsyncKeyState((int)key) < 0;
+    private static bool IsDown(VIRTUAL_KEY key) => KeyState.IsDown((int)key);
 
     private static LRESULT KeyboardProc(int code, WPARAM wParam, LPARAM lParam)
     {
