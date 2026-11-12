@@ -158,6 +158,11 @@ internal sealed class RenderSession : IDisposable
         var fading = _alphas.Update(request.Effects.Cursor, request.Zoom, request.TrackingOptions, request.Activity,
             Stopwatch.GetTimestamp(), Stopwatch.Frequency);
         _islands.Update(request.Islands, Stopwatch.GetTimestamp());
+        if (request.Islands is null && request.KnownIslands is { } known)
+        {
+            _islands.Prune(known, _monitor.DeviceName); // the last still island may just have gone
+        }
+
         var animating = LocatorActive || fading || (!request.OverlayOnly && _desktop.SmartSettling) || _overview.NeedsRedraw || _islands.NeedsRedraw;
         var changes = _changes.Compare(newImage, request, frame, _cursorInside, _lastCursor, shape,
             animating, _snapshots.IsRequested, _shown);

@@ -156,7 +156,7 @@ Befunde der Reviews, die bewusst nicht als Code umgesetzt sind (Designvorschläg
 - **Standbild und Live-Daten:** Gewichte des intelligenten Invertierens und Bereiche des Filters pro
   Fenster kommen vom Live-Bild, nicht vom Standbild.
 - **Standbild-Zeitpunkt:** aufgenommen beim ersten Zeichnen nach dem Umschalten, nach Neustart oder
-  Neuaufbau der Pipeline; freigegeben erst beim nächsten Zeichnen auf dem Monitor.
+  Neuaufbau der Pipeline; freigegeben beim nächsten Frame des Monitors (schläft er, beim Aufwachen).
 - **Anzeigewechsel zur Laufzeit:** Inseln werden beim Start, beim Profilwechsel und beim Bearbeiten
   eingepasst, nicht bei jedem Anzeigewechsel (kein Monitor-Ereignis in Core). Bis dahin ausgeblendet
   bzw. für den kleineren Monitor eingepasst gezeichnet; gespeichert bleibt das Original.
@@ -185,3 +185,7 @@ Befunde der Reviews, die bewusst nicht als Code umgesetzt sind (Designvorschläg
   geführt (`Committed`, `WithUntouchedFrom`). Einpassen erst beim Zeichnen und Greifen wäre einfacher
   und würde auch nach Anzeigewechseln wirken – späterer Umbau.
 - **`RenderModels.Islands` mit Vorgabewert:** wie `Markers`; die Composition Root setzt das echte Modell.
+- **Rad-Rest:** Teil-Rastungen des Touchpads sammeln sich je Lauf und Richtung, nicht je Insel oder
+  Pause; eine halbe Rastung kann sich mit einer späteren halben auf einer anderen Insel addieren.
+- **Überflüssiges Speichern:** Endet ein Lauf mit Änderungen, nachdem eine Änderung von außen gewann,
+  wird einmal unverändert gespeichert.

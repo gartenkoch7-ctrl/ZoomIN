@@ -133,8 +133,8 @@ public sealed class IslandModel
 
     private IslandSet Fitted(IslandSet set) => Volatile.Read(ref _boundsOf) is { } boundsOf ? set.FitTo(boundsOf) : set;
 
-    // commitAs: what becomes Committed, null = keep it; without it a saved change commits what is shown.
-    private void Publish(Func<IslandScene, IslandScene> change, bool save, Func<IslandSet?>? commitAs = null)
+    // commitAs: what becomes Committed (every caller says it: a drag step must never commit by default), null = keep it.
+    private void Publish(Func<IslandScene, IslandScene> change, bool save, Func<IslandSet?> commitAs)
     {
         IslandScene before;
         IslandScene after;
@@ -151,7 +151,7 @@ public sealed class IslandModel
 
             // A drag step shows its islands but does not commit them; a saved change of the edit mode
             // commits what is shown; visibility and fitting commit nothing.
-            if ((commitAs is null ? (save ? after.Set : null) : commitAs()) is { } committed)
+            if (commitAs() is { } committed)
             {
                 Volatile.Write(ref _committed, committed);
             }

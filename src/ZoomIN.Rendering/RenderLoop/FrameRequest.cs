@@ -21,6 +21,7 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// the overview keeps the view from before it.</param>
 /// <param name="Activity">Mouse, typing and hold key for the show conditions of the highlights (E1).</param>
 /// <param name="Islands">Islands to draw on this monitor (M19 B1), or null; drawing them needs the desktop even at 1× (edit mode).</param>
+/// <param name="KnownIslands">All islands, also when none are drawn: still images of removed ones are freed.</param>
 internal readonly record struct FrameRequest(
     ZoomMode Mode,
     ZoomMode AnchorMode,
@@ -39,7 +40,8 @@ internal readonly record struct FrameRequest(
     ViewPlacement Placement = default,
     bool ViewHeld = false,
     MarkerActivitySample Activity = default,
-    IslandScene? Islands = null)
+    IslandScene? Islands = null,
+    IslandSet? KnownIslands = null)
 {
     /// <summary>Not magnified and no colour filter: only pointer, crosshair or locator are drawn.</summary>
     public bool OverlayOnly => Zoom <= ZoomLimits.UnzoomedUpTo && !Effects.Filter.ChangesColors && !WindowsFiltered && Islands is null;

@@ -19,7 +19,11 @@ internal sealed class IslandKeyGate
     private volatile bool _pass;
 
     /// <summary>The edit mode starts: a press held now belongs to whoever got it.</summary>
-    public void Starting(bool down) => _pass = down;
+    public void Starting(bool down)
+    {
+        _passAt = 0; // a pass of an earlier run whose release was lost must not make this one stale
+        _pass = down;
+    }
 
     /// <summary>Hook thread, every event of this key.</summary>
     /// <param name="take">Hands a new press to the edit mode; false if it does not take it (not running, modifier held).</param>

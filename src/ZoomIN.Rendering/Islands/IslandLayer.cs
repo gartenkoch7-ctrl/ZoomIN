@@ -38,6 +38,9 @@ internal sealed class IslandLayer
         _time = time;
     }
 
+    /// <summary>Frees still images of islands that are gone or live, on frames that draw no island. 0 B.</summary>
+    public void Prune(IslandSet set, string monitorId) => _stills.Prune(set, monitorId);
+
     /// <summary>The edit mode's frames changed colour since they were last drawn.</summary>
     public bool NeedsRedraw => _phase != _drawnPhase;
 

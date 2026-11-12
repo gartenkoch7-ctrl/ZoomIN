@@ -30,12 +30,10 @@ internal sealed class IslandStills : IDisposable
     }
 
     /// <summary>
-    /// Takes missing images from <paramref name="desktop"/> (the monitor's captured desktop) and
-    /// frees images of islands that are gone or live.
+    /// Frees images of islands that are gone or live; also on frames that draw no island (the last
+    /// still island removed). 0 B.
     /// </summary>
-    /// <param name="dragging">An edit drag runs: a source that changes with every step is not
-    /// taken again each frame (a new texture and log per size); the island shows live until the drag is over.</param>
-    public void Update(ID3D11DeviceContext context, ID3D11Texture2D desktop, IslandSet set, string monitorId, PhysicalRect monitor, bool dragging)
+    public void Prune(IslandSet set, string monitorId)
     {
         for (var place = 0; place < _ids.Length; place++)
         {
@@ -45,7 +43,17 @@ internal sealed class IslandStills : IDisposable
                 _ids[place] = 0;
             }
         }
+    }
 
+    /// <summary>
+    /// Takes missing images from <paramref name="desktop"/> (the monitor's captured desktop) and
+    /// frees images of islands that are gone or live.
+    /// </summary>
+    /// <param name="dragging">An edit drag runs: a source that changes with every step is not
+    /// taken again each frame (a new texture and log per size); the island shows live until the drag is over.</param>
+    public void Update(ID3D11DeviceContext context, ID3D11Texture2D desktop, IslandSet set, string monitorId, PhysicalRect monitor, bool dragging)
+    {
+        Prune(set, monitorId);
         for (var i = 0; i < set.Count; i++)
         {
             var island = set[i];

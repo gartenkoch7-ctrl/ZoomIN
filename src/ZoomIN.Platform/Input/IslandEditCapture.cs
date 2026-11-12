@@ -115,7 +115,13 @@ public sealed class IslandEditCapture : IIslandEditInput
                         _wheelRest = 0;
                     }
 
-                    _wheelRest += (short)(mouseData >> 16);
+                    var delta = (short)(mouseData >> 16);
+                    if ((_wheelRest < 0 && delta > 0) || (_wheelRest > 0 && delta < 0))
+                    {
+                        _wheelRest = 0; // turned back: the other direction starts afresh
+                    }
+
+                    _wheelRest += delta;
                     var notches = (int)(_wheelRest / WheelDelta);
                     if (notches != 0)
                     {
