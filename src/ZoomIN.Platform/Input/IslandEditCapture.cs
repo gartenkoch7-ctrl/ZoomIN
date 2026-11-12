@@ -1,4 +1,3 @@
-using System.Threading.Channels;
 using ZoomIN.Core.Islands;
 using ZoomIN.Core.Viewport;
 
@@ -33,7 +32,7 @@ public sealed class IslandEditCapture : IIslandEditInput
     private const double WheelDelta = 120;
     private const uint RepeatGapMilliseconds = 2500;
 
-    private Session? _session;
+    private IslandEditQueue? _session;
 
     // Hook thread only: buttons and keys whose press was swallowed, so their release is too.
     private int _heldButtons;
@@ -54,7 +53,7 @@ public sealed class IslandEditCapture : IIslandEditInput
     public void Start(IIslandEditInputHandler handler)
     {
         ArgumentNullException.ThrowIfNull(handler);
-        Interlocked.Exchange(ref _session, new Session(handler))?.Complete();
+        Interlocked.Exchange(ref _session, new IslandEditQueue(handler))?.Complete();
     }
 
     public void Stop() => Interlocked.Exchange(ref _session, null)?.Complete();
@@ -78,7 +77,7 @@ public sealed class IslandEditCapture : IIslandEditInput
 
                 if (message == Wheel)
                 {
-                    session.Post(new Input(InputKind.Wheel, point, (short)(mouseData >> 16) / WheelDelta));
+                    session.Wheel((short)(mouseData >> 16) / WheelDelta, point);
                 }
 
                 return true;
@@ -94,7 +93,7 @@ public sealed class IslandEditCapture : IIslandEditInput
                 _heldButtons |= ButtonOf(message);
                 if (message == LeftDown)
                 {
-                    session.Post(new Input(InputKind.Press, point, 0));
+                    session.Press(point);
                 }
 
                 return true;
@@ -108,7 +107,7 @@ public sealed class IslandEditCapture : IIslandEditInput
                 _heldButtons &= ~button;
                 if (message == LeftUp)
                 {
-                    session?.Post(new Input(InputKind.Release, point, 0));
+                    session?.Release(point);
                 }
 
                 return true;
@@ -161,7 +160,7 @@ public sealed class IslandEditCapture : IIslandEditInput
         }
 
         held = true;
-        session.Post(new Input(virtualKey == EscapeKey ? InputKind.Escape : InputKind.Delete, default, 0));
+        session.Key(virtualKey == EscapeKey ? IslandEditKey.Escape : IslandEditKey.Delete);
         return true;
     }
 
@@ -173,95 +172,4 @@ public sealed class IslandEditCapture : IIslandEditInput
         MiddleDown or MiddleUp => 4,
         _ => 8,
     };
-
-    private enum InputKind
-    {
-        Press,
-        Move,
-        Release,
-        Wheel,
-        Escape,
-        Delete,
-    }
-
-    private readonly record struct Input(InputKind Kind, PhysicalPoint Point, double Notches);
-
-    /// <summary>One edit mode: its queue and the worker that hands the input on in order.</summary>
-    private sealed class Session
-    {
-        private readonly IIslandEditInputHandler _handler;
-        private readonly Channel<Input> _queue = Channel.CreateUnbounded<Input>(new UnboundedChannelOptions { SingleReader = true });
-
-        // The latest move, packed; queued as one marker until the worker took it (moves come fast).
-        private long _move;
-        private int _moveQueued;
-        private volatile bool _stopped;
-
-        public Session(IIslandEditInputHandler handler)
-        {
-            _handler = handler;
-            _ = Task.Run(RunAsync);
-        }
-
-        public void Post(Input input) => _queue.Writer.TryWrite(input);
-
-        public void Move(int x, int y)
-        {
-            Volatile.Write(ref _move, ((long)x << 32) | (uint)y);
-            if (Interlocked.Exchange(ref _moveQueued, 1) == 0)
-            {
-                Post(new Input(InputKind.Move, default, 0));
-            }
-        }
-
-        // Inputs still queued are dropped, not handed on: they belong to an edit mode that is over.
-        public void Complete()
-        {
-            _stopped = true;
-            _queue.Writer.TryComplete();
-        }
-
-        private async Task RunAsync()
-        {
-            await foreach (var input in _queue.Reader.ReadAllAsync().ConfigureAwait(false))
-            {
-                if (!_stopped)
-                {
-                    Hand(input);
-                }
-            }
-        }
-
-        // The handler logs its own failures; the worker must outlive one of them.
-        private void Hand(Input input)
-        {
-            try
-            {
-                switch (input.Kind)
-                {
-                    case InputKind.Move:
-                        Interlocked.Exchange(ref _moveQueued, 0);
-                        var packed = Volatile.Read(ref _move);
-                        _handler.Moved(new PhysicalPoint((int)(packed >> 32), (int)packed));
-                        break;
-                    case InputKind.Press:
-                        _handler.Pressed(input.Point);
-                        break;
-                    case InputKind.Release:
-                        _handler.Released(input.Point);
-                        break;
-                    case InputKind.Wheel:
-                        _handler.Wheel(input.Notches, input.Point);
-                        break;
-                    default:
-                        _handler.Key(input.Kind == InputKind.Escape ? IslandEditKey.Escape : IslandEditKey.Delete);
-                        break;
-                }
-            }
-            catch (Exception ex) when (ex is not OutOfMemoryException)
-            {
-                // Swallowed on purpose; see the comment above.
-            }
-        }
-    }
 }

@@ -26,11 +26,12 @@ public static class IslandResize
         var roomX = Math.Min(left ? target.Right - monitor.X : monitor.Right - target.X, (left ? source.Right - monitor.X : monitor.Right - source.X) * level);
         var roomY = Math.Min(top ? target.Bottom - monitor.Y : monitor.Bottom - target.Y, (top ? source.Bottom - monitor.Y : monitor.Bottom - source.Y) * level);
 
-        // The far edge never passes the fixed one: below the minimum size the drag stops.
-        var width = Math.Max(Math.Min(left ? target.Right - corner.X : corner.X - target.X, roomX), minimum);
-        var height = Math.Max(Math.Min(top ? target.Bottom - corner.Y : corner.Y - target.Y, roomY), minimum);
-        var sourceWidth = width / level;
-        var sourceHeight = height / level;
+        // The far edge never passes the fixed one: below the minimum size the drag stops. Whole source
+        // pixels, so Fit's rounding cannot move the fixed edge (it would jitter by up to level / 2).
+        var sourceWidth = WholePixels(left ? target.Right - corner.X : corner.X - target.X, roomX, minimum, level);
+        var sourceHeight = WholePixels(top ? target.Bottom - corner.Y : corner.Y - target.Y, roomY, minimum, level);
+        var width = sourceWidth * level;
+        var height = sourceHeight * level;
         var newSource = new PhysicalRect(
             left ? source.Right - sourceWidth : source.X,
             top ? source.Bottom - sourceHeight : source.Y,
@@ -39,6 +40,9 @@ public static class IslandResize
         var origin = new PhysicalPoint(left ? target.Right - width : target.X, top ? target.Bottom - height : target.Y);
         return island with { Source = newSource, TargetOrigin = origin };
     }
+
+    private static double WholePixels(double picture, double room, double minimum, double level) =>
+        Math.Max(Math.Min(Math.Round(picture / level), Math.Floor(room / level)), minimum / level);
 
     /// <summary>Where the corner of the picture is.</summary>
     public static PhysicalPoint CornerOf(PhysicalRect picture, IslandCorner which) => which switch

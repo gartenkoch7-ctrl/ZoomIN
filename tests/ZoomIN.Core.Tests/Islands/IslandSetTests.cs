@@ -44,7 +44,7 @@ public sealed class IslandSetTests
     }
 
     [Fact]
-    public void From_TakesTheFirstFour_SkipsBrokenEntries_AndFitsKnownMonitors()
+    public void From_TakesTheFirstFour_SkipsBrokenEntries_AndFitTo_FitsKnownMonitors()
     {
         var islands = new List<Island>
         {
@@ -57,7 +57,7 @@ public sealed class IslandSetTests
             At(400),
         };
 
-        var set = IslandSet.From(islands, new IslandMonitors().BoundsOf);
+        var set = IslandSet.From(islands).FitTo(new IslandMonitors().BoundsOf);
 
         Assert.Equal(4, set.Count);
         Assert.Equal([1, 2, 3, 4], set.Items.Select(island => island.Id));

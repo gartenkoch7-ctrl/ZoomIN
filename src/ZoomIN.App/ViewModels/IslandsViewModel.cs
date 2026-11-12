@@ -48,18 +48,21 @@ public sealed partial class IslandsViewModel : ObservableObject
         var scene = _model.Scene;
         _loading = true;
         Visible = scene.Visible;
+
+        // The saved islands: a drag of the edit mode would rebuild the rows on every refresh.
+        var set = _model.Committed;
         _loading = false;
-        if (ReferenceEquals(scene.Set, _shown))
+        if (ReferenceEquals(set, _shown))
         {
             return;
         }
 
-        _shown = scene.Set;
+        _shown = set;
         Rows.Clear();
         var monitors = _monitors.MonitorIds();
-        for (var i = 0; i < scene.Set.Count; i++)
+        for (var i = 0; i < set.Count; i++)
         {
-            var island = scene.Set[i];
+            var island = set[i];
             var monitor = IndexOf(monitors, island.MonitorId) + 1;
             Rows.Add(new IslandRow(island, i + 1, monitor, _texts, OnStillChanged));
         }
@@ -89,10 +92,10 @@ public sealed partial class IslandsViewModel : ObservableObject
     // islands changed meanwhile or the island is gone – then the next Refresh rebuilds the rows.
     private void OnStillChanged(IslandRow row)
     {
-        var before = _model.Scene.Set;
+        var before = _model.Committed;
         if (_model.SetStill(row.Id, row.Still) && ReferenceEquals(before, _shown))
         {
-            _shown = _model.Scene.Set;
+            _shown = _model.Committed;
         }
     }
 

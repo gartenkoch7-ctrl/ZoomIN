@@ -88,6 +88,31 @@ public sealed class IslandModelTests
     }
 
     [Fact]
+    public void SettingsPageChange_DuringADrag_IsBuiltOnTheCommittedIslands()
+    {
+        var model = new IslandModel(One(), visible: true);
+        var committed = model.Committed;
+        var dragged = committed.Replace(0, committed[0] with { TargetOrigin = new PhysicalPoint(900, 900) });
+        model.ShowEdit(committed, dragged, new IslandEditView(0, null, 0), save: false);
+
+        model.SetStill(committed[0].Id, true);
+
+        Assert.Equal(new PhysicalPoint(100, 100), model.Committed[0].TargetOrigin);
+        Assert.True(model.Committed[0].Still);
+    }
+
+    [Fact]
+    public void Replace_AfterFitTo_FitsTheProfilesIslands()
+    {
+        var model = new IslandModel(IslandSet.Empty, visible: true);
+        model.FitTo(new IslandMonitors().BoundsOf);
+
+        model.Replace(IslandSet.Empty.Add(new Island(0, IslandMonitors.First, new PhysicalRect(10, 10, 50, 50), new PhysicalPoint(5000, 100), 2))!, true);
+
+        Assert.Equal(1820, model.Scene.Set[0].TargetOrigin.X);
+    }
+
+    [Fact]
     public void FitTo_PushesIslandsOntoTheirMonitor()
     {
         var model = new IslandModel(

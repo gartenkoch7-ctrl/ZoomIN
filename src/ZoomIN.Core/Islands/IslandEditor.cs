@@ -149,8 +149,16 @@ public sealed class IslandEditor
         }
 
         var island = Set[index];
-        Set = Set.Replace(index, IslandRules.WithLevel(island, ZoomLimits.Step(island.Level, notches), monitor));
+        var changed = IslandRules.WithLevel(island, ZoomLimits.Step(island.Level, notches), monitor);
         Selected = index;
+
+        // At the limit (16× or the largest level that fits) further notches change nothing.
+        if (changed == island)
+        {
+            return IslandEditOutcome.None;
+        }
+
+        Set = Set.Replace(index, changed);
         return IslandEditOutcome.LevelChanged;
     }
 

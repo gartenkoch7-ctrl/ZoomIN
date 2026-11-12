@@ -18,6 +18,7 @@ public sealed class IslandModel
     private readonly Lock _gate = new();
     private IslandScene _scene;
     private IslandSet _committed;
+    private Func<string, PhysicalRect?>? _boundsOf;
 
     public IslandModel(IslandSet set, bool visible)
     {
@@ -46,12 +47,19 @@ public sealed class IslandModel
     public void Replace(IslandSet set, bool visible)
     {
         ArgumentNullException.ThrowIfNull(set);
-        Publish(scene => scene with { Set = set.Renumbered(scene.Set.NextId), Visible = visible }, save: true);
+        Publish(scene => scene with { Set = Fitted(set.Renumbered(scene.Set.NextId)), Visible = visible }, save: true);
     }
 
-    /// <summary>Fits every island to its monitor as it is now (at start); not saved until the next change.</summary>
-    public void FitTo(Func<string, PhysicalRect?> boundsOf) =>
+    /// <summary>
+    /// Fits every island to its monitor as it is now, and every profile's islands from now on (the
+    /// app passes the monitors at start). Not saved until the next change.
+    /// </summary>
+    public void FitTo(Func<string, PhysicalRect?> boundsOf)
+    {
+        ArgumentNullException.ThrowIfNull(boundsOf);
+        Volatile.Write(ref _boundsOf, boundsOf);
         Publish(scene => scene.Edit is null ? scene with { Set = scene.Set.FitTo(boundsOf) } : scene, save: false, commit: true);
+    }
 
     public void SetVisible(bool visible) => Publish(scene => scene with { Visible = visible }, save: true, commit: false);
 
@@ -93,17 +101,22 @@ public sealed class IslandModel
         Publish(scene => scene with { Set = ReferenceEquals(scene.Set, expected) ? edited : scene.Set, Edit = null }, save: true);
     }
 
+    // Built on the committed islands, never on a drag in progress (which would be saved with it);
+    // a running edit mode sees the change from outside and ends without overwriting it.
     private bool Change(int id, Func<IslandSet, int, IslandSet> change)
     {
         var changed = false;
         Publish(scene =>
         {
-            var index = scene.Set.IndexOf(id);
+            var committed = _committed;
+            var index = committed.IndexOf(id);
             changed = index >= 0;
-            return changed ? scene with { Set = change(scene.Set, index) } : scene;
+            return changed ? scene with { Set = change(committed, index) } : scene;
         }, save: true);
         return changed;
     }
+
+    private IslandSet Fitted(IslandSet set) => Volatile.Read(ref _boundsOf) is { } boundsOf ? set.FitTo(boundsOf) : set;
 
     private void Publish(Func<IslandScene, IslandScene> change, bool save, bool? commit = null)
     {

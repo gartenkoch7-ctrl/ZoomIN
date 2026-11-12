@@ -293,7 +293,8 @@ Plan: [b1-inseln.md](../plan/features/b1-inseln.md). Code: `Core/Islands/`, `Ren
     Puffer b0 wächst von 128 auf 144 B). Live: Skala 1, Versatz 0 → jede Koordinate bitgleich wie
     vorher. Auch `SmartWeight.hlsli` und `TextEnhance.hlsli` tasten über `TexUv` ab (WARP-Test:
     Schärfe/Fett auf Standbild = live, innen).
-  - Grenze: Die Gewichte des intelligenten Invertierens kommen vom Live-Bild. Hat sich der Inhalt
+  - Grenze: Die Gewichte des intelligenten Invertierens und die Bereiche des Filters pro Fenster
+    kommen vom Live-Bild (ein über die Stelle geschobenes gefiltertes Fenster färbt das Standbild mit). Hat sich der Inhalt
     seit dem Standbild stark geändert, kann die Invertierung im Standbild an Stellen leicht
     abweichen.
 - **Bearbeitungsmodus:** Rahmen blinken (Amber/Weiß, alle 0,5 s; `IslandLayer.NeedsRedraw` weckt

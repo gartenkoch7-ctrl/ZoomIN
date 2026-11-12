@@ -31,10 +31,10 @@ public sealed class IslandSet
     public IReadOnlyList<Island> Items => _items;
 
     /// <summary>
-    /// Islands from the settings: the first <see cref="IslandRules.MaxCount"/>, each fitted to its
-    /// monitor if it is known now (an unknown monitor keeps the island for when it comes back).
+    /// Islands from the settings: the first <see cref="IslandRules.MaxCount"/> with a monitor, as
+    /// saved. <see cref="IslandModel"/> fits them to the monitors (<see cref="FitTo"/>).
     /// </summary>
-    public static IslandSet From(IEnumerable<Island> islands, Func<string, PhysicalRect?>? boundsOf = null)
+    public static IslandSet From(IEnumerable<Island> islands)
     {
         ArgumentNullException.ThrowIfNull(islands);
         var items = new List<Island>();
@@ -50,8 +50,7 @@ public sealed class IslandSet
                 continue;
             }
 
-            var numbered = island with { Id = items.Count + 1 };
-            items.Add(boundsOf?.Invoke(island.MonitorId) is { } monitor ? IslandRules.Fit(numbered, monitor) : numbered);
+            items.Add(island with { Id = items.Count + 1 });
         }
 
         return new IslandSet([.. items], items.Count + 1);

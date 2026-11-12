@@ -87,6 +87,22 @@ public sealed class IslandEditorGrabTests
         Assert.True(island.Source.X >= 0);
     }
 
+    [Fact]
+    public void LeftCornerDrag_AtAHighLevel_KeepsTheRightEdgeStill()
+    {
+        // Source (500,500) 50×50 at 8×, picture (100,100)–(500,500).
+        var set = IslandSet.Empty.Add(new Island(0, IslandMonitors.First, new PhysicalRect(500, 500, 50, 50), new PhysicalPoint(100, 100), 8))!;
+        var editor = Editor(set);
+        editor.Press(new PhysicalPoint(100, 100));
+
+        for (var x = 90; x > 60; x -= 3)
+        {
+            editor.Move(new PhysicalPoint(x, 100));
+            Assert.Equal(500, editor.Set[0].Target.Right);
+            Assert.Equal(550, editor.Set[0].Source.Right);
+        }
+    }
+
     private static IslandEditor Editor(IslandSet? set = null) => new(set ?? IslandSet.Empty, new IslandMonitors(), _ => 3);
 
     // Source (200,200) 50×50 at 2×, picture (100,100)–(200,200).
