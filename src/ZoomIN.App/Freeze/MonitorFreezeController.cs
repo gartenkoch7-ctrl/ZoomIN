@@ -90,8 +90,10 @@ public sealed class MonitorFreezeController : IDisposable
     /// </summary>
     public void LiftAll(string reason)
     {
-        var seen = _frozen.State; // only what is frozen now, not a freeze made before the queued work runs
-        _dispatch(() => _guard.Run("lift_all", () => Lift(seen.Monitors.Contains, reason)));
+        // What is frozen or being frozen (a press under way) now, not a freeze made after this call.
+        var freezing = _freezing;
+        var seen = _frozen.State;
+        _dispatch(() => _guard.Run("lift_all", () => Lift(m => freezing || seen.Monitors.Contains(m), reason)));
     }
 
     public void Dispose()

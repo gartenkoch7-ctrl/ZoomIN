@@ -51,13 +51,10 @@ public sealed class MonitorSwitchController(
     /// </summary>
     internal PhysicalPoint LandingPoint(MonitorLayout layout, int target, IReadOnlyList<PhysicalRect> forbidden)
     {
-        PhysicalPoint point;
         lock (_gate)
         {
-            point = _memory.Recall(layout.Ids[target], layout.Bounds[target]);
+            return Landing(layout, target, forbidden);
         }
-
-        return FenceGeometry.Create(layout.Bounds, forbidden).Nearest(point);
     }
 
     /// <summary>Forgets monitors that are gone (also done at every switch).</summary>
@@ -97,7 +94,7 @@ public sealed class MonitorSwitchController(
         }
 
         var to = layout.Ids[next];
-        var point = LandingPoint(layout, next, frozen.Areas());
+        var point = Landing(layout, next, frozen.Areas());
         using var operation = Telemetry.Source.StartActivity("zoomin.view.monitor_switch")?
             .SetTag("zoomin.monitor.from", from)
             .SetTag("zoomin.monitor.to", to)
@@ -113,6 +110,10 @@ public sealed class MonitorSwitchController(
         log.MonitorSwitched(from, to, skipped);
         announcer.Announce(texts.Format("Switch.Done", MonitorNames.Label(to)));
     }
+
+    // Under _gate (held by the caller).
+    private PhysicalPoint Landing(MonitorLayout layout, int target, IReadOnlyList<PhysicalRect> forbidden) =>
+        FenceGeometry.Create(layout.Bounds, forbidden).Nearest(_memory.Recall(layout.Ids[target], layout.Bounds[target]));
 
     private void Refuse(string reason, string textKey)
     {

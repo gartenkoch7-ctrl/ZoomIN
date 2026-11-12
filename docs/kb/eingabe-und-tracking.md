@@ -367,8 +367,8 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
   einem Anzeigewechsel taut er bei 1× auf. Geparkt wird nach dem Veröffentlichen des Einfrierens,
   zurückgegeben vor dem Veröffentlichen des Aufhebens (`MonitorFreeze.Thawing`): ein Render-Thread
   sieht nie einen aufgetauten Monitor ohne seine Stufe. Gespeichert wird „Zoom an“ auch, wenn nur der
-  eingefrorene Monitor vergrößert ist (`ZoomMapping.SavedOn`): der sichere Bildschirm startet dann
-  vergrößert. Einfrieren und Aufheben melden `ZoomModel.Changed`, weil sich `IsOn` ändern kann
+  eingefrorene Monitor vergrößert ist (`ZoomMapping.SavedOn`). Win+L und Beenden heben das
+  Einfrieren aber vorher auf; gespeichert wird dann die Stufe, mit der er auftaut. Einfrieren und Aufheben melden `ZoomModel.Changed`, weil sich `IsOn` ändern kann
   (Tray, Speichern, Reservierung). Ein eingefrorener Monitor bekommt von `MonitorRenderer` feste
   Werte für Fokus, Caret, Suchhilfe und Zeiger, damit deren Neuigkeiten ihn nicht neu zeichnen. Sieht ein Render-Thread den
   Zeiger doch auf dem eingefrorenen Monitor (Zaun versagt, z. B. Hook verloren), meldet er das

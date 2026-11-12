@@ -51,27 +51,33 @@ public sealed class MonitorFreeze
     public IReadOnlyList<FrozenMonitor> Unfreeze(Func<FrozenMonitor, bool> which, bool restoreLevel = true)
     {
         ArgumentNullException.ThrowIfNull(which);
-        IReadOnlyList<FrozenMonitor> removed;
-        lock (_gate)
+        IReadOnlyList<FrozenMonitor> removed = [];
+        try
         {
-            var next = _state.Without(which, out removed);
-            try
+            lock (_gate)
             {
-                if (removed.Count > 0)
+                var next = _state.Without(which, out removed);
+                try
                 {
-                    Thawing?.Invoke(removed, restoreLevel);
+                    if (removed.Count > 0)
+                    {
+                        Thawing?.Invoke(removed, restoreLevel);
+                    }
+                }
+                finally
+                {
+                    // Published even if restoring the targets failed: a monitor must never stay frozen for good.
+                    Volatile.Write(ref _state, next);
                 }
             }
-            finally
-            {
-                // Published even if restoring the targets failed: a monitor must never stay frozen for good.
-                Volatile.Write(ref _state, next);
-            }
         }
-
-        if (removed.Count > 0)
+        finally
         {
-            Changed?.Invoke();
+            // Listeners (zoom model, render wake-up) hear of every published thaw, also a failed restore.
+            if (removed.Count > 0)
+            {
+                Changed?.Invoke();
+            }
         }
 
         return removed;
