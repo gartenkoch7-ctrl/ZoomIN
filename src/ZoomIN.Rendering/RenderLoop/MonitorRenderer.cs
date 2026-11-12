@@ -182,6 +182,10 @@ internal sealed class MonitorRenderer : IDisposable
             lastFrame = now;
             animator.Advance(delta, _model.AnimationSeconds);
             islands = _demand.Islands(animator.Current, frozen); // for the zoom this frame is drawn at
+            if (islands is null)
+            {
+                session.PruneIslands(_models.Islands.Scene.Set); // the last still island may just have gone
+            }
 
             // Unzoomed: the whole monitor, no lens or strip.
             var mode = unzoomed ? ZoomMode.Fullscreen : frozen?.Mode ?? _model.Mode;
@@ -190,8 +194,7 @@ internal sealed class MonitorRenderer : IDisposable
                 frozen is null ? _effects.LocateRequestedAt : 0, frozen is null ? _tracking.Snapshot : TrackingSnapshot.Empty, _tracking.Options,
                 frozen is null && _effects.PointerHiddenByTyping, // frozen: no locator, marks or pointer, so their news change nothing (G2)
                 windows, windowsFiltered, overview, _model.TargetFor(_deviceName), _models.ViewRequests.PlacementFor(_deviceName),
-                lowered, frozen is null ? _models.Markers.Sample : default, frozen, frozen is { Still: true, StillUnavailable: false },
-                islands, _models.Islands.Scene.Set);
+                lowered, frozen is null ? _models.Markers.Sample : default, frozen, frozen is { Still: true, StillUnavailable: false }, islands);
             var wasVisible = session.IsVisible;
             _stats.Record(session.RenderFrame(request), !wasVisible && session.IsVisible);
 

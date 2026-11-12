@@ -24,7 +24,6 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// <param name="Frozen">The monitor is frozen (G2): anchor, level and mode stay, no pointer or marks; null = live.</param>
 /// <param name="FrozenStill">Frozen with a still image that is (to be) shown, read once per frame: <see cref="FrozenMonitor.StillUnavailable"/> may change during a freeze.</param>
 /// <param name="Islands">Islands to draw on this monitor (M19 B1), or null; drawing them needs the desktop even at 1× (edit mode).</param>
-/// <param name="KnownIslands">All islands, also when none are drawn: still images of removed ones are freed.</param>
 internal readonly record struct FrameRequest(
     ZoomMode Mode,
     ZoomMode AnchorMode,
@@ -45,8 +44,7 @@ internal readonly record struct FrameRequest(
     MarkerActivitySample Activity = default,
     FrozenMonitor? Frozen = null,
     bool FrozenStill = false,
-    IslandScene? Islands = null,
-    IslandSet? KnownIslands = null)
+    IslandScene? Islands = null)
 {
     /// <summary>
     /// Not magnified, no colour filter and no islands: only pointer, crosshair or locator are drawn. A

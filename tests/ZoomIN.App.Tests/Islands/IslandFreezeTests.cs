@@ -21,6 +21,7 @@ public sealed class IslandFreezeTests
         rig.PointerTo(Two);
         rig.Controller.ToggleFreeze();
         var level = rig.Frozen.For(Two)!.Level;
+        Assert.Same(rig.Models.Islands.Scene, rig.Frozen.For(Two)!.Islands); // its islands freeze with it
         using var islands = Islands(rig);
 
         islands.ToggleEdit();

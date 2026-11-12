@@ -156,7 +156,8 @@ public sealed class MonitorFreezeController : IDisposable
         var shared = _settings.Current;
         var monitor = new FrozenMonitor(
             id, layout.Bounds[index], _zoom.TargetFor(id), _zoom.Mode, _zoom.Lens, _zoom.Dock,
-            shared.FrozenContent == FrozenContent.Still, RgbColor.ParseOrDefault(shared.FrozenFrameColor, RgbColor.Cyan), OnPointerInside);
+            shared.FrozenContent == FrozenContent.Still, RgbColor.ParseOrDefault(shared.FrozenFrameColor, RgbColor.Cyan), OnPointerInside,
+            _settings.Models.Islands.Scene); // its islands freeze with it (B1)
         _frozen.Freeze(monitor);
         _operations.Start(monitor);
         _fence.Forbid(FenceOwner.FrozenMonitors, _frozen.State.Areas());

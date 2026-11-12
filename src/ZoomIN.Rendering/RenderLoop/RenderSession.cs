@@ -186,7 +186,7 @@ internal sealed class RenderSession : IDisposable
         // A highlight fading in or out under its show condition (E1) also needs the frame drawn.
         var fading = _alphas.Update(request.Effects.Cursor, request.Zoom, request.TrackingOptions, request.Activity,
             Stopwatch.GetTimestamp(), Stopwatch.Frequency);
-        _islands.Begin(request.Islands, request.KnownIslands, _monitor.DeviceName, Stopwatch.GetTimestamp());
+        _islands.Update(request.Islands, Stopwatch.GetTimestamp());
         var animating = LocatorActive || fading || (!request.OverlayOnly && _desktop.SmartSettling) || _overview.NeedsRedraw || _islands.NeedsRedraw;
         var changes = _changes.Compare(newImage, request, frame, _cursorInside, _lastCursor, shape,
             animating, _snapshots.IsRequested, _shown);
@@ -252,7 +252,7 @@ internal sealed class RenderSession : IDisposable
         return FrameOutcome.Presented;
     }
 
-    /// <summary>Frees still images of islands that are gone or live (also while nothing is drawn). 0 B.</summary>
+    /// <summary>Frees still images of islands that are gone or live, on frames and sleeps without islands. 0 B.</summary>
     public void PruneIslands(IslandSet set) => _islands.Prune(set, _monitor.DeviceName);
 
     public void Dispose() => _resources.Dispose();

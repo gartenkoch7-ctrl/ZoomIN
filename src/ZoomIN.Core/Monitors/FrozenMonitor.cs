@@ -1,3 +1,4 @@
+using ZoomIN.Core.Islands;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Viewport;
@@ -18,9 +19,11 @@ namespace ZoomIN.Core.Monitors;
 /// <param name="frameColor">Colour of the border that marks the monitor as frozen.</param>
 /// <param name="pointerInside">Called once, on a render thread, if the pointer gets onto the frozen monitor anyway
 /// (the fence failed): the owner then lifts the freeze, as nothing there would match what clicks hit.</param>
+/// <param name="islands">The islands at the moment of freezing (M19 B1), without an edit view: they stay and freeze
+/// with the monitor; null = none.</param>
 public sealed class FrozenMonitor(
     string id, PhysicalRect bounds, double level, ZoomMode mode, LensSize lens, DockLayout dock, bool still, RgbColor frameColor,
-    Action<FrozenMonitor>? pointerInside = null)
+    Action<FrozenMonitor>? pointerInside = null, IslandScene? islands = null)
 {
     // The anchor is two doubles (not atomic): written once, then published through the state.
     private const int Empty = 0;
@@ -47,6 +50,9 @@ public sealed class FrozenMonitor(
     public bool Still { get; } = still;
 
     public RgbColor FrameColor { get; } = frameColor;
+
+    /// <summary>The islands as they were when the monitor froze; later changes wait for the thaw (B1).</summary>
+    public IslandScene? Islands { get; } = islands is { Edit: not null } ? islands with { Edit = null } : islands;
 
     /// <summary>The number Windows shows for the monitor (for announcements).</summary>
     public int Number => MonitorNames.Number(Id);

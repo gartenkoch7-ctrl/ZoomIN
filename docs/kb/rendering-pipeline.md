@@ -271,10 +271,12 @@ Plan: [b1-inseln.md](../plan/features/b1-inseln.md). Code: `Core/Islands/`, `Ren
   (vorübergehend 1×) blenden sie damit aus. Im Bearbeitungsmodus zeichnen **alle** Monitore, auch
   bei 1×; dann ist `FrameRequest.OverlayOnly` falsch, damit die Desktop-Kopie läuft.
 - **Eingefrorener Monitor (G2):** Seine Inseln **bleiben sichtbar und frieren mit ein** (Plan B1,
-  Merge-Prüfung). `OverlayDemand.Islands(zoom, frozen)` merkt sich beim ersten Frame eines
-  Einfrierens die Inselszene (unveränderlich, nur ein Verweis, 0 B) und nutzt sie samt Modus des
-  Einfrierens bis zum Auftauen. Ausblenden (`Strg+Alt+I`), Einstellungsseite, Profilwechsel und
-  Bearbeiten ändern ihn also erst danach. `IslandLayer.Draw` tastet dasselbe Bild ab wie das
+  Merge-Prüfung). Der Freeze-Controller legt die Inselszene des Augenblicks in `FrozenMonitor.Islands`
+  ab (unveränderlich, ohne Bearbeitungsansicht). `OverlayDemand.Islands(zoom, frozen)` nutzt sie samt
+  Modus des Einfrierens bis zum Auftauen, auch nach einem Neuaufbau der Pipeline. Ausblenden
+  (`Strg+Alt+I`), Einstellungsseite, Profilwechsel und Bearbeiten ändern ihn also erst danach.
+  Standbilder entfernter Inseln gibt `MonitorRenderer` auf jedem Frame und vor jedem Schlaf ohne
+  Inseln frei (`PruneIslands`), ein Monitor mit Inseln beim Zeichnen. `IslandLayer.Draw` tastet dasselbe Bild ab wie das
   Hauptbild (`FrozenLayer.Desktop`), mit Standbild also das Standbild. Solange es gehalten wird,
   liest der Monitor keinen neuen Capture-Frame, und Standbild-Inseln passen dazu. Beim Einfrieren
   mit „live“ bleiben auch die Inseln live. Die vorübergehende 1× des Bearbeitens übergeht ein

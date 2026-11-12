@@ -19,10 +19,6 @@ internal sealed class OverlayDemand
     private readonly ZoomModel _zoom;
     private readonly EffectsModel _effects;
 
-    // Render thread only: the islands as they were when the monitor froze (G2).
-    private FrozenMonitor? _frozenFor;
-    private IslandScene? _frozenScene;
-
     public OverlayDemand(string deviceName, RenderModels models)
     {
         _deviceName = deviceName;
@@ -70,22 +66,18 @@ internal sealed class OverlayDemand
 
     /// <summary>
     /// The islands this monitor draws at <paramref name="zoom"/> (M19 B1), or null: in fullscreen while
-    /// zoomed in, and on every monitor while they are edited (also at 1×). A frozen monitor (G2) keeps
-    /// the islands as they were when it froze, in its frozen mode: they stay and freeze with it, later
-    /// changes (shortcut, settings page, profile, edit mode) wait for the thaw. Render thread, 0 B.
+    /// zoomed in, and on every monitor while they are edited (also at 1×). A frozen monitor (G2) shows
+    /// the islands it froze with, in its frozen mode (<see cref="FrozenMonitor.Islands"/>): later changes
+    /// (shortcut, settings page, profile, edit mode) wait for the thaw. Lock-free, 0 B.
     /// </summary>
     /// <param name="frozen">This frame's freeze of the monitor, or null.</param>
     public IslandScene? Islands(double zoom, FrozenMonitor? frozen)
     {
-        if (!ReferenceEquals(frozen, _frozenFor))
-        {
-            _frozenFor = frozen;
-            _frozenScene = frozen is null ? null : _models.Islands.Scene;
-        }
-
-        var scene = _frozenScene ?? _models.Islands.Scene;
+        var scene = frozen is null ? _models.Islands.Scene : frozen.Islands;
         var mode = frozen?.Mode ?? _zoom.Mode;
-        return scene.ShowsOn(_deviceName, mode == ZoomMode.Fullscreen && zoom > ZoomLimits.UnzoomedUpTo) ? scene : null;
+        return scene is not null && scene.ShowsOn(_deviceName, mode == ZoomMode.Fullscreen && zoom > ZoomLimits.UnzoomedUpTo)
+            ? scene
+            : null;
     }
 
     /// <summary>After a pipeline failure: retry soon if the monitor should show anything, else wait for a change.</summary>

@@ -55,24 +55,37 @@ public sealed class IslandDemandTests
     {
         // Frozen in fullscreen at 2×, then the live mode went to the lens: the islands stay (G2, plan B1).
         var models = Models(ZoomMode.Lens);
-        var frozen = new FrozenMonitor(First, default, 2, ZoomMode.Fullscreen, LensSize.Default, DockLayout.Default, true, default);
-        models.Zoom.Frozen.Freeze(frozen);
-        var first = new OverlayDemand(First, models);
         var before = models.Islands.Scene;
+        var frozen = Freeze(models, before);
+        var first = new OverlayDemand(First, models);
 
         Assert.Same(before, first.Islands(2, frozen));
         Assert.Null(first.Islands(2, null)); // live: the lens shows no islands
 
         // Hidden, edited or switched elsewhere meanwhile: the frozen monitor keeps its picture.
-        first.Islands(2, frozen);
         models.Islands.SetVisible(false);
         models.Islands.ShowEdit(models.Islands.Scene.Set, models.Islands.Scene.Set, new IslandEditView(-1, null, 0), save: false);
         Assert.Same(before, first.Islands(2, frozen));
+        Assert.Same(before, new OverlayDemand(First, models).Islands(2, frozen)); // also after a pipeline rebuild
         Assert.True(first.NeededAfterFailure());
 
-        // Frozen again: the islands as they are now.
-        var again = new FrozenMonitor(First, default, 3, ZoomMode.Fullscreen, LensSize.Default, DockLayout.Default, true, default);
-        Assert.Same(models.Islands.Scene, first.Islands(3, again));
+        // Frozen again: the islands as they are now, without the edit frames; frozen without any: none.
+        Assert.Null(first.Islands(3, Freeze(models, models.Islands.Scene)));
+        Assert.Null(first.Islands(3, Freeze(models, null)));
+    }
+
+    [Fact]
+    public void FrozenDuringAnEditStart_KeepsTheIslands_WithoutTheEditFrames()
+    {
+        var models = Models(ZoomMode.Fullscreen);
+        models.Islands.ShowEdit(models.Islands.Scene.Set, models.Islands.Scene.Set, new IslandEditView(-1, null, 0), save: false);
+
+        var frozen = Freeze(models, models.Islands.Scene);
+
+        Assert.NotNull(frozen.Islands);
+        Assert.Null(frozen.Islands.Edit);
+        Assert.Same(frozen.Islands, new OverlayDemand(First, models).Islands(2, frozen));
+        Assert.Null(new OverlayDemand(First, models).Islands(1, frozen)); // no edit mode at 1× on it
     }
 
     [Fact]
@@ -99,6 +112,14 @@ public sealed class IslandDemandTests
 
         Assert.True(request.OverlayOnly);
         Assert.False((request with { Islands = new IslandScene(IslandSet.Empty, true, null) }).OverlayOnly);
+    }
+
+    // Frozen in fullscreen at 2× with these islands, as the freeze controller does.
+    private static FrozenMonitor Freeze(RenderModels models, IslandScene? islands)
+    {
+        var frozen = new FrozenMonitor(First, default, 2, ZoomMode.Fullscreen, LensSize.Default, DockLayout.Default, true, default, null, islands);
+        models.Zoom.Frozen.Freeze(frozen);
+        return frozen;
     }
 
     private static RenderModels Models(ZoomMode mode)

@@ -43,7 +43,9 @@ public sealed class AgentStateReport(
             if (zoom.Frozen.For(id) is { } frozen)
             {
                 var ignored = temporary.Length > 0 ? string.Create(CultureInfo.InvariantCulture, $", temporary {ceiling:0.00} ignored") : string.Empty;
-                temporary = string.Create(CultureInfo.InvariantCulture, $" (frozen: shows {frozen.Level:0.00} {frozen.Mode}, {frozen.ImageKind}{ignored})");
+                var islands = frozen.Islands is { Visible: true } kept ? kept.Set.Count : 0; // as they were when it froze (B1)
+                temporary = string.Create(
+                    CultureInfo.InvariantCulture, $" (frozen: shows {frozen.Level:0.00} {frozen.Mode}, {frozen.ImageKind}, {islands} frozen islands{ignored})");
             }
             Line(text, string.Create(CultureInfo.InvariantCulture, $"  {id} {bounds}: zoom {target:0.00}{temporary}, monitor filter {(filter.Enabled ? filter.Filter.ToString() : "off")}"));
         }

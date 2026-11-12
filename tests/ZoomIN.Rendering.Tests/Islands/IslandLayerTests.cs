@@ -142,7 +142,7 @@ public sealed class IslandLayerTests
     }
 
     [Fact]
-    public void Begin_WithoutIslands_FreesTheStillOfARemovedIsland_ButKeepsTheOthers()
+    public void Prune_WithoutIslands_FreesTheStillOfARemovedIsland_ButKeepsTheOthers()
     {
         using var rig = new IslandRig();
         var scene = IslandRig.Scene(null, IslandRig.At(8, 8, still: true));
@@ -151,11 +151,11 @@ public sealed class IslandLayerTests
         Assert.NotNull(rig.Stills.For(still.Id, still.Source));
 
         // A frame without islands (e.g. hidden) keeps the still of an island that is still there...
-        rig.Layer.Begin(null, scene.Set, IslandRig.Monitor, Stopwatch.GetTimestamp());
+        rig.Layer.Prune(scene.Set, IslandRig.Monitor);
         Assert.NotNull(rig.Stills.For(still.Id, still.Source));
 
         // ...and frees it once the island is gone, also without another drawn frame.
-        rig.Layer.Begin(null, IslandSet.Empty, IslandRig.Monitor, Stopwatch.GetTimestamp());
+        rig.Layer.Prune(IslandSet.Empty, IslandRig.Monitor);
         Assert.Null(rig.Stills.For(still.Id, still.Source));
     }
 }
