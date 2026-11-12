@@ -42,13 +42,8 @@ internal sealed class HoldKeyTracker
     /// <summary>One key event from the hook.</summary>
     public void OnKey(IHoldKeyHandler handler, VIRTUAL_KEY key, uint scanCode, bool down, bool up)
     {
-        // A new hold key: the old one's release will not come, so its press no longer blocks counting.
-        var holdKey = handler.Key;
+        var holdKey = Follow(handler);
         _suspect = false; // the hook is alive: a press it did not report is the lag after a release
-        if (holdKey != _downKey)
-        {
-            (_down, _downKey) = (false, holdKey);
-        }
 
         switch (HoldKeyCodes.Classify(key, scanCode, down, up, holdKey))
         {
@@ -81,6 +76,7 @@ internal sealed class HoldKeyTracker
     /// </summary>
     public bool OnKeyState(IHoldKeyHandler handler, bool pressed)
     {
+        Follow(handler);
         var missed = false;
         if (pressed && !_down)
         {
@@ -121,5 +117,18 @@ internal sealed class HoldKeyTracker
         }
 
         return missed;
+    }
+
+    // A new hold key (for key events and key state checks alike): the old one's release will not
+    // come, so its press no longer counts as the new key being down.
+    private MarkerHoldKey Follow(IHoldKeyHandler handler)
+    {
+        var holdKey = handler.Key;
+        if (holdKey != _downKey)
+        {
+            (_down, _downKey, _suspect, _releaseSuspect) = (false, holdKey, false, false);
+        }
+
+        return holdKey;
     }
 }

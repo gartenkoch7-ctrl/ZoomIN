@@ -70,6 +70,20 @@ public sealed class HoldKeyTrackerTests
     }
 
     [Fact]
+    public void NewHoldKey_IsJudgedOnItsOwn_ByTheKeyStateCheckToo()
+    {
+        var tracker = new HoldKeyTracker();
+        var handler = new CountingHandler();
+        tracker.Start(MarkerHoldKey.RightShift, down: true); // its release will be missed
+
+        handler.Key = MarkerHoldKey.LeftShift;
+        tracker.OnKeyState(handler, pressed: false);
+        tracker.OnKeyState(handler, pressed: false);
+
+        Assert.Equal(0, handler.Ups); // no release for a key that was never pressed
+    }
+
+    [Fact]
     public void KeyEvents_PressReleaseAndTyping()
     {
         var tracker = new HoldKeyTracker();
@@ -91,7 +105,7 @@ public sealed class HoldKeyTrackerTests
 
         public int Others { get; private set; }
 
-        public MarkerHoldKey Key => MarkerHoldKey.RightShift;
+        public MarkerHoldKey Key { get; set; } = MarkerHoldKey.RightShift;
 
         public void HoldKeyDown() => Downs++;
 

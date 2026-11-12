@@ -176,7 +176,6 @@ E2 und E1 laufen in **einer** Spur hintereinander, weil beide diese Dateien änd
   Großschreiben (KB).
 - **Hold-Key-Telemetrie und -Wechsel:**
   - Eine beim Hook-Start schon gehaltene Taste zählt nicht in `hold_key_presses`.
-  - Ein Wechsel der Haltetaste wird im Tracker erst mit dem nächsten Tastenereignis wirksam.
   - Die Kürzel-Seite zeigt die Haltetaste vom Öffnen der Seite.
 - **D1-Kostenmessung:** `PassCostProbe` versucht nach jedem Neustart wieder einmal neu. Das kostet
   nur Zeit, solange jemand die Metrik abonniert.
