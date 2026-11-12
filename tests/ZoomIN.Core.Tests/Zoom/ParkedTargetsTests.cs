@@ -56,8 +56,8 @@ public sealed class ParkedTargetsTests
         model.Activate(ZoomMode.Docked, "R", s_all); // the strip on R
         Assert.True(model.TargetFor("R") > 1);
 
-        model.Frozen.Freeze(Frozen("L", 1));
-        model.Frozen.Freeze(Frozen("R", model.TargetFor("R")));
+        model.Frozen.Freeze(Frozen("L", 1, ZoomMode.Docked));
+        model.Frozen.Freeze(Frozen("R", model.TargetFor("R"), ZoomMode.Docked));
         model.Frozen.UnfreezeAll();
 
         Assert.True(model.TargetFor("R") > 1);
@@ -97,6 +97,6 @@ public sealed class ParkedTargetsTests
         Assert.Equal(level, seen);
     }
 
-    private static FrozenMonitor Frozen(string id, double level) =>
-        new(id, new PhysicalRect(0, 0, 10, 10), level, ZoomMode.Fullscreen, LensSize.Default, DockLayout.Default, false, RgbColor.Cyan);
+    private static FrozenMonitor Frozen(string id, double level, ZoomMode mode = ZoomMode.Fullscreen) =>
+        new(id, new PhysicalRect(0, 0, 10, 10), level, mode, LensSize.Default, DockLayout.Default, false, RgbColor.Cyan);
 }

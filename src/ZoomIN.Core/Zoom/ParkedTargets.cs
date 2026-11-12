@@ -4,16 +4,15 @@ using ZoomIN.Core.Monitors;
 namespace ZoomIN.Core.Zoom;
 
 /// <summary>
-/// Targets of frozen monitors, kept out of the model's targets while frozen (G2): a frozen monitor
-/// shows its own level (<see cref="FrozenMonitor.Level"/>), so zoom on/off, steps and
-/// <see cref="ZoomModel.IsOn"/> only see the free monitors. On thaw the level comes back if it still
-/// fits: same mode as at freezing, in Docked mode only for the docked monitor (one strip, one
-/// reservation), with a shared level the level the others have now; after a display change, and
-/// otherwise, the monitor is at 1×. Works under the model's lock.
+/// Keeps frozen monitors out of the model's targets (G2): a frozen monitor shows its own level
+/// (<see cref="FrozenMonitor.Level"/>), so zoom on/off, steps and <see cref="ZoomModel.IsOn"/> only
+/// see the free monitors. On thaw the level comes back if it still fits: same mode as at freezing
+/// (<see cref="FrozenMonitor.Mode"/>), in Docked mode only for the docked monitor (one strip, one
+/// reservation), with a shared level only the level the others have now (none zoomed: 1×); after a
+/// display change and otherwise the monitor is at 1×. Stateless; works under the model's lock.
 /// </summary>
 internal sealed class ParkedTargets
 {
-    private readonly Dictionary<string, ZoomMode> _parked = new(StringComparer.Ordinal);
     private readonly Lock _gate;
     private readonly MonitorFreeze _frozen;
     private readonly Func<IReadOnlyDictionary<string, double>> _read;
@@ -29,7 +28,7 @@ internal sealed class ParkedTargets
     {
         (_gate, _frozen, _read, _write, _context, _changed) = (gate, frozen, read, write, context, changed);
 
-        // A freeze is published first (render threads then use its own level), then its target parks.
+        // A freeze is published first (render threads then use its own level), then its target leaves.
         // A thaw restores the target first, under the freeze lock, then publishes: never a dip to 1×.
         // Lock order freeze → model; the model never takes the freeze lock.
         frozen.Changed += OnChanged;
@@ -40,21 +39,11 @@ internal sealed class ParkedTargets
     {
         lock (_gate)
         {
-            Dictionary<string, double>? next = null;
             var targets = _read();
-            var mode = _context().Mode;
-            foreach (var monitor in _frozen.State.Monitors)
+            var frozen = _frozen.State;
+            if (targets.Keys.Any(frozen.Contains))
             {
-                if (_parked.TryAdd(monitor.Id, mode) && targets.ContainsKey(monitor.Id))
-                {
-                    next ??= new Dictionary<string, double>(targets);
-                    next.Remove(monitor.Id);
-                }
-            }
-
-            if (next is not null)
-            {
-                _write(next);
+                _write(targets.Where(t => !frozen.Contains(t.Key)).ToDictionary(t => t.Key, t => t.Value));
             }
         }
 
@@ -70,15 +59,13 @@ internal sealed class ParkedTargets
             Dictionary<string, double>? next = null;
             foreach (var monitor in thawed)
             {
-                if (!_parked.Remove(monitor.Id, out var parkedMode) || !restoreLevel || parkedMode != mode
-                    || (mode == ZoomMode.Docked && monitor.Id != docked))
+                if (!restoreLevel || monitor.Mode != mode || (mode == ZoomMode.Docked && monitor.Id != docked))
                 {
                     continue;
                 }
 
-                // Shared level: the level the free monitors have now, if any is zoomed; else the frozen one.
-                var shared = perMonitor ? 0 : targets.Values.Where(level => level > ZoomLimits.Min).DefaultIfEmpty(0).Max();
-                var level = shared > 0 ? shared : monitor.Level;
+                // Shared level: the level the free monitors have now; none zoomed means zoom is off.
+                var level = perMonitor ? monitor.Level : targets.Values.DefaultIfEmpty(ZoomLimits.Min).Max();
                 if (level > ZoomLimits.Min)
                 {
                     next ??= new Dictionary<string, double>(targets);

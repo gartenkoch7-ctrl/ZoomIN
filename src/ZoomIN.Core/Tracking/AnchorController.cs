@@ -85,6 +85,7 @@ public sealed class AnchorController
     private void Initialize(in AnchorInput input)
     {
         _anchor = input.MouseInside ? input.Mouse : _startAt ?? Center(input.Monitor);
+        _startAt = null;
         _lastMouse = input.Mouse;
         _lastTick = input.Now;
         _lastZoom = input.Zoom;

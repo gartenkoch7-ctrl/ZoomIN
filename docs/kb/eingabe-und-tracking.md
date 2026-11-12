@@ -362,7 +362,8 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
   (`Toggle/Activate/Step` über die freien Monitore, `FrozenTargets.Free`) und `IsOn` sehen es nicht,
   ein bei 4× eingefrorener Monitor macht „Zoom an“ also nicht wahr. Beim Aufheben kommt es zurück,
   wenn es noch passt: gleicher Modus wie beim Einfrieren, im Modus Angedockt nur für den
-  angedockten Monitor, bei gemeinsamer Stufe die Stufe, die die anderen jetzt haben; sonst und nach
+  angedockten Monitor, bei gemeinsamer Stufe die Stufe, die die anderen jetzt haben (ist keiner
+  vergrößert, ist der Zoom aus und er taut bei 1× auf); sonst und nach
   einem Anzeigewechsel taut er bei 1× auf. Geparkt wird nach dem Veröffentlichen des Einfrierens,
   zurückgegeben vor dem Veröffentlichen des Aufhebens (`MonitorFreeze.Thawing`): ein Render-Thread
   sieht nie einen aufgetauten Monitor ohne seine Stufe. Gespeichert wird „Zoom an“ auch, wenn nur der
