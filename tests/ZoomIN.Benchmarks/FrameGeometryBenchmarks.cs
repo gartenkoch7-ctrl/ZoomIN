@@ -60,7 +60,8 @@ public class FrameGeometryBenchmarks
     {
         _frame++;
         var zoom = 1 + (_frame % 8 * 0.25);
-        return _enhancement.At(zoom, Smoothing.Text).BoldPixels;
+        var frame = ModeGeometry.Compute(ZoomMode.Docked, _monitor, Cursor(), zoom, LensSize.Default, DockLayout.Default);
+        return _enhancement.At(frame, Smoothing.Text).BoldPixels;
     }
 
     private PhysicalPoint Cursor() => new(_frame % 3840, _frame % 2160);

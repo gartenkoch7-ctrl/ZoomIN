@@ -51,8 +51,10 @@ internal readonly struct MagnifyConstants
         TextureHeight = (float)monitor.Height;
         SmoothingMode = (uint)smoothing;
         MonitorSmart = smart ? 1u : 0u;
-        Sharpness = (float)enhance.Sharpness;
-        BoldPixels = (float)enhance.BoldPixels;
+        // PSEnhanced always samples bicubic: with another smoothing it would switch it silently (risk 3).
+        var applied = TextEnhancement.WorksWith(smoothing) ? enhance : TextEnhancement.Off;
+        Sharpness = (float)applied.Sharpness;
+        BoldPixels = (float)applied.BoldPixels;
         _enhancePadding0 = 0;
         _enhancePadding1 = 0;
     }

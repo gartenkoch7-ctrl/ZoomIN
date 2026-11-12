@@ -155,6 +155,9 @@ public sealed class TextEnhanceTests
         var resolved = MagnifyConstants.Fullscreen(Source, Screen, ColorMatrix.Identity, smoothing, enhance: enhance);
 
         Assert.False(resolved.Enhanced);
+
+        // Also when a caller skips At: the constants never switch another smoothing to bicubic.
+        Assert.Equal(smoothing == Smoothing.Text, MagnifyConstants.Fullscreen(Source, Screen, ColorMatrix.Identity, smoothing, enhance: new TextEnhancement(1, 3)).Enhanced);
         Assert.Equal(Pixels(plain), Pixels(resolved));
     }
 
