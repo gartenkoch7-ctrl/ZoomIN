@@ -2,6 +2,7 @@ using System.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Islands;
 using ZoomIN.Core.Modes;
+using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Overview;
 using ZoomIN.Core.Zoom;
 
@@ -17,6 +18,10 @@ internal sealed class OverlayDemand
     private readonly RenderModels _models;
     private readonly ZoomModel _zoom;
     private readonly EffectsModel _effects;
+
+    // Render thread only: the islands as they were when the monitor froze (G2).
+    private FrozenMonitor? _frozenFor;
+    private IslandScene? _frozenScene;
 
     public OverlayDemand(string deviceName, RenderModels models)
     {
@@ -64,14 +69,22 @@ internal sealed class OverlayDemand
         unzoomed && (overview is not null || lowered) ? _zoom.Mode : frameMode;
 
     /// <summary>
-    /// The islands this monitor draws at <paramref name="zoom"/> in <paramref name="mode"/> (M19 B1), or
-    /// null: in fullscreen while zoomed in, and on every monitor while they are edited (also at 1×).
-    /// A frozen monitor (G2) passes its frozen mode and level: its islands stay and freeze with it.
-    /// Lock-free, 0 B.
+    /// The islands this monitor draws at <paramref name="zoom"/> (M19 B1), or null: in fullscreen while
+    /// zoomed in, and on every monitor while they are edited (also at 1×). A frozen monitor (G2) keeps
+    /// the islands as they were when it froze, in its frozen mode: they stay and freeze with it, later
+    /// changes (shortcut, settings page, profile, edit mode) wait for the thaw. Render thread, 0 B.
     /// </summary>
-    public IslandScene? Islands(double zoom, ZoomMode mode)
+    /// <param name="frozen">This frame's freeze of the monitor, or null.</param>
+    public IslandScene? Islands(double zoom, FrozenMonitor? frozen)
     {
-        var scene = _models.Islands.Scene;
+        if (!ReferenceEquals(frozen, _frozenFor))
+        {
+            _frozenFor = frozen;
+            _frozenScene = frozen is null ? null : _models.Islands.Scene;
+        }
+
+        var scene = _frozenScene ?? _models.Islands.Scene;
+        var mode = frozen?.Mode ?? _zoom.Mode;
         return scene.ShowsOn(_deviceName, mode == ZoomMode.Fullscreen && zoom > ZoomLimits.UnzoomedUpTo) ? scene : null;
     }
 

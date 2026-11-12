@@ -29,7 +29,6 @@ internal sealed class IslandLayer
     private readonly GpuPassTimer _time;
     private int _phase = -1;
     private int _drawnPhase = -1;
-    private IslandSet? _prunedFor;
 
     public IslandLayer(MagnifyPass pass, CursorPass marks, IslandStills stills, GpuPassTimer time)
     {
@@ -47,15 +46,13 @@ internal sealed class IslandLayer
 
     /// <summary>
     /// Call every frame before the change check: the blink of the edit mode, and on frames without
-    /// islands the still images of removed ones are freed (once per island list: pruning the same
-    /// list again frees nothing, as only drawn frames take still images of that list's still islands).
+    /// islands the still images of removed ones are freed (the last still island may just have gone).
     /// </summary>
     public void Begin(IslandScene? scene, IslandSet? known, string monitorId, long now)
     {
-        if (scene is null && known is not null && !ReferenceEquals(known, _prunedFor))
+        if (scene is null && known is not null)
         {
-            _stills.Prune(known, monitorId); // the last still island may just have gone
-            _prunedFor = known;
+            _stills.Prune(known, monitorId);
         }
 
         Update(scene, now);

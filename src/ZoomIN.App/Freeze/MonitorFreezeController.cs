@@ -119,21 +119,23 @@ public sealed class MonitorFreezeController : IDisposable
             return;
         }
 
+        // The island edit mode (B1) confines a drag to the monitor it began on: frozen, the pointer would
+        // be held between the drag's edge and the forbidden area. The user ends editing first.
+        if (_settings.Models.Islands.Scene.Editing)
+        {
+            Refuse("island_edit", "Freeze.IslandEdit");
+            return;
+        }
+
         // The overview shows 1× for a moment; frozen, its frame would stay and the view before it
         // would be lost. The user ends it first (tap again or Esc).
         var id = layout.Ids[index];
         // The docked strip reserves screen space and takes every zoom command (ZoomModel.Step): frozen,
         // the reservation would follow the live mode and zooming elsewhere would go nowhere.
-        // The island edit mode (B1) confines a drag to the monitor it began on: frozen, the pointer would
-        // be held between the drag's edge and the forbidden area. The user ends editing first.
         var docked = _zoom.Mode == ZoomMode.Docked && _zoom.IsOn && _zoom.DockedMonitor == id;
-        (string? Reason, string? Text) refusal = _settings.Models.Islands.Scene.Editing ? ("island_edit", "Freeze.IslandEdit")
-            : docked ? ("docked", "Freeze.Docked")
-            : _overview.Current is { } session && session.MonitorId == id ? ("overview", "Freeze.Overview")
-            : default;
-        if (refusal is (string refusedFor, string hint))
+        if (docked || (_overview.Current is { } session && session.MonitorId == id))
         {
-            Refuse(refusedFor, hint);
+            Refuse(docked ? "docked" : "overview", docked ? "Freeze.Docked" : "Freeze.Overview");
             return;
         }
 

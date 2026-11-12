@@ -203,6 +203,10 @@ Befunde der Reviews, die bewusst nicht als Code umgesetzt sind (Designvorschläg
   eine Falle ist das nicht.
 - **Strg+Alt+N während eines Ziehens:** Der Sprung per `SetCursorPos` umgeht den Zaun des Ziehens.
   Die nächste Bewegung holt den Zeiger an den Rand des Zieh-Monitors zurück. Esc nimmt das Ziehen zurück.
-- **Dateigröße nach dem Merge:** `RenderSession.cs` (265) und `MonitorFreezeController.cs` (256) liegen
+- **Inseln eingefrorener Monitore im Render-Loop:** Dass `RenderSession` Inseln aus dem eingefrorenen
+  Bild zeichnet, prüft kein Test. `RenderSession` braucht echte Desktop-Duplizierung, getestet sind
+  `OverlayDemand` und `IslandLayer`. Fiel das Einfrieren genau in den Start des Bearbeitens, behält
+  die gemerkte Szene dessen Rahmen bis zum Auftauen.
+- **Dateigröße nach dem Merge:** `RenderSession.cs` (265) und `MonitorFreezeController.cs` (258) liegen
   über 250, aber unter 300. Sie sind Integrationsdateien mehrerer Spuren. Aufgeteilt wird nach dem
   Merge aller M19-Spuren im Integrationsbranch, damit andere Spuren keine Konflikte bekommen.

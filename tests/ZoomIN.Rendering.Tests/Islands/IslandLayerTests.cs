@@ -140,4 +140,22 @@ public sealed class IslandLayerTests
         Assert.Equal(new Bgra(255, 255, 255, 255), pixels.At(6, 34));
         Assert.False(rig.Layer.NeedsRedraw);
     }
+
+    [Fact]
+    public void Begin_WithoutIslands_FreesTheStillOfARemovedIsland_ButKeepsTheOthers()
+    {
+        using var rig = new IslandRig();
+        var scene = IslandRig.Scene(null, IslandRig.At(8, 8, still: true));
+        var still = scene.Set[0]; // with the id the set gave it
+        rig.Draw(scene);
+        Assert.NotNull(rig.Stills.For(still.Id, still.Source));
+
+        // A frame without islands (e.g. hidden) keeps the still of an island that is still there...
+        rig.Layer.Begin(null, scene.Set, IslandRig.Monitor, Stopwatch.GetTimestamp());
+        Assert.NotNull(rig.Stills.For(still.Id, still.Source));
+
+        // ...and frees it once the island is gone, also without another drawn frame.
+        rig.Layer.Begin(null, IslandSet.Empty, IslandRig.Monitor, Stopwatch.GetTimestamp());
+        Assert.Null(rig.Stills.For(still.Id, still.Source));
+    }
 }
