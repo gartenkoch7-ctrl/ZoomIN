@@ -319,6 +319,107 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
 - **Offen:** Ausnahmeliste für Spiele und Fernsteuerung (ADR-0028), injizierte Bewegungen
   (`LLMHF_INJECTED`) werden derzeit wie echte behandelt.
 
+## Maus-Puffer und Achsensperre (M19 A6)
+Zwei Filter der Zaun-Filterkette (`IPointerMoveFilter`), global eingestellt
+(`AppSettings.PointerConstraint`, nicht im Profil), ab Werk beide aus. Nur die Tray-App nutzt sie,
+der sichere Bildschirm nicht. `PointerConstraintController` (App) meldet einen Filter beim Zaun nur
+an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten ist wie in Windows.
+
+- **Maus-Puffer** (`Core/Pointer/EdgeBuffer`, Reihenfolge 300): Eine Bewegung von einem Monitor
+  auf einen anderen endet am Rand (letzter Pixel `Right − 1`), bis der Zeiger die Druckzeit der
+  Stufe lang gegen den Rand drückt: Leicht 0,2 s, Mittel 0,4 s, Stark 0,8 s. „Drücken“ = weitere
+  Bewegungen zeigen nach außen. Es beginnt von vorn bei einem Rückzug vom Rand um mehr als 3 px
+  (Zittern zählt nicht; Entlanggleiten am Rand auch nicht, zählt aber auch nicht als Drücken), bei einer Pause ohne Druck über die halbe Druckzeit (höchstens 250 ms; bei Leicht also 100 ms, damit zwei einzelne Stupser nicht hinüberführen) und bei einer neuen
+  Richtung ohne gemeinsame Komponente (an einer Ecke wackelt die Hand zwischen „rechts“ und
+  „rechts unten“, das bleibt ein Drücken). Nach dem Hinüberwechseln gilt der Puffer auf dem neuen
+  Monitor wieder, in beide Richtungen.
+- **Ziel auf keinem Monitor:** Schräg über eine Ecke (z. B. an der Taskleiste nach rechts, die
+  Hand zieht leicht nach unten) zählt als Drücken entlang der Achse, die auf einen Nachbarn führt,
+  wie Windows es abschneiden würde; die stärker gedrückte Achse zuerst. Sonst (Lücke versetzter
+  Monitore oder ein Monitor, den die Liste noch nicht kennt) entscheidet Windows: Der Puffer lässt
+  die Bewegung durch, damit er den Zeiger nie einsperrt.
+- **Drücken gehört zu einem Monitor:** Wechselt der Zeiger (z. B. per Kürzel) auf einen anderen
+  Monitor, beginnt die Druckzeit dort von vorn.
+- **Monitore beim Anzeigewechsel:** Liefert Windows mitten im Aufzählen keine vollständige Liste,
+  ruht der Puffer (eine alte Anordnung könnte eine Kante mitten in einen echten Monitor legen)
+  und liest die Monitore jede Sekunde neu, bis zu zehnmal je Anlass (`BufferSetup`). Nach jedem
+  Anzeigewechsel liest er sie zur Bestätigung eine Sekunde später noch einmal, weil Windows
+  zunächst noch Teile der alten Anordnung melden kann. Das gilt auch
+  für nur einen gelesenen Monitor (ein zweiter kann noch fehlen). Ein fehlgeschlagenes Anwenden
+  wird erst bei der nächsten Änderung einer A6-Einstellung wiederholt, nicht bei jeder anderen.
+- **Eingefrorene Monitore:** Der Puffer gibt eine Bewegung frei, danach wirken die gesperrten
+  Bereiche des Zauns. Ein eingefrorener Monitor bleibt also gesperrt, der Puffer gilt nur zwischen
+  freien Monitoren.
+- **Achsensperre** (`Core/Pointer/AxisLock`, Reihenfolge 200): Solange die gewählte Haltetaste
+  gedrückt ist, sind die ersten 8 px (physische Pixel, je Achse) frei. Dann gewinnt die größere
+  Achse, bei Gleichstand waagrecht (Leserichtung), und der Zeiger bleibt auf der Zeile bzw. Spalte,
+  in der die Taste gedrückt wurde (er springt die wenigen Pixel der freien Strecke zurück). Loslassen
+  gibt ihn bei der nächsten Bewegung frei; ein neues Drücken wählt die Achse neu.
+- **Kein `ClipCursor`-Band** (Abweichung vom Plan): Die Achse ist ein Filter im Zaun-Hook statt
+  eines 1 px hohen `ClipCursor`-Rechtecks. So gibt es nur einen Mechanismus, die gesperrten
+  Bereiche wirken auch hier zuletzt, und ein fremder `ClipCursor` (Spiel, Fernsteuerung) wird von
+  der Achsensperre nie überschrieben. Windows' Zurücksetzen von `ClipCursor` (Desktopwechsel,
+  Anzeigewechsel) betrifft die Filter nicht; den Hook hält der Zaun am Leben (`HookLost`).
+- **Haltetaste** (`Platform/PointerConstraint/Win32HoldKeyWatch`): eigener `WH_KEYBOARD_LL`-Hook
+  auf eigenem Thread, nur lesend, nichts wird verschluckt. Er unterscheidet links und rechts
+  (`VK_LSHIFT`/`VK_RSHIFT`, `VK_LCONTROL`/`VK_RCONTROL`, `VK_LMENU`/`VK_RMENU`; Alt Gr meldet
+  `VK_RMENU` plus ein unechtes `VK_LCONTROL` mit Scancode `0x21D`, das ignoriert wird, damit
+  Alt Gr nicht als gehaltenes Strg links zählt). Ebenso ignoriert werden die unechten
+  Umschalt-Ereignisse, die Windows bei eingeschaltetem NumLock um Ziffernblock- und
+  Navigationstasten legt (Scancode mit Bit `0x200` oder erweitertes `0x2A`): Umschalt
+  halten und eine Pfeiltaste des Ziffernblocks drücken löst die Sperre nicht. Ein erweitertes
+  `0x36` (rechts) gilt nicht als unecht, weil manche Layouts das echte Umschalt rechts so melden;
+  mit „Umschalt rechts“ kann eine graue Pfeiltaste die Achse daher neu wählen lassen (offen,
+  am echten Gerät prüfen). Injizierte neutrale Codes (`VK_SHIFT`, `VK_CONTROL`, `VK_MENU`)
+  werden nach Scancode bzw. Erweiterungs-Flag links oder rechts zugeordnet. Nach so einem
+  unechten Loslassen meldet `GetAsyncKeyState` die Taste eine Weile als oben; die Prüfung wartet
+  dann bis zu vier Takte (2 s), bevor sie die Sperre löst; kommt danach Windows' unechtes
+  Drücken (die Taste ist also noch gehalten), rastet die Sperre wieder ein. Injizierte Tasten mit Erweiterungs-Flag
+  (Tastenumbelegung, Hilfsprogramme) gelten nicht als unecht. Die Tastenwiederholung beim Halten zählt nur
+  einmal. Der Hook läuft nur, solange die Achsensperre eingeschaltet ist. Ein eigener Hook statt
+  des Tastatur-Hooks von `Win32InputActivityHook`, weil dieser mit B1 geteilt ist; nach der
+  Integration lässt er sich dort als Beobachter einhängen (wie `OverviewKeyWatch`). Injizierte
+  Tasten (Bildschirmtastatur) zählen bewusst mit.
+- **Verpasstes Loslassen:** Lässt man die Taste auf dem Sperrbildschirm oder bei einer UAC-Abfrage
+  los, sieht der Hook das nie. Deshalb prüft ein Takt alle 0,5 s, nur solange die Taste als
+  gehalten gilt, `GetAsyncKeyState`; ist die Taste nicht gedrückt, gilt sie als losgelassen
+  (Log 2963). Die erste Prüfung kommt 0,5 s nach dem Drücken, lange nachdem Windows den
+  Tastenzustand gesetzt hat. Zusätzlich gilt
+  die Haltetaste nach `DesktopSwitch` und `SessionUnlock` des Zauns als losgelassen
+  (`IHoldKeyWatch.Reset`); eine noch gehaltene Taste rastet mit ihrer nächsten Wiederholung wieder
+  ein. Drücken, Loslassen und Prüfung laufen unter einer kleinen Sperre, damit sich ein Drücken
+  und ein gleichzeitiges Abschalten nie zu „gehalten ohne Taste“ verschränken.
+- **Tastatur-Hook verweigert:** wird nicht behalten (Log 2962); der nächste Start oder `Reset`
+  (nach Desktopwechsel) versucht es erneut. Einen von Windows wegen Zeitüberschreitung still
+  entfernten Tastatur-Hook erkennt die Haltetaste nicht (offen; die Achsensperre reagiert dann
+  nicht mehr, sperrt aber auch nichts).
+- **Zeiger von außen versetzt** (Kürzel mit `SetCursorPos`, anderes Programm), während die Achse
+  gilt: Die Sperre übernimmt die neue Zeile bzw. Spalte, statt den Zeiger zurückzuziehen. Vor der
+  Wahl der Achse zählt nur ein Sprung über 8 px; dass Windows den Punkt an einer Bildschirmkante
+  oder einem fremden `ClipCursor` um wenige Pixel zurücksetzt, startet die 8 px nicht neu.
+- **Ecke:** Ein Drücken, das schräg an einer Ecke begann, bleibt beim Entlanggleiten an einer der
+  beiden Kanten erhalten; erst ein Rückzug von allen gedrückten Kanten beginnt von vorn.
+- **Strg als Haltetaste und Suchhilfe „Strg allein“:** Der Aktivitäts-Hook wertet ein Strg, das
+  ohne andere Taste losgelassen wird, als Auslöser der Suchhilfe; eine Mausbewegung dazwischen
+  zählt dort nicht. Mit Strg als Haltetaste zeigt jede Nutzung der Achsensperre also die
+  Suchhilfe, wenn dieser Auslöser an ist (offen, braucht eine Änderung im geteilten
+  `Win32InputActivityHook`; bis dahin Umschalt oder Alt als Haltetaste wählen).
+- **Ein Monitor:** Der Puffer-Filter bleibt auch mit nur einem Monitor angemeldet (er tut dann
+  nichts): Nur ein angemeldeter Filter hält den Zaun-Wächter, der Anzeigewechsel meldet. Sonst
+  käme der Puffer nach dem Anstecken eines zweiten Monitors nicht zurück.
+- **Sperren:** Der Controller ruft den Zaun unter seiner eigenen Sperre auf; seine Reaktion auf
+  `Recomputed` nimmt diese Sperre deshalb nie (der Zaun kann beim Abmelden des letzten Filters
+  genau diesen Wächter-Thread beenden und auf ihn warten).
+- **Hook-Pfad:** Beide Filter rechnen nur, `0 B` (`PointerConstraintAllocationTests`,
+  `PointerConstraintBenchmarks`), zählen nur Zahlen (beobachtbare Zähler
+  `zoomin.pointer.buffer_blocked`, `zoomin.pointer.axis_lock`), loggen nie und keine Koordinaten.
+- **Umschalt + Ziehen** markiert in vielen Programmen Text, Alt öffnet beim Loslassen oft das Menü:
+  darauf weist die Einstellungskarte hin, die Haltetaste ist frei wählbar.
+- **Offen:** Absolute Eingaben (Stift, Touch, Fernsteuerung) auf einen anderen Monitor hält der
+  Puffer ebenfalls zurück, bis die Druckzeit um ist; ein Stifttipp auf den Nachbarmonitor landet
+  dann am Rand. Dafür bräuchte der Filter die Herkunft der Bewegung (`dwExtraInfo`,
+  `LLMHF_INJECTED`), die die Zaun-Schnittstelle heute nicht weitergibt.
+
 ## Übersicht auf Knopfdruck (M17 B2)
 - `Strg+Alt+O` (anpassbar, auf dem sicheren Bildschirm nicht belegt). **Antippen** (< 300 ms):
   Der Monitor unter der Maus gleitet auf 1× (vorübergehende Stufe, Besitzer `Overview`), ein

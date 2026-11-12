@@ -1,4 +1,5 @@
 using ZoomIN.Core.Hotkeys;
+using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Tracking;
 
 namespace ZoomIN.Core.Settings;
@@ -45,4 +46,7 @@ public abstract record InputSettings
 
     /// <summary>Key that shows highlights set to "only while held" (E1).</summary>
     public MarkerHoldKey MarkerHoldKey { get; set; }
+
+    /// <summary>Mouse buffer and axis lock (A6, M19); global, not in the profile; both off from the factory.</summary>
+    public PointerConstraintOptions PointerConstraint { get; set; } = PointerConstraintOptions.Default;
 }

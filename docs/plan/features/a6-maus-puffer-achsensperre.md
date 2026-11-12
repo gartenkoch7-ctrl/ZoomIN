@@ -1,6 +1,6 @@
 # A6 · Maus-Puffer und Achsensperre
 **Meilenstein:** [M19](../m19-mehrere-ansichten.md) · **Spur:** C · **Branch:** `feat/m19-a6-maus-puffer` ·
-**Größe:** S · **Status:** geplant
+**Größe:** S · **Status:** umgesetzt (Spur C), Sichtprüfung offen
 
 **Ziel:**
 - Der Zeiger rutscht nicht mehr versehentlich auf den anderen Monitor.
@@ -60,22 +60,26 @@ Grundsatz: [ADR-0028](../../adr/0028-zeiger-versetzen-nur-auf-befehl.md)
   - Hinweis, dass Umschalt+Ziehen in vielen Programmen Text markiert
 
 ## Aufgaben
-- [ ] Core: `EdgeBuffer` und `AxisLock` mit Tests (Abdeckung ≥ 90 %). Fälle: alle drei Stufen,
+- [x] Core: `EdgeBuffer` und `AxisLock` mit Tests (Abdeckung ≥ 90 %). Fälle: alle drei Stufen,
       Rückzug setzt zurück, Ecke zwischen drei Monitoren, Monitore mit Versatz, Achse nach 8 px,
       Diagonale, Taste los.
-- [ ] Benchmark: Hook-Pfad je Mausbewegung `0 B` (`EdgeBuffer`, `AxisLock`).
-- [ ] Platform: Hook-Modus „begrenzen“, Band per `ClipCursor`, linke/rechte Taste unterscheiden,
-      neu anwenden nach Desktopwechsel.
-- [ ] App: Controller, Einstellungskarte, Werkswerte aus.
-- [ ] Telemetrie (ADR-0019):
+- [x] Benchmark: Hook-Pfad je Mausbewegung `0 B` (`EdgeBuffer`, `AxisLock`)
+      (`PointerConstraintBenchmarks`, Allokationstests `PointerConstraintAllocationTests`).
+- [x] Platform: Hook-Modus „begrenzen“, linke/rechte Taste unterscheiden, neu anwenden nach
+      Desktopwechsel. **Abweichung:** kein `ClipCursor`-Band; Puffer und Achse sind Filter im
+      Zaun-Hook aus Schritt 0 (`IPointerMoveFilter`), die Haltetaste ein eigener lesender
+      `WH_KEYBOARD_LL`-Hook (`Win32HoldKeyWatch`), `Win32InputActivityHook` bleibt unberührt.
+- [x] App: Controller, Einstellungskarte, Werkswerte aus.
+- [x] Telemetrie (ADR-0019):
   - Zähler `zoomin.pointer.buffer_blocked` (gestoppte Übergänge) und `zoomin.pointer.axis_lock`
     (Nutzungen, Tag Achse)
   - Logs App 1760–1779, Platform 2960–2979
   - Keine Koordinaten pro Bewegung loggen
   - Katalog `docs/kb/telemetrie.md`
-- [ ] Texte Deutsch/Englisch. Bildschirmleser liest die Karte vollständig, die Stufen haben
-      verständliche Namen.
-- [ ] KB: `docs/kb/eingabe-und-tracking.md` (Puffer, Achse, ClipCursor-Rücksetzung durch Windows).
+- [x] Texte Deutsch/Englisch. Bildschirmleser liest die Karte vollständig, die Stufen haben
+      verständliche Namen (Namen und Hilfetexte über `SettingCard`; Vorlesen mit Sprachausgabe
+      noch vom Nutzer zu prüfen).
+- [x] KB: `docs/kb/eingabe-und-tracking.md` (Puffer, Achse, ClipCursor-Rücksetzung durch Windows).
 
 ## Parallelisierung
 - **Gehört allein dieser Spur:**
@@ -92,13 +96,20 @@ Grundsatz: [ADR-0028](../../adr/0028-zeiger-versetzen-nur-auf-befehl.md)
   Hook-Zustand von A6 auf. Reihenfolge im Hook: Bearbeitungsmodus (B1) vor Achse vor Puffer.
 
 ## Akzeptanzkriterien
-- [ ] Puffer aus: Verhalten wie Windows.
-- [ ] Puffer an: Der Zeiger bleibt am Rand stehen und kommt erst nach der Druckzeit der Stufe hinüber.
-- [ ] Ein eingefrorener Monitor (nach dem Merge mit G2) bleibt unabhängig vom Puffer gesperrt.
-- [ ] Achsensperre: Mit gehaltener Taste bewegt sich der Zeiger nur auf einer Achse, beim Loslassen
-      ist er sofort frei.
-- [ ] Nach Win+L, UAC und Abstecken eines Monitors ist der Zeiger nie eingesperrt.
-- [ ] Mausbewegung bleibt flüssig: kein spürbarer Versatz, Hook-Pfad ohne Allokation.
+Stand Spur C: Logik und Ablauf durch Tests belegt; die Sichtprüfung mit echter Maus und zwei
+Monitoren steht noch aus (Integration).
+- [x] Puffer aus: Verhalten wie Windows (kein Filter angemeldet, kein Hook; `Factory_RegistersNothing`).
+- [x] Puffer an: Der Zeiger bleibt am Rand stehen und kommt erst nach der Druckzeit der Stufe hinüber
+      (`EdgeBufferTests`).
+- [ ] Ein eingefrorener Monitor (nach dem Merge mit G2) bleibt unabhängig vom Puffer gesperrt
+      (durch die Zaun-Reihenfolge gegeben, Filter vor gesperrten Bereichen; nach dem Merge prüfen).
+- [x] Achsensperre: Mit gehaltener Taste bewegt sich der Zeiger nur auf einer Achse, beim Loslassen
+      ist er sofort frei (`AxisLockTests`, `HoldKeyWatchTests`).
+- [ ] Nach Win+L, UAC und Abstecken eines Monitors ist der Zeiger nie eingesperrt (Logik getestet:
+      verpasstes Loslassen, Neustart der Haltetaste nach Desktopwechsel, Monitore neu nach
+      Anzeigewechsel; echter Ablauf noch von Hand prüfen).
+- [ ] Mausbewegung bleibt flüssig: kein spürbarer Versatz, Hook-Pfad ohne Allokation (`0 B`
+      belegt; „spürbar“ prüft der Nutzer).
 
 ## Offene Fragen / Risiken
 - **Hook-Zeitlimit:** Windows entfernt einen `WH_MOUSE_LL`-Hook, der zu langsam antwortet

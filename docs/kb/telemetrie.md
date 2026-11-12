@@ -69,8 +69,8 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 ## EventId-Bereiche
 | Bereich | Projekt |
 |---|---|
-| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1500 Maus folgen, 1520 Übersicht, 1540 Fenster-Verschieben, 1600 Schärfe/Fett – reserviert, noch ungenutzt, 1620 eigene Farbschemata, 1640–1659 Markierungen) |
-| 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe, 2900 Fenster-Verschieben, 2920 Übersicht, 2940 Zeigerzaun und Zeiger versetzen, 2950–2959 Haltetaste) |
+| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1500 Maus folgen, 1520 Übersicht, 1540 Fenster-Verschieben, 1600 Schärfe/Fett – reserviert, noch ungenutzt, 1620 eigene Farbschemata, 1640–1659 Markierungen, 1760 Maus-Puffer und Achsensperre) |
+| 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe, 2900 Fenster-Verschieben, 2920 Übersicht, 2940 Zeigerzaun und Zeiger versetzen, 2950–2959 Haltetaste, 2960 Haltetaste der Achsensperre) |
 | 3000–3999 | Rendering (3100 Übersicht, 3200 Schärfe/Fett, 3220 eigene Farbschemata, 3240–3259 Markierungen, 3300 Standbild) |
 | 4000–4999 | Watchdog |
 | 5000–5999 | Setup |
@@ -112,6 +112,7 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.agent.command` | app | Ein KI-Debug-Befehl über die Pipe (ADR-0027; Tag `zoomin.agent.tool`: Werkzeugname oder `unknown`; Fehler: Ausnahmetyp bzw. `failed`) |
 | `zoomin.pointer.fence` | app, secure | Zeigerzaun neu berechnet und durchgesetzt (ADR-0028; Tags `zoomin.fence.mode`: `off`, `clip`, `hook`; `zoomin.fence.trigger`: `request`, `desktop_switch`, `session_unlock`, `display_change`; `zoomin.fence.forbidden`: Zahl der gesperrten Rechtecke) |
 | `zoomin.pointer.move` | app | Zeiger per Kürzel versetzt (ADR-0028; Tags `zoomin.reason`: `FreezeMonitor`, `NextMonitor`; `zoomin.monitor`; abgelehnt → Status Error) |
+| `zoomin.pointer.constraint` | app | Maus-Puffer und Achsensperre (A6) angewendet, nur bei einer Änderung der Einstellung (Tags `zoomin.buffer`: `Off`, `Light`, `Medium`, `Strong`; `zoomin.axis_lock`; `zoomin.monitors`; Fehler: Ausnahmetyp). Keine Koordinaten |
 | `zoomin.view.window_drag` | app, secure | Fenster verschieben oder Größe ändern (G1), von der ersten Fensteränderung bis zum Loslassen; nur wenn ein Ziehen etwas bewirken kann (Zoom an, nicht Angedockt, Aktion nicht „unverändert“, ein Schalter an). Tags `zoomin.drag.kind` (`move`, `resize`; `unknown` nur bei Umriss-Ziehen mit unklarer Trefferzone), `zoomin.drag.action` (`lift`, `lower`; `unchanged` nur, wenn die Einstellung zwischen Drücken und Ziehen wechselte), `zoomin.zoom.before` (Stufe des Nutzers), `zoomin.zoom.during` (vorübergehende Stufe; fehlt, wenn sie nichts absenkte), `zoomin.drag.crossed_monitor`, `zoomin.drag.cleared` (Befehl des Nutzers oder neue Monitoranordnung), `zoomin.monitor` (Monitor am Ende). Keine Fenstertitel |
 
 ## Katalog: Messwerte
@@ -144,6 +145,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.windowfilter.regions_dropped` | Fenster | – | Fenster über dem Limit von 64 Bereichen, die den Monitorfilter zeigen (je Aktualisierung; dazu Log 2705) |
 | `zoomin.pointer.fence_blocked` | Bewegungen | – | Mausbewegungen, die der Zaun-Hook verschluckt oder an den Rand geklemmt hat (beobachtbarer Zähler: der Hook zählt nur, ohne Allokation) |
 | `zoomin.pointer.fence_changes` | Änderungen | `zoomin.fence.mode`, `zoomin.fence.trigger` (wie oben, dazu `clip_lost`, `hook_lost`, `dispose`) | Zaun gesetzt, neu gesetzt (z. B. nach Win+L) oder gelöst |
+| `zoomin.pointer.buffer_blocked` | Drück-Anläufe | – | Maus-Puffer (A6): Beginn eines Drückens gegen einen Monitorrand, das der Puffer zurückhält. Zählt jeden Neubeginn (nach Rückzug, zu langer Pause, neuer Richtung) und auch Anläufe, die danach hinüberführen oder auf einen eingefrorenen Monitor zielen; also eine obere Grenze der wirklich verhinderten Wechsel (beobachtbarer Zähler, der Hook zählt nur, ohne Allokation) |
+| `zoomin.pointer.axis_lock` | Nutzungen | `zoomin.axis` (`horizontal`, `vertical`) | Achsensperre (A6): Haltetaste gedrückt und nach 8 px eine Achse gewählt (beobachtbarer Zähler, ohne Allokation im Hook) |
 | `zoomin.render.still_images` | Bilder | – | Gehaltene Standbilder auf der GPU (M19, Baustein „Standbild“): +1 beim Anlegen, −1 beim Freigeben |
 | `zoomin.render.enhance_gpu_ms` | ms | `zoomin.monitor` | Zusatz-GPU-Zeit von Schärfe/Fett im Magnify-Durchgang (M18, D1): nach jeder Wertänderung und nach gezeichneten Frames ohne Schärfe/Fett (unter 1,5×, andere Glättung) erneut, 32 Frames ohne gegen mit nach 60 Frames Aufwärmen (`PassCostProbe`); gemessen wird genau die gezeichnete Ansicht – bei Lupe/angedockt nur deren Fläche, also nicht mit Vollbild-Werten vergleichbar. Nur solange jemand das Instrument abonniert, sonst keine Messzeichnungen. Budget 0,05 ms auf RTX 3060 Ti bei 1080p Vollbild |
 | `zoomin.filters.custom_schemes` | Schemata | – | Anzahl der eigenen Farbschemata (0–4, Gauge; beim Start und bei jeder Änderung, M18) |
@@ -207,6 +210,11 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1640 | Info | Caret marker changed: {Shape}, {Thickness} – Form oder Dicke auf der Seite „Fokus & Textcursor“ geändert (E2) |
 | 1650 | Info | Show condition of {Marker} changed: {Condition} – `crosshair`, `caret`, `focus_frame`; auch beim Profilwechsel (E1) |
 | 1651 | Info | Hold key changed: {Key} (E1) |
+| 1760 | Info | Pointer constraint: buffer {Buffer}, axis lock {AxisLock} with {Key}, {Monitors} monitors – Maus-Puffer und Achsensperre (A6) angewendet, nur bei einer Änderung |
+| 1761 | Debug | Pointer constraint re-applied after {Trigger} ({Monitors} monitors) – Monitore nur nach `DisplayChange` neu gelesen (sonst 0); nach Desktopwechsel/Entsperren beginnt die Haltetaste von vorn |
+| 1762 | Fehler | Applying the pointer constraint failed; buffer and axis lock are off |
+| 1763 | Fehler | Re-applying the pointer constraint after {Trigger} failed |
+| 1764 | Debug | Pointer constraint: monitors read again ({Monitors} monitors) – Wiederholung nach einem Anzeigewechsel oder wenn weniger als zwei Monitore lesbar waren (jede Sekunde, höchstens zehnmal je Anlass) |
 | 2001 | Fehler | UI Automation is unavailable; focus tracking is off |
 | 2002 | Info | Caret source in {Process}: {Source} |
 | 2003 | Fehler | Reading focus and caret failed; tracking goes on with the system caret |
@@ -284,6 +292,11 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2952 | Fehler | Installing the hold key hook failed; highlights shown only while a key is held stay hidden (E1) |
 | 2953 | Fehler | Hold key handler failed (E1) |
 | 2954 | Warnung | Hold key is down but the hook saw no press; following the key state instead – Hook von Windows entfernt oder Taste schon vor dem Start gehalten; einmal je Hook-Start (E1) |
+| 2960 | Info | Axis lock key watch started for {Key} |
+| 2961 | Info | Axis lock key watch stopped |
+| 2962 | Warnung | Axis lock: installing the keyboard hook failed; the axis lock does not react to its key |
+| 2963 | Debug | Axis lock key release was missed (e.g. another desktop was active); released by the check – Taste bei der Prüfung nicht gedrückt (Prüfung alle 0,5 s, nur solange sie als gehalten gilt) |
+| 2964 | Fehler | Axis lock key handler failed {Count} times – vom Prüftakt (auch einmal 0,5 s nach dem Loslassen), `Reset` oder `Stop` gemeldet, nie aus dem Tastatur-Hook |
 | 3001 | Info | Zoom pipeline ready for {Monitor} |
 | 3002 | Info | Display changed on {Monitor}: {Reason} |
 | 3003 | Fehler | Zoom pipeline for {Monitor} failed |
