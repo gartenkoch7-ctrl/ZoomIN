@@ -16,6 +16,9 @@ internal static partial class PointerConstraintLog
     [LoggerMessage(EventId = 1762, Level = LogLevel.Error, Message = "Applying the pointer constraint failed; buffer and axis lock are off")]
     public static partial void ApplyFailed(this ILogger logger, Exception exception);
 
+    [LoggerMessage(EventId = 1764, Level = LogLevel.Debug, Message = "Pointer constraint: monitors read again ({Monitors} monitors)")]
+    public static partial void MonitorsReread(this ILogger logger, int monitors);
+
     [LoggerMessage(EventId = 1763, Level = LogLevel.Error, Message = "Re-applying the pointer constraint after {Trigger} failed")]
     public static partial void ReapplyFailed(this ILogger logger, Exception exception, FenceTrigger trigger);
 }

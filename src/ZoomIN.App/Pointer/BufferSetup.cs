@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Pointer;
-using ZoomIN.Core.PointerFence;
 
 namespace ZoomIN.App.Pointer;
 
@@ -83,11 +82,11 @@ internal sealed class BufferSetup(EdgeBuffer buffer, IMonitorProvider monitors, 
         try
         {
             var count = Configure(null, retry: true, confirm: false);
-            log.Reapplied(FenceTrigger.DisplayChange, count);
+            log.MonitorsReread(count);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            log.ReapplyFailed(ex, FenceTrigger.DisplayChange);
+            log.ApplyFailed(ex);
         }
     }
 }

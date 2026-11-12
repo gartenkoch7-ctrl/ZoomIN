@@ -196,9 +196,10 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1541 | Info | Monitors changed during a window drag; its zoom level was given back |
 | 1542 | Fehler | Handling a window drag failed |
 | 1760 | Info | Pointer constraint: buffer {Buffer}, axis lock {AxisLock} with {Key}, {Monitors} monitors – Maus-Puffer und Achsensperre (A6) angewendet, nur bei einer Änderung |
-| 1761 | Debug | Pointer constraint re-applied after {Trigger} ({Monitors} monitors) – Monitore neu gelesen; nach Desktopwechsel/Entsperren beginnt die Haltetaste von vorn |
+| 1761 | Debug | Pointer constraint re-applied after {Trigger} ({Monitors} monitors) – Monitore nur nach `DisplayChange` neu gelesen (sonst 0); nach Desktopwechsel/Entsperren beginnt die Haltetaste von vorn |
 | 1762 | Fehler | Applying the pointer constraint failed; buffer and axis lock are off |
 | 1763 | Fehler | Re-applying the pointer constraint after {Trigger} failed |
+| 1764 | Debug | Pointer constraint: monitors read again ({Monitors} monitors) – Wiederholung nach einem Anzeigewechsel oder wenn weniger als zwei Monitore lesbar waren (jede Sekunde, höchstens zehnmal je Anlass) |
 | 2001 | Fehler | UI Automation is unavailable; focus tracking is off |
 | 2002 | Info | Caret source in {Process}: {Source} |
 | 2003 | Fehler | Reading focus and caret failed; tracking goes on with the system caret |

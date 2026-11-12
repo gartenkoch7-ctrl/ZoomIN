@@ -182,13 +182,23 @@ public sealed class PointerConstraintController : IDisposable
                 return;
             }
 
-            var monitors = _bufferSetup.Refresh();
-            if (Volatile.Read(ref _applied) is { AxisLock: true } && trigger is FenceTrigger.DesktopSwitch or FenceTrigger.SessionUnlock)
+            var applied = Volatile.Read(ref _applied);
+            var monitors = 0;
+            if (applied is { Buffer: not EdgeBufferLevel.Off } && trigger == FenceTrigger.DisplayChange)
+            {
+                // Only a display change moves monitors; Win+L or UAC keep the layout.
+                monitors = _bufferSetup.Refresh();
+            }
+
+            if (applied is { AxisLock: true } && trigger is FenceTrigger.DesktopSwitch or FenceTrigger.SessionUnlock)
             {
                 _axis.KeysMissed();
             }
 
-            _log.Reapplied(trigger, monitors);
+            if (applied is not null)
+            {
+                _log.Reapplied(trigger, monitors);
+            }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
