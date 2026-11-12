@@ -54,6 +54,22 @@ public sealed class HoldKeyTrackerTests
     }
 
     [Fact]
+    public void MissedRelease_EndsTheHold_EvenWhileTyping()
+    {
+        var tracker = new HoldKeyTracker();
+        var handler = new CountingHandler();
+        tracker.Start(MarkerHoldKey.RightShift, down: false);
+        tracker.OnKey(handler, VIRTUAL_KEY.VK_RSHIFT, 0x36, down: true, up: false);
+
+        // The release went to an elevated window; the user keeps typing between the checks.
+        tracker.OnKeyState(handler, pressed: false);
+        tracker.OnKey(handler, VIRTUAL_KEY.VK_A, 0x1E, down: true, up: false);
+        tracker.OnKeyState(handler, pressed: false);
+
+        Assert.Equal(1, handler.Ups);
+    }
+
+    [Fact]
     public void KeyEvents_PressReleaseAndTyping()
     {
         var tracker = new HoldKeyTracker();

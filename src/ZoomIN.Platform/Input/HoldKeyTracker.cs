@@ -42,7 +42,7 @@ internal sealed class HoldKeyTracker
     {
         // A new hold key: the old one's release will not come, so its press no longer blocks counting.
         var holdKey = handler.Key;
-        (_suspect, _releaseSuspect) = (false, false); // the hook is alive and reports the key itself
+        _suspect = false; // the hook is alive: a press it did not report is the lag after a release
         if (holdKey != _downKey)
         {
             (_down, _downKey) = (false, holdKey);
@@ -51,7 +51,9 @@ internal sealed class HoldKeyTracker
         switch (HoldKeyCodes.Classify(key, scanCode, down, up, holdKey))
         {
             case HoldKeyEvent.Down:
-                // Key repeat sends further "down" events while held; count the press once.
+                // Key repeat sends further "down" events while held; count the press once. Only events
+                // of the hold key itself clear a pending release check, not other keys typed meanwhile.
+                _releaseSuspect = false;
                 if (!_down)
                 {
                     _down = true;
@@ -61,6 +63,7 @@ internal sealed class HoldKeyTracker
                 handler.HoldKeyDown();
                 break;
             case HoldKeyEvent.Up:
+                _releaseSuspect = false;
                 _down = false;
                 handler.HoldKeyUp();
                 break;
