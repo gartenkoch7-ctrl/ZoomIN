@@ -6,7 +6,8 @@ namespace ZoomIN.Platform.Lifecycle;
 
 /// <summary>
 /// Autostart via the per-user Run key (no admin rights). The watchdog is started by ZoomIN
-/// itself, so only the main exe is registered.
+/// itself, so only the main exe is registered. Since ADR-0030 only for the portable ZIP and
+/// developer builds; an installed ZoomIN uses <see cref="EaseOfAccessAutostart"/>.
 /// </summary>
 public sealed class RegistryAutostart : IAutostart
 {
@@ -17,7 +18,7 @@ public sealed class RegistryAutostart : IAutostart
     private readonly string _command;
 
     public RegistryAutostart()
-        : this(RunKey, $"\"{StableExecutablePath()}\"")
+        : this(RunKey, $"\"{StableExecutablePath(Environment.ProcessPath)}\"")
     {
     }
 
@@ -30,10 +31,10 @@ public sealed class RegistryAutostart : IAutostart
 
     // An installed ZoomIN runs from a version folder that a later update removes (ADR-0015);
     // autostart must use the "current" link, which always points at the installed version.
-    private static string? StableExecutablePath() =>
-        InstallLayout.TryFromExecutable(Environment.ProcessPath, out var layout)
+    internal static string? StableExecutablePath(string? executable) =>
+        InstallLayout.TryFromExecutable(executable, out var layout)
             ? layout.CurrentExecutable
-            : Environment.ProcessPath;
+            : executable;
 
     public bool IsEnabled
     {
@@ -41,6 +42,16 @@ public sealed class RegistryAutostart : IAutostart
         {
             using var key = Registry.CurrentUser.OpenSubKey(_keyPath);
             return key?.GetValue(ValueName) is string value && value == _command;
+        }
+    }
+
+    /// <summary>A "ZoomIN" Run value exists, whatever it points at (older versions, other folders).</summary>
+    public bool Exists
+    {
+        get
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(_keyPath);
+            return key?.GetValue(ValueName) is not null;
         }
     }
 

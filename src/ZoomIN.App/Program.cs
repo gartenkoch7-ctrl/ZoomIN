@@ -11,11 +11,13 @@ using ZoomIN.App.SecureDesktop;
 using ZoomIN.App.Updates;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Folders;
+using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.AgentDebug;
 using ZoomIN.Platform.Diagnostics;
 using ZoomIN.Platform.Folders;
+using ZoomIN.Platform.Lifecycle;
 using ZoomIN.Platform.SecureDesktop;
 using ZoomIN.Watchdog;
 using ZoomIN.Watchdog.Crashes;
@@ -40,10 +42,14 @@ public static class Program
     /// <summary>From process start until the tray app is ready (ended by <see cref="App"/>).</summary>
     internal static Activity? StartOperation { get; set; }
 
+    /// <summary>How the tray app was started (ADR-0030); decides the Ease of Access signal in <see cref="App"/>.</summary>
+    internal static LaunchOrigin Origin { get; private set; } = LaunchOrigin.Unknown;
+
     [STAThread]
     public static int Main(string[] args)
     {
         args = TraceParentArgument.Extract(args, out var traceParent);
+        args = LaunchOrigin.ExtractMarker(args, out var leftJob);
         if (WatchdogArguments.TryParse(args, out var processId, out var secure))
         {
             return RunRole(TelemetryRole.Watchdog, traceParent, log =>
@@ -97,21 +103,40 @@ public static class Program
             return RunFlow(TelemetryRole.Uninstall, traceParent, services => services.GetRequiredService<UninstallFlow>().RemoveElevated(asker));
         }
 
-        if (RestartArguments.TryParse(args, out var oldProcess))
+        var restarted = RestartArguments.TryParse(args, out var oldProcess);
+        if (restarted)
         {
             WaitForExit(oldProcess);
         }
 
-        using var instance = SingleInstance.TryAcquire();
+        // Ease of Access starts the tray app in a job that ends at the next lock screen (ADR-0030):
+        // leave it before taking the single-instance mutex, so the new instance can take it.
+        Origin = new LaunchOriginProbe().Read(leftJob) with { AfterRestart = restarted };
+        if (Origin.ShouldLeaveJob && SingleInstance.IsTaken())
+        {
+            // Windows started its AT again while ZoomIN runs outside the job: nothing to do.
+            return 0;
+        }
+
+        var early = Origin.ShouldLeaveJob ? Start(TelemetryRole.App, traceParent) : null;
+        if (early is not null && LeaveJob(early, args))
+        {
+            early.Dispose();
+            return 0;
+        }
+
+        using var instance = SingleInstance.TryAcquire(askToOpen: !Origin.ByEaseOfAccess);
         if (instance is null)
         {
+            early?.Dispose();
             return 0;
         }
 
         Instance = instance;
-        using var appTelemetry = Start(TelemetryRole.App, traceParent);
+        using var appTelemetry = early ?? Start(TelemetryRole.App, traceParent);
         Telemetry = appTelemetry;
         StartOperation = appTelemetry.StartOperation("zoomin.app.start");
+        PrepareAutostart(appTelemetry, reported: early is not null);
         WinRT.ComWrappersSupport.InitializeComWrappers();
         Application.Start(callbackParams =>
         {
@@ -120,6 +145,32 @@ public static class Program
             _ = new App();
         });
         return 0;
+    }
+
+    /// <summary>Logs the job found and starts ZoomIN again outside it; true if this instance must exit.</summary>
+    private static bool LeaveJob(TelemetryHost telemetry, string[] args)
+    {
+        using var operation = telemetry.StartOperation("zoomin.autostart.leave_job");
+        var breakaway = new JobBreakaway(telemetry.Logger<JobBreakaway>());
+        breakaway.Report(Origin);
+        var left = breakaway.TryRelaunch(Environment.ProcessPath!, args);
+        operation?.SetTag("zoomin.autostart.left_job", left);
+        return left;
+    }
+
+    /// <summary>
+    /// How Windows started the tray app (spike A1; unless <see cref="LeaveJob"/> logged it already)
+    /// and the one-time move of the autostart into the Ease of Access list (ADR-0030), before any
+    /// view model reads the autostart.
+    /// </summary>
+    private static void PrepareAutostart(TelemetryHost telemetry, bool reported)
+    {
+        if (!reported)
+        {
+            new JobBreakaway(telemetry.Logger<JobBreakaway>()).Report(Origin);
+        }
+
+        new AutostartMigration(new AutostartSelector(telemetry.Logger<AutostartSelector>()), telemetry.Logger<AutostartMigration>()).Migrate();
     }
 
     /// <summary>A short-lived role with its own small container (installation services, its flow).</summary>

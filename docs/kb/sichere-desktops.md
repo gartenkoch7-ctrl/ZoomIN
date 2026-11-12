@@ -120,6 +120,82 @@ Schlüssel `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Accessibility\ATs\
 - Prüfen, ob wirklich gesperrt wurde: Ereignisanzeige `Microsoft-Windows-Winlogon/Operational`,
   Ereignis 811 mit Benachrichtigung (4) = Sperre, (5) = Entsperren.
 
+## Autostart über die Erleichterte Bedienung (M10-Abschluss, Spur A, ADR-0030)
+Umgesetzt (Stand 2026-11-12, Branch `feat/m10-a-autostart`):
+- **Installiert:** „Mit Windows starten“ schreibt `ZoomIN` in HKCU
+  `Software\Microsoft\Windows NT\CurrentVersion\Accessibility\Configuration` (`EaseOfAccessAutostart`).
+  Andere Namen (z. B. `nvda_nvda_v1`) bleiben, Groß/klein egal. Ein alter Run-Wert wird bei jedem
+  Umschalten mit entfernt (`AutostartSelector`), sonst würde ein zweiter Start das Einstellungsfenster
+  öffnen. **ZIP/Entwickler-Build:** weiter Run-Eintrag.
+- Windows startet Namen aus der Liste nur, wenn HKLM `ATs\ZoomIN` existiert. Darum bleibt der
+  AT-Eintrag, solange ZoomIN installiert ist, auch bei „Sperrbildschirm aus“. Aus heißt jetzt:
+  HKLM `Configuration` ohne ZoomIN und `SecureDesktopAccommodation=none` unter `ATs\ZoomIN`
+  (Annahme laut Doku, beim Testbuild prüfen: Autostart läuft, auf der Sperre startet nichts).
+- **Falle Update:** `--apply-update` führt die bisher installierte Version aus. Hatte sie
+  „Sperrbildschirm aus“, löscht sie `ATs\ZoomIN`. Darum wählt `AutostartSelector` die Liste nur,
+  wenn `ATs\ZoomIN` existiert, sonst den Run-Eintrag. `AutostartMigration` wartet dann
+  (Log 2321) und zieht beim ersten Start nach dem nächsten erhöhten Schritt um.
+- **Umzug:** Beim Start der Tray-App: installiert und Run-Wert `ZoomIN` vorhanden → erst Listeneintrag,
+  dann Run-Wert löschen (Log 2320, Ablauf `zoomin.autostart.migrate`). Ohne Run-Wert ändert sich nichts.
+- **Deinstallation:** `UninstallFlow` schaltet über `AutostartSelector` aus: Listeneintrag und Run-Wert
+  des deinstallierenden Benutzers sind weg; `RemoveAll` löscht `ATs\ZoomIN` und den HKLM-Listeneintrag.
+- **Job-Ausstieg (Spike A1):** `Program` prüft vor dem Einzelinstanz-Mutex `IsProcessInJob`, die
+  Limits des Jobs (`QueryInformationJobObject`) und den Elternprozess (Toolhelp-Schnappschuss,
+  Name ohne Pfad; unbekannt, wenn er jünger ist als wir oder sein Alter nicht lesbar ist –
+  dann könnte die Id schon einem anderen Prozess gehören). Start durch die Erleichterte Bedienung =
+  Eltern `ATBroker`/`utilman`, oder im Job mit schon beendetem Elternprozess (nicht nach
+  `--wait-for`, dort endet der Elternprozess absichtlich), oder Marker `--left-job`. Erlaubt der Job den Ausstieg (`JOB_OBJECT_LIMIT_BREAKAWAY_OK` 0x800 oder
+  `SILENT_BREAKAWAY_OK` 0x1000), startet ZoomIN sich mit `CREATE_BREAKAWAY_FROM_JOB` und
+  `--left-job` neu und endet, ohne den Mutex je zu halten. Lehnt `CreateProcess` die
+  UIAccess-EXE ab (Fehler 740), versucht es ShellExecute; ob dieser Prozess draußen ist, loggt er selbst.
+  Vermutung (ungeprüft): Über ShellExecute erzeugt der AppInfo-Dienst den Prozess mit uns als
+  Elternteil, er landet dann im selben Job (Log 2327). Ob `CreateProcess` aus einer Instanz mit
+  UIAccess klappt, zeigt 2324 `breakaway`.
+- Bekannte Grenze: Steckt ein anderer Starter in einem Job und endet sofort nach dem Start von
+  ZoomIN, zählt das als Start durch die Erleichterte Bedienung (kein Start-Signal, unnötiger
+  Neustart). Der Spike zeigt, ob die Regel „Job ohne Elternprozess“ überhaupt gebraucht wird.
+- `EaseOfAccessNotifier` (Win+U-Trick): Das **Start**-Signal kommt nur noch, wenn **nicht** die
+  Erleichterte Bedienung gestartet hat (Startmenü, Run-Eintrag, nach Update); sonst Log 2328. Das
+  **Ende**-Signal (Tray › Beenden) kommt immer: Laut Doku muss ein von der Erleichterten Bedienung
+  gestartetes Hilfsmittel, das sich selbst beendet, das melden.
+- `AutostartSelector` prüft `ATs\ZoomIN` bei jedem Lesen und Schalten, nicht nur beim Start: Der
+  erhöhte Schritt kann den Eintrag schreiben, während die App läuft.
+
+### Spike A1 durchführen (Nutzer, offen)
+Voraussetzung: Testbuild dieses Stands installiert, „Mit Windows starten“ an. Prüfen in `regedit`
+(nicht aus einer Agenten-Shell, die sieht ein umgeleitetes HKCU):
+`HKCU\Software\Microsoft\Windows NT\CurrentVersion\Accessibility` → `Configuration` enthält
+`ZoomIN`; unter `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` gibt es keinen Wert `ZoomIN`.
+1. **Abmelden und wieder anmelden** (kein Neustart nötig). Etwa 10 s warten, bis das Tray-Symbol da ist.
+   Ein Start durch die Erleichterte Bedienung, der auf eine laufende ZoomIN trifft, endet still
+   (kein Einstellungsfenster). Stehen 2323/2324 im Log mehrfach, hat Windows die beendete
+   Job-Instanz neu gestartet – notieren.
+2. Neueste Datei aus `%LocalAppData%\ZoomIN\logs\` sichern (Agent: per Terminal-Panel nach
+   `TestResults/` kopieren). Gesucht:
+   - **2323 der ersten Instanz:** `in job True, job limits 0x…, parent ATBroker, … Ease of Access
+     start True` → Start im Job, welche Limits, wer startet.
+   - **2324** `started process N (breakaway)` → Ausstieg geklappt; `(shell)` → `CreateProcess` hat die
+     UIAccess-EXE abgelehnt.
+   - **2325** (Job verbietet den Ausstieg) oder **2326** (Fehlercode) → Kandidat 1 gescheitert.
+   - **2323 der zweiten Instanz:** `in job False, … parent ZoomIN, left job True` → draußen.
+     **2327** → trotz Neustart im Job.
+   - **2328** → kein Win+U gesendet.
+3. **Win+L**, 5 s warten: Ist der Sperrbildschirm vergrößert? Entsperren: Ist das Tray-Symbol noch
+   da, und steht im Benutzer-Log **keine** neue 2323 (die Tray-App lief durch)?
+4. Eine **UAC-Abfrage** auslösen (z. B. Rechtsklick › Als Administrator ausführen): vergrößert?
+5. Tray › **Beenden** (Log 2301 `exiting`), dann **Win+L**: Die Sperre darf **nicht** vergrößert sein.
+6. ZoomIN aus dem **Startmenü** starten: 2323 mit `parent explorer, … Ease of Access start False`
+   und 2301 `Ease of Access notified (starting)`; danach Win+L vergrößert.
+7. Optional (Adminrechte, der Nutzer setzt es selbst): HKLM `ATs\ZoomIN\TerminateOnDesktopSwitch=0`,
+   Schritte 1–3 wiederholen. Bleibt die sichere Instanz stehen, wie lange dauert der zweite Start
+   (SYSTEM-Log 1107)? Danach den Wert zurück auf 1.
+
+**Auswertung:** 2324 + zweite Instanz `in job False` + Tray überlebt Win+L + Sperre vergrößert →
+Spike gelungen, Nachtrag in ADR-0030. Sonst gilt Q9 ohne Rückfrage: geplante Aufgabe bei der
+Anmeldung (`TaskSchedulerAutostart`, noch nicht gebaut), Win+U-Trick bleibt.
+- Sonderfall: Ausstieg gelingt, Tray überlebt, aber die Sperre bleibt unvergrößert → Windows hält
+  das Hilfsmittel nach dem Ende der Job-Instanz für beendet. Dann müsste die neue Instanz
+  (`--left-job`) das Start-Signal senden; das ist eine neue Entscheidung, kein stiller Umbau.
 ## Startzeit, Prüf-Logs, Schnappschuss, SYSTEM-Logs (M10-Abschluss, Spur C, 2026-11-12)
 - **Ursache der ~1 s Lücke (aus dem Code):** Log 1107 wartete auf `ZoomController.Status.IsVisible`.
   Der Render-Thread veröffentlicht seinen Status aber nur **einmal je Sekunde** (`FrameStatistics.SecondElapsed`,

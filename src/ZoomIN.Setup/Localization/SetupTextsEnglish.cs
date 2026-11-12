@@ -34,7 +34,7 @@ internal static class SetupTextsEnglish
 
         ["Step2.Title"] = "Settings",
         ["Step2.Text"] = "Everything can be changed later in ZoomIN.",
-        ["Autostart"] = "Start ZoomIN with Windows",
+        ["Autostart"] = "Start ZoomIN with Windows (right after sign-in)",
         ["Desktop"] = "Shortcut on the desktop",
         ["Updates"] = "Check for new versions",
         ["SecureDesktop"] = "Also magnify the sign-in screen, lock screen and administrator prompts",

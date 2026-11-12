@@ -300,7 +300,15 @@ Tray-App außerhalb des Jobs weiterlaufen lassen?
 
 ### Aufgaben (Abschluss)
 - [ ] Integrationsbranch `feat/m10-abschluss`, Spuren A, B, C gleichzeitig (Worktree je Spur)
-- [ ] Spike A1, Ergebnis als Nachtrag in ADR-0030
+- [x] Spur A: Paket A2 umgesetzt (`feat/m10-a-autostart`); Job-Prüfung und Ausstieg für A1 gebaut,
+  Win+U-Trick nur noch ohne Start durch die Erleichterte Bedienung
+- [ ] Integration nach dem Merge von B: `ServiceRegistration.cs` Zeilen 57 und 108
+  `IAutostart` → `AutostartSelector` (sonst nutzen Schalter, Willkommen und Deinstallation weiter
+  nur den Run-Eintrag, während die Migration schon in die Liste umzieht); vor dem Testbuild für A1
+- [ ] Spike A1, Ergebnis als Nachtrag in ADR-0030 – Messung mit dem Nutzer offen, Anleitung in
+  [sichere-desktops.md](../kb/sichere-desktops.md#spike-a1-durchführen-nutzer-offen)
+- [ ] Ausweichweg Q9 (`TaskSchedulerAutostart`, geplante Aufgabe bei der Anmeldung): ausstehend,
+  nur falls der Spike scheitert – noch nicht gebaut
 - [ ] Mergen B → C → A, nach jedem Merge Build und Tests
 - [ ] Gesamt-Review (§9) bis ohne Befunde; `/security-review`
 - [ ] Testbuild installieren (Nutzer), dann die Checkliste in Abschnitt 6 und zusätzlich:

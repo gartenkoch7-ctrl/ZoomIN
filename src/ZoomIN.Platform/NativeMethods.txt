@@ -241,3 +241,11 @@ IsProcessInJob
 WaitForSingleObject
 GetCurrentProcess
 CreateFile
+// Lifecycle/LaunchOriginProbe, Lifecycle/JobBreakaway (M10 A1: leaving the Ease of Access job)
+QueryInformationJobObject
+JOBOBJECT_BASIC_LIMIT_INFORMATION
+CreateToolhelp32Snapshot
+Process32FirstW
+Process32NextW
+PROCESSENTRY32W
+CreateProcess

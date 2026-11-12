@@ -55,7 +55,7 @@ internal static class ServiceRegistration
         services.AddEngine(EngineScope.Full);
 
         services.AddSingleton<ITrayIcon, Win32TrayIcon>();
-        services.AddSingleton<IAutostart, RegistryAutostart>();
+        services.AddSingleton<IAutostart, AutostartSelector>();
         services.AddSingleton<HttpClient, UpdateHttpClient>();
         services.AddSingleton<IReleaseFeed, GitHubReleaseFeed>();
         services.AddSingleton<IPackageDownloader, HttpPackageDownloader>();
@@ -64,6 +64,7 @@ internal static class ServiceRegistration
         services.AddSingleton<IUiAccessProbe, Win32UiAccessProbe>();
         services.AddSingleton<UpdateService>();
         services.AddSingleton<IDiagnosticsPackage, DiagnosticsPackage>();
+        services.AddSingleton<ISecureLogsRequest, ElevatedSecureLogsRequest>();
         services.AddSingleton<SetupLauncher>();
         services.AddSingleton<ISecureDesktopSwitch, SecureDesktopSwitch>();
         services.AddSingleton<IWatchdogLauncher, ShellWatchdogLauncher>();
@@ -106,7 +107,7 @@ internal static class ServiceRegistration
         services.AddSingleton<UpdateRunner>();
         services.AddSingleton<UninstallFlow>();
         services.AddSingleton<IRemovalSteps, ProcessRemovalSteps>();
-        services.AddSingleton<IAutostart, RegistryAutostart>();
+        services.AddSingleton<IAutostart, AutostartSelector>();
         services.AddSingleton<ISecureDesktopSwitch, SecureDesktopSwitch>();
         return services;
     }
