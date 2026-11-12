@@ -214,6 +214,11 @@ Befunde der Reviews, die bewusst nicht als Code umgesetzt sind (Designvorschläg
   Rückgabewert wäre robuster.
 - **Ganze Szene im Einfrieren:** `FrozenMonitor.Islands` hält auch die Inseln anderer Monitore. Jeder
   Leser filtert nach Monitor, wie bei der Live-Szene.
+- **Zeichenregeln an drei Stellen:** „Vollbild über 1×“, „eigener Monitor“ und „passt“ stehen in
+  `OverlayDemand.Islands`, `IslandLayer.Draw` und `FrozenMonitor.ShownIslands`. Ein gemeinsamer
+  Core-Helfer wäre robuster. Ändert sich eine Regel, müssen alle drei mit.
+- **Test der Textur eines eingefrorenen Monitors:** `FrozenLayerTests` prüft nur, dass
+  `DesktopTexture` beim gehaltenen Standbild nicht die Live-Textur liefert, nicht ihre Pixel.
 - **Dateigröße nach dem Merge:** `RenderSession.cs` (264) und `MonitorFreezeController.cs` (259) liegen
   über 250, aber unter 300. Sie sind Integrationsdateien mehrerer Spuren. Aufgeteilt wird nach dem
   Merge aller M19-Spuren im Integrationsbranch, damit andere Spuren keine Konflikte bekommen.
