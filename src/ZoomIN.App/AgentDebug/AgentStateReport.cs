@@ -38,6 +38,14 @@ public sealed class AgentStateReport(
             var temporary = zoom.Temporary.TryGetCeiling(id, out var ceiling)
                 ? string.Create(CultureInfo.InvariantCulture, $" (temporary {ceiling:0.00}, shows {Math.Min(target, ceiling):0.00})")
                 : string.Empty;
+
+            // Frozen (G2): its target is parked; it shows its own level, mode and image, temporary levels pass it by.
+            if (zoom.Frozen.For(id) is { } frozen)
+            {
+                var ignored = temporary.Length > 0 ? string.Create(CultureInfo.InvariantCulture, $", temporary {ceiling:0.00} ignored") : string.Empty;
+                temporary = string.Create(CultureInfo.InvariantCulture,
+                    $" (frozen: shows {frozen.Level:0.00} {frozen.Mode}, {frozen.ImageKind}, {frozen.ShownIslands} frozen islands{ignored})");
+            }
             Line(text, string.Create(CultureInfo.InvariantCulture, $"  {id} {bounds}: zoom {target:0.00}{temporary}, monitor filter {(filter.Enabled ? filter.Filter.ToString() : "off")}"));
         }
 

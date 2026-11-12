@@ -1,5 +1,6 @@
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
+using ZoomIN.Core.Islands;
 using ZoomIN.Core.Overview;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.WindowFilters;
@@ -22,4 +23,7 @@ public sealed record RenderModels(
 {
     /// <summary>Mouse, typing and hold key for the show conditions of the highlights (E1).</summary>
     public MarkerActivity Markers { get; init; } = new();
+
+    /// <summary>Islands above the zoom and their edit mode (M19 B1).</summary>
+    public IslandModel Islands { get; init; } = new(IslandSet.Empty, visible: true);
 }

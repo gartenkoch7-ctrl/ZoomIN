@@ -25,9 +25,13 @@ public sealed partial class PointerPage : Page
 
     public PointerViewModel? Vm { get; private set; }
 
+    /// <summary>Mouse buffer and axis lock (A6); global, so "Reset" leaves it alone.</summary>
+    public PointerConstraintViewModel? Constraint { get; private set; }
+
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         _services = (PageServices)e.Parameter;
+        Constraint = _services.Create<PointerConstraintViewModel>();
         var shapes = _services.Get<ICursorShapeSource>();
         _arrow = shapes.Load(shapes.ArrowHandle());
         CreateViewModel();

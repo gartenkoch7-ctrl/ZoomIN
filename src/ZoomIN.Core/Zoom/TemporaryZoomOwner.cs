@@ -11,4 +11,7 @@ public enum TemporaryZoomOwner
 
     /// <summary>G1: lift or lower the zoom while a window is moved or resized.</summary>
     WindowDrag,
+
+    /// <summary>M19 B1: every monitor at 1× while islands are edited, so the pointer is where the user sees the islands.</summary>
+    IslandEdit,
 }

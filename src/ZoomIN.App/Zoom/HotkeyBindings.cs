@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Logging;
+using ZoomIN.App.Freeze;
+using ZoomIN.App.Islands;
 using ZoomIN.App.Overview;
 using ZoomIN.App.Settings;
 using ZoomIN.Core.Hotkeys;
@@ -10,7 +12,8 @@ namespace ZoomIN.App.Zoom;
 /// <summary>Which shortcut does what: the gesture → action table, registered with Windows (ADR-0008).</summary>
 public sealed class HotkeyBindings(
     SettingsService settings, ProfileService profiles, IHotkeyService hotkeys, ZoomCommands zoom,
-    WindowFilterCommands windowFilter, OverviewController overview, ILogger<HotkeyBindings> log)
+    WindowFilterCommands windowFilter, OverviewController overview, MonitorFreezeController freeze,
+    MonitorSwitchController monitorSwitch, IslandController islands, IslandVisibility islandVisibility, ILogger<HotkeyBindings> log)
 {
     /// <summary>Hotkeys that could not be registered because another application owns them.</summary>
     public IReadOnlyList<HotkeyGesture> Unavailable { get; private set; } = [];
@@ -62,9 +65,25 @@ public sealed class HotkeyBindings(
         Add(s.ProfileHotkey, profiles.Next);
         Add(s.WindowFilterHotkey, () => windowFilter.Toggle());
         Add(s.OverviewHotkey, () => overview.Press());
+        Add(s.IslandsHotkey, islandVisibility.Toggle);
+        Add(s.IslandEditHotkey, () => islands.ToggleEdit());
+        var refusedBefore = unavailable.Count;
+        Add(s.FreezeMonitorHotkey, freeze.ToggleFreeze);
+        var freezeLost = s.FreezeMonitorHotkey.VirtualKey == 0 || unavailable.Count > refusedBefore;
+        Add(s.NextMonitorHotkey, monitorSwitch.NextMonitor);
         Unavailable = unavailable;
+
+        // Without Ctrl+Alt+H nothing could give a frozen monitor back (G2).
+        if (freezeLost)
+        {
+            freeze.LiftAll("shortcut_gone");
+        }
     }
 
-    /// <summary>Releases all shortcuts while the hotkey editor records a new combination.</summary>
-    public void Suspend() => hotkeys.UnregisterAll();
+    /// <summary>Releases all shortcuts while the hotkey editor records a new combination; a freeze ends (G2).</summary>
+    public void Suspend()
+    {
+        hotkeys.UnregisterAll();
+        freeze.LiftAll("shortcut_gone");
+    }
 }

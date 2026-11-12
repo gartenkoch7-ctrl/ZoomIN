@@ -239,6 +239,375 @@ Schema und Standardbelegung: [ADR-0008](../adr/0008-tastenkuerzel-strg-alt.md)
 (Strg+Alt+Taste ohne AltGr-Belegung, Strg+Mausrad mit Vorrang vor Anwendungen).
 Globale Kürzel per `RegisterHotKey`, Mausrad per `WH_MOUSE_LL`.
 
+## Zeigerzaun und Zeiger versetzen (M19 Schritt 0, ADR-0028)
+Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bearbeitungsmodus).
+
+- **Geometrie** (`Core/PointerFence/FenceGeometry`, rein): erlaubt = Vereinigung der Monitore
+  minus gesperrte Rechtecke, als disjunkte Teilrechtecke. Gespiegelte Monitore zählen einmal.
+  Ist das Ergebnis genau ein Rechteck (`SingleRect`), reicht `ClipCursor`; sonst braucht es den
+  Hook. Pixelraster wie bei `RECT`: letzter erreichbarer Pixel ist `Right − 1`.
+- **Klemmen statt Springen:** Eine Bewegung in einen gesperrten Bereich endet am Rand des
+  Teilrechtecks, in dem der Zeiger gerade ist, oder eines Teilrechtecks, das eine Kante mit ihm
+  teilt (eine gemeinsame Ecke reicht nicht, sonst rutscht er diagonal auf einen dritten Monitor; so
+  gleitet er an einer Insel-Kante weiter statt an einer unsichtbaren Naht zu hängen), nie auf
+  einem freien Monitor jenseits des gesperrten. Geprüft
+  wird nur das Ziel, nicht der Weg: Absolute Eingaben (Stift, Fernsteuerung, `SendInput`) dürfen
+  über einen gesperrten Monitor hinweg auf einen freien springen; mit der Maus (relativ, wenige
+  Pixel je Ereignis) kommt das nicht vor. Gewollt: Wer mit dem Stift auf Monitor 2 tippt, will
+  dorthin.
+- **Nie einsperren:** Ist der Zeiger schon in einem gesperrten Bereich (Anzeigewechsel, ein
+  anderes Programm hat ihn versetzt), bewegt er sich frei. Bliebe gar nichts erlaubt (alle
+  Monitore gesperrt, letzter freier abgesteckt), bleibt der Zaun aus (Log 2942).
+- **Modi** (`IPointerFence`, `Platform/PointerFence/Win32PointerFence`): aus · `ClipCursor` ·
+  schreibender `WH_MOUSE_LL`-Hook (`Win32FenceHook`, eigene Klasse und eigener Thread, der
+  lesende `Win32InputActivityHook` bleibt unberührt). Ohne gesperrte Bereiche und ohne Filter
+  läuft nichts. Braucht es den Hook nur wegen Filtern und ist der erlaubte Bereich ein Rechteck,
+  hält zusätzlich `ClipCursor` ihn (stärker: auch absolute Eingaben, keine Lücke beim
+  Neuinstallieren des Hooks).
+- **Hook:** Er fragt pro `WM_MOUSEMOVE` die unveränderliche `FenceDecision` (lock-frei, `0 B`,
+  Test `PointerFenceFailureTests.HookPath_DoesNotAllocate`). Eine abgelehnte Bewegung wird
+  verschluckt (Rückgabe 1), der Zeiger per `SetCursorPos` auf den erlaubten Punkt gesetzt. Das
+  ist die Hook-Form dessen, was `ClipCursor` selbst tut, kein Versetzen im Sinne von ADR-0028.
+  Ohne Klemmen bliebe der Zeiger bei schneller Bewegung einige Pixel vor dem Rand stehen
+  (Bildlaufleisten am Monitorrand wären nicht erreichbar). `GetCursorPos` liefert im Hook noch
+  die alte Position.
+- **Filterkette** (`IPointerMoveFilter`, Reihenfolge `PointerFilterOrder`): Bearbeitungsmodus
+  (100) → Achsensperre (200) → Maus-Puffer (300). Danach wirken immer die gesperrten Bereiche: ein
+  eingefrorener Monitor bleibt gesperrt, egal was ein Filter erlaubt. Filter laufen im Hook:
+  nur rechnen, nicht loggen. Wirft einer, gelten für diese Bewegung nur die gesperrten Bereiche, der Fehler wird vom
+  Prüftakt gemeldet (Log 2947). Zeitstempel in `TimeProvider.GetTimestamp()`-Ticks.
+- **Windows setzt `ClipCursor` zurück** bei Desktopwechsel (Win+L, UAC, Strg+Alt+Entf). Der
+  Wächter (`Win32FenceWatcher`, verstecktes Top-Level-Fenster auf eigenem Thread, nur solange
+  der Zaun an ist) reagiert auf `EVENT_SYSTEM_DESKTOPSWITCH`, `WM_WTSSESSION_CHANGE`
+  (Entsperren, Wiederverbinden) und `WM_DISPLAYCHANGE` (nur Top-Level-Fenster bekommen es) und
+  setzt neu. Dazu prüft er jede Sekunde `GetClipCursor`: ganzer virtueller Bildschirm = von
+  Windows gelöst → neu setzen; ein Rechteck innerhalb unseres = von Windows nach Anzeigewechseln
+  zugeschnitten → bleibt unseres (ein fremdes Rechteck darin ist nicht unterscheidbar und wird
+  ersetzt: lieber das als ein zurückgelassener eigener Clip); jedes andere Rechteck = fremdes
+  Programm (Spiel, Fernsteuerung) → nicht überschreiben und beim Lösen nicht freigeben (Log 2948).
+  Auch beim Setzen, Lösen und bei `ProcessExit` wird so geprüft. Nach `ProcessExit` lässt der
+  Hook alles durch, und der Zaun ändert sich nicht mehr.
+- **Hook verweigert:** Ist der erlaubte Bereich ein Rechteck, hält `ClipCursor` ihn weiter (nur
+  die Filter fallen aus). Der Prüftakt versucht den Hook erneut (Abstand 1, 2, 4 … bis 64 s), solange Besitzer ihn
+  brauchen (Log 2943 einmal bis zum Erfolg). Auf einem fremden Desktop
+  schlägt `ClipCursor` fehl (Log 2944 einmal), der Prüftakt versucht es wieder.
+- **Anzeigewechsel:** Der Zaun rechnet gegen die aktuellen Monitore neu und meldet
+  `Recomputed`; die Besitzer (G2) prüfen dann ihre Bereiche, z. B. Einfrieren eines abgesteckten
+  Monitors aufheben.
+- **Freigabe in jedem Fehlerfall:** Fehler beim Setzen, Hook verweigert, Monitore nicht lesbar
+  → alles lösen (Log 2943/2949). `Dispose`, `ProcessExit` und `UnhandledException` lösen den
+  Clip; den Hook entfernt Windows mit dem Prozess. `Environment.FailFast` überspringt alle
+  Handler: dafür gibt der Watchdog nach einem Absturz `ClipCursor(NULL)` frei
+  (`PointerClipCleanup`). Im laufenden Betrieb löst ZoomIN nur einen Clip, den es selbst gesetzt
+  hat; der Watchdog kann das nach einem Absturz nicht unterscheiden und löst jeden (ein Spiel
+  setzt seinen beim nächsten Aktivieren neu).
+- **Hook verschwunden:** Windows entfernt einen zu langsamen `WH_MOUSE_LL`-Hook ohne Meldung
+  (`LowLevelHooksTimeout`). Der Prüftakt merkt es (`HookHeartbeat`: zweimal hintereinander Zeiger
+  bewegt, Hook nicht aufgerufen; ein einzelnes `SetCursorPos` reicht nicht, das läuft an
+  Low-Level-Hooks vorbei) und installiert ihn neu (Auslöser `HookLost`).
+- **Wächter bleibt**, solange Besitzer Bereiche oder Filter haben, auch wenn der Zaun gerade aus
+  ist (z. B. nichts erlaubt während eines Anzeigewechsels): der nächste Wechsel schaltet ihn
+  wieder ein.
+- **Reihenfolge für Besitzer:** erst den Zeiger versetzen, dann sperren. `ClipCursor` zieht einen
+  Zeiger außerhalb des Rechtecks sonst auf dessen Rand.
+- **Zeiger versetzen** (`IPointerMover`, `Win32PointerMover`, `SetCursorPos`): nur aus
+  Kürzel-Controllern der App (Architekturtest `PointerMoverCallerTests`), jedes Versetzen mit
+  Grund und Ziel-Monitor im Log (2945).
+- **Tests** greifen nie den echten Zeiger an: Logik gegen ein gefälschtes `IFenceNative`; der
+  echte Clip-Test setzt nur den ganzen virtuellen Bildschirm und löst in `finally`, der echte
+  Hook lässt alles durch.
+- **Loslassen von selbst ohne Meldung** (Integration M19): `Recomputed` kommt nur nach Desktopwechsel,
+  Entsperren und Anzeigewechsel. Lässt der Zaun selbst los (Prüftakt scheitert, neuer Hook verweigert,
+  `Forbid` scheitert), meldet er das nicht: Kein Besitzer könnte etwas tun, der Prüftakt versucht den
+  Hook erneut (Log 2943). Ein eingefrorener Monitor ist dann bis dahin erreichbar; kommt der Zeiger
+  hin, sieht der Render-Thread ihn und G2 hebt das Einfrieren auf (`pointer_inside`). Puffer,
+  Achsensperre und Zieh-Zaun der Inseln fallen bis zum neuen Hook still aus (sie sperren dann auch
+  nichts). Fällt der Zaun nur von Hook auf Clip zurück (ein Rechteck erlaubt), gilt dasselbe für die
+  Filter.
+- **Drei Tastatur-Hooks** (Integration M19): Haltetaste der Markierungen (M18, `Win32HoldKeyHook`),
+  Haltetaste der Achsensperre (A6, `Win32HoldKeyWatch`) und der Aktivitäts-Hook (Suchhilfe, Übersicht B2,
+  Inseln B1). Nur der Aktivitäts-Hook verschluckt Tasten, und nur Esc und Entf (Inseln vor Übersicht);
+  Umschalt, Strg und Alt (links/rechts) – die möglichen Haltetasten – laufen immer durch
+  (belegt durch Review: B1 prüft nur Esc und Entf; `IslandEditCaptureTests.HoldKeys_AlwaysPass_WhileEditing` hält das fest). Bei den Tastatur-Hooks
+  spielt die Reihenfolge damit keine Rolle: keine Taste wird doppelt verschluckt, kein Loslassen einer
+  Haltetaste geht verloren. Umgekehrt nimmt der Bearbeitungsmodus der Inseln Esc, Entf und Mausrad mit
+  gehaltenem Umschalt, Strg oder Alt nicht an – also auch nicht, solange die Achsentaste gehalten ist.
+- **Zwei Maus-Hooks** (Integration M19): Zaun-Hook und Aktivitäts-Hook. Ändert der Zaun-Hook einen Zug,
+  verschluckt er ihn und setzt den Zeiger per `SetCursorPos`, das kein Low-Level-Hook sieht. Ruft
+  Windows den Zaun-Hook zuerst auf (der zuletzt installierte kommt zuerst, der Zaun installiert bei
+  `HookLost` neu), sehen Suchhilfe, Ausblenden beim Tippen, Markierungen (E1) und das Ziehen einer Insel
+  solche Züge nicht; unveränderte Züge kommen an (offen, Abhilfe: geänderte Züge weiterreichen).
+- **Offen:** Ausnahmeliste für Spiele und Fernsteuerung (ADR-0028), injizierte Bewegungen
+  (`LLMHF_INJECTED`) werden derzeit wie echte behandelt.
+
+## Inseln: Klicks fallen durch, Bearbeiten fängt ab (M19 B1)
+- **Normalbetrieb:** Eine Insel ist reine Anzeige im klickdurchlässigen Overlay. Ein Klick auf sie
+  trifft das Fenster darunter (an der Stelle, wo der Zeiger wirklich ist). ZoomIN fängt dann keine
+  Mauseingabe ab und registriert keinen Filter beim Zeigerzaun.
+- **Bearbeitungsmodus** (`Strg+Alt+Umschalt+I`, Knopf „Bearbeiten starten“; `IslandController`):
+  - Alle Monitore gehen vorübergehend auf **1×** (Besitzer `IslandEdit` der vorübergehenden Stufe,
+    *selbst entschieden*). Dann liegt der echte Zeiger genau dort, wo der Nutzer Inseln und Desktop
+    sieht: Aufziehen (Quelle), Verschieben und Ecken (Bild) rechnen alle in denselben
+    Desktop-Pixeln. Angedockt gibt es keine vorübergehende Stufe → der Modus startet dort nicht
+    (Ansage). In der Lupe geht es (bei 1× wird ohnehin vollflächig gezeichnet), Inseln erscheinen
+    danach aber nur im Vollbild.
+  - Abfangen: `IslandEditCapture` hängt am vorhandenen `WH_MOUSE_LL`/`WH_KEYBOARD_LL` von
+    `Win32InputActivityHook` (kein neuer Hook). Nur solange der Modus läuft, werden Maustasten
+    (links, rechts, Mitte, X), Mausrad, Esc und Entf verschluckt und der Reihe nach auf einem
+    Hintergrund-Worker an den Editor gegeben; der Hook stellt nur in eine Warteschlange.
+    Bewegungen gehen immer an Windows weiter (der Zeiger muss sich bewegen), schnelle Folgen
+    werden zur jeweils letzten zusammengefasst. Wurde ein Druck verschluckt, wird auch sein
+    Loslassen verschluckt – auch nach dem Ende des Modus; ein Druck von vorher behält sein
+    Loslassen für die Anwendung. Esc und Entf prüft der Hook vor dem Esc der Übersicht (B2). Beim Ende
+    noch wartende Eingaben werden verworfen, nicht mehr weitergegeben. Esc/Entf mit Strg, Alt, Umschalt
+    oder Win (Task-Manager, Start, Umschalt+Entf) bleiben beim System, ebenso ein Esc/Entf, das beim
+    Start schon gedrückt war (samt Wiederholung und Loslassen). Mit vertauschten Maustasten (Linkshänder)
+    zieht die physisch rechte, also die primäre Taste. Eine Folge von Bewegungen wird
+    nur bis zur nächsten anderen Eingabe zusammengefasst (Reihenfolge Drücken → Bewegen bleibt).
+  - Mausrad mit Strg, Alt oder Win lässt der Bearbeitungsmodus durch: Strg+Mausrad zoomt weiter
+    (der Rad-Hook kommt nach dem Aktivitäts-Hook) – unsichtbar, denn die 1× gilt.
+  - **Zeigerzaun:** Während eines Ziehens hält `IslandDragFence` (Filter `PointerFilterOrder.IslandEdit`
+    = 100, erster der Kette) den Zeiger auf dem Monitor der Insel (eine Insel gehört genau einem
+    Monitor). Der Filter ist nur im Bearbeitungsmodus registriert und lässt außerhalb eines
+    Ziehens alles durch. `FenceOwner.IslandEdit` (gesperrte Bereiche) wird nicht gebraucht.
+    Danach laufen Achsensperre (200) und Mauspuffer (300, A6) auf dem schon begrenzten Punkt: Die
+    Achsensperre hält die Zeile auch beim Ziehen, der Puffer sieht während eines Ziehens nie ein
+    Überqueren. Gesperrte Bereiche eingefrorener Monitore (G2) wendet der Zaun **nach** allen Filtern
+    an, der Zeiger kommt also auch beim Ziehen nie auf einen eingefrorenen Monitor
+    (`IslandEditFilterChainTests`). Einfrieren während des Bearbeitens lehnt G2 ab: Der Zaun des
+    Ziehens zeigte sonst auf einen gesperrten Monitor und der Zeiger stünde zwischen beiden fest.
+    Ein schon eingefrorener Monitor bleibt beim Start des Bearbeitens eingefroren, mit Stufe und Zaun
+    (`IslandFreezeTests`).
+  - Editor (`IslandEditor`, rein): Rechteck auf freier Fläche aufziehen (< 16 px = Klick) → neue
+    Insel mit der Stufe des Monitors (`TargetFor`, sonst die zuletzt genutzte Vollbild-Stufe, sonst
+    2×); Insel ziehen → verschieben; Ecke (±12 px, bei kleinen Bildern ein Viertel der Seite, damit die Mitte noch verschiebt) ziehen → Ausschnitt größer/kleiner bei gleicher
+    Stufe, die Gegenecke bleibt; Rad über der Insel (sonst die gewählte) → Stufe in Zoom-Schritten;
+    Entf → gewählte bzw. die unter dem Zeiger löschen; Esc → laufendes Ziehen zurücknehmen, sonst
+    Ende. Eine fünfte Insel wird mit Ansage abgelehnt.
+  - **Sicherheitsnetz** (*selbst entschieden*): Ende nach 2 min ohne Eingabe, bei Desktopwechsel
+    (Win+L, UAC, Strg+Alt+Entf), Entsperren, Anzeigewechsel (über `IPointerFence.Recomputed`, der
+    Zaun läuft ja wegen des Filters) und wenn ein Zoom-Befehl die 1× löscht (Zoom aus, Moduswechsel,
+    Schritt auf 1×). Erneutes Kürzel beendet ebenfalls. Am Ende: laufendes Ziehen zurücknehmen
+    (nie ein halbes Ziehen speichern), Eingabe freigeben, Filter weg, 1× freigeben, Inseln speichern
+    (`IslandEditWatch`).
+  - Ändert sich die Inselliste von außen (Profilwechsel, Löschen oder Standbild auf der
+    Einstellungsseite), endet der Modus und **behält die Änderung von außen** – er würde sie sonst
+    mit seinem Stand überschreiben.
+  - Ohne installierten Aktivitäts-Hook (`IIslandEditInput.IsAvailable`) startet der Modus nicht
+    (Ansage): die Klicks würden sonst die Programme unter den Inseln treffen. Entfernt Windows den
+    Hook später stillschweigend, merkt ZoomIN das nicht (offen).
+  - **Gespeichert** wird nur der übernommene Stand (`IslandModel.Committed`): Ein laufendes Ziehen
+    landet nie in `settings.json` oder einem Profil, auch nicht bei Profilwechsel mitten im Ziehen.
+    Ein Lauf ohne Änderung speichert nichts; ein Lauf mit Änderung speichert nur die bearbeiteten
+    Inseln neu, die anderen mit ihren gespeicherten Rechtecken (`IslandSet.WithUntouchedFrom`), auch
+    wenn sie gerade für einen kleineren Monitor eingepasst gezeichnet werden. Ein Rechteck bis zum
+    letzten erreichbaren Pixel (Right − 1) nimmt die letzte Spalte und Zeile mit. Eine neu angelegte Insel schaltet ausgeblendete Inseln
+    wieder ein. Die Zeilen der Einstellungsseite nennen die Windows-Nummer des Monitors (DISPLAYn).
+    Jedes Bearbeitungs-Ergebnis geht atomar an das Modell (nur wenn die Inseln noch die zuletzt
+    veröffentlichten sind); Profilwechsel vergeben neue Inselnummern (Standbilder, Zeilen der
+    Einstellungsseite gehören zur Nummer).
+  - Ecke ziehen: Die Ecke folgt dem Zeiger ab der Stelle, wo sie gegriffen wurde (kein Sprung um
+    die Griffreichweite), und hält am Monitorrand an; Gegenecke und Stufe bleiben (in ganzen
+    Quellpixeln; bei Stufen wie 2,5× kann die Gegenkante um einen halben Pixel springen).
+  - Verlorenes Loslassen (Win+L mitten im Klick): Der nächste Druck derselben Maustaste gehört wieder
+    der Anwendung; ein Esc/Entf-„Wiederholen“ nach mehr als 2,5 s gilt als neuer Druck.
+  - Grenze: Klemmt der Zaun-Filter eine Bewegung am Monitorrand, versetzt er den Zeiger mit
+    `SetCursorPos`, das kein Low-Level-Hook sieht. Die gezogene Insel folgt dann bis zum Loslassen
+    nur bis zur letzten gesehenen Position; das Loslassen setzt sie richtig.
+  - Start und Ende laufen nacheinander (eigene Sperre), damit ein Ende nie zurückgibt, was ein neuer
+    Start gerade übernommen hat (`IslandEditTakeover`: 1×, Eingabe, Ziehfilter). Ein Ende wegen
+    Desktop- oder Anzeigewechsel läuft auf dem Thread-Pool, nicht im Wächter-Thread des Zauns: das
+    Zurückgeben des Filters kann diesen Thread beenden; ebenso das Ende wegen einer Änderung von außen
+    (Sperr-Reihenfolge Start/Ende vor Eingabeschritt). Jede Eingabe gehört zu ihrem Lauf
+    (`IslandEditInputRun`), eine verspätete Eingabe eines beendeten Laufs wirkt nie im nächsten.
+    Die Einstellungsseite aktualisiert die Liste
+    auf `IslandModel.Saved` statt mit einem Takt.
+  - Die Sichtbarkeit (`Strg+Alt+I`) bleibt die des Nutzers: Beim Bearbeiten werden auch
+    ausgeblendete Inseln gezeigt, danach sind sie wieder aus.
+  - Inseln, die gerade nicht gezeichnet werden (Monitor fehlt, Bild ragt heraus), lassen sich nicht
+    greifen, löschen oder per Rad ändern. Unter dem Zeiger gewinnt die oberste Insel, deren Bild
+    oder Ecke getroffen ist (die Griffreichweite einer oberen Insel verdeckt keine untere).
+- Bildschirmleser: „Inseln bearbeiten: …“/„… aus“, „Insel 2 von 4, 3-fach“ beim Wählen und nach
+  jeder Änderung, „Höchstens 4 Inseln“, „Insel gelöscht“; `Strg+Alt+I` sagt „Inseln an/aus“.
+- Auf dem sicheren Desktop gibt es keine Inseln und keine Kürzel dafür (`SecureSettingsSanitizer`).
+## Maus-Puffer und Achsensperre (M19 A6)
+Zwei Filter der Zaun-Filterkette (`IPointerMoveFilter`), global eingestellt
+(`AppSettings.PointerConstraint`, nicht im Profil), ab Werk beide aus. Nur die Tray-App nutzt sie,
+der sichere Bildschirm nicht. `PointerConstraintController` (App) meldet einen Filter beim Zaun nur
+an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten ist wie in Windows.
+
+- **Maus-Puffer** (`Core/Pointer/EdgeBuffer`, Reihenfolge 300): Eine Bewegung von einem Monitor
+  auf einen anderen endet am Rand (letzter Pixel `Right − 1`), bis der Zeiger die Druckzeit der
+  Stufe lang gegen den Rand drückt: Leicht 0,2 s, Mittel 0,4 s, Stark 0,8 s. „Drücken“ = weitere
+  Bewegungen zeigen nach außen. Es beginnt von vorn bei einem Rückzug vom Rand um mehr als 3 px
+  (Zittern zählt nicht; Entlanggleiten am Rand auch nicht, zählt aber auch nicht als Drücken), bei einer Pause ohne Druck über die halbe Druckzeit (höchstens 250 ms; bei Leicht also 100 ms, damit zwei einzelne Stupser nicht hinüberführen) und bei einer neuen
+  Richtung ohne gemeinsame Komponente (an einer Ecke wackelt die Hand zwischen „rechts“ und
+  „rechts unten“, das bleibt ein Drücken). Nach dem Hinüberwechseln gilt der Puffer auf dem neuen
+  Monitor wieder, in beide Richtungen.
+- **Ziel auf keinem Monitor:** Schräg über eine Ecke (z. B. an der Taskleiste nach rechts, die
+  Hand zieht leicht nach unten) zählt als Drücken entlang der Achse, die auf einen Nachbarn führt,
+  wie Windows es abschneiden würde; die stärker gedrückte Achse zuerst. Sonst (Lücke versetzter
+  Monitore oder ein Monitor, den die Liste noch nicht kennt) entscheidet Windows: Der Puffer lässt
+  die Bewegung durch, damit er den Zeiger nie einsperrt.
+- **Drücken gehört zu einem Monitor:** Wechselt der Zeiger (z. B. per Kürzel) auf einen anderen
+  Monitor, beginnt die Druckzeit dort von vorn.
+- **Monitore beim Anzeigewechsel:** Liefert Windows mitten im Aufzählen keine vollständige Liste,
+  ruht der Puffer (eine alte Anordnung könnte eine Kante mitten in einen echten Monitor legen)
+  und liest die Monitore jede Sekunde neu, bis zu zehnmal je Anlass (`BufferSetup`). Nach jedem
+  Anzeigewechsel liest er sie zur Bestätigung eine Sekunde später noch einmal, weil Windows
+  zunächst noch Teile der alten Anordnung melden kann. Das gilt auch
+  für nur einen gelesenen Monitor (ein zweiter kann noch fehlen). Ein fehlgeschlagenes Anwenden
+  wird erst bei der nächsten Änderung einer A6-Einstellung wiederholt, nicht bei jeder anderen.
+- **Eingefrorene Monitore:** Der Puffer gibt eine Bewegung frei, danach wirken die gesperrten
+  Bereiche des Zauns. Ein eingefrorener Monitor bleibt also gesperrt, der Puffer gilt nur zwischen
+  freien Monitoren.
+- **Achsensperre** (`Core/Pointer/AxisLock`, Reihenfolge 200): Solange die gewählte Haltetaste
+  gedrückt ist, sind die ersten 8 px (physische Pixel, je Achse) frei. Dann gewinnt die größere
+  Achse, bei Gleichstand waagrecht (Leserichtung), und der Zeiger bleibt auf der Zeile bzw. Spalte,
+  in der die Taste gedrückt wurde (er springt die wenigen Pixel der freien Strecke zurück). Loslassen
+  gibt ihn bei der nächsten Bewegung frei; ein neues Drücken wählt die Achse neu.
+- **Kein `ClipCursor`-Band** (Abweichung vom Plan): Die Achse ist ein Filter im Zaun-Hook statt
+  eines 1 px hohen `ClipCursor`-Rechtecks. So gibt es nur einen Mechanismus, die gesperrten
+  Bereiche wirken auch hier zuletzt, und ein fremder `ClipCursor` (Spiel, Fernsteuerung) wird von
+  der Achsensperre nie überschrieben. Windows' Zurücksetzen von `ClipCursor` (Desktopwechsel,
+  Anzeigewechsel) betrifft die Filter nicht; den Hook hält der Zaun am Leben (`HookLost`).
+- **Haltetaste** (`Platform/PointerConstraint/Win32HoldKeyWatch`): eigener `WH_KEYBOARD_LL`-Hook
+  auf eigenem Thread, nur lesend, nichts wird verschluckt. Er unterscheidet links und rechts
+  (`VK_LSHIFT`/`VK_RSHIFT`, `VK_LCONTROL`/`VK_RCONTROL`, `VK_LMENU`/`VK_RMENU`; Alt Gr meldet
+  `VK_RMENU` plus ein unechtes `VK_LCONTROL` mit Scancode `0x21D`, das ignoriert wird, damit
+  Alt Gr nicht als gehaltenes Strg links zählt). Ebenso ignoriert werden die unechten
+  Umschalt-Ereignisse, die Windows bei eingeschaltetem NumLock um Ziffernblock- und
+  Navigationstasten legt (Scancode mit Bit `0x200` oder erweitertes `0x2A`): Umschalt
+  halten und eine Pfeiltaste des Ziffernblocks drücken löst die Sperre nicht. Ein erweitertes
+  `0x36` (rechts) gilt nicht als unecht, weil manche Layouts das echte Umschalt rechts so melden;
+  mit „Umschalt rechts“ kann eine graue Pfeiltaste die Achse daher neu wählen lassen (offen,
+  am echten Gerät prüfen). Injizierte neutrale Codes (`VK_SHIFT`, `VK_CONTROL`, `VK_MENU`)
+  werden nach Scancode bzw. Erweiterungs-Flag links oder rechts zugeordnet. Nach so einem
+  unechten Loslassen meldet `GetAsyncKeyState` die Taste eine Weile als oben; die Prüfung wartet
+  dann bis zu vier Takte (2 s), bevor sie die Sperre löst; kommt danach Windows' unechtes
+  Drücken (die Taste ist also noch gehalten), rastet die Sperre wieder ein. Injizierte Tasten mit Erweiterungs-Flag
+  (Tastenumbelegung, Hilfsprogramme) gelten nicht als unecht. Die Tastenwiederholung beim Halten zählt nur
+  einmal. Der Hook läuft nur, solange die Achsensperre eingeschaltet ist. Ein eigener Hook statt
+  des Tastatur-Hooks von `Win32InputActivityHook`, weil dieser mit B1 geteilt ist; nach der
+  Integration lässt er sich dort als Beobachter einhängen (wie `OverviewKeyWatch`). Injizierte
+  Tasten (Bildschirmtastatur) zählen bewusst mit.
+- **Verpasstes Loslassen:** Lässt man die Taste auf dem Sperrbildschirm oder bei einer UAC-Abfrage
+  los, sieht der Hook das nie. Deshalb prüft ein Takt alle 0,5 s, nur solange die Taste als
+  gehalten gilt, `GetAsyncKeyState`; ist die Taste nicht gedrückt, gilt sie als losgelassen
+  (Log 2963). Die erste Prüfung kommt 0,5 s nach dem Drücken, lange nachdem Windows den
+  Tastenzustand gesetzt hat. Zusätzlich gilt
+  die Haltetaste nach `DesktopSwitch` und `SessionUnlock` des Zauns als losgelassen
+  (`IHoldKeyWatch.Reset`); eine noch gehaltene Taste rastet mit ihrer nächsten Wiederholung wieder
+  ein. Drücken, Loslassen und Prüfung laufen unter einer kleinen Sperre, damit sich ein Drücken
+  und ein gleichzeitiges Abschalten nie zu „gehalten ohne Taste“ verschränken.
+- **Tastatur-Hook verweigert:** wird nicht behalten (Log 2962); der nächste Start oder `Reset`
+  (nach Desktopwechsel) versucht es erneut. Einen von Windows wegen Zeitüberschreitung still
+  entfernten Tastatur-Hook erkennt die Haltetaste nicht (offen; die Achsensperre reagiert dann
+  nicht mehr, sperrt aber auch nichts).
+- **Zeiger von außen versetzt** (Kürzel mit `SetCursorPos`, anderes Programm), während die Achse
+  gilt: Die Sperre übernimmt die neue Zeile bzw. Spalte, statt den Zeiger zurückzuziehen. Vor der
+  Wahl der Achse zählt nur ein Sprung über 8 px; dass Windows den Punkt an einer Bildschirmkante
+  oder einem fremden `ClipCursor` um wenige Pixel zurücksetzt, startet die 8 px nicht neu.
+- **Ecke:** Ein Drücken, das schräg an einer Ecke begann, bleibt beim Entlanggleiten an einer der
+  beiden Kanten erhalten; erst ein Rückzug von allen gedrückten Kanten beginnt von vorn.
+- **Strg als Haltetaste und Suchhilfe „Strg allein“:** Der Aktivitäts-Hook wertet ein Strg, das
+  ohne andere Taste losgelassen wird, als Auslöser der Suchhilfe; eine Mausbewegung dazwischen
+  zählt dort nicht. Mit Strg als Haltetaste zeigt jede Nutzung der Achsensperre also die
+  Suchhilfe, wenn dieser Auslöser an ist (offen, braucht eine Änderung im geteilten
+  `Win32InputActivityHook`; bis dahin Umschalt oder Alt als Haltetaste wählen).
+- **Ein Monitor:** Der Puffer-Filter bleibt auch mit nur einem Monitor angemeldet (er tut dann
+  nichts): Nur ein angemeldeter Filter hält den Zaun-Wächter, der Anzeigewechsel meldet. Sonst
+  käme der Puffer nach dem Anstecken eines zweiten Monitors nicht zurück.
+- **Sperren:** Der Controller ruft den Zaun unter seiner eigenen Sperre auf; seine Reaktion auf
+  `Recomputed` nimmt diese Sperre deshalb nie (der Zaun kann beim Abmelden des letzten Filters
+  genau diesen Wächter-Thread beenden und auf ihn warten).
+- **Hook-Pfad:** Beide Filter rechnen nur, `0 B` (`PointerConstraintAllocationTests`,
+  `PointerConstraintBenchmarks`), zählen nur Zahlen (beobachtbare Zähler
+  `zoomin.pointer.buffer_blocked`, `zoomin.pointer.axis_lock`), loggen nie und keine Koordinaten.
+- **Umschalt + Ziehen** markiert in vielen Programmen Text, Alt öffnet beim Loslassen oft das Menü:
+  darauf weist die Einstellungskarte hin, die Haltetaste ist frei wählbar.
+- **Offen:** Absolute Eingaben (Stift, Touch, Fernsteuerung) auf einen anderen Monitor hält der
+  Puffer ebenfalls zurück, bis die Druckzeit um ist; ein Stifttipp auf den Nachbarmonitor landet
+  dann am Rand. Dafür bräuchte der Filter die Herkunft der Bewegung (`dwExtraInfo`,
+  `LLMHF_INJECTED`), die die Zaun-Schnittstelle heute nicht weitergibt.
+
+## Monitor einfrieren und Monitorwechsel (M19 G2)
+- **Kürzel:** `Strg+Alt+H` friert den Monitor unter dem Zeiger ein; ist schon einer eingefroren,
+  hebt dasselbe Kürzel **alle** auf. `Strg+Alt+N` setzt den Zeiger auf den nächsten freien
+  Monitor. Beide anpassbar (Seite „Tastenkürzel“), auf dem sicheren Bildschirm abgeschaltet
+  (`SecureSettingsSanitizer`: ein Zaun dort könnte Anmeldung oder UAC-Abfrage versperren). Die
+  Kürzel kamen ohne Schema-Wechsel, ebenso die Inselkürzel (B1, `Strg+Alt+I`, `Strg+Alt+Umschalt+I`):
+  Hat der Nutzer eines davon schon einer älteren Aktion gegeben, bleibt das Werkskürzel beim Laden
+  unbelegt (`SettingsMigration.WithoutNewHotkeyClashes`). Selbst aufgenommene Kürzel bleiben
+  unangetastet und gehen auch einem Werkskürzel eines anderen M19-Kürzels vor (Integration M19).
+- **Ablauf beim Einfrieren** (`App/Freeze/MonitorFreezeController`): Ziel ist der nächstgelegene
+  freie Monitor (`MonitorCycle.NearestFree`, Abstand zum Monitorrechteck; bei Gleichstand rechts
+  zuerst – `FenceGeometry.Nearest` kennt diese Regel nicht und prüft nur noch, dass der Zielpunkt
+  erlaubt ist). Dort landet der Zeiger auf seiner letzten Position (`PointerMemory` im
+  `MonitorSwitchController`, gemerkt bei jedem Versetzen durch ein Kürzel; manuelle Wechsel merkt
+  es nicht), sonst in der Mitte. Reihenfolge nach ADR-0028: `IPointerMover.MoveTo(…, FreezeMonitor)`
+  → Modell einfrieren → `IPointerFence.Forbid(FrozenMonitors, …)`. Lehnt Windows das Versetzen ab,
+  wird nichts eingefroren. Läuft auf dem Monitor eine Übersicht (B2), wird nicht eingefroren
+  (Hinweis „Erst die Übersicht beenden“): ihr 1×-Bild und ihr Rahmen würden sonst stehen bleiben.
+  Ebenso während eines Fenster-Verschiebens oder einer Größenänderung mit eigener Stufe (G1; Hinweis „Erst das
+  Verschieben oder die Größenänderung des Fensters beenden“): Der Sprung des Zeigers nähme das Fenster mit.
+  Senkt eine andere vorübergehende Stufe den Monitor (etwa eine gerade endende Übersicht), Hinweis „Der
+  Monitor zeigt gerade eine vorübergehende Ansicht“; das Bild spränge sonst auf die Stufe des Nutzers
+  (`FreezeRefusals`, Integration M19).
+- **Grenzen:** Mit einem Monitor kein Einfrieren und kein Wechsel, Hinweis per Bildschirmleser und
+  Tray-Meldung. Weil dasselbe Kürzel bei einem eingefrorenen Monitor alles aufhebt, ist höchstens
+  einer eingefroren; der „letzte freie Monitor“ ist damit nur der Fall „ein Monitor“. Nach einem
+  Neustart ist nichts eingefroren (nie gespeichert).
+- **Reihenfolge `Strg+Alt+N`** (`Core/Monitors/MonitorCycle`, rein, `0 B`): nach Monitormitte,
+  zuerst x, bei gleicher Mitte-x (gestapelt) y. Hin und zurück, an den Enden umkehren, Start nach
+  rechts, eingefrorene überspringen. Lage 1 · 3 · 2: 1 → 3 → 2 → 3 → 1. Ist 2 eingefroren, führt
+  der erste Wechsel von 3 nach 1. „Gleiche Spalte“ heißt gleiche Mitte-x; ein schmalerer Laptop
+  unter einem breiten Monitor mit anderer Mitte gilt als eigene Spalte.
+- **Sperre:** Der Zaun hält den Zeiger vom eingefrorenen Monitor fern (keine Fehlklicks), auch
+  beim Fensterziehen – ein Fenster lässt sich nicht auf ihn ziehen (im Hinweistext erwähnt).
+- **Aufheben von selbst:** `IPointerFence.Recomputed` mit `DesktopSwitch` oder `SessionUnlock`
+  (Win+L, UAC, Strg+Alt+Entf) hebt **alle** auf, die beim Ereignis bestanden. `DisplayChange` (`Core/Monitors/FreezeRules`) hebt nur dort auf, wo der Monitor
+  fehlt oder andere Grenzen hat, und bei Standbild (die Pipeline wird neu gebaut, das Bild ginge
+  verloren); bliebe kein freier Monitor oder hat Windows den Zeiger auf einen eingefrorenen Monitor
+  gesetzt (sein eigener wurde abgesteckt), alle. Die Ereignisse kommen auf dem Wächter-Thread des
+  Zauns, der Controller arbeitet sie im Thread-Pool ab: der Zaun kann den Wächter beim Lösen bis zu
+  2 s joinen, und der darf dann nicht auf das Schloss des Controllers warten. Jeder Fehler im
+  Controller hebt alles auf und gibt den Zaun frei (Log 1725). Werden die Kürzel bearbeitet oder ist
+  `Strg+Alt+H` nicht (mehr) registriert, endet ein Einfrieren auch (`HotkeyBindings`, Grund
+  `shortcut_gone`): sonst gäbe nichts den Monitor zurück.
+- **Wechselwirkungen:** Vorübergehende Stufen (Fenster-Verschieben G1, Übersicht B2) wirken
+  auf einem eingefrorenen Monitor nicht; dessen Stufe, Modus, Lupe und Dock gelten vom Augenblick
+  des Einfrierens. Sein Ziel wird im Modell geparkt (`Core/Zoom/ParkedTargets`): Zoombefehle
+  (`Toggle/Activate/Step` über die freien Monitore, `FrozenTargets.Free`) und `IsOn` sehen es nicht,
+  ein bei 4× eingefrorener Monitor macht „Zoom an“ also nicht wahr. Beim Aufheben kommt es zurück,
+  wenn es noch passt: gleicher Modus wie beim Einfrieren, im Modus Angedockt nur für den
+  angedockten Monitor, bei gemeinsamer Stufe die Stufe, die die anderen jetzt haben (ist keiner
+  vergrößert, ist der Zoom aus und er taut bei 1× auf); sonst und nach
+  einem Anzeigewechsel taut er bei 1× auf. Geparkt wird nach dem Veröffentlichen des Einfrierens,
+  zurückgegeben vor dem Veröffentlichen des Aufhebens (`MonitorFreeze.Thawing`): ein Render-Thread
+  sieht nie einen aufgetauten Monitor ohne seine Stufe. Gespeichert wird „Zoom an“ auch, wenn nur der
+  eingefrorene Monitor vergrößert ist (`ZoomMapping.SavedOn`). Win+L und Beenden heben das
+  Einfrieren aber vorher auf; gespeichert wird dann die Stufe, mit der er auftaut. Einfrieren und Aufheben melden `ZoomModel.Changed`, weil sich `IsOn` ändern kann
+  (Tray, Speichern, Reservierung). Ein eingefrorener Monitor bekommt von `MonitorRenderer` feste
+  Werte für Fokus, Caret, Suchhilfe und Zeiger, damit deren Neuigkeiten ihn nicht neu zeichnen. Sieht ein Render-Thread den
+  Zeiger doch auf dem eingefrorenen Monitor (Zaun versagt, z. B. Hook verloren), meldet er das
+  (`FrozenMonitor.ReportPointerInside`); steht er dort noch, endet das Einfrieren (Grund
+  `pointer_inside`). Zoom aus (`Strg+Alt+Z`) oder Moduswechsel ändern ihn nicht – der Rahmen zeigt
+  den Zustand. Der Monitor mit dem angedockten Streifen wird nicht eingefroren (Hinweis): Der
+  Streifen reserviert Bildschirmfläche nach dem Live-Modus, und Zoombefehle gingen im Modus
+  Angedockt an ihn statt an den Monitor, auf dem man arbeitet.
+- **Mit A6 (Puffer, Achsensperre):** Die gesperrten Bereiche wirken in `FenceDecision` immer nach
+  den Filtern; ein Puffer am Rand zu einem eingefrorenen Monitor hält den Zeiger also höchstens auf,
+  hinüber kommt er nie. A6 sperrt keine Bereiche, daher braucht `LandingPoint` nur die eingefrorenen;
+  `SetCursorPos` läuft nicht durch den Low-Level-Hook, die Filter halten den Sprung nicht auf. Sperrt
+  später ein weiterer Besitzer (B1) Bereiche, müsste der Zaun eine Abfrage dafür anbieten.
+- **Mit M18 (Markierungen, Haltetaste):** Auf einem eingefrorenen Monitor zeichnet `RenderSession`
+  weder Fokusrahmen noch Caret-Markierung; das Fadenkreuz kommt mit dem Zeiger, der dort nie ist.
+  `MonitorRenderer` gibt ihm eine leere Aktivität (Maus, Tippen, Haltetaste), sodass deren
+  Neuigkeiten ihn nicht neu zeichnen; Schärfe/Fett wirken auf das eingefrorene Bild wie sonst.
+- **Ansagen:** „Monitor 2 eingefroren“, „Einfrieren aufgehoben“, „Monitor 3“ (Windows-Nummer aus
+  dem Gerätenamen, `MonitorNames.Number`).
+
 ## Übersicht auf Knopfdruck (M17 B2)
 - `Strg+Alt+O` (anpassbar, auf dem sicheren Bildschirm nicht belegt). **Antippen** (< 300 ms):
   Der Monitor unter der Maus gleitet auf 1× (vorübergehende Stufe, Besitzer `Overview`), ein
@@ -283,6 +652,7 @@ Globale Kürzel per `RegisterHotKey`, Mausrad per `WH_MOUSE_LL`.
 - Bildschirmleser: „Übersicht an/aus“ als UIA-Benachrichtigung (`UiaAnnouncer`, eigenes
   verborgenes Fenster, nur wenn ein Client lauscht). Ob NVDA/Sprachausgabe sie aus dem
   Hintergrund vorlesen, ist noch nicht geprüft.
+
 ## Fokus & Caret – Verhalten (M6)
 - Fokus-Schwenk weich (~200 ms) oder sofort, einstellbar. **Jeder** Fokuswechsel wird in die
   Bildmitte gelegt, auch wenn das Element schon sichtbar war (Entscheidung 2026-11-03).

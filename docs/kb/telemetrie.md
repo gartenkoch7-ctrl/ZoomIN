@@ -69,9 +69,9 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 ## EventId-Bereiche
 | Bereich | Projekt |
 |---|---|
-| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1500 Maus folgen, 1520 Übersicht, 1540 Fenster-Verschieben, 1600 Schärfe/Fett – reserviert, noch ungenutzt, 1620 eigene Farbschemata, 1640–1659 Markierungen) |
-| 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe, 2900 Fenster-Verschieben, 2920 Übersicht, 2950–2959 Haltetaste) |
-| 3000–3999 | Rendering (3100 Übersicht, 3200 Schärfe/Fett, 3220 eigene Farbschemata, 3240–3259 Markierungen) |
+| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1500 Maus folgen, 1520 Übersicht, 1540 Fenster-Verschieben, 1600 Schärfe/Fett – reserviert, noch ungenutzt, 1620 eigene Farbschemata, 1640–1659 Markierungen, 1720 eingefrorene Monitore und Monitorwechsel, 1740–1759 Inseln, 1760 Maus-Puffer und Achsensperre) |
+| 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe, 2900 Fenster-Verschieben, 2920 Übersicht, 2940 Zeigerzaun und Zeiger versetzen, 2950–2959 Haltetaste, 2960 Haltetaste der Achsensperre) |
+| 3000–3999 | Rendering (3100 Übersicht, 3200 Schärfe/Fett, 3220 eigene Farbschemata, 3240–3259 Markierungen, 3300 Standbild, 3310 eingefrorene Monitore, 3320–3339 Inseln – reserviert, noch ungenutzt: der Render-Loop loggt nicht, Standbilder melden 3300/3301) |
 | 4000–4999 | Watchdog |
 | 5000–5999 | Setup |
 | 6000–6999 | Core (noch keine) |
@@ -110,7 +110,14 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.view.overview` | app | Übersicht (M17 B2) vom Kürzel bis zum Hineinzoomen, Esc oder Abbruch; eigener Wurzel-Ablauf über Threads hinweg. Tags `zoomin.monitor`, `zoomin.mode`, `zoomin.overview.level_before` (Stufe vorher), am Ende `zoomin.overview.kind` (`tap`, `hold`) und `zoomin.overview.end` (`zoom_in`, `escape`, `cancelled`) |
 | `zoomin.filters.scheme_edit` | app | Eigenes Farbschema angelegt, fertig bearbeitet, gelöscht oder per „Jetzt anzeigen“ eingeschaltet (M18; Tags `zoomin.operation`: `create`, `change`, `delete`, `show`; Fehler `full`, wenn alle 4 Plätze belegt sind; `zoomin.place`: `Custom1`–`Custom4`, `zoomin.kind`: Art, beim Löschen `zoomin.fallbacks`). Nie der Name des Schemas |
 | `zoomin.agent.command` | app | Ein KI-Debug-Befehl über die Pipe (ADR-0027; Tag `zoomin.agent.tool`: Werkzeugname oder `unknown`; Fehler: Ausnahmetyp bzw. `failed`) |
+| `zoomin.pointer.fence` | app, secure | Zeigerzaun neu berechnet und durchgesetzt (ADR-0028; Tags `zoomin.fence.mode`: `off`, `clip`, `hook`; `zoomin.fence.trigger`: `request`, `desktop_switch`, `session_unlock`, `display_change`; `zoomin.fence.forbidden`: Zahl der gesperrten Rechtecke) |
+| `zoomin.pointer.move` | app | Zeiger per Kürzel versetzt (ADR-0028; Tags `zoomin.reason`: `FreezeMonitor`, `NextMonitor`; `zoomin.monitor`; abgelehnt → Status Error) |
+| `zoomin.view.freeze` | app | Ein Monitor eingefroren (G2), vom Kürzel bis zum Aufheben; eigener Wurzel-Ablauf über Threads hinweg. Tags `zoomin.monitor`, `zoomin.monitor.number` (Windows-Nummer), `zoomin.zoom.level`, `zoomin.mode`, `zoomin.freeze.image` (`live`, `still`), am Ende `zoomin.freeze.end` (`command`, `display_change`, `desktop_switch`, `session_unlock`, `move_refused`, `shortcut_gone`, `pointer_inside`, `failure`, `exit`) |
+| `zoomin.view.monitor_switch` | app | `Strg+Alt+N` (G2): Tags `zoomin.monitor.from`, `zoomin.monitor.to`, `zoomin.monitor.skipped` (übersprungene eingefrorene Monitore); Versetzen abgelehnt → Status Error. Darunter `zoomin.pointer.move` |
+| `zoomin.pointer.constraint` | app | Maus-Puffer und Achsensperre (A6) angewendet, nur bei einer Änderung der Einstellung (Tags `zoomin.buffer`: `Off`, `Light`, `Medium`, `Strong`; `zoomin.axis_lock`; `zoomin.monitors`; Fehler: Ausnahmetyp). Keine Koordinaten |
 | `zoomin.view.window_drag` | app, secure | Fenster verschieben oder Größe ändern (G1), von der ersten Fensteränderung bis zum Loslassen; nur wenn ein Ziehen etwas bewirken kann (Zoom an, nicht Angedockt, Aktion nicht „unverändert“, ein Schalter an). Tags `zoomin.drag.kind` (`move`, `resize`; `unknown` nur bei Umriss-Ziehen mit unklarer Trefferzone), `zoomin.drag.action` (`lift`, `lower`; `unchanged` nur, wenn die Einstellung zwischen Drücken und Ziehen wechselte), `zoomin.zoom.before` (Stufe des Nutzers), `zoomin.zoom.during` (vorübergehende Stufe; fehlt, wenn sie nichts absenkte), `zoomin.drag.crossed_monitor`, `zoomin.drag.cleared` (Befehl des Nutzers oder neue Monitoranordnung), `zoomin.monitor` (Monitor am Ende). Keine Fenstertitel |
+| `zoomin.islands.edit` | app | Bearbeitungsmodus der Inseln (M19 B1) vom Kürzel bis zum Ende; eigener Wurzel-Ablauf über Threads hinweg. Tags `zoomin.islands.before` (Zahl vorher), am Ende `zoomin.islands.after` (Zahl danach) und `zoomin.islands.end` (`escape`, `shortcut`, `settings` (Knopf auf der Einstellungsseite), `idle`, `DesktopSwitch`, `SessionUnlock`, `DisplayChange`, `cleared` (Zoom-Befehl löschte die 1×), `changed` (Inseln von außen geändert), `failed`, `exit`). Die Dauer ist die des Ablaufs |
+| `zoomin.islands.toggle` | app | `Strg+Alt+I` bzw. Schalter „Inseln anzeigen“ (Tags `zoomin.islands.visible`, `zoomin.islands.count`) |
 
 ## Katalog: Messwerte
 Nur mit Export-Adresse und Stufe „Ausführlich“/„Benutzerdefiniert + Messwerte“. Im Render-Loop
@@ -128,10 +135,10 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.tracking.chromium_nudges` | Fenster | – | Chromium-Inhaltsfenster nach IAccessible2 gefragt |
 | `zoomin.tracking.read_failures` | Abfragen | `exception.type` | Abfrage von Fokus und Caret mit unerwarteter Ausnahme abgebrochen; Tracking läuft mit Systemcaret weiter (dazu Log 2003, einmal je Ausnahmetyp) |
 | `zoomin.tracking.anchor_switches` | Wechsel | `zoomin.anchor.source` (`mouse`, `focus`, `caret`) | Ansicht folgt jetzt Maus, Fokus oder Caret (Render-Thread, ohne Allokation) |
-| `zoomin.zoom.temporary_levels` | Änderungen | `zoomin.owner` (`overview`, `window_drag`), `zoomin.action` (`set`, `release`, `move`, `cleared`) | Vorübergehende Zoomstufe (M17) gesetzt, freigegeben, auf einen anderen Monitor verschoben oder durch einen Befehl des Nutzers gelöscht. `set` zählt nur neue Stufen (Ersetzen nicht), ein `move` auf eine eigene Stufe zählt zusätzlich ein `release`. Bleibt ein `set` ohne späteres `release` oder `cleared`, gibt ein Besitzer nicht frei (der KI-Debug-Zustand zeigt dann „temporary“ am Monitor). Abläufe und Logs bringen Übersicht (B2) und Fenster-Verschieben (G1) selbst mit |
+| `zoomin.zoom.temporary_levels` | Änderungen | `zoomin.owner` (`overview`, `window_drag`, `island_edit`), `zoomin.action` (`set`, `release`, `move`, `cleared`) | Vorübergehende Zoomstufe (M17) gesetzt, freigegeben, auf einen anderen Monitor verschoben oder durch einen Befehl des Nutzers gelöscht. `set` zählt nur neue Stufen (Ersetzen nicht), ein `move` auf eine eigene Stufe zählt zusätzlich ein `release`. Bleibt ein `set` ohne späteres `release` oder `cleared`, gibt ein Besitzer nicht frei (der KI-Debug-Zustand zeigt dann „temporary“ am Monitor). Abläufe und Logs bringen Übersicht (B2), Fenster-Verschieben (G1) und der Bearbeitungsmodus der Inseln (B1, 1× auf allen Monitoren) selbst mit |
 | `zoomin.tracking.mouse_push` | Frames | `zoomin.mouse.follow` (`center`, `margin`, `fixpoint`) | Frames, in denen eine Mausbewegung die Ansicht verschoben hat (M17 A1); die Rate je Sekunde zeigt, wie unruhig das Bild im jeweiligen Modus ist. Render-Thread, Instrument und Tags beim Start angelegt, ohne Allokation |
 | `zoomin.render.smart_invert_gpu_time` | ms | `zoomin.monitor` | Mittlere Zusatz-GPU-Zeit des intelligenten Invertierens: Umgebungs-Durchgang (Mittel über 120 Läufe) plus Mehrkosten im Magnify-Durchgang (seit M14 je Pipeline gemessen, 32 Frames schlicht gegen intelligent nach 60 Frames Aufwärmen, erneut wenn der ganze Monitor intelligent wird); > 1 ms → Rückfall (Log 3007) |
-| `zoomin.render.gpu_time` | ms | `zoomin.monitor`, `zoomin.pass` (`magnify`) | Mittlere GPU-Zeit eines Durchgangs über 120 Frames (M14); Zeitstempel-Abfragen laufen nur, solange jemand das Instrument abonniert (Diagnose, OTLP). Durchgänge überlappen nicht: kein Gesamt-Frame-Wert, weil verschachtelte Disjoint-Abfragen nicht überall erlaubt sind |
+| `zoomin.render.gpu_time` | ms | `zoomin.monitor`, `zoomin.pass` (`magnify`, `islands`) | Mittlere GPU-Zeit eines Durchgangs über 120 Frames (M14; `islands` seit M19 B1: alle Inseln eines Frames zusammen); Zeitstempel-Abfragen laufen nur, solange jemand das Instrument abonniert (Diagnose, OTLP). Durchgänge überlappen nicht: kein Gesamt-Frame-Wert, weil verschachtelte Disjoint-Abfragen nicht überall erlaubt sind |
 | `zoomin.render.ready_time` | ms | `zoomin.monitor` | Prozessstart bis erste fertige Zoom-Pipeline des Monitors (einmal je Prozess und Monitor, nur in der ersten Minute – später angesteckte Monitore zählen nicht, M14) |
 | `zoomin.render.smart_invert_frames` | Frames | `zoomin.monitor` | Frames, in denen der Umgebungs-Durchgang lief (ADR-0024); seit M14 nur bei neuem Desktop-Bild und bis die Glättung eingeschwungen ist |
 | `zoomin.render.overlay_time` | s | `zoomin.monitor`, `zoomin.state` (`active`, `paused`) | Zeit, in der der Render-Thread arbeitet bzw. schläft – ergibt den Pausenanteil des Filters pro Fenster |
@@ -140,10 +147,17 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.windowfilter.update_duration` | ms | – | Fenster auflisten und Bereiche bauen nach einer Fensteränderung |
 | `zoomin.windowfilter.regions` | Bereiche | – | Bereiche, die der Shader nach einer Änderung bekommt (höchstens 64) |
 | `zoomin.windowfilter.regions_dropped` | Fenster | – | Fenster über dem Limit von 64 Bereichen, die den Monitorfilter zeigen (je Aktualisierung; dazu Log 2705) |
+| `zoomin.pointer.fence_blocked` | Bewegungen | – | Mausbewegungen, die der Zaun-Hook verschluckt oder an den Rand geklemmt hat (beobachtbarer Zähler: der Hook zählt nur, ohne Allokation) |
+| `zoomin.pointer.fence_changes` | Änderungen | `zoomin.fence.mode`, `zoomin.fence.trigger` (wie oben, dazu `clip_lost`, `hook_lost`, `dispose`) | Zaun gesetzt, neu gesetzt (z. B. nach Win+L) oder gelöst |
+| `zoomin.pointer.buffer_blocked` | Drück-Anläufe | – | Maus-Puffer (A6): Beginn eines Drückens gegen einen Monitorrand, das der Puffer zurückhält. Zählt jeden Neubeginn (nach Rückzug, zu langer Pause, neuer Richtung) und auch Anläufe, die danach hinüberführen oder auf einen eingefrorenen Monitor zielen; also eine obere Grenze der wirklich verhinderten Wechsel (beobachtbarer Zähler, der Hook zählt nur, ohne Allokation) |
+| `zoomin.pointer.axis_lock` | Nutzungen | `zoomin.axis` (`horizontal`, `vertical`) | Achsensperre (A6): Haltetaste gedrückt und nach 8 px eine Achse gewählt (beobachtbarer Zähler, ohne Allokation im Hook) |
+| `zoomin.render.still_images` | Bilder | – | Gehaltene Standbilder auf der GPU (M19, Baustein „Standbild“): +1 beim Anlegen, −1 beim Freigeben |
+| `zoomin.islands.count` | Inseln | – | Inseln des aktiven Profils (M19 B1): Auf-und-ab-Zähler, ändert sich mit Anlegen, Löschen und Profilwechsel |
 | `zoomin.render.enhance_gpu_ms` | ms | `zoomin.monitor` | Zusatz-GPU-Zeit von Schärfe/Fett im Magnify-Durchgang (M18, D1): nach jeder Wertänderung und nach gezeichneten Frames ohne Schärfe/Fett (unter 1,5×, andere Glättung) erneut, 32 Frames ohne gegen mit nach 60 Frames Aufwärmen (`PassCostProbe`); gemessen wird genau die gezeichnete Ansicht – bei Lupe/angedockt nur deren Fläche, also nicht mit Vollbild-Werten vergleichbar. Nur solange jemand das Instrument abonniert, sonst keine Messzeichnungen. Budget 0,05 ms auf RTX 3060 Ti bei 1080p Vollbild |
 | `zoomin.filters.custom_schemes` | Schemata | – | Anzahl der eigenen Farbschemata (0–4, Gauge; beim Start und bei jeder Änderung, M18) |
 | `zoomin.highlight.caret_frames` | Frames | `zoomin.monitor`, `zoomin.highlight.caret_shape` (`bar`, `wedges`, `frame`, `circle`) | Gezeichnete Frames mit Caret-Markierung je Form (E2): welche Form im Einsatz ist. Zählt gezeichnete, nicht sichtbare Frames – Leerlauf-Frames (M14) fehlen, viel Bewegung zählt mehr. Render-Thread, Tags beim Start angelegt, ohne Allokation (`RenderLayersAllocationTests`) |
 | `zoomin.highlight.hold_key_presses` | Drücke | – | Haltetaste für Markierungen gedrückt (E1; Tastenwiederholung zählt nicht, keine Tasteninhalte). Nur solange der Haltetasten-Hook läuft |
+| `zoomin.view.frozen_monitors` | Monitore | – | Gerade eingefrorene Monitore (G2): +1 beim Einfrieren, −1 beim Aufheben (Befehl, Desktopwechsel, Anzeigewechsel, Fehler, Beenden) |
 
 ## Katalog: Logmeldungen
 | Id | Stufe | Meldung |
@@ -202,6 +216,26 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1640 | Info | Caret marker changed: {Shape}, {Thickness} – Form oder Dicke auf der Seite „Fokus & Textcursor“ geändert (E2) |
 | 1650 | Info | Show condition of {Marker} changed: {Condition} – `crosshair`, `caret`, `focus_frame`; auch beim Profilwechsel (E1) |
 | 1651 | Info | Hold key changed: {Key} (E1) |
+| 1720 | Info | Monitor {Monitor} frozen at {Level:0.00}x ({Image}, {Islands} islands); pointer moved to {Target} (G2) – `Islands`: Inseln, die mit dem Monitor einfrieren und dort gezeigt werden (B1) |
+| 1721 | Info | Freeze lifted on {Count} monitors ({Reason}) – `command`, `display_change`, `desktop_switch`, `session_unlock`, `move_refused` (der Zeiger kam beim Einfrieren zurück und liess sich nicht wieder versetzen), `shortcut_gone` (Kürzel werden bearbeitet oder `Strg+Alt+H` ist nicht registriert), `pointer_inside` (Zaun versagt, Zeiger auf dem eingefrorenen Monitor), `exit` |
+| 1722 | Info | Pointer switched from {From} to {To} (skipped {Skipped} frozen) |
+| 1723 | Info | Freezing refused: {Reason} – `layout_unavailable` (Anzeigewechsel läuft), `one_monitor`, `no_pointer`, `overview` (Übersicht läuft auf dem Monitor), `docked` (der angedockte Monitor), `island_edit` (Inseln werden bearbeitet, B1), `window_drag` (Fenster verschieben oder Größe ziehen mit eigener Stufe, G1), `temporary_level` (eine andere senkende vorübergehende Stufe, z. B. eine gerade endende Übersicht), `move_refused` |
+| 1724 | Info | Monitor switch refused: {Reason} – `layout_unavailable`, `one_monitor`, `no_free_monitor`, `move_refused` |
+| 1725 | Fehler | Frozen monitors: {Step} failed; every freeze was lifted and the pointer released – `toggle`, `recompute`, `lift_all`, `pointer_inside`, `exit`, `release` (der Monitorwechsel hebt nichts auf; seine Fehler meldet der Kürzel-Dienst, Log 2202) |
+| 1740 | Info | Islands shown: {Visible} ({Count} islands) – `Strg+Alt+I` oder Schalter (B1) |
+| 1741 | Info | Island edit mode on ({Count} islands) |
+| 1742 | Info | Island edit mode off: {Reason} ({Count} islands, {Seconds:0.0} s) – Gründe wie `zoomin.islands.end` |
+| 1743 | Info | Island edit mode not started: {Reason} – `docked`, `no_input` (Aktivitäts-Hook nicht installiert), `changed` (Inseln änderten sich während des Starts) |
+| 1744 | Info | Island {Index} {Outcome} on {Monitor}: source {Source}, picture {Picture}, level {Level:0.00}, still {Still} – `Created`, `Changed`, `LevelChanged`; nur Rechtecke und Stufe, nie Inhalt |
+| 1745 | Info | New island refused: all {Max} places are taken |
+| 1746 | Info | Island removed ({Count} left) |
+| 1747 | Fehler | Island edit step {Step} failed – `press`, `move`, `release`, `wheel`, `Escape`, `Delete`, `report`, `announce`, `end`, `start` (Start fehlgeschlagen, alles zurückgegeben); der Bearbeitungsmodus läuft weiter bzw. endet sauber |
+| 1748 | Info | Island {Index} changed on the settings page: {Change} – `removed`, `still`, `live` |
+| 1760 | Info | Pointer constraint: buffer {Buffer}, axis lock {AxisLock} with {Key}, {Monitors} monitors – Maus-Puffer und Achsensperre (A6) angewendet, nur bei einer Änderung |
+| 1761 | Debug | Pointer constraint re-applied after {Trigger} ({Monitors} monitors) – Monitore nur nach `DisplayChange` neu gelesen (sonst 0); nach Desktopwechsel/Entsperren beginnt die Haltetaste von vorn |
+| 1762 | Fehler | Applying the pointer constraint failed; buffer and axis lock are off |
+| 1763 | Fehler | Re-applying the pointer constraint after {Trigger} failed |
+| 1764 | Debug | Pointer constraint: monitors read again ({Monitors} monitors) – Wiederholung nach einem Anzeigewechsel oder wenn weniger als zwei Monitore lesbar waren (jede Sekunde, höchstens zehnmal je Anlass) |
 | 2001 | Fehler | UI Automation is unavailable; focus tracking is off |
 | 2002 | Info | Caret source in {Process}: {Source} |
 | 2003 | Fehler | Reading focus and caret failed; tracking goes on with the system caret |
@@ -264,11 +298,26 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2920 | Info | Overview: Esc swallowed {Count} times – beim Ende der Übersicht, nur die Anzahl |
 | 2921 | Fehler | Overview key handler failed (im Tastatur-Hook abgefangen) |
 | 2922 | Warnung | Screen reader announcement unavailable: {Reason} – `window` oder Ausnahmetyp |
+| 2940 | Info | Pointer fence {Mode} after {Trigger} ({Forbidden} forbidden areas, {Filters} filters) |
+| 2941 | Warnung | Pointer fence: watching desktop switches failed; the fence is not re-applied after Win+L or UAC |
+| 2942 | Warnung | Pointer fence: nothing would be left for the pointer; the pointer stays free |
+| 2943 | Fehler | Pointer fence: installing the mouse hook failed; move filters and non-rectangular areas are not kept until it works – einmal bis zum nächsten Erfolg; ein Rechteck hält dann `ClipCursor` allein, der Prüftakt versucht den Hook erneut (Abstand 1, 2, 4 … bis 64 s) |
+| 2944 | Warnung | Pointer fence: ClipCursor failed (error {Error}); retried on the next check – einmal bis zum nächsten Erfolg |
+| 2945 | Info | Pointer moved to {Monitor} by command ({Reason}) |
+| 2946 | Warnung | Moving the pointer ({Reason}) failed (error {Error}) |
+| 2947 | Fehler | Pointer fence: {Count} move filter failures; only the forbidden areas applied to those moves – vom Prüftakt gemeldet, nie aus dem Hook |
+| 2948 | Info | Pointer fence: another program confines the pointer; not overriding it |
+| 2949 | Fehler | Pointer fence update failed ({Trigger}); the pointer is released |
 | 2950 | Info | Hold key hook started for {Key} – nur solange eine Markierung „Nur bei gehaltener Taste“ nutzt (E1) |
 | 2951 | Info | Hold key hook stopped (E1) |
 | 2952 | Fehler | Installing the hold key hook failed; highlights shown only while a key is held stay hidden (E1) |
 | 2953 | Fehler | Hold key handler failed (E1) |
 | 2954 | Warnung | Hold key is down but the hook saw no press; following the key state instead – Hook von Windows entfernt (eine schon beim Start gehaltene Taste zählt nicht); einmal je Hook-Start (E1) |
+| 2960 | Info | Axis lock key watch started for {Key} |
+| 2961 | Info | Axis lock key watch stopped |
+| 2962 | Warnung | Axis lock: installing the keyboard hook failed; the axis lock does not react to its key |
+| 2963 | Debug | Axis lock key release was missed (e.g. another desktop was active); released by the check – Taste bei der Prüfung nicht gedrückt (Prüfung alle 0,5 s, nur solange sie als gehalten gilt) |
+| 2964 | Fehler | Axis lock key handler failed {Count} times – vom Prüftakt (auch einmal 0,5 s nach dem Loslassen), `Reset` oder `Stop` gemeldet, nie aus dem Tastatur-Hook |
 | 3001 | Info | Zoom pipeline ready for {Monitor} |
 | 3002 | Info | Display changed on {Monitor}: {Reason} |
 | 3003 | Fehler | Zoom pipeline for {Monitor} failed |
@@ -283,6 +332,12 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 3201 | Debug | Text enhancement values changed: sharpness {Sharpness} %, bold {Bold} px – je Reglerschritt, solange an |
 | 3220 | Info | Filter palette rebuilt: {Count} own schemes ({Places}) – Plätze mit Art, z. B. `Custom1 Tint`; nur bei Änderung, nie im Render-Loop |
 | 3221 | Info | Colour replacements {State}: {Replacements} defined; the step runs only on monitors showing such a scheme – `on`, `changed`, `off`; ob der Schritt je Monitor läuft, steht in `ReplaceActive` |
+| 3300 | Info | Still image of {Width}x{Height} px held |
+| 3301 | Info | Still image released |
+| 3302 | Warnung | Still image not taken: source format {Format} is not supported |
+| 3310 | Info | Frozen view on {Monitor} ({Image}) – `live` oder `still`, beim Beginn eines Einfrierens (G2) |
+| 3311 | Info | Frozen view on {Monitor} ended |
+| 3312 | Warnung | Still image of frozen monitor {Monitor} not taken or lost with a rebuilt pipeline; it stays live – einmal je Einfrieren und Pipeline |
 | 4001 | Warnung | Cannot watch process {ProcessId}: {Reason} |
 | 4002 | Fehler | ZoomIN ended unexpectedly (exit code 0x{ExitCode:X8}) |
 | 4003 | Warnung | Restarting ZoomIN |

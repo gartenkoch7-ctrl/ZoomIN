@@ -3,8 +3,11 @@ using Vortice.DXGI;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Rendering.Capture;
+using ZoomIN.Rendering.Freeze;
 using ZoomIN.Rendering.Gpu;
+using ZoomIN.Rendering.Islands;
 using ZoomIN.Rendering.Overlay;
+using ZoomIN.Rendering.Still;
 using ZoomIN.Rendering.TextEnhance;
 
 namespace ZoomIN.Rendering.RenderLoop;
@@ -49,10 +52,13 @@ internal sealed class RenderResources : IDisposable
                 CursorLayer = new CursorLayer(cursorPass, pointer.Shapes, pointer.SystemCursor);
                 Highlights = new HighlightLayer(cursorPass, new HighlightMetrics(deviceName));
                 OverviewLayer = new OverviewLayer(cursorPass);
+                Frozen = Own(new FrozenLayer(cursorPass, new StillFrame(Gpu.Device, log), deviceName, log));
                 var smart = Own(SmartInvertLayer.Create(Gpu.Device, Monitor.Width, Monitor.Height, deviceName, health, log));
                 Desktop = new DesktopLayer(
                     pass, smart, Own(new GpuPassTimer(Gpu.Device, deviceName, "magnify")), Own(new PassCostProbe(Gpu.Device)),
                     Own(new EnhanceCost(Gpu.Device, deviceName)));
+                Islands = new IslandLayer(
+                    pass, cursorPass, Own(new IslandStills(Gpu.Device, log)), Own(new GpuPassTimer(Gpu.Device, deviceName, "islands")));
             }
         }
         catch
@@ -78,7 +84,13 @@ internal sealed class RenderResources : IDisposable
 
     public OverviewLayer OverviewLayer { get; }
 
+    /// <summary>Frozen monitor (G2): kept anchor, still image and border.</summary>
+    public FrozenLayer Frozen { get; }
+
     public DesktopLayer Desktop { get; }
+
+    /// <summary>Islands above the zoom (M19 B1).</summary>
+    public IslandLayer Islands { get; }
 
     public void Dispose()
     {

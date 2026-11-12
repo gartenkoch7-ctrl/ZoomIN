@@ -1,8 +1,11 @@
 using ZoomIN.Core.Filters;
+using ZoomIN.Core.Islands;
 using ZoomIN.Core.Modes;
+using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Overview;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.WindowFilters;
+using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.Rendering.RenderLoop;
 
@@ -18,6 +21,9 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// <param name="ViewHeld">A temporary level (window drag) holds the monitor below the user's level, also while gliding there:
 /// the overview keeps the view from before it.</param>
 /// <param name="Activity">Mouse, typing and hold key for the show conditions of the highlights (E1).</param>
+/// <param name="Frozen">The monitor is frozen (G2): anchor, level and mode stay, no pointer or marks; null = live.</param>
+/// <param name="FrozenStill">Frozen with a still image that is (to be) shown, read once per frame: <see cref="FrozenMonitor.StillUnavailable"/> may change during a freeze.</param>
+/// <param name="Islands">Islands to draw on this monitor (M19 B1), or null; drawing them needs the desktop even at 1× (edit mode).</param>
 internal readonly record struct FrameRequest(
     ZoomMode Mode,
     ZoomMode AnchorMode,
@@ -35,8 +41,15 @@ internal readonly record struct FrameRequest(
     double OverviewLevel = 1,
     ViewPlacement Placement = default,
     bool ViewHeld = false,
-    MarkerActivitySample Activity = default)
+    MarkerActivitySample Activity = default,
+    FrozenMonitor? Frozen = null,
+    bool FrozenStill = false,
+    IslandScene? Islands = null)
 {
-    /// <summary>Not magnified and no colour filter: only pointer, crosshair or locator are drawn.</summary>
-    public bool OverlayOnly => Zoom <= 1.01 && !Effects.Filter.ChangesColors && !WindowsFiltered;
+    /// <summary>
+    /// Not magnified, no colour filter and no islands: only pointer, crosshair or locator are drawn. A
+    /// frozen still image is drawn at 1× too, or the live desktop would show through.
+    /// </summary>
+    public bool OverlayOnly =>
+        Zoom <= ZoomLimits.UnzoomedUpTo && !Effects.Filter.ChangesColors && !WindowsFiltered && !FrozenStill && Islands is null;
 }

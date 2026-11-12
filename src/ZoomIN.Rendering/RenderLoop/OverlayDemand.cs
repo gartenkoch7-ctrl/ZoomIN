@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using ZoomIN.Core.Filters;
+using ZoomIN.Core.Islands;
 using ZoomIN.Core.Modes;
+using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Overview;
 using ZoomIN.Core.Zoom;
 
@@ -62,8 +64,30 @@ internal sealed class OverlayDemand
     public ZoomMode AnchorMode(ZoomMode frameMode, bool unzoomed, OverviewSession? overview, bool lowered) =>
         unzoomed && (overview is not null || lowered) ? _zoom.Mode : frameMode;
 
+    /// <summary>The mode the monitor zooms in: the frozen one (G2), else the user's.</summary>
+    public ZoomMode Mode(FrozenMonitor? frozen) => frozen?.Mode ?? _zoom.Mode;
+
+    /// <summary>
+    /// The islands this monitor owns (M19 B1): the live ones, or on a frozen monitor (G2) those it froze
+    /// with (<see cref="FrozenMonitor.Islands"/>, null = none): later changes (shortcut, settings page,
+    /// profile, edit mode) wait for the thaw. Drawing and freeing still images both follow it. 0 B.
+    /// </summary>
+    public IslandScene? SceneFor(FrozenMonitor? frozen) => frozen is null ? _models.Islands.Scene : frozen.Islands;
+
+    /// <summary>
+    /// The islands this monitor draws at <paramref name="zoom"/>, or null: in fullscreen while zoomed
+    /// in, and on every monitor while they are edited (also at 1×). Lock-free, 0 B.
+    /// </summary>
+    /// <param name="mode">This frame's <see cref="Mode"/>, read once per frame.</param>
+    /// <param name="scene">This frame's <see cref="SceneFor"/>, read once per frame.</param>
+    public IslandScene? Islands(double zoom, ZoomMode mode, IslandScene? scene) =>
+        scene is not null && scene.ShowsOn(_deviceName, mode == ZoomMode.Fullscreen && zoom > ZoomLimits.UnzoomedUpTo)
+            ? scene
+            : null;
+
     /// <summary>After a pipeline failure: retry soon if the monitor should show anything, else wait for a change.</summary>
     public bool NeededAfterFailure() =>
         _zoom.EffectiveTargetFor(_deviceName) > ZoomLimits.Min || NeedsOverlayUnzoomed(_effects.CurrentFor(_deviceName))
-        || _models.Windows.Regions.Count > 0 || Overview is not null;
+        || _models.Windows.Regions.Count > 0 || Overview is not null || _zoom.Frozen.IsFrozen(_deviceName)
+        || _models.Islands.Scene.Editing;
 }

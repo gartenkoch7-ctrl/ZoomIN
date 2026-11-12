@@ -1,3 +1,4 @@
+using ZoomIN.App.Freeze;
 using ZoomIN.App.Localization;
 using ZoomIN.App.Settings;
 using ZoomIN.App.Zoom;
@@ -19,18 +20,23 @@ public sealed class TrayMenuSync
     private readonly ProfileService _profiles;
     private readonly ZoomCommands _zoom;
     private readonly WindowFilterCommands _windowFilter;
+    private readonly MonitorFreezeController _freeze;
+    private readonly MonitorSwitchController _switch;
     private readonly ILocalizer _texts;
     private readonly FilterNames _filterNames;
 
     public TrayMenuSync(
         ITrayIcon tray, SettingsService settings, ProfileService profiles, ZoomCommands zoom,
-        WindowFilterCommands windowFilter, ILocalizer texts, FilterNames filterNames)
+        WindowFilterCommands windowFilter, MonitorFreezeController freeze, MonitorSwitchController monitorSwitch, ILocalizer texts,
+        FilterNames filterNames)
     {
         _tray = tray;
         _settings = settings;
         _profiles = profiles;
         _zoom = zoom;
         _windowFilter = windowFilter;
+        _freeze = freeze;
+        _switch = monitorSwitch;
         _texts = texts;
         _filterNames = filterNames;
     }
@@ -44,6 +50,10 @@ public sealed class TrayMenuSync
 
         // Short status after the window filter shortcut (ADR-0020); the tray works from any thread.
         _windowFilter.Toggled += rule => _tray.Notify(Text.Get("WinFilter.Title"), WindowFilterStatus(rule));
+
+        // Why Ctrl+Alt+H or Ctrl+Alt+N did nothing, e.g. "freezing needs at least two monitors" (G2).
+        _freeze.Refused += hint => _tray.Notify(_texts.Get("Freeze.Title"), hint);
+        _switch.Refused += hint => _tray.Notify(_texts.Get("Freeze.Title"), hint);
     }
 
     /// <summary>Runs a zoom or profile command; the shell handles Open and Exit itself.</summary>

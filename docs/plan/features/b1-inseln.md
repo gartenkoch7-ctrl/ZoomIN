@@ -1,6 +1,6 @@
 # B1 · Eingefrorene Ausschnitte („Inseln“)
 **Meilenstein:** [M19](../m19-mehrere-ansichten.md) · **Spur:** B · **Branch:** `feat/m19-b1-inseln` ·
-**Größe:** M · **Status:** geplant
+**Größe:** M · **Status:** umgesetzt auf `feat/m19-b1-inseln` (2026-11-12), Sichtprüfung und Freigabetest offen
 
 **Ziel:** Bis zu vier feste Bildschirmbereiche (z. B. Uhr, Statuszeile, Chat, Formelzeile) bleiben
 als vergrößerte Inseln über dem Zoom sichtbar, während der Zoom normal der Maus folgt.
@@ -69,22 +69,22 @@ Grundsatz: [ADR-0028](../../adr/0028-zeiger-versetzen-nur-auf-befehl.md) (Inseln
   und „Bearbeiten starten“.
 
 ## Aufgaben
-- [ ] Core: `Island`, `IslandSet`, `IslandEditor` mit Tests (Abdeckung ≥ 90 %). Fälle: Obergrenze 4,
+- [x] Core: `Island`, `IslandSet`, `IslandEditor` mit Tests (Abdeckung ≥ 90 %). Fälle: Obergrenze 4,
       Mindestgröße, Insel am Monitorrand, Stufe begrenzen, Esc bricht Aufziehen ab, Entf löscht.
-- [ ] Rendering: Inseln im Desktop-Durchgang, Rahmen, Bearbeitungsdarstellung. WARP-Tests:
+- [x] Rendering: Inseln im Desktop-Durchgang, Rahmen, Bearbeitungsdarstellung. WARP-Tests:
       Insel zeigt den richtigen Quellbereich, Filter wirken, Rahmenfarbe.
-- [ ] Benchmark: Frame mit 4 Inseln `0 B`. GPU-Zeit mit 4 Inseln gegen ohne messen (RTX, ×10 hochgerechnet).
-- [ ] Platform: abfangender Hook-Modus nur im Bearbeitungsmodus, automatisches Ende.
-- [ ] App: Kürzel, Controller, Profil, Einstellungskarte.
-- [ ] Telemetrie (ADR-0019):
+- [x] Benchmark: Frame mit 4 Inseln `0 B`. GPU-Zeit mit 4 Inseln gegen ohne messen (RTX, ×10 hochgerechnet).
+- [x] Platform: abfangender Hook-Modus nur im Bearbeitungsmodus, automatisches Ende.
+- [x] App: Kürzel, Controller, Profil, Einstellungskarte.
+- [x] Telemetrie (ADR-0019):
   - Abläufe `zoomin.islands.edit` (Dauer, Zahl der Inseln danach) und `zoomin.islands.toggle`
   - Zähler `zoomin.islands.count`
   - Logs App 1740–1759, Rendering 3320–3339
   - Keine Inhalte, nur Rechtecke und Stufen
   - Katalog `docs/kb/telemetrie.md`
-- [ ] Texte Deutsch/Englisch. Bildschirmleser sagt Bearbeitungsmodus an/aus und „Insel 2 von 4,
+- [x] Texte Deutsch/Englisch. Bildschirmleser sagt Bearbeitungsmodus an/aus und „Insel 2 von 4,
       3-fach“ an. Die Liste in den Einstellungen ist per Tastatur bedienbar.
-- [ ] KB: `docs/kb/rendering-pipeline.md` (Inseln im Durchgang) und `docs/kb/eingabe-und-tracking.md`
+- [x] KB: `docs/kb/rendering-pipeline.md` (Inseln im Durchgang) und `docs/kb/eingabe-und-tracking.md`
       (Klicks fallen durch, Hook nur im Bearbeitungsmodus).
 - [ ] Freigabetest: Inseln und Bearbeitungsrahmen sind in Teams/OBS unsichtbar.
 
@@ -105,14 +105,14 @@ Grundsatz: [ADR-0028](../../adr/0028-zeiger-versetzen-nur-auf-befehl.md) (Inseln
     Reihenfolge ist: Bearbeitungsmodus vor Achse vor Puffer.
 
 ## Akzeptanzkriterien
-- [ ] Bis zu 4 Inseln lassen sich im Bearbeitungsmodus anlegen, verschieben, in der Größe ändern,
+- [x] Bis zu 4 Inseln lassen sich im Bearbeitungsmodus anlegen, verschieben, in der Größe ändern,
       in der Stufe ändern und löschen. Eine fünfte wird mit Hinweis abgelehnt.
-- [ ] Außerhalb des Bearbeitungsmodus fängt ZoomIN keine Mausklicks ab. Ein Klick auf eine Insel
+- [x] Außerhalb des Bearbeitungsmodus fängt ZoomIN keine Mausklicks ab. Ein Klick auf eine Insel
       trifft das Fenster darunter.
-- [ ] `Strg+Alt+I` blendet alle Inseln ein und aus.
-- [ ] Live-Inseln aktualisieren sich (Uhr läuft), Standbild-Inseln bleiben stehen.
-- [ ] Nach einem Neustart und nach einem Profilwechsel erscheinen die Inseln des Profils.
-- [ ] Farbfilter und Smart Invert wirken in Inseln wie im Hauptbild.
+- [x] `Strg+Alt+I` blendet alle Inseln ein und aus.
+- [x] Live-Inseln aktualisieren sich (Uhr läuft), Standbild-Inseln bleiben stehen.
+- [x] Nach einem Neustart und nach einem Profilwechsel erscheinen die Inseln des Profils.
+- [x] Farbfilter und Smart Invert wirken in Inseln wie im Hauptbild.
 - [ ] Inseln und Rahmen sind in Bildschirmübertragungen unsichtbar.
 - [ ] Bildrate bleibt bei 4 Inseln gleich der Monitor-Hz.
 
@@ -128,3 +128,98 @@ Grundsatz: [ADR-0028](../../adr/0028-zeiger-versetzen-nur-auf-befehl.md) (Inseln
   Monitoren wären F1 (zweiter Monitor zeigt den ersten) und sind hier nicht enthalten.
 - **Lupe und Angedockt:** Inseln gelten im Vollbild. Ob sie in der Lupe oder im Streifen sichtbar
   sind, beim Umsetzen klären. Vorschlag: nur Vollbild.
+  → **Entschieden beim Umsetzen:** nur Vollbild. Bearbeiten geht auch in der Lupe (bei 1×), im
+  angedockten Modus nicht (dort gibt es keine vorübergehende 1×).
+
+## Umsetzungsstand (2026-11-12)
+Details: [rendering-pipeline.md](../../kb/rendering-pipeline.md#inseln-m19-b1) und
+[eingabe-und-tracking.md](../../kb/eingabe-und-tracking.md) (Abschnitt „Inseln“).
+- **Abweichung Zeichnen:** eigene Klasse `Rendering/Islands/IslandLayer` (ein Draw je Insel mit dem
+  vorhandenen `MagnifyPass`) statt Code in `DesktopLayer`; gezeichnet nach den Hervorhebungen, vor
+  Übersichtsrahmen und Zeiger. `DesktopLayer.cs` blieb unverändert.
+- **Shader:** `Magnify.hlsl` bekommt `StillOffset/StillScale` (Puffer b0 128 → 144 B) und tastet über
+  `TexUv` ab, damit Standbilder nur ihren Quellbereich halten müssen. Live bitgleich wie vorher.
+- **Bearbeiten bei 1×** (selbst entschieden): alle Monitore vorübergehend 1× (neuer Besitzer
+  `TemporaryZoomOwner.IslandEdit`), damit Zeiger, Quelle und Inselbild dieselben Koordinaten haben.
+- **Hook:** abfangender Modus `Platform/Input/IslandEditCapture` am vorhandenen Aktivitäts-Hook
+  (Maus und Tastatur), kein neuer Hook. Zeigerzaun: Filter `IslandDragFence`
+  (`PointerFilterOrder.IslandEdit`) hält ein Ziehen auf dem Monitor der Insel; gesperrte Bereiche
+  (`FenceOwner.IslandEdit`) braucht B1 nicht.
+- **Telemetrie:** App 1740–1748; Rendering 3320–3339 bleibt frei (kein Log im Render-Loop,
+  Standbilder melden 3300/3301). GPU-Zeit im Betrieb als `zoomin.render.gpu_time` (`islands`).
+- **GPU** (RTX 3060 Ti, 1080p, 4×, 4 Inseln 600 × 160): +0,008–0,018 ms, ×10 ≈ 0,2 ms.
+- **Zusammenspiel nach dem Merge von M18/A6/G2:** Inseln auf einem eingefrorenen Monitor bleiben
+  sichtbar und frieren mit ein (Standbild des Monitors, Stufe und Modus des Einfrierens). Beim
+  Bearbeiten bleibt er eingefroren (Stufe, Zaun). Einfrieren während des Bearbeitens lehnt G2 ab
+  (`island_edit`, *selbst entschieden*). Filterkette 100 → 200 → 300,
+  danach die gesperrten Bereiche (`IslandEditFilterChainTests`). Eigene Farbschemata und Schärfe/Fett
+  wirken auf Live- und Standbild-Inseln wie im Hauptbild (WARP-Tests).
+- **Offen für den Menschen:** Sichtprüfung (Blinken, Griffe, gestricheltes Rechteck, Uhr läuft),
+  Freigabetest Teams/OBS, Bildrate bei 4 Inseln am echten Monitor, Ansagen mit NVDA/Sprachausgabe.
+
+## Akzeptierte Abwägungen (Review-Schleife §9)
+Befunde der Reviews, die bewusst nicht als Code umgesetzt sind (Designvorschläge oder bekannte Grenzen):
+- **Standbild und Live-Daten:** Gewichte des intelligenten Invertierens und Bereiche des Filters pro
+  Fenster kommen vom Live-Bild, nicht vom Standbild.
+- **Standbild-Zeitpunkt:** aufgenommen beim ersten Zeichnen nach dem Umschalten, nach Neustart oder
+  Neuaufbau der Pipeline; freigegeben beim nächsten Frame des Monitors (schläft er, beim Aufwachen).
+- **Anzeigewechsel zur Laufzeit:** Inseln werden beim Start, beim Profilwechsel und beim Bearbeiten
+  eingepasst, nicht bei jedem Anzeigewechsel (kein Monitor-Ereignis in Core). Bis dahin ausgeblendet
+  bzw. für den kleineren Monitor eingepasst gezeichnet; gespeichert bleibt das Original.
+- **Verlorener Aktivitäts-Hook:** Entfernt Windows den Hook stillschweigend, merkt ZoomIN das nicht;
+  das 2-min-Sicherheitsnetz beendet den Modus.
+- **Zaun klemmt am Rand:** Die vom Zaun per `SetCursorPos` gesetzte Position sieht kein Low-Level-Hook;
+  die Insel folgt bis zum Loslassen nur bis zur letzten gesehenen Position.
+- **Halbe Pixel:** Bei Stufen wie 2,5× kann die Gegenkante beim Ecke-Ziehen einen halben Pixel springen.
+- **Esc/Entf beim Start gehalten:** Ein zweiter Blick nach 100 ms klärt ein Loslassen genau beim Start.
+  Geht das Loslassen später verloren (Win+L) und kam keine Wiederholung, kann das erste Esc an die
+  Anwendung gehen.
+- **Architektur:** Zwei Sperren (Start/Ende, Eingabeschritt) statt eines einzigen Akteurs; Enden aus
+  fremden Threads laufen über den Thread-Pool. Ein Umbau zum Akteur wäre sauberer, ist aber kein Fehler.
+- **Kosten im Bearbeitungsmodus:** Jede Bewegung setzt den Leerlauf-Timer neu und vergleicht die
+  Szene; das gestrichelte Rechteck sind bis zu ~260 Rechteck-Draws. Nur während des Bearbeitens.
+- **Doppelter Code:** Monitornummer aus `\\.\DISPLAYn` (Zoom- und Filterseite), Punkt-Klemmen
+  (`IslandEditor`, `ModeGeometry`, `FenceGeometry`), Tasten-Wiederholungslücke (`OverviewKeyWatch`).
+  `PointerStyle` nutzt 1,01 noch als Zahl statt `ZoomLimits.UnzoomedUpTo`.
+  `IslandOperation` wiederholt die Wurzel-Ablauf-Logik von `OverviewOperation`.
+- **P/Invoke in `Platform/Input`:** `GetSystemMetrics` wie die übrigen Hook-Klassen dort direkt über
+  CsWin32 (gelebte Ausnahme der Regel „nur in Interop/“).
+- **Monitorwechsel bei offener Einstellungsseite:** Die Zeilen aktualisieren Monitornummer und
+  „nicht angeschlossen“ erst bei der nächsten gespeicherten Änderung oder beim erneuten Öffnen.
+- **`PointerStyle`** nutzt 1,01 noch als Zahl; `ZoomLimits.UnzoomedUpTo` gilt für Inseln und Overlay.
+- **Dateigröße:** `IslandEditor.cs` und
+  `IslandEditorTests.cs` liegen knapp unter 250 Zeilen.
+- **Einpassen im Modell:** Gezeichnete (eingepasste) und gespeicherte Inseln werden im Modell getrennt
+  geführt (`Committed`, `WithUntouchedFrom`). Einpassen erst beim Zeichnen und Greifen wäre einfacher
+  und würde auch nach Anzeigewechseln wirken – späterer Umbau.
+- **`RenderModels.Islands` mit Vorgabewert:** wie `Markers`; die Composition Root setzt das echte Modell.
+- **Rad-Rest:** Teil-Rastungen des Touchpads sammeln sich je Lauf und Richtung, nicht je Insel oder
+  Pause; eine halbe Rastung kann sich mit einer späteren halben auf einer anderen Insel addieren.
+- **Überflüssiges Speichern:** Endet ein Lauf mit Änderungen, nachdem eine Änderung von außen gewann,
+  wird einmal unverändert gespeichert.
+- **Einfrieren gegen Bearbeiten (Merge G2):** Die Ablehnung prüft `Scene.Editing` ohne gemeinsame
+  Sperre mit `IslandController`. Ein Einfrieren genau beim Start oder Ende des Bearbeitens kann
+  durchrutschen. Schlimmstenfalls hält der Zaun des Ziehens den Zeiger bis zum Loslassen am Rand,
+  eine Falle ist das nicht.
+- **Strg+Alt+N während eines Ziehens:** Der Sprung per `SetCursorPos` umgeht den Zaun des Ziehens.
+  Die nächste Bewegung holt den Zeiger an den Rand des Zieh-Monitors zurück. Esc nimmt das Ziehen zurück.
+- **Inseln eingefrorener Monitore im Render-Loop:** Dass `RenderSession` Inseln aus dem eingefrorenen
+  Bild zeichnet, prüft kein Test. `RenderSession` braucht echte Desktop-Duplizierung, getestet sind
+  `OverlayDemand` und `IslandLayer`.
+- **Freigeben von Standbildern an zwei Stellen:** ohne Inseln in `MonitorRenderer`, mit Inseln in
+  `IslandStills.Update` beim Zeichnen. Ein Frame mit Inseln, der nichts zeichnet, gibt nichts frei.
+  Eine Szenenänderung erzwingt aber immer ein Zeichnen.
+- **Bild und Textur eines eingefrorenen Monitors:** `FrozenLayer.Desktop` und `DesktopTexture`
+  entscheiden je für sich, ob das Standbild gehalten wird, mit derselben Bedingung. Ein gemeinsamer
+  Rückgabewert wäre robuster.
+- **Ganze Szene im Einfrieren:** `FrozenMonitor.Islands` hält auch die Inseln anderer Monitore. Jeder
+  Leser filtert nach Monitor, wie bei der Live-Szene.
+- **Zeichenregeln an drei Stellen:** „Vollbild über 1×“, „eigener Monitor“ und „passt“ stehen in
+  `OverlayDemand.Islands`, `IslandLayer.Draw` und `FrozenMonitor.ShownIslands`. Ein gemeinsamer
+  Core-Helfer wäre robuster. Ändert sich eine Regel, müssen alle drei mit.
+- **Test der Textur eines eingefrorenen Monitors:** `FrozenLayerTests` prüft nur, dass
+  `DesktopTexture` beim gehaltenen Standbild nicht die Live-Textur liefert, nicht ihre Pixel.
+- **Dateigröße nach dem Merge:** `RenderSession.cs` (264) und `MonitorFreezeController.cs` (259) liegen
+  über 250, aber unter 300. Sie sind Integrationsdateien mehrerer Spuren. Aufgeteilt wird nach dem
+  Merge aller M19-Spuren im Integrationsbranch, damit andere Spuren keine Konflikte bekommen.
+  → Erledigt in der Integration (`SessionPointer`, `FreezeLifter`, `FreezeRefusals`; jetzt 236 bzw. 219 Zeilen).

@@ -245,6 +245,95 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   (32 B/Frame) – der teure Teil steht deshalb in einer eigenen Methode.
 - PNG ohne Bibliothek: `PngWriter` (RGBA8, Filter 0, ein zlib-IDAT, CRC-32).
 
+## Standbild (M19 Schritt 0)
+- `Rendering/Still/StillFrame` kopiert auf Anforderung die Desktop-Kopie eines Monitors
+  (`DesktopDuplicator.Texture`) oder einen Teil davon in eine eigene Textur und hält sie bis
+  `Release`. Für eingefrorene Monitore (G2) und Inseln (B1) mit „Standbild“.
+- Kopie per rohem `CopyResource` bzw. `CopySubresourceRegion` (`DxgiInterop`, Slots 47/46), weil
+  Vorticies Wrapper pro Aufruf allozieren. Gleiche Größe → Textur wiederverwendet, `0 B`
+  (`StillFrameTests`); neue Größe oder erstes Bild → neue Textur (nur auf Anforderung).
+- Nur `B8G8R8A8_UNorm` ohne Multisampling (Format der Desktop-Kopie). Ein 4K-Bild hält ~33 MB
+  GPU-Speicher; Zähler `zoomin.render.still_images`.
+- Gehört wie das Gerät einem Render-Thread. Verdrahtung in `RenderSession`/`DesktopLayer` machen
+  die Spuren G2/B1.
+
+## Inseln (M19 B1)
+Plan: [b1-inseln.md](../plan/features/b1-inseln.md). Code: `Core/Islands/`, `Rendering/Islands/`,
+`App/Islands/`, `Platform/Input/IslandEditCapture`.
+- **Was:** bis zu 4 feste Quellbereiche eines Monitors, vergrößert an fester Stelle desselben
+  Monitors über dem Zoom. Ziel = Quelle × Stufe; beim Anlegen wächst das Bild um die Mitte der
+  Quelle und wird an den Rändern auf den Monitor geschoben (Uhr in der Ecke bleibt in der Ecke).
+  `IslandRules.Fit` hält Quelle und Bild im Monitor, Mindestgröße 16 px, Stufe 1×–16× und so klein,
+  dass das Bild passt.
+- **Wann gezeichnet** (`OverlayDemand.Islands`, je Frame lock-frei, 0 B): im Vollbild, solange der
+  Monitor vergrößert ist (> 1,01×), sichtbar (`Strg+Alt+I`) und eine Insel auf ihm liegt. Lupe und
+  Angedockt zeigen keine Inseln (Vorschlag des Plans übernommen). Übersicht und Fenster-Verschieben
+  (vorübergehend 1×) blenden sie damit aus. Im Bearbeitungsmodus zeichnen **alle** Monitore, auch
+  bei 1×; dann ist `FrameRequest.OverlayOnly` falsch, damit die Desktop-Kopie läuft.
+- **Eingefrorener Monitor (G2):** Seine Inseln **bleiben sichtbar und frieren mit ein** (Plan B1,
+  Merge-Prüfung). Der Freeze-Controller legt die Inselszene des Augenblicks in `FrozenMonitor.Islands`
+  ab (unveränderlich, ohne Bearbeitungsansicht). Je Frame liest `MonitorRenderer` einmal
+  `OverlayDemand.Mode(frozen)` und `OverlayDemand.SceneFor(frozen)` und fragt damit
+  `Islands(zoom, mode, scene)`. Ein eingefrorener Monitor nutzt so Szene und Modus des Einfrierens
+  bis zum Auftauen, auch nach einem Neuaufbau der Pipeline. Log 1720 und der KI-Debug-Bericht nennen
+  die Zahl (`FrozenMonitor.ShownIslands`). Ausblenden
+  (`Strg+Alt+I`), Einstellungsseite, Profilwechsel und Bearbeiten ändern ihn also erst danach.
+  Standbilder entfernter Inseln gibt `MonitorRenderer` auf jedem Frame und vor jedem Schlaf ohne
+  Inseln frei (`PruneIslands`), ein Monitor mit Inseln beim Zeichnen, beide gegen die Liste aus
+  `SceneFor` (eingefroren: die eingefrorene). Standbild-Inseln auf ihm kopiert
+  `IslandStills` aus derselben Textur wie das Hauptbild (`FrozenLayer.DesktopTexture`). `IslandLayer.Draw` tastet dasselbe Bild ab wie das
+  Hauptbild (`FrozenLayer.Desktop`), mit Standbild also das Standbild. Solange es gehalten wird,
+  liest der Monitor keinen neuen Capture-Frame, und Standbild-Inseln passen dazu. Beim Einfrieren
+  mit „live“ bleiben auch die Inseln live. Die vorübergehende 1× des Bearbeitens übergeht ein
+  eingefrorener Monitor: Er behält Stufe, Modus, Zaun und Inseln, ohne Bearbeitungsrahmen. Taut er
+  während des Bearbeitens auf, zeigt er 1× und macht mit. Einfrieren während des Bearbeitens lehnt
+  G2 ab (`island_edit`).
+- **Reihenfolge im Frame:** Desktop → Hervorhebungen (Fokus, Caret) → **Inseln** → Übersichtsrahmen
+  → Zeiger. Der Zeiger liegt also immer oben. Alles im vorhandenen Overlay-Fenster
+  (`WDA_EXCLUDEFROMCAPTURE`), kein neues Fenster.
+- **Ein Draw je Insel** mit dem vorhandenen `MagnifyPass` (`MagnifyConstants.ForIsland`): Quelle,
+  Bild und 3-px-Rahmen in der Lupenrahmen-Farbe wie bei der Lupe (`WithFrame`). Farbmatrix, Filter
+  pro Fenster (Puffer b1 gilt weiter, seine Bereiche liegen in Desktop-UV), eigene Farbschemata,
+  intelligentes Invertieren (Gewichte des Frames), Glättung und Schärfe/Fett (`At(Stufe der Insel)`)
+  wirken also wie im Hauptbild. Konstanten werden je Draw hochgeladen (144 B); bei ruhigem Bild wird
+  ohnehin nichts gezeichnet (M14).
+- **Standbild je Insel** (`IslandStills`, 4 Plätze à `StillFrame`): einmal kopiert, sobald die
+  Insel als Standbild **zum ersten Mal gezeichnet** wird (nach dem Umschalten, nach einem Neustart
+  oder Neuaufbau der Pipeline, z. B. Anzeigewechsel – das Bild wird nie gespeichert) und wenn ihre
+  Quelle sich ändert; frei, wenn sie weg oder wieder live ist. Jedes Umschalten auf „Standbild“ zählt `Island.Take` hoch und
+  erzwingt ein neues Bild, auch ohne gezeichneten Frame dazwischen. Freigegeben wird erst beim nächsten
+  Zeichnen auf dem Monitor. Wer bei 1× auf „Standbild“ schaltet,
+  bekommt also das Bild beim nächsten Hineinzoomen. Während des Bearbeitens wird eine sich ändernde
+  Quelle (Ecke ziehen) nicht je Schritt neu kopiert (neue Textur und Log je Frame); die Insel zeigt
+  dann live und wird nach dem Ende neu aufgenommen. Eine fehlgeschlagene Kopie (Format) wird nicht
+  je Frame wiederholt.
+  - Die Kopie hält nur den Quellbereich (ganze Pixel). Damit Filter pro Fenster, Gewichte und
+    Texelraster weiter in **Desktop-UV** rechnen, bildet `Magnify.hlsl` erst beim Abtasten auf die
+    Textur ab: `TexUv(uv) = uv · StillScale + StillOffset` (Konstanten `StillOffset/StillScale`,
+    Puffer b0 wächst von 128 auf 144 B). Live: Skala 1, Versatz 0 → jede Koordinate bitgleich wie
+    vorher. Auch `SmartWeight.hlsli` und `TextEnhance.hlsli` tasten über `TexUv` ab (WARP-Test:
+    Schärfe/Fett auf Standbild = live, innen).
+  - Grenze: Die Gewichte des intelligenten Invertierens und die Bereiche des Filters pro Fenster
+    kommen vom Live-Bild (ein über die Stelle geschobenes gefiltertes Fenster färbt das Standbild mit). Hat sich der Inhalt
+    seit dem Standbild stark geändert, kann die Invertierung im Standbild an Stellen leicht
+    abweichen.
+- **Bearbeitungsmodus:** Rahmen blinken (Amber/Weiß, alle 0,5 s; `IslandLayer.NeedsRedraw` weckt
+  nur beim Wechsel), Griffe (10 px gefüllt) an den Ecken der gewählten Insel, beim Aufziehen ein
+  gestricheltes Rechteck (weiße Striche auf dunkler Linie, höchstens 64 Striche je Seite) über den
+  Rechteck-Shader des Zeigerdurchgangs.
+- **Monitor geändert:** Insel außerhalb ihres Monitors oder auf einem fehlenden Monitor wird nicht
+  gezeichnet (nie Absturz), ebenso eine Stufe außerhalb 1×–16× (von Hand geänderte Datei). Beim
+  Start von ZoomIN und beim nächsten Bearbeiten schiebt `Fit` sie zurück in den Monitor – nur für die Anzeige;
+  gespeichert bleiben die alten Rechtecke, bis der Nutzer eine Insel ändert (ein Beamer für eine
+  Weile verkleinert sie nicht dauerhaft). Nach einem
+  Anzeigewechsel im laufenden Betrieb bleibt sie bis dahin ausgeblendet (offen: kein Monitor-Ereignis
+  in Core).
+- **Kosten:** CPU je Frame 2,5 ns, 0 B (`IslandBenchmarks`); `IslandLayer.Draw` mit 4 Inseln,
+  Standbild und Bearbeitungsmarken 0 B (`IslandRenderPathTests`). GPU (`IslandGpuTimeTests`,
+  `ZOOMIN_GPU_TIMING=1`, 1080p bei 4×, 4 Inseln 600 × 160, RTX 3060 Ti): +0,014 ms schlicht,
+  +0,008 ms mit intelligentem Invertieren, +0,018 ms mit Schärfe/Fett (Hauptbild 0,08–0,10 ms).
+  ×10 Onboard **hochgerechnet** ≈ 0,2 ms. Im Betrieb `zoomin.render.gpu_time` mit `zoomin.pass=islands`.
+
 ## Schärfen und Fett (M18, D1)
 Plan: [d1-schaerfen-fetter.md](../plan/features/d1-schaerfen-fetter.md). Code: `Shaders/TextEnhance.hlsli`,
 `Magnify.hlsl` `PSEnhanced`, `Core/Filters/TextEnhancement.cs`, `Rendering/TextEnhance/`.
@@ -318,6 +407,43 @@ Plan: [d1-schaerfen-fetter.md](../plan/features/d1-schaerfen-fetter.md). Code: `
   `EnhanceCost` dasselbe nach jeder Änderung und nach einer Pause (`zoomin.render.enhance_gpu_ms`),
   nur mit Zuhörer, auf genau der gezeichneten Ansicht (bei Lupe nur deren Fläche).
 - Der Debug-Schnappschuss (`-info.txt`) nennt Glättung, Schärfe, Fett und ob sie bei diesem Zoom wirken.
+
+
+## Eingefrorener Monitor (M19 G2)
+- `ZoomModel.Frozen` (`MonitorFreeze`) hält einen unveränderlichen `FreezeState`; der Render-Thread
+  liest je Frame `Frozen.For(monitor)` lock-frei, `0 B` (Benchmark `FreezeBenchmarks`).
+- `MonitorRenderer`: eingefroren → Zielstufe ist die Stufe des Augenblicks (`FrozenMonitor.Level`),
+  Modus, Lupe und Dock ebenso; vorübergehende Stufen und die Übersicht wirken nicht. Der Renderer
+  schläft nicht, auch bei 1× nicht (Rahmen).
+- `RenderSession` (Zeiger und Anker seit der M19-Integration in `SessionPointer`): der Anker wird nicht weitergeschoben (`AnchorController.Next` läuft nicht), es
+  gilt der Anker des letzten Live-Frames. Er wird im `FrozenMonitor` abgelegt (einmal, atomar), so
+  zeigt eine nach einem Anzeigewechsel neu gebaute Pipeline denselben Ausschnitt; nach dem Aufheben
+  beginnt ihr `AnchorController` dort (`StartAt`) statt in der Monitormitte. Zeiger,
+  Fokusrahmen und Caret werden dort nicht gezeichnet (`SessionPointer.Inside` ist falsch).
+- `Rendering/Freeze/FrozenLayer`: Standbild über den Baustein `StillFrame` – beim ersten Frame des
+  Einfrierens aus `DesktopDuplicator.Texture`, danach liest die Sitzung **keinen** Capture-Frame
+  mehr (`HoldsStill`). Ein neues Einfrieren (neues Objekt) nimmt ein neues Bild, Aufheben gibt die
+  Textur frei. Bei Standbild wird auch bei 1× der Desktop gezeichnet (`FrameRequest.OverlayOnly`),
+  sonst schiene der Live-Desktop durch. Fehlt das Bild, bleibt der Monitor live (Log 3312).
+  Das Standbild lebt im Gerät der Pipeline: Ein Anzeigewechsel hebt Standbild-Einfrieren deshalb
+  auf (Controller). Nach einem Neustart der Pipeline wegen eines Fehlers (ohne Anzeigewechsel) nimmt
+  die neue Sitzung kein neues Bild (`FrozenMonitor.ClaimStill`: nur einmal je Einfrieren), sondern
+  zeigt live (Log 3312) – ein späteres Bild als Standbild auszugeben wäre irreführender.
+  `RenderSession.Hide` gibt ein Standbild sofort frei (ein aufgetauter Monitor bei 1× schläft).
+  Genommen wird es nur aus einer aktuellen Desktop-Kopie (`DesktopDuplicator.IsCurrent`): nach
+  `ACCESS_LOST` (Win+L, UAC) wartet es auf den nächsten Frame, statt ein altes Bild festzuhalten.
+  Steht der Zeiger doch auf einem eingefrorenen Monitor, zeigt Windows seinen eigenen Zeiger
+  (`FrozenLayer.NeedsSystemPointer`, auch einmal direkt nach dem Sprung). In Lupe und Angedockt
+  friert das Standbild nur den vergrößerten Ausschnitt ein; daneben bleibt der Desktop sichtbar
+  wie immer (gewollt: dort ist ZoomIN durchsichtig). Ein eingefrorener Monitor bei 1× „Live“ läuft im
+  Leerlauf-Takt (eine Prüfung je Bildwechsel), damit der Rahmen stehen bleibt.
+  Mit dem Standbild bleiben auch die Fensterbereiche des Filters pro Fenster stehen, sonst lägen die
+  Filter auf Fenstern, die im Bild gar nicht mehr dort sind.
+- **Rahmen:** 6 px innen am Monitorrand in der Einstellungsfarbe (Werk: Cyan), gezeichnet mit dem
+  Rechteck-Shader des `CursorPass` wie der Fokusrahmen – nicht im `Magnify.hlsl`, denn dessen
+  Rahmen umgibt nur Lupe/Streifen, und `DesktopLayer`/`Magnify.hlsl` gehören Spur B1.
+  `WDA_EXCLUDEFROMCAPTURE` gilt unverändert fürs Overlay.
+- WARP-Tests `FrozenLayerTests`: Anker bleibt, Live-Inhalt ändert sich, Standbild nicht; `0 B`.
 
 ## Shader-Regeln
 - HLSL-Dateien in `ZoomIN.Rendering/Shaders/`. Seit M14 Schritt 4 übersetzt sie der Build mit

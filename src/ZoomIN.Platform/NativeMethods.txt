@@ -189,6 +189,22 @@ SetBrushOrgEx
 BITMAPINFO
 GetCurrentProcessId
 
+// PointerFence/Win32FenceNative, Win32FenceHook, Win32FenceWatcher, Win32PointerMover (M19)
+ClipCursor
+GetClipCursor
+SetCursorPos
+WTSRegisterSessionNotification
+WTSUnRegisterSessionNotification
+NOTIFY_FOR_THIS_SESSION
+WM_WTSSESSION_CHANGE
+WTS_SESSION_UNLOCK
+WTS_CONSOLE_CONNECT
+WTS_REMOTE_CONNECT
+WM_DISPLAYCHANGE
+EVENT_SYSTEM_DESKTOPSWITCH
+WINEVENT_OUTOFCONTEXT
+WNDCLASSEXW
+
 // Tests: solid test windows (WindowFilters tests)
 GetStockObject
 UnregisterClass
@@ -210,3 +226,9 @@ SystemParametersInfo
 IsZoomed
 GetWindowPlacement
 WINDOWPLACEMENT
+
+// Input/IslandEditCapture
+WM_MBUTTONUP
+WM_XBUTTONDOWN
+WM_XBUTTONUP
+WM_MOUSEHWHEEL

@@ -23,6 +23,7 @@ public sealed class AnchorController
     private const double SettleDistance = 0.5;
 
     private bool _initialized;
+    private PhysicalPoint? _startAt;
     private PhysicalPoint _anchor;
     private PhysicalPoint _target;
     private readonly PlacementTracker _placement = new();
@@ -75,9 +76,16 @@ public sealed class AnchorController
         return _anchor;
     }
 
+    /// <summary>
+    /// Where the view starts if this controller has not run yet and the mouse is elsewhere, instead of
+    /// the monitor's middle: a pipeline rebuilt while its monitor was frozen (G2) goes on from the frozen view.
+    /// </summary>
+    public PhysicalPoint StartAt(PhysicalPoint anchor) => (_startAt = anchor).Value;
+
     private void Initialize(in AnchorInput input)
     {
-        _anchor = input.MouseInside ? input.Mouse : Center(input.Monitor);
+        _anchor = input.MouseInside ? input.Mouse : _startAt ?? Center(input.Monitor);
+        _startAt = null;
         _lastMouse = input.Mouse;
         _lastTick = input.Now;
         _lastZoom = input.Zoom;

@@ -50,6 +50,7 @@ public sealed class ZoomEngine : IZoomOutput
         _effects.Changed += Wake;
         _effects.Signaled += Wake;
         _models.Windows.RegionsChanged += Wake;
+        _models.Islands.Changed += Wake;
         _models.Overview.Started += OnOverview;
         _models.Overview.Ended += OnOverview;
         _watchdog = new Timer(_ => CheckForHangs(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
@@ -94,6 +95,7 @@ public sealed class ZoomEngine : IZoomOutput
         _effects.Changed -= Wake;
         _effects.Signaled -= Wake;
         _models.Windows.RegionsChanged -= Wake;
+        _models.Islands.Changed -= Wake;
         _models.Overview.Started -= OnOverview;
         _models.Overview.Ended -= OnOverview;
         lock (_gate)

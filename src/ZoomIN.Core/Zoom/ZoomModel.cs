@@ -1,4 +1,5 @@
 using ZoomIN.Core.Modes;
+using ZoomIN.Core.Monitors;
 
 namespace ZoomIN.Core.Zoom;
 
@@ -22,6 +23,7 @@ public sealed class ZoomModel
     private double _animationSeconds;
     private int _mode;
     private bool _perMonitor;
+    private readonly ParkedTargets _parked; // targets of frozen monitors (G2)
 
     public ZoomModel(ZoomLevels levels, ZoomMode mode, bool perMonitor, double animationSeconds)
     {
@@ -32,6 +34,8 @@ public sealed class ZoomModel
         _lens = LensSize.Default;
         _dock = DockLayout.Default;
         Temporary = new TemporaryZoom(_gate, () => Mode == ZoomMode.Docked);
+        _parked = new ParkedTargets(_gate, Frozen, () => Volatile.Read(ref _targets), targets => Volatile.Write(ref _targets, targets),
+            () => (Mode, DockedMonitor, _perMonitor), () => Changed?.Invoke());
     }
 
     /// <summary>Raised after every change, on the thread that caused it. Handlers must be fast.</summary>
@@ -39,6 +43,9 @@ public sealed class ZoomModel
 
     /// <summary>Temporary levels per monitor (overview, window drag); never saved.</summary>
     public TemporaryZoom Temporary { get; }
+
+    /// <summary>Frozen monitors (G2): own anchor, level and mode; their targets are parked meanwhile. Never saved.</summary>
+    public MonitorFreeze Frozen { get; } = new();
 
     public ZoomMode Mode => (ZoomMode)Volatile.Read(ref _mode);
 
@@ -167,6 +174,7 @@ public sealed class ZoomModel
             var mode = Mode;
             var docked = mode == ZoomMode.Docked;
             var targets = Volatile.Read(ref _targets);
+            monitors = FrozenTargets.Free(Frozen.State, monitors); // a frozen monitor keeps its level (G2)
             var id = docked && ZoomTargetRules.AnyOn(targets, monitors) ? DockedMonitor : monitorAtMouse;
             if (ZoomTargetRules.PlanStep(targets, id, notches, monitors, docked, _perMonitor) is not { } step)
             {
@@ -202,6 +210,7 @@ public sealed class ZoomModel
         IReadOnlyList<TemporaryZoomOwner> cleared;
         lock (_gate)
         {
+            monitors = FrozenTargets.Free(Frozen.State, monitors); // a frozen monitor keeps its level (G2)
             if (offIfOn && ZoomTargetRules.AnyOn(Volatile.Read(ref _targets), monitors))
             {
                 Volatile.Write(ref _targets, s_allOff);

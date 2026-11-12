@@ -2,7 +2,7 @@
 // was, so with both sliders at 0 nothing costs more. Runs on the source, before own schemes, the
 // colour matrix and the smart inversion, so the result is the same under every filter (spike D1:
 // after the smart inversion it widened the seams of the inverted areas). Needs Desktop,
-// LinearSampler, TextureSize, Sharpness and BoldPx from Magnify.hlsl and Luma from SmartWeight.hlsli.
+// LinearSampler, TextureSize, TexUv, Sharpness and BoldPx from Magnify.hlsl and Luma from SmartWeight.hlsli.
 // Cost: the 9 bicubic taps of PSMain plus 4 for bold.
 
 // Below this luma range around the pixel there is no stroke to widen (flat areas, soft gradients).
@@ -32,7 +32,7 @@ float Chroma(float3 c) { return max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b)
 
 float Colourful(float3 c) { return smoothstep(CHROMA_LOW, CHROMA_HIGH, Chroma(c)); }
 
-float3 EnhanceTap(float2 uv) { return Desktop.SampleLevel(LinearSampler, uv, 0).rgb; }
+float3 EnhanceTap(float2 uv) { return Desktop.SampleLevel(LinearSampler, TexUv(uv), 0).rgb; }
 
 // "Schärfe": Catmull-Rom with the same 9 bilinear taps, but evaluated at a remapped position between
 // two texels: the middle of the way is crossed faster and the texel centres widen into small

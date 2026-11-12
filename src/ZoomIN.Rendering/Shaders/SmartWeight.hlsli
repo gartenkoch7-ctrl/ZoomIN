@@ -1,5 +1,5 @@
 // Edge-aware weight of the smart inversion (ADR-0024), included by Magnify.hlsl after its
-// resources: needs Desktop, Weights, PointSampler and TextureSize.
+// resources: needs Desktop, Weights, PointSampler, TextureSize and TexUv.
 
 // How close a pixel's luma must be to a texel's background luma to follow that texel (edge sharpness).
 #define EDGE_SIGMA 0.12
@@ -34,7 +34,7 @@ float TapLuma(float2 uv, int k, float reach)
 {
     int cell = k < 4 ? k : k + 1;
     float2 offset = float2(cell % 3 - 1, cell / 3 - 1);
-    return Luma(Desktop.SampleLevel(PointSampler, uv + offset * reach / TextureSize, 0).rgb);
+    return Luma(Desktop.SampleLevel(PointSampler, TexUv(uv + offset * reach / TextureSize), 0).rgb);
 }
 
 // Smart inversion weight at uv, edge-aware (joint bilateral upsampling): of the four nearest weight

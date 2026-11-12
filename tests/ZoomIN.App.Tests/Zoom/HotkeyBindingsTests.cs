@@ -1,7 +1,11 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using ZoomIN.App.Freeze;
+using ZoomIN.App.Islands;
 using ZoomIN.App.Localization;
 using ZoomIN.App.Overview;
 using ZoomIN.App.Settings;
+using ZoomIN.App.Tests.Freeze;
+using ZoomIN.App.Tests.Islands;
 using ZoomIN.App.Tests.Overview;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Filters;
@@ -32,6 +36,8 @@ public sealed class HotkeyBindingsTests
         Assert.Contains(HotkeyGesture.ZoomIn, hotkeys.Registered.Keys);
         Assert.False(hotkeys.Registered[HotkeyGesture.Overview].Repeat);
         Assert.True(hotkeys.Registered[HotkeyGesture.ZoomIn].Repeat);
+        Assert.False(hotkeys.Registered[HotkeyGesture.FreezeMonitor].Repeat);
+        Assert.False(hotkeys.Registered[HotkeyGesture.NextMonitor].Repeat);
         Assert.False(hotkeys.Registered[HotkeyGesture.ToggleZoom].Repeat);
 
         hotkeys.Registered[HotkeyGesture.ToggleZoom].Action();
@@ -67,6 +73,19 @@ public sealed class HotkeyBindingsTests
         Assert.Empty(hotkeys.Registered);
     }
 
+    [Fact]
+    public void EditingShortcuts_OrLosingCtrlAltH_LiftsAFreeze()
+    {
+        var (bindings, hotkeys, models) = Create(new AppSettings(), taken: HotkeyGesture.FreezeMonitor);
+        models.Zoom.Frozen.Freeze(new Core.Monitors.FrozenMonitor(
+            @"\\.\DISPLAY1", default, 1, Core.Modes.ZoomMode.Fullscreen, Core.Modes.LensSize.Default, Core.Modes.DockLayout.Default, false, default));
+
+        bindings.Register(); // Ctrl+Alt+H is taken by another application
+
+        Assert.False(models.Zoom.Frozen.Any);
+        Assert.DoesNotContain(HotkeyGesture.FreezeMonitor, hotkeys.Registered.Keys);
+    }
+
     private static (HotkeyBindings Bindings, FakeHotkeys Hotkeys, RenderModels Models) Create(
         AppSettings settings, HotkeyGesture? taken = null)
     {
@@ -81,8 +100,18 @@ public sealed class HotkeyBindingsTests
         var hotkeys = new FakeHotkeys(taken);
         var overview = new OverviewController(service, zoom, monitors, new FixedCursor(), new FakeOverviewKeys(), new RecordingAnnouncer(),
             AppTexts.CreateLocalizer(), TimeProvider.System, NullLogger<OverviewController>.Instance);
+        var fence = new FakeFence();
+        var mover = new FakeMover(new MovableCursor(), fence);
+        var monitorSwitch = new MonitorSwitchController(models.Zoom, monitors, new FixedCursor(), mover, new RecordingAnnouncer(),
+            AppTexts.CreateLocalizer(), NullLogger<MonitorSwitchController>.Instance);
+        var freeze = new MonitorFreezeController(service, monitorSwitch, monitors, new FixedCursor(), fence, mover,
+            new RecordingAnnouncer(), AppTexts.CreateLocalizer(), NullLogger.Instance, work => work());
+        var islands = new IslandController(service, monitors, new FakeIslandInput(), fence, new RecordingAnnouncer(),
+            AppTexts.CreateLocalizer(), TimeProvider.System, NullLogger<IslandController>.Instance);
+        var visibility = new IslandVisibility(service, new RecordingAnnouncer(), AppTexts.CreateLocalizer(), NullLogger<IslandVisibility>.Instance);
         var bindings = new HotkeyBindings(
-            service, new ProfileService(service, new NoProfiles()), hotkeys, zoom, windowFilter, overview, NullLogger<HotkeyBindings>.Instance);
+            service, new ProfileService(service, new NoProfiles()), hotkeys, zoom, windowFilter, overview, freeze, monitorSwitch,
+            islands, visibility, NullLogger<HotkeyBindings>.Instance);
         return (bindings, hotkeys, models);
     }
 

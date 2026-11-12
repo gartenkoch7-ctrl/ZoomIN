@@ -2,7 +2,9 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
+using ZoomIN.Core.Islands;
 using ZoomIN.Core.Modes;
+using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Updates;
@@ -16,71 +18,19 @@ namespace ZoomIN.Core.Settings;
 /// Persisted user settings (ADR-0004). M2–M4 keep only what zoom and input need; M7 adds the
 /// rest and the settings UI. Bump <see cref="CurrentSchemaVersion"/> and add a migration on
 /// breaking changes; new optional properties with defaults need no migration. Shortcuts and the
-/// other input settings shared by all profiles are in the base record <see cref="InputSettings"/>.
+/// other settings shared by all profiles are in the base records <see cref="SharedSettings"/> and <see cref="InputSettings"/>.
 /// </summary>
 /// <remarks>
 /// Properties use <c>set</c>, not <c>init</c>: the System.Text.Json source generator assigns
 /// default(T) to missing init-only properties, which would wipe the defaults below when an older
 /// file lacks a newer property (found in M3). Treat instances as immutable and use <c>with</c>.
 /// </remarks>
-public sealed record AppSettings : InputSettings
+public sealed record AppSettings : SharedSettings
 {
     /// <summary>2 (M17): mouse follow mode instead of CenterMouse, see <see cref="SettingsMigration"/>.</summary>
     public const int CurrentSchemaVersion = 2;
 
     public int SchemaVersion { get; set; } = CurrentSchemaVersion;
-
-    // --- Application (shared by all profiles) ---
-    public AppLanguage Language { get; set; } = AppLanguage.System;
-
-    /// <summary>False until the first-run assistant was completed (M7).</summary>
-    public bool FirstRunCompleted { get; set; }
-
-    /// <summary>The "closes to tray" hint is shown only once.</summary>
-    public bool CloseToTrayHintShown { get; set; }
-
-    /// <summary>The migration to the margin mode (M17 A1) still has to tell the user once where to change it back.</summary>
-    public bool MouseFollowHintPending { get; set; }
-
-    /// <summary>Update check at start and once a day (ADR-0014); only asks GitHub for the release list.</summary>
-    public bool CheckForUpdates { get; set; }
-
-    /// <summary>Which releases are offered (ADR-0014): finished ones only, or also experimental builds.</summary>
-    public ReleaseChannel UpdateChannel { get; set; } = ReleaseChannel.Stable;
-
-    public string ActiveProfile { get; set; } = ProfileFields.DefaultProfileName;
-
-    // --- Diagnostics (shared by all profiles; ADR-0019, read through AppSettingsTelemetry) ---
-    public TelemetryLevel TelemetryLevel { get; set; } = TelemetryOptions.Default.Level;
-
-    public bool TelemetryLogs { get; set; } = TelemetryOptions.Default.Logs;
-
-    public bool TelemetryTraces { get; set; } = TelemetryOptions.Default.Traces;
-
-    public bool TelemetryMetrics { get; set; } = TelemetryOptions.Default.Metrics;
-
-    public LogLevel TelemetryLogLevel { get; set; } = TelemetryOptions.Default.LogLevel;
-
-    public int TelemetryRetentionDays { get; set; } = TelemetryOptions.Default.RetentionDays;
-
-    public DateTimeOffset? TelemetryRaisedUntil { get; set; }
-
-    public string TelemetryOtlpEndpoint { get; set; } = string.Empty;
-
-    /// <summary>
-    /// KI-Debug (ADR-0027): an agent may read the state, take debug snapshots and trigger shortcuts
-    /// over a pipe. Off from the factory; stays on until the user turns it off (user's decision).
-    /// </summary>
-    public bool AgentDebugEnabled { get; set; }
-
-    /// <summary>Filter per window (ADR-0020): on/off, automatic filter, sensitivity and the user's rules per app + window class.</summary>
-    public WindowFilterOptions WindowFilter { get; set; } = WindowFilterOptions.Default;
-
-    /// <summary>
-    /// Own colour schemes (M18, C1–C3), at most 4; the definitions are shared by all profiles, the
-    /// choice (<see cref="ColorFilter"/>, rules) belongs to the profile. None from the factory.
-    /// </summary>
-    public IReadOnlyList<CustomScheme> CustomSchemes { get; set; } = [];
 
     // --- Display (stored per profile, see ProfileFields) ---
 
@@ -238,4 +188,7 @@ public sealed record AppSettings : InputSettings
 
     /// <summary>Zoom while moving or resizing windows (G1): lift to 1× by default, for both.</summary>
     public WindowDragOptions WindowDrag { get; set; } = WindowDragOptions.Default;
+
+    /// <summary>Islands of the profile (M19 B1): shown or hidden, and up to four of them.</summary>
+    public IslandOptions Islands { get; set; } = IslandOptions.Default;
 }

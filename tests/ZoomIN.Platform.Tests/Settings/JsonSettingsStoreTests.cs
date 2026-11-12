@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
+using ZoomIN.Core.Islands;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.WindowFilters;
@@ -66,6 +67,20 @@ public sealed class JsonSettingsStoreTests : IDisposable
             MarkerHoldKey = MarkerHoldKey.RightCtrl,
             MouseFollow = MouseFollowMode.Center,
             OverviewHotkey = new HotkeyGesture(HotkeyModifiers.Control | HotkeyModifiers.Alt, 0x4F),
+            IslandsHotkey = new HotkeyGesture(HotkeyModifiers.Control | HotkeyModifiers.Alt, 0x4A),
+            IslandEditHotkey = default,
+            Islands = new IslandOptions
+            {
+                Visible = false,
+                Items =
+                [
+                    new IslandEntry
+                    {
+                        MonitorId = @"\\.\DISPLAY1", SourceX = 1800, SourceY = 1040, SourceWidth = 120, SourceHeight = 40,
+                        TargetX = 1560, TargetY = 960, Level = 3, Still = true,
+                    },
+                ],
+            },
         };
 
         store.Save(settings);
@@ -171,6 +186,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
         Assert.Equal(expected.DockedMonitorZoomLevels, actual.DockedMonitorZoomLevels);
         Assert.Equal(expected.MonitorFilters, actual.MonitorFilters);
         Assert.Equal(expected.WindowFilter.Rules, actual.WindowFilter.Rules);
+        Assert.Equal(expected.Islands.Items, actual.Islands.Items);
         Assert.Equal(expected.CustomSchemes.Count, actual.CustomSchemes.Count);
         for (var i = 0; i < expected.CustomSchemes.Count; i++)
         {
@@ -187,6 +203,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
                 MonitorFilters = actual.MonitorFilters,
                 CustomSchemes = actual.CustomSchemes,
                 WindowFilter = expected.WindowFilter with { Rules = actual.WindowFilter.Rules },
+                Islands = expected.Islands with { Items = actual.Islands.Items },
             },
             actual);
     }

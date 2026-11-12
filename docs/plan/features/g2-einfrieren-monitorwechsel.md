@@ -1,6 +1,6 @@
 # G2 · Monitor einfrieren und Monitor wechseln
 **Meilenstein:** [M19](../m19-mehrere-ansichten.md) · **Spur:** A · **Branch:** `feat/m19-g2-einfrieren` ·
-**Größe:** M · **Status:** geplant
+**Größe:** M · **Status:** umgesetzt (Branch), Sichtprüfung offen
 
 **Ziel:** Ein Monitor behält seinen vergrößerten Ausschnitt, während man auf einem anderen weiterarbeitet.
 Mit einem Kürzel wechselt der Zeiger zum nächsten Monitor.
@@ -70,28 +70,28 @@ Grundsatz: [ADR-0028](../../adr/0028-zeiger-versetzen-nur-auf-befehl.md)
   Rahmenfarbe. Die Kürzel stehen auf der Seite „Tastenkürzel“.
 
 ## Aufgaben
-- [ ] Core: `MonitorCycle`, `FreezeState`, `PointerMemory` mit Tests (Abdeckung ≥ 90 %). Fälle: 1, 2
+- [x] Core: `MonitorCycle`, `FreezeState`, `PointerMemory` mit Tests (Abdeckung ≥ 90 %). Fälle: 1, 2
       und 3 Monitore, Hin und Zurück, Mitte zuerst rechts, eingefrorene überspringen, gestapelte
       Monitore, letzter freier Monitor.
-- [ ] Core: Beispiel aus dem Grilling als Test (1 links · 3 Mitte · 2 rechts).
-- [ ] `ZoomModel` um den Freeze-Zustand erweitern, Tests für lock-freies Lesen.
-- [ ] Rendering: Anker und Stufe einfrieren, Zeiger und Markierungen auf eingefrorenen Monitoren
+- [x] Core: Beispiel aus dem Grilling als Test (1 links · 3 Mitte · 2 rechts).
+- [x] `ZoomModel` um den Freeze-Zustand erweitern, Tests für lock-freies Lesen.
+- [x] Rendering: Anker und Stufe einfrieren, Zeiger und Markierungen auf eingefrorenen Monitoren
       unterdrücken, Rahmen. WARP-Test „Anker bleibt, Inhalt ändert sich“.
-- [ ] Benchmark: Render-Pfad mit eingefrorenem Monitor `0 B`. `MonitorCycle` `0 B`.
-- [ ] Platform: Mover (`SetCursorPos`) mit Interface, Zaun mit den Monitorrechtecken.
-- [ ] App: Kürzel, Controller, Hinweis „letzter freier Monitor“, Einstellungen.
-- [ ] Telemetrie (ADR-0019):
+- [x] Benchmark: Render-Pfad mit eingefrorenem Monitor `0 B` (`FreezeBenchmarks.FrozenLookup`, WARP-Allokationstest `FrozenLayerTests`). `MonitorCycle` `0 B`.
+- [x] Platform: Mover (`SetCursorPos`) mit Interface, Zaun mit den Monitorrechtecken.
+- [x] App: Kürzel, Controller, Hinweis „letzter freier Monitor“, Einstellungen.
+- [x] Telemetrie (ADR-0019):
   - Abläufe `zoomin.view.freeze` (Tags: Monitor-Index, Stufe, live/Standbild) und
     `zoomin.view.monitor_switch` (von, nach, übersprungen)
   - Zähler `zoomin.view.frozen_monitors`
   - Logs App 1720–1739, Rendering 3310–3319
   - Alles im Katalog `docs/kb/telemetrie.md`
-- [ ] Texte Deutsch/Englisch. Bildschirmleser sagt Einfrieren, Aufheben und Wechsel an (z. B.
+- [x] Texte Deutsch/Englisch. Bildschirmleser sagt Einfrieren, Aufheben und Wechsel an (z. B.
       „Monitor 2 eingefroren“).
-- [ ] KB: `docs/kb/eingabe-und-tracking.md` (Zeiger versetzen, Sperre, Reihenfolge) und
+- [x] KB: `docs/kb/eingabe-und-tracking.md` (Zeiger versetzen, Sperre, Reihenfolge) und
       `docs/kb/rendering-pipeline.md` (eingefrorener Anker).
 - [ ] Sicht- und Freigabetest: Rahmen und eingefrorener Monitor bleiben in Teams/OBS unsichtbar.
-- [ ] Sichere Bildschirme (M10): Einfrieren beim Wechsel aufheben, Zaun lösen.
+- [x] Sichere Bildschirme (M10): Einfrieren beim Wechsel aufheben, Zaun lösen.
 
 ## Parallelisierung
 - **Gehört allein dieser Spur:**
@@ -110,18 +110,18 @@ Grundsatz: [ADR-0028](../../adr/0028-zeiger-versetzen-nur-auf-befehl.md)
   immer gesperrt, der Puffer gilt nur zwischen freien Monitoren.
 
 ## Akzeptanzkriterien
-- [ ] `Strg+Alt+H` friert den Monitor unter dem Zeiger ein. Der Zeiger steht sofort auf dem
+- [x] `Strg+Alt+H` friert den Monitor unter dem Zeiger ein. Der Zeiger steht sofort auf dem
       nächstgelegenen freien Monitor.
-- [ ] Der Zeiger erreicht einen eingefrorenen Monitor weder per Maus noch per `Strg+Alt+N`.
-- [ ] Ein erneutes `Strg+Alt+H` hebt alle auf. Danach ist der Monitor wieder erreichbar und folgt
+- [x] Der Zeiger erreicht einen eingefrorenen Monitor weder per Maus noch per `Strg+Alt+N`.
+- [x] Ein erneutes `Strg+Alt+H` hebt alle auf. Danach ist der Monitor wieder erreichbar und folgt
       dem Zeiger.
-- [ ] Der letzte freie Monitor lässt sich nicht einfrieren, es kommt ein Hinweis. Mit einem Monitor
+- [x] Der letzte freie Monitor lässt sich nicht einfrieren, es kommt ein Hinweis. Mit einem Monitor
       bleibt das Kürzel ohne Wirkung und gibt einen Hinweis.
-- [ ] Die Reihenfolge stimmt mit dem Grilling-Beispiel überein, auch wenn die Windows-Nummern nicht
+- [x] Die Reihenfolge stimmt mit dem Grilling-Beispiel überein, auch wenn die Windows-Nummern nicht
       der Lage entsprechen.
 - [ ] Live: Ein Video läuft auf dem eingefrorenen Monitor weiter. Standbild: Das Bild bleibt stehen.
-- [ ] Nach einem Neustart ist kein Monitor eingefroren, und der Zeiger ist frei.
-- [ ] Win+L, UAC und das Umstecken eines Monitors heben das Einfrieren auf oder stellen den Zaun
+- [x] Nach einem Neustart ist kein Monitor eingefroren, und der Zeiger ist frei.
+- [x] Win+L, UAC und das Umstecken eines Monitors heben das Einfrieren auf oder stellen den Zaun
       korrekt wieder her. Der Zeiger ist danach nie eingesperrt.
 - [ ] Rahmen und Inhalt sind in Bildschirmübertragungen unsichtbar.
 
