@@ -69,8 +69,10 @@ public sealed class EdgeBuffer(TimeProvider time) : IPointerMoveFilter
 
         if (IndexOf(setup.Monitors, requested) < 0)
         {
-            // Not onto a monitor (outer edge, a gap of an offset layout): Windows keeps it on one.
-            return requested;
+            // Into no monitor (a gap of an offset layout): Windows would put the pointer on the
+            // nearest one, at a corner possibly the neighbour. It stays here, as it would at a
+            // plain outer edge, and this is no pressing: there is nothing to cross to.
+            return Clamp(home, requested);
         }
 
         var dirX = requested.X >= home.Right ? 1 : requested.X < home.X ? -1 : 0;
@@ -91,10 +93,12 @@ public sealed class EdgeBuffer(TimeProvider time) : IPointerMoveFilter
             return requested;
         }
 
-        return new PhysicalPoint(
-            Math.Clamp(requested.X, home.X, Math.Max(home.X, home.Right - 1)),
-            Math.Clamp(requested.Y, home.Y, Math.Max(home.Y, home.Bottom - 1)));
+        return Clamp(home, requested);
     }
+
+    private static PhysicalPoint Clamp(PhysicalRect home, PhysicalPoint point) => new(
+        Math.Clamp(point.X, home.X, Math.Max(home.X, home.Right - 1)),
+        Math.Clamp(point.Y, home.Y, Math.Max(home.Y, home.Bottom - 1)));
 
     // Same setup, no long pause, and at least one outward direction in common (at a corner the
     // hand wobbles between "right" and "right and down").
