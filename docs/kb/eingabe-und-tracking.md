@@ -360,7 +360,10 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
   auf einem eingefrorenen Monitor nicht; dessen Stufe, Modus, Lupe und Dock gelten vom Augenblick
   des Einfrierens. Zoombefehle (`ZoomModel.Toggle/Activate/Step`, `IsOn`) zählen nur die freien
   Monitore: ein bei 4× eingefrorener Monitor macht „Zoom an“ nicht wahr, und sein Ziel bleibt für
-  das Aufheben erhalten (`MonitorFreeze.WithoutFrozen/KeepFrozen`). Sieht ein Render-Thread den
+  das Aufheben erhalten (`MonitorFreeze.WithoutFrozen/KeepFrozen`). Taut er im Modus Angedockt
+  auf und ist nicht der angedockte Monitor, geht er auf 1× (`ZoomTargetRules.AfterFreezeChange`:
+  ein Streifen, eine Reservierung). Einfrieren und Aufheben melden `ZoomModel.Changed`, weil sich
+  `IsOn` ändern kann (Tray, Speichern, Reservierung). Sieht ein Render-Thread den
   Zeiger doch auf dem eingefrorenen Monitor (Zaun versagt, z. B. Hook verloren), meldet er das
   (`FrozenMonitor.ReportPointerInside`); steht er dort noch, endet das Einfrieren (Grund
   `pointer_inside`). Zoom aus (`Strg+Alt+Z`) oder Moduswechsel ändern ihn nicht – der Rahmen zeigt

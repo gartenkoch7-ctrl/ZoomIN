@@ -33,6 +33,7 @@ public sealed class ZoomModel
         _lens = LensSize.Default;
         _dock = DockLayout.Default;
         Temporary = new TemporaryZoom(_gate, () => Mode == ZoomMode.Docked);
+        Frozen.Changed += OnFrozenChanged;
     }
 
     /// <summary>Raised after every change, on the thread that caused it. Handlers must be fast.</summary>
@@ -41,10 +42,7 @@ public sealed class ZoomModel
     /// <summary>Temporary levels per monitor (overview, window drag); never saved.</summary>
     public TemporaryZoom Temporary { get; }
 
-    /// <summary>
-    /// Frozen monitors (G2): each keeps its anchor, level and mode from the moment of freezing and
-    /// ignores <see cref="Temporary"/> levels. Lock-free to read; never saved.
-    /// </summary>
+    /// <summary>Frozen monitors (G2): own anchor, level and mode, not counted by <see cref="IsOn"/>; never saved.</summary>
     public MonitorFreeze Frozen { get; } = new();
 
     public ZoomMode Mode => (ZoomMode)Volatile.Read(ref _mode);
@@ -223,8 +221,8 @@ public sealed class ZoomModel
                 }
 
                 Volatile.Write(ref _mode, (int)mode);
-                var on = ZoomTargetRules.SwitchOn(mode, monitorAtMouse, monitors, id => _levels.Get(mode, id, _perMonitor));
-                Volatile.Write(ref _targets, Frozen.KeepFrozen(on, Volatile.Read(ref _targets))); // a frozen monitor keeps its target (G2)
+                Volatile.Write(ref _targets, Frozen.KeepFrozen( // a frozen monitor keeps its target (G2)
+                    ZoomTargetRules.SwitchOn(mode, monitorAtMouse, monitors, id => _levels.Get(mode, id, _perMonitor)), Volatile.Read(ref _targets)));
             }
 
             // An explicit on/off or mode command ends every temporary view (see TemporaryZoom),
@@ -233,6 +231,17 @@ public sealed class ZoomModel
         }
 
         Raise(cleared);
+    }
+
+    // A freeze changes IsOn (tray, saving, docked reservation listen to Changed) and may thaw a monitor in Docked mode.
+    private void OnFrozenChanged()
+    {
+        lock (_gate)
+        {
+            Volatile.Write(ref _targets, ZoomTargetRules.AfterFreezeChange(Volatile.Read(ref _targets), Mode, DockedMonitor, Frozen.IsFrozen));
+        }
+
+        Changed?.Invoke();
     }
 
     // Outside the lock: handlers may read the model.

@@ -57,6 +57,38 @@ public sealed class FreezeRulesTests
     }
 
     [Fact]
+    public void Freezing_RaisesChanged_AndAThawedMonitorInDockedModeGoesBackTo1x()
+    {
+        string[] all = ["L", "R"];
+        var model = new ZoomIN.Core.Zoom.ZoomModel(new ZoomIN.Core.Zoom.ZoomLevels(), ZoomMode.Fullscreen, false, 0);
+        model.Toggle("L", all); // shared level: both zoomed
+        var changes = 0;
+        model.Changed += () => changes++;
+        var right = Frozen("R", s_right, false);
+        model.Frozen.Freeze(right);
+        Assert.Equal(1, changes);
+
+        model.Activate(ZoomMode.Docked, "L", all); // the strip goes to L; R keeps its frozen target
+        Assert.True(model.TargetFor("R") > 1);
+
+        model.Frozen.UnfreezeAll();
+        Assert.Equal(1, model.TargetFor("R"));
+        Assert.True(model.TargetFor("L") > 1);
+    }
+
+    [Fact]
+    public void DisplayChange_WithThePointerOnAFreezeMadeAfterTheEvent_EndsItToo()
+    {
+        var right = Frozen("R", s_right, false);
+        var now = State(right);
+
+        var lift = FreezeRules.ToLift(
+            ZoomIN.Core.PointerFence.FenceTrigger.DisplayChange, now, FreezeState.Empty, false, [("L", s_left), ("R", s_right)], new PhysicalPoint(2000, 5));
+
+        Assert.Equal([right], lift);
+    }
+
+    [Fact]
     public void DefaultAllMonitors_PairsIdsWithBounds_OrGivesNothing()
     {
         IMonitorProvider monitors = new Fixed(("L", s_left), ("R", s_right));

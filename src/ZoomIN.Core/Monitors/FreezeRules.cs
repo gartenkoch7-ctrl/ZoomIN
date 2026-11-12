@@ -30,8 +30,10 @@ public static class FreezeRules
             case FenceTrigger.DesktopSwitch or FenceTrigger.SessionUnlock:
                 return candidates;
             case FenceTrigger.DisplayChange when monitors.Count > 0:
+                // A trapped pointer ends every freeze, also one made after the event: it is trapped now.
                 var kept = KeptAfterDisplayChange(now, monitors, mouse);
-                return [.. candidates.Where(m => !kept.Contains(m))];
+                var trapped = mouse is { } p && now.Monitors.Any(m => m.Bounds.Contains(p));
+                return [.. (trapped ? now.Monitors : candidates).Where(m => !kept.Contains(m))];
             default:
                 return [];
         }
