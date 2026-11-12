@@ -85,9 +85,10 @@ public sealed class MonitorFreezeController : IDisposable
 
     /// <summary>
     /// Lifts every freeze without a shortcut, e.g. while the shortcuts are being edited or when
-    /// Ctrl+Alt+H is no longer registered: otherwise nothing could give the frozen monitor back.
+    /// Ctrl+Alt+H is no longer registered: otherwise nothing could give the frozen monitor back. Runs
+    /// on the thread pool: releasing the fence may wait for its watcher, not on the settings window.
     /// </summary>
-    public void LiftAll(string reason) => _guard.Run("lift_all", () => Lift(_ => true, reason));
+    public void LiftAll(string reason) => _dispatch(() => _guard.Run("lift_all", () => Lift(_ => true, reason)));
 
     public void Dispose()
     {
