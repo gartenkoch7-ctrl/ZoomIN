@@ -88,7 +88,14 @@ public sealed class IslandEditor
                     ? island with { TargetOrigin = new PhysicalPoint(
                         island.TargetOrigin.X + point.X - _drag.Start.X, island.TargetOrigin.Y + point.Y - _drag.Start.Y) }
                     : IslandResize.ToCorner(island, _drag.Corner, Grabbed(island, point), _drag.Monitor);
-                Set = _before.Replace(index, IslandRules.Fit(moved, _drag.Monitor));
+                var fitted = IslandRules.Fit(moved, _drag.Monitor);
+
+                // Pinned at the monitor edge: the same island, no new set (it would redraw every monitor).
+                if (Set.IndexOf(island.Id) is var now and >= 0 && Set[now] != fitted)
+                {
+                    Set = _before.Replace(index, fitted);
+                }
+
                 return IslandEditOutcome.Dragged;
             default:
                 return IslandEditOutcome.None;
@@ -110,7 +117,7 @@ public sealed class IslandEditor
             return Set.Items.SequenceEqual(_before.Items) ? IslandEditOutcome.None : IslandEditOutcome.Changed;
         }
 
-        var band = RubberBand ?? default;
+        var band = ToLastPixel(RubberBand ?? default, drag.Monitor);
         RubberBand = null;
         if (!IslandRules.IsLargeEnough(band))
         {
@@ -210,6 +217,11 @@ public sealed class IslandEditor
 
     private static PhysicalPoint Clamp(PhysicalPoint point, PhysicalRect monitor) =>
         new(Math.Clamp(point.X, monitor.X, monitor.Right), Math.Clamp(point.Y, monitor.Y, monitor.Bottom));
+
+    // The pointer stops at the last pixel (Right − 1): a band that ends there takes the last column and row too.
+    private static PhysicalRect ToLastPixel(PhysicalRect band, PhysicalRect monitor) => new(
+        band.X, band.Y, monitor.Right - band.Right <= 1 ? monitor.Right - band.X : band.Width,
+        monitor.Bottom - band.Bottom <= 1 ? monitor.Bottom - band.Y : band.Height);
 
     private static PhysicalRect Span(PhysicalPoint a, PhysicalPoint b) =>
         new(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Abs(a.X - b.X), Math.Abs(a.Y - b.Y));

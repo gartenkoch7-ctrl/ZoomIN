@@ -46,6 +46,17 @@ public sealed class IslandEditorGrabTests
     }
 
     [Fact]
+    public void RubberBand_ToTheLastReachablePixel_TakesTheLastColumnAndRow()
+    {
+        var editor = Editor();
+
+        editor.Press(new PhysicalPoint(1800, 1000));
+        editor.Release(new PhysicalPoint(1919, 1079)); // the pointer stops there (Right − 1)
+
+        Assert.Equal(new PhysicalRect(1800, 1000, 120, 80), editor.Set[0].Source);
+    }
+
+    [Fact]
     public void Click_ClearsTheRubberBand()
     {
         var editor = Editor();

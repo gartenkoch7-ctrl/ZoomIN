@@ -138,20 +138,19 @@ public sealed partial class IslandsViewModel : ObservableObject
         }
     }
 
-    // The number Windows shows for the display ("\\.\DISPLAY2" → 2), not the place in the list;
-    // 0 if the monitor is not attached.
+    // The number Windows shows for the display ("\\.\DISPLAY2" → 2, trailing digits as on the filter
+    // page), not the place in the list; 0 if the monitor is not attached.
     private static int DisplayNumber(string monitorId, List<string> attached)
     {
-        const string Prefix = @"\\.\DISPLAY";
         var index = attached.IndexOf(monitorId);
-        if (index < 0)
+        var start = monitorId.Length;
+        while (start > 0 && char.IsAsciiDigit(monitorId[start - 1]))
         {
-            return 0;
+            start--;
         }
 
-        return monitorId.StartsWith(Prefix, StringComparison.Ordinal)
-            && int.TryParse(monitorId.AsSpan(Prefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out var number)
-            ? number
+        return index < 0 ? 0
+            : int.TryParse(monitorId.AsSpan(start), NumberStyles.None, CultureInfo.InvariantCulture, out var number) ? number
             : index + 1;
     }
 }

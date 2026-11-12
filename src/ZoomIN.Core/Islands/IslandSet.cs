@@ -76,6 +76,29 @@ public sealed class IslandSet
         return items is null ? this : new IslandSet(items, NextId);
     }
 
+    /// <summary>
+    /// These islands, but each one still as in <paramref name="start"/> (fitted to the monitors only
+    /// for drawing) taken from <paramref name="saved"/> instead: what the edit mode commits, so islands
+    /// the user did not touch keep their saved rectangles on a monitor that is smaller for a while.
+    /// </summary>
+    public IslandSet WithUntouchedFrom(IslandSet start, IslandSet saved)
+    {
+        ArgumentNullException.ThrowIfNull(start);
+        ArgumentNullException.ThrowIfNull(saved);
+        var items = (Island[])_items.Clone();
+        for (var i = 0; i < items.Length; i++)
+        {
+            var before = start.IndexOf(items[i].Id);
+            var original = saved.IndexOf(items[i].Id);
+            if (before >= 0 && original >= 0 && start[before] == items[i])
+            {
+                items[i] = saved[original];
+            }
+        }
+
+        return new IslandSet(items, NextId);
+    }
+
     /// <summary>The same islands with ids from <paramref name="firstId"/> on (a profile's islands replace others).</summary>
     public IslandSet Renumbered(int firstId)
     {

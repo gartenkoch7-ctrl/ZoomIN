@@ -67,6 +67,19 @@ public sealed class IslandSetTests
     }
 
     [Fact]
+    public void WithUntouchedFrom_KeepsTheSavedRectanglesOfIslandsTheUserDidNotEdit()
+    {
+        var saved = IslandSet.Empty.Add(At(0) with { TargetOrigin = new PhysicalPoint(5000, 100) })!.Add(At(100))!;
+        var start = saved.FitTo(new IslandMonitors().BoundsOf);
+        var edited = start.Replace(1, start[1] with { Level = 3 });
+
+        var commit = edited.WithUntouchedFrom(start, saved);
+
+        Assert.Equal(5000, commit[0].TargetOrigin.X); // untouched: as saved, not as fitted for drawing
+        Assert.Equal(3, commit[1].Level);
+    }
+
+    [Fact]
     public void HasIslandOn_ChecksTheMonitor()
     {
         var set = IslandSet.Empty.Add(At(0))!;

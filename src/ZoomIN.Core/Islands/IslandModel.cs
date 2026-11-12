@@ -83,7 +83,8 @@ public sealed class IslandModel
     /// </summary>
     /// <param name="save">The step finished a change (not a drag in progress): saved and committed.</param>
     /// <returns>False if the islands changed from outside; nothing was published.</returns>
-    public bool ShowEdit(IslandSet expected, IslandSet set, IslandEditView edit, bool save)
+    /// <param name="commit">What is saved for a saved step (the edited islands, untouched ones as saved); null = <paramref name="set"/>.</param>
+    public bool ShowEdit(IslandSet expected, IslandSet set, IslandEditView edit, bool save, IslandSet? commit = null)
     {
         ArgumentNullException.ThrowIfNull(set);
         ArgumentNullException.ThrowIfNull(edit);
@@ -94,7 +95,7 @@ public sealed class IslandModel
         {
             current = ReferenceEquals(scene.Set, expected);
             return current ? scene with { Set = set, Edit = edit } : scene;
-        }, save);
+        }, save, () => save ? commit ?? set : null);
         return current;
     }
 
@@ -104,13 +105,14 @@ public sealed class IslandModel
     /// </summary>
     /// <param name="changed">The run changed something: saved and committed. Otherwise only drawn
     /// (fitting the islands to the monitors at its start is no change to save).</param>
-    public void EndEdit(IslandSet expected, IslandSet edited, bool changed = true)
+    /// <param name="commit">What is saved when <paramref name="changed"/>; null = <paramref name="edited"/>.</param>
+    public void EndEdit(IslandSet expected, IslandSet edited, bool changed = true, IslandSet? commit = null)
     {
         ArgumentNullException.ThrowIfNull(edited);
         Publish(
             scene => scene with { Set = ReferenceEquals(scene.Set, expected) ? edited : scene.Set, Edit = null },
             save: changed,
-            changed ? null : () => null);
+            () => changed && ReferenceEquals(Scene.Set, edited) ? commit ?? edited : null);
     }
 
     // Built on the committed islands, never on a drag in progress (which would be saved with it);

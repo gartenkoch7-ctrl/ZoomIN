@@ -217,7 +217,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1744 | Info | Island {Index} {Outcome} on {Monitor}: source {Source}, picture {Picture}, level {Level:0.00}, still {Still} – `Created`, `Changed`, `LevelChanged`; nur Rechtecke und Stufe, nie Inhalt |
 | 1745 | Info | New island refused: all {Max} places are taken |
 | 1746 | Info | Island removed ({Count} left) |
-| 1747 | Fehler | Island edit step {Step} failed – `press`, `move`, `release`, `wheel`, `Escape`, `Delete`, `report`, `announce`, `end`; der Bearbeitungsmodus läuft weiter bzw. endet sauber |
+| 1747 | Fehler | Island edit step {Step} failed – `press`, `move`, `release`, `wheel`, `Escape`, `Delete`, `report`, `announce`, `end`, `start` (Start fehlgeschlagen, alles zurückgegeben); der Bearbeitungsmodus läuft weiter bzw. endet sauber |
 | 1748 | Info | Island {Index} changed on the settings page: {Change} – `removed`, `still`, `live`
 | 2001 | Fehler | UI Automation is unavailable; focus tracking is off |
 | 2002 | Info | Caret source in {Process}: {Source} |

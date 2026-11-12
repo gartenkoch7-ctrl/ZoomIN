@@ -19,12 +19,14 @@ internal sealed class IslandEditSession : IDisposable
 
     /// <param name="published">The islands in the model when the run starts (the editor starts with them fitted to the monitors).</param>
     public IslandEditSession(
-        IslandEditor editor, IslandSet published, Activity? operation, TimeProvider time, TimeSpan idleLimit, Action<IslandEditSession> idle)
+        IslandEditor editor, IslandSet published, IslandSet saved, Activity? operation, TimeProvider time, TimeSpan idleLimit,
+        Action<IslandEditSession> idle)
     {
         Editor = editor;
         Operation = operation;
         Published = published;
         Fitted = editor.Set;
+        Saved = saved;
         _time = time;
         StartedAt = time.GetTimestamp();
         _idleLimit = idleLimit;
@@ -43,7 +45,7 @@ internal sealed class IslandEditSession : IDisposable
         var operation = IslandOperation.StartEdit(set.Count);
         try
         {
-            return new IslandEditSession(editor, current, operation, time, idleLimit, idle);
+            return new IslandEditSession(editor, current, model.Committed, operation, time, idleLimit, idle);
         }
         catch
         {
@@ -71,6 +73,12 @@ internal sealed class IslandEditSession : IDisposable
 
     /// <summary>What the run leaves behind: its islands, or the fitted ones of its start if it changed nothing.</summary>
     public IslandSet Result => HasChanges ? Editor.Set : Fitted;
+
+    /// <summary>The saved islands at the start: islands the run did not touch are saved as they were.</summary>
+    public IslandSet Saved { get; }
+
+    /// <summary>What is saved for <see cref="Result"/>: edited islands as edited, the others as saved before.</summary>
+    public IslandSet Commit => Result.WithUntouchedFrom(Fitted, Saved);
 
     /// <summary>What the render threads draw for the editor's state now.</summary>
     public IslandEditView View() => new(Editor.Selected, Editor.RubberBand, StartedAt, Editor.DragBounds is not null);
@@ -124,7 +132,7 @@ internal sealed class IslandEditSession : IDisposable
     {
         var before = Published;
         Published = Editor.Set;
-        if (model.ShowEdit(before, Editor.Set, View(), save))
+        if (model.ShowEdit(before, Editor.Set, View(), save, save ? Editor.Set.WithUntouchedFrom(Fitted, Saved) : null))
         {
             return true;
         }

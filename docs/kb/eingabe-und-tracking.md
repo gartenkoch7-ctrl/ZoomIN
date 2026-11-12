@@ -368,7 +368,10 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
     Hook später stillschweigend, merkt ZoomIN das nicht (offen).
   - **Gespeichert** wird nur der übernommene Stand (`IslandModel.Committed`): Ein laufendes Ziehen
     landet nie in `settings.json` oder einem Profil, auch nicht bei Profilwechsel mitten im Ziehen.
-    Ein Lauf ohne Änderung speichert nichts. Eine neu angelegte Insel schaltet ausgeblendete Inseln
+    Ein Lauf ohne Änderung speichert nichts; ein Lauf mit Änderung speichert nur die bearbeiteten
+    Inseln neu, die anderen mit ihren gespeicherten Rechtecken (`IslandSet.WithUntouchedFrom`), auch
+    wenn sie gerade für einen kleineren Monitor eingepasst gezeichnet werden. Ein Rechteck bis zum
+    letzten erreichbaren Pixel (Right − 1) nimmt die letzte Spalte und Zeile mit. Eine neu angelegte Insel schaltet ausgeblendete Inseln
     wieder ein. Die Zeilen der Einstellungsseite nennen die Windows-Nummer des Monitors (DISPLAYn).
     Jedes Bearbeitungs-Ergebnis geht atomar an das Modell (nur wenn die Inseln noch die zuletzt
     veröffentlichten sind); Profilwechsel vergeben neue Inselnummern (Standbilder, Zeilen der

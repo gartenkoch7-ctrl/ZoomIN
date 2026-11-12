@@ -4,6 +4,7 @@ using ZoomIN.Core.Modes;
 using ZoomIN.Core.Overview;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.WindowFilters;
+using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.Rendering.RenderLoop;
 
@@ -41,7 +42,7 @@ internal readonly record struct FrameRequest(
     IslandScene? Islands = null)
 {
     /// <summary>Up to this zoom a frame counts as 1× (also for islands, OverlayDemand).</summary>
-    public const double UnzoomedUpTo = 1.01;
+    public const double UnzoomedUpTo = ZoomLimits.UnzoomedUpTo;
 
     /// <summary>Not magnified and no colour filter: only pointer, crosshair or locator are drawn.</summary>
     public bool OverlayOnly => Zoom <= UnzoomedUpTo && !Effects.Filter.ChangesColors && !WindowsFiltered && Islands is null;
