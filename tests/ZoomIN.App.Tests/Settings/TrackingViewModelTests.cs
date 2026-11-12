@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using ZoomIN.App.Localization;
 using ZoomIN.App.ViewModels;
+using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Tracking;
 
 namespace ZoomIN.App.Tests.Settings;
@@ -49,5 +50,29 @@ public sealed class TrackingViewModelTests
 
         Assert.True(vm.MouseMarginEnabled);
         Assert.Equal(MouseFollowMode.Margin, tracking.Options.MouseFollow);
+    }
+
+    [Fact]
+    public void CaretLookAndShowConditions_ChangeOnlyThemselves()
+    {
+        // M18 review: a profile switch while the page is open must not be undone by the caret settings.
+        var tracking = new TrackingModel(TrackingOptions.Default);
+        var vm = new TrackingViewModel(tracking, AppTexts.CreateLocalizer(), NullLogger<TrackingViewModel>.Instance);
+        var profile = TrackingOptions.Default with
+        {
+            Enabled = false, FocusFrame = false, MouseFollow = MouseFollowMode.Fixpoint,
+            CaretStyle = CaretMarkerStyle.Default with { Color = RgbColor.ParseOrDefault("#00E5FF", RgbColor.Magenta) },
+        };
+        tracking.SetOptions(profile);
+
+        vm.CaretShapeIndex = (int)CaretMarkerShape.Wedges;
+        vm.CaretShowIndex = (int)ShowCondition.HoldKey;
+        vm.CaretShapeIndex = -1; // the ComboBox unloads
+
+        var o = tracking.Options;
+        Assert.Equal((false, false, MouseFollowMode.Fixpoint), (o.Enabled, o.FocusFrame, o.MouseFollow));
+        Assert.Equal(profile.CaretStyle with { Shape = CaretMarkerShape.Wedges }, o.CaretStyle);
+        Assert.Equal(ShowCondition.HoldKey, o.CaretShow);
+        Assert.Equal(CaretMarkerShape.Wedges, vm.CaretStyle.Shape);
     }
 }

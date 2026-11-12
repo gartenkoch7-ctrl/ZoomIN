@@ -105,21 +105,23 @@ public sealed partial class TrackingViewModel : ObservableObject
     [ObservableProperty]
     public partial int CaretShowIndex { get; set; }
 
-    partial void OnTrackingEnabledChanged(bool value) => Apply();
+    // Every handler changes only its own field (M17 A1, M18 review): the page's other values may be
+    // older than the model, e.g. after Strg+Alt+T or a profile switch while the page is open.
+    partial void OnTrackingEnabledChanged(bool value) => ApplyOnly(o => o with { Enabled = value });
 
-    partial void OnFocusChanged(bool value) => Apply();
+    partial void OnFocusChanged(bool value) => ApplyOnly(o => o with { Focus = value });
 
-    partial void OnCaretChanged(bool value) => Apply();
+    partial void OnCaretChanged(bool value) => ApplyOnly(o => o with { Caret = value });
 
-    partial void OnPanMsChanged(double value) => Apply();
+    partial void OnPanMsChanged(double value) => ApplyOnly(o => o with { PanSeconds = value / 1000 });
 
-    partial void OnMarginChanged(double value) => Apply();
+    partial void OnMarginChanged(double value) => ApplyOnly(o => o with { CaretMargin = value / 100 });
 
-    partial void OnFocusFrameChanged(bool value) => Apply();
+    partial void OnFocusFrameChanged(bool value) => ApplyOnly(o => o with { FocusFrame = value });
 
     partial void OnCaretMarkerChanged(bool value)
     {
-        Apply();
+        ApplyOnly(o => o with { CaretMarker = value });
         if (_ready)
         {
             // The preview shows the marker only while it is switched on.
@@ -166,8 +168,19 @@ public sealed partial class TrackingViewModel : ObservableObject
 
     partial void OnMouseMarginChanged(double value) => ApplyOnly(o => o with { MouseMargin = value / 100 });
 
-    // Only the changed field (M17 A1): the page's other values may be older than the model, e.g.
-    // after Strg+Alt+T or a profile switch while the page is open.
+    // A ComboBox reports index −1 (no selection) while it unloads: ComboChoice keeps the current value.
+    partial void OnCaretShapeIndexChanged(int value) => ApplyStyle(s => s with { Shape = ComboChoice.Or(value, s.Shape) });
+
+    // An unreadable colour (while typing) keeps the current one.
+    partial void OnCaretColorChanged(string value) => ApplyStyle(s => s with { Color = RgbColor.ParseOrDefault(value, s.Color) });
+
+    partial void OnCaretThicknessIndexChanged(int value) => ApplyStyle(s => s with { Thickness = ComboChoice.Or(value, s.Thickness) });
+
+    partial void OnFocusFrameShowIndexChanged(int value) =>
+        ApplyOnly(o => o with { FocusFrameShow = ComboChoice.Or(value, o.FocusFrameShow) });
+
+    partial void OnCaretShowIndexChanged(int value) => ApplyOnly(o => o with { CaretShow = ComboChoice.Or(value, o.CaretShow) });
+
     private void ApplyOnly(Func<TrackingOptions, TrackingOptions> change)
     {
         if (_ready)
@@ -176,43 +189,16 @@ public sealed partial class TrackingViewModel : ObservableObject
         }
     }
 
-    partial void OnCaretShapeIndexChanged(int value) => ApplyChoice(value);
-
-    partial void OnCaretColorChanged(string value) => Apply();
-
-    partial void OnFocusFrameShowIndexChanged(int value) => ApplyChoice(value);
-
-    partial void OnCaretShowIndexChanged(int value) => ApplyChoice(value);
-
-    partial void OnCaretThicknessIndexChanged(int value) => ApplyChoice(value);
-
-    // A ComboBox reports index −1 (no selection) while it unloads: not a choice, nothing to apply.
-    private void ApplyChoice(int index)
-    {
-        if (index >= 0)
-        {
-            Apply();
-        }
-    }
-
-    private void Apply()
+    private void ApplyStyle(Func<CaretMarkerStyle, CaretMarkerStyle> change)
     {
         if (!_ready)
         {
             return;
         }
 
-        // Values that cannot be used (no selection, unreadable colour) keep the current look.
         var before = _style;
-        _style = CaretMarkerStyle.From((CaretMarkerShape)CaretShapeIndex, CaretColor, (CaretMarkerThickness)CaretThicknessIndex, before);
-        var current = _tracking.Options;
-        _tracking.SetOptions(new TrackingOptions(
-            TrackingEnabled, Focus, Caret, PanMs / 1000, Margin / 100, FocusFrame, CaretMarker, MouseFollow, MouseMargin / 100)
-        {
-            CaretStyle = _style,
-            FocusFrameShow = ComboChoice.Or(FocusFrameShowIndex, current.FocusFrameShow),
-            CaretShow = ComboChoice.Or(CaretShowIndex, current.CaretShow),
-        });
+        ApplyOnly(o => o with { CaretStyle = change(o.CaretStyle) });
+        _style = _tracking.Options.CaretStyle;
         if (before.Shape != _style.Shape || before.Thickness != _style.Thickness)
         {
             _log.CaretStyleChanged(_style.Shape, _style.Thickness);

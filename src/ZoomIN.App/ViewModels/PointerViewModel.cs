@@ -142,6 +142,15 @@ public sealed partial class PointerViewModel : ObservableObject
             return;
         }
 
+        // The show condition (E1) changes only itself: Strg+Alt+K while the page is open must not be
+        // undone by the page's older crosshair choice (M18 review).
+        if (e.PropertyName == nameof(CrosshairShowIndex))
+        {
+            _effects.SetCursor(Style with { CrosshairShow = ComboChoice.Or(CrosshairShowIndex, Style.CrosshairShow) });
+            StyleChanged?.Invoke();
+            return;
+        }
+
         var hotkeyBefore = Style.LocatorTriggers.HasFlag(LocatorTriggers.Hotkey);
         _effects.SetCursor(Build());
         if (hotkeyBefore != TriggerHotkey)
@@ -180,7 +189,7 @@ public sealed partial class PointerViewModel : ObservableObject
             CrosshairWidth = CrosshairWidth,
             CrosshairOpacity = CrosshairOpacity / 100,
             HideWhileTyping = HideWhileTyping,
-            CrosshairShow = ComboChoice.Or(CrosshairShowIndex, Style.CrosshairShow),
+            CrosshairShow = Style.CrosshairShow, // set on its own above
         };
     }
 }
