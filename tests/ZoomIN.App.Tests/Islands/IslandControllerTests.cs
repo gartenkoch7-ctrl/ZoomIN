@@ -130,8 +130,7 @@ public sealed class IslandControllerTests
 
         rig.Models.Zoom.SetMode(ZoomMode.Lens);
 
-        Assert.False(rig.Controller.IsEditing);
-        Assert.False(rig.Input.Capturing);
+        Assert.True(SpinWait.SpinUntil(() => !rig.Controller.IsEditing && !rig.Input.Capturing, TimeSpan.FromSeconds(5)));
     }
 
     [Fact]

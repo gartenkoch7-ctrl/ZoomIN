@@ -54,8 +54,8 @@ internal sealed class RenderResources : IDisposable
                 Desktop = new DesktopLayer(
                     pass, smart, Own(new GpuPassTimer(Gpu.Device, deviceName, "magnify")), Own(new PassCostProbe(Gpu.Device)),
                     Own(new EnhanceCost(Gpu.Device, deviceName)));
-                Islands = Own(new IslandLayer(
-                    pass, cursorPass, new IslandStills(Gpu.Device, log), new GpuPassTimer(Gpu.Device, deviceName, "islands")));
+                Islands = new IslandLayer(
+                    pass, cursorPass, Own(new IslandStills(Gpu.Device, log)), Own(new GpuPassTimer(Gpu.Device, deviceName, "islands")));
             }
         }
         catch

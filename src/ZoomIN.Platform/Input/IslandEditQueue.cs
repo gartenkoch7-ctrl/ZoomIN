@@ -46,9 +46,9 @@ internal sealed class IslandEditQueue
     public void Key(IslandEditKey key) =>
         Post(new Input(key == IslandEditKey.Escape ? InputKind.Escape : InputKind.Delete, default, 0, null));
 
-    public void Move(int x, int y)
+    public void Move(PhysicalPoint point)
     {
-        var packed = ((long)x << 32) | (uint)y;
+        var packed = ((long)(int)point.X << 32) | (uint)(int)point.Y; // hook points are whole pixels
         if (Volatile.Read(ref _pending) is { } burst && burst.TryUpdate(packed))
         {
             return;

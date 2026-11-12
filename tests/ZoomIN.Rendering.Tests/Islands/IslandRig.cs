@@ -29,7 +29,9 @@ internal sealed class IslandRig : IDisposable
         Target = RenderTarget.Create(Gpu.Device, Size);
         Pass = new MagnifyPass(Gpu.Device);
         Marks = new CursorPass(Gpu.Device);
-        Layer = new IslandLayer(Pass, Marks, new IslandStills(Gpu.Device, NullLogger.Instance), new GpuPassTimer(Gpu.Device, Monitor, "islands"));
+        Stills = new IslandStills(Gpu.Device, NullLogger.Instance);
+        Time = new GpuPassTimer(Gpu.Device, Monitor, "islands");
+        Layer = new IslandLayer(Pass, Marks, Stills, Time);
     }
 
     public GpuDevice Gpu { get; }
@@ -43,6 +45,10 @@ internal sealed class IslandRig : IDisposable
     public CursorPass Marks { get; }
 
     public IslandLayer Layer { get; }
+
+    public IslandStills Stills { get; }
+
+    public GpuPassTimer Time { get; }
 
     public static DisplayEffects Effects(FilterId? filter = null) =>
         new(new FilterSettings(filter is not null, filter ?? FilterId.Inverted, 1, 0), Smoothing.Pixel, PointerStyle.Default);
@@ -73,7 +79,8 @@ internal sealed class IslandRig : IDisposable
 
     public void Dispose()
     {
-        Layer.Dispose();
+        Time.Dispose();
+        Stills.Dispose();
         Marks.Dispose();
         Pass.Dispose();
         Target.Dispose();

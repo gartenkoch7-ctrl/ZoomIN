@@ -44,7 +44,9 @@ public sealed class IslandGpuTimeTests
         using var pass = new MagnifyPass(gpu.Device);
         using var marks = new CursorPass(gpu.Device);
         using var ambient = new AmbientPass(gpu.Device, Width, Height);
-        using var layer = new IslandLayer(pass, marks, new IslandStills(gpu.Device, NullLogger.Instance), new GpuPassTimer(gpu.Device, Monitor, "islands"));
+        using var stills = new IslandStills(gpu.Device, NullLogger.Instance);
+        using var time = new GpuPassTimer(gpu.Device, Monitor, "islands");
+        var layer = new IslandLayer(pass, marks, stills, time);
         var monitor = new PhysicalRect(0, 0, Width, Height);
         var scene = Scene();
 

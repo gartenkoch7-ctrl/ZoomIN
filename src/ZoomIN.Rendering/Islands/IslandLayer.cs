@@ -16,7 +16,7 @@ namespace ZoomIN.Rendering.Islands;
 /// selected island has corner handles; a new one shows a dashed rubber band. All in the existing
 /// overlay window, which is excluded from capture. Every frame on the render thread: no allocation.
 /// </summary>
-internal sealed class IslandLayer : IDisposable
+internal sealed class IslandLayer
 {
     // Frame around each island, in physical pixels (a little thinner than the lens frame).
     private const double FrameThickness = 3;
@@ -99,12 +99,6 @@ internal sealed class IslandLayer : IDisposable
         {
             DrawEditMarks(context, target, monitorId, monitor, set, edit, frame);
         }
-    }
-
-    public void Dispose()
-    {
-        _time.Dispose();
-        _stills.Dispose();
     }
 
     private void DrawEditMarks(

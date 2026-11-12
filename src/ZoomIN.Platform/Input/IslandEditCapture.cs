@@ -91,14 +91,13 @@ public sealed class IslandEditCapture : IIslandEditInput
     public void Stop() => Interlocked.Exchange(ref _session, null)?.Complete();
 
     /// <summary>Hook thread, every mouse event. Returns true if it must not reach applications.</summary>
-    internal bool OnMouse(uint message, int x, int y, uint mouseData)
+    internal bool OnMouse(uint message, PhysicalPoint point, uint mouseData)
     {
         var session = Volatile.Read(ref _session);
-        var point = new PhysicalPoint(x, y);
         switch (message)
         {
             case MouseMove:
-                session?.Move(x, y);
+                session?.Move(point);
                 return false; // the pointer must move, also while dragging
             case Wheel:
             case HorizontalWheel:
@@ -118,11 +117,11 @@ public sealed class IslandEditCapture : IIslandEditInput
                 {
                     // A new press: the release of a swallowed one was never seen (secure desktop,
                     // hook timeout); this press's release belongs to the application.
-                    _heldButtons &= ~ButtonOf(message);
+                    _heldButtons &= ~ButtonOf(message, mouseData);
                     return false;
                 }
 
-                _heldButtons |= ButtonOf(message);
+                _heldButtons |= ButtonOf(message, mouseData);
                 if (message == _primaryDown)
                 {
                     session.Press(point);
@@ -130,7 +129,7 @@ public sealed class IslandEditCapture : IIslandEditInput
 
                 return true;
             case LeftUp or RightUp or MiddleUp or ExtraUp:
-                var button = ButtonOf(message);
+                var button = ButtonOf(message, mouseData);
                 if ((_heldButtons & button) == 0)
                 {
                     return false; // pressed before the edit mode: the application gets its release
@@ -216,12 +215,12 @@ public sealed class IslandEditCapture : IIslandEditInput
         _isDown(KeyState.Control) || _isDown(KeyState.Alt) || _isDown(KeyState.Shift)
         || _isDown(KeyState.LeftWindows) || _isDown(KeyState.RightWindows);
 
-    // Extra buttons share one bit: which of the two hardly matters for keeping the release.
-    private static int ButtonOf(uint message) => message switch
+    // One bit per button, so a swallowed press never takes the release of another one.
+    private static int ButtonOf(uint message, uint mouseData) => message switch
     {
         LeftDown or LeftUp => 1,
         RightDown or RightUp => 2,
         MiddleDown or MiddleUp => 4,
-        _ => 8,
+        _ => (mouseData >> 16) == 2 ? 16 : 8, // XBUTTON1 or XBUTTON2 (high word of mouseData)
     };
 }

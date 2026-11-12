@@ -5,6 +5,7 @@ using Windows.Win32.UI.Input.KeyboardAndMouse;
 using Windows.Win32.UI.WindowsAndMessaging;
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Pointer;
+using ZoomIN.Core.Viewport;
 
 namespace ZoomIN.Platform.Input;
 
@@ -173,7 +174,7 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
     {
         try
         {
-            return _islandEdit.OnMouse(message, info->pt.X, info->pt.Y, info->mouseData);
+            return _islandEdit.OnMouse(message, new PhysicalPoint(info->pt.X, info->pt.Y), info->mouseData);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {

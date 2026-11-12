@@ -130,7 +130,16 @@ public sealed class IslandController : IDisposable
         {
             if (!started)
             {
-                // Never leave the monitors at 1× after a start that did not happen.
+                // Never leave the monitors at 1×, nor a run behind (Publish may throw from a Changed handler).
+                lock (_gate)
+                {
+                    if (session is not null && ReferenceEquals(_edit, session))
+                    {
+                        _edit = null;
+                        _model.EndEdit(session.Published, session.Published);
+                    }
+                }
+
                 session?.Dispose();
                 IslandOperation.StopEdit(operation, notStarted, _model.Scene.Set.Count);
                 _takeover.GiveBack();

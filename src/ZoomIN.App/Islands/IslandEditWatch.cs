@@ -74,7 +74,7 @@ internal sealed class IslandEditWatch : IDisposable
         {
             if (_zoom.Temporary.LevelFor(TemporaryZoomOwner.IslandEdit, monitor) is null)
             {
-                Safely(() => end("cleared"));
+                _ = Task.Run(() => Safely(() => end("cleared"))); // not under the lock the raiser may hold (overview, window drag)
                 return;
             }
         }
