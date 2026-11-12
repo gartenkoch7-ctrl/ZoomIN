@@ -118,8 +118,6 @@ E2 und E1 laufen in **einer** Spur hintereinander, weil beide diese Dateien änd
   öffnet Menüs. Der Hook läuft auch bei Zoom aus, solange eine Bedingung „Haltetaste“ ist.
 - **Überblendung:** Sie läuft auf allen Monitoren, auch ohne Caret dort. Das sind einige
   Zusatz-Frames je Wechsel von Ruhe und Bewegung.
-- **Druckmoment:** Zwischen Hook-„Down“ und dem aktualisierten Tastenzustand kann der 400-ms-Timer ein
-  Halten beenden. Das Fenster dafür ist Mikrosekunden groß.
 - **Ältere Muster, nicht M18:** `TrayMenuSync` nutzt die Fassade `Text` statt `ILocalizer`. Kommt mit
   M14 Schritt 6.
 - **Weitere Punkte:** Die Caret-Vorschau rechnet in XAML-Einheiten. Testhilfen stehen in
@@ -151,6 +149,11 @@ E2 und E1 laufen in **einer** Spur hintereinander, weil beide diese Dateien änd
   Render-Loop.
 - **Fensterregeln:** `WindowRuleRow.IndexOf` prüft die Rückfall-Regel über die Listenreihenfolge
   statt über `CustomSchemes.Resolve`. Der Code-Kommentar begründet das.
+- **Synchrone Arbeit:**
+  - `MarkerInput` startet und stoppt den Hook-Thread synchron im Änderungs-Ereignis, also auf dem
+    Kürzel- oder UI-Thread. Das dauert Millisekunden.
+  - Das Löschen eines Schemas schreibt die gespeicherten Profile auf dem UI-Thread.
+- **Aufräumen:** `DisplayEffects.Recompute` und `ReplaceSlotOf` prüfen „hat Ersetzungen“ doppelt.
 - Das Review lief, bis eine Runde keine Codeänderung mehr ergab.
 
 ## Offen für Menschen

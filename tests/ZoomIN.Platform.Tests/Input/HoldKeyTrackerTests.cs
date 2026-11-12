@@ -29,11 +29,28 @@ public sealed class HoldKeyTrackerTests
         Assert.False(tracker.OnKeyState(handler, pressed: true)); // may be the lag right after a release
         Assert.Equal(0, handler.Downs);
         Assert.True(tracker.OnKeyState(handler, pressed: true));
+        Assert.False(tracker.OnKeyState(handler, pressed: false)); // may be the lag right after a press
+        Assert.Equal((1, 0), (handler.Downs, handler.Ups));
         Assert.False(tracker.OnKeyState(handler, pressed: false));
         Assert.Equal((1, 1), (handler.Downs, handler.Ups));
 
         tracker.OnKeyState(handler, pressed: true);
         Assert.False(tracker.OnKeyState(handler, pressed: true)); // reported only once per session
+    }
+
+    [Fact]
+    public void KeyStateLaggingRightAfterAPress_DoesNotEndTheHold()
+    {
+        var tracker = new HoldKeyTracker();
+        var handler = new CountingHandler();
+        tracker.Start(MarkerHoldKey.RightShift, down: false);
+
+        tracker.OnKey(handler, VIRTUAL_KEY.VK_RSHIFT, 0x36, down: true, up: false);
+        tracker.OnKeyState(handler, pressed: false); // Windows has not updated the key state yet
+        tracker.OnKeyState(handler, pressed: true);
+
+        Assert.Equal(0, handler.Ups);
+        Assert.Equal(2, handler.Downs);
     }
 
     [Fact]

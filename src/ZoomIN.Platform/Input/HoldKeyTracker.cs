@@ -18,6 +18,7 @@ internal sealed class HoldKeyTracker
     private bool _down;
     private bool _missedLogged;
     private bool _suspect;
+    private bool _releaseSuspect;
     private MarkerHoldKey _downKey;
 
     /// <summary>A new hook session. A key already held at the start is "down", not a missed press.</summary>
@@ -25,7 +26,7 @@ internal sealed class HoldKeyTracker
     {
         _downKey = key;
         _down = down;
-        _suspect = false;
+        (_suspect, _releaseSuspect) = (false, false);
         _missedLogged = false;
     }
 
@@ -33,7 +34,7 @@ internal sealed class HoldKeyTracker
     public void Stop()
     {
         _down = false;
-        _suspect = false;
+        (_suspect, _releaseSuspect) = (false, false);
     }
 
     /// <summary>One key event from the hook.</summary>
@@ -41,7 +42,7 @@ internal sealed class HoldKeyTracker
     {
         // A new hold key: the old one's release will not come, so its press no longer blocks counting.
         var holdKey = handler.Key;
-        _suspect = false; // the hook is alive
+        (_suspect, _releaseSuspect) = (false, false); // the hook is alive and reports the key itself
         if (holdKey != _downKey)
         {
             (_down, _downKey) = (false, holdKey);
@@ -95,10 +96,20 @@ internal sealed class HoldKeyTracker
         _suspect = false;
         if (pressed)
         {
+            _releaseSuspect = false;
             handler.HoldKeyDown();
         }
         else if (_down)
         {
+            // Up although the hook saw no release: also only on the second check in a row – right
+            // after a press the key state may still say "up" for the same reason.
+            if (!_releaseSuspect)
+            {
+                _releaseSuspect = true;
+                return missed;
+            }
+
+            _releaseSuspect = false;
             _down = false;
             handler.HoldKeyUp();
         }
