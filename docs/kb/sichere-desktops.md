@@ -246,6 +246,9 @@ Anmeldung (`TaskSchedulerAutostart`, noch nicht gebaut), Win+U-Trick bleibt.
   startet `ZoomIN.exe --copy-secure-logs <Diagnose>\secure-logs-<GUID>` mit „runas“. Der erhöhte
   Schritt (`SecureLogCopy`) schreibt als Admin in einen Ordner des Benutzers, darum:
   - Ziel nur genau `<eigener Diagnoseordner>\secure-logs-<32 hex>` (`SecureLogCopyRule`), Laufwerk fest.
+    „Eigener“ heißt: der des Kontos, das den erhöhten Schritt ausführt. Bei Erhöhung „über die
+    Schulter“ (Standardbenutzer gibt Admin-Kennwort ein) ist das ein anderes Konto: Der Schritt lehnt
+    ab (Exit-Code 2), das Paket entsteht ohne SYSTEM-Logs. Gewollt, kein Ausweg über fremde Pfade.
   - Diagnoseordner wird ohne Folgen von Reparse-Points geöffnet; `GetFinalPathNameByHandle` muss dem
     erwarteten Pfad entsprechen (kein Junction irgendwo). Danach **nur noch über das Handle**:
     Zielordner und jede Datei entstehen mit `NtCreateFile` relativ zum Handle (`RootDirectory`,

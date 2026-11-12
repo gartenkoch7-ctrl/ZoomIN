@@ -113,13 +113,10 @@ internal static class ServiceRegistration
     }
 
     /// <summary>
-    /// The secure-desktop instance (ADR-0016): engine only, settings read-only from the session
-    /// user, nothing that opens windows, files chosen by the user or the network.
+    /// The secure-desktop instance's registrations (ADR-0016): the core engine only, settings
+    /// read-only from the session user, nothing that opens windows, files chosen by the user or the
+    /// network. <see cref="SecureDesktopHost"/> adds its checks (<see cref="SecureCheckRegistration"/>) and builds it.
     /// </summary>
-    public static ServiceProvider BuildSecureDesktop(TelemetryHost telemetry, IAppFolders folders) =>
-        SecureDesktop(telemetry, folders).BuildServiceProvider();
-
-    /// <summary>The secure-desktop instance's registrations.</summary>
     internal static ServiceCollection SecureDesktop(TelemetryHost telemetry, IAppFolders folders)
     {
         var services = new ServiceCollection();
