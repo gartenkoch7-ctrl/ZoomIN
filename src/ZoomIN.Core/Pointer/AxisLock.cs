@@ -29,6 +29,7 @@ public sealed class AxisLock : IPointerMoveFilter
     private bool _active;
     private int _activePress;
     private PhysicalPoint _anchor;
+    private PhysicalPoint _last;
     private LockAxis _axis;
 
     public AxisLock() => PointerConstraintMetrics.EnsureCreated();
@@ -65,13 +66,20 @@ public sealed class AxisLock : IPointerMoveFilter
             _active = true;
             _activePress = press;
             _anchor = current;
+            _last = current;
             _axis = LockAxis.None;
         }
 
-        // Off the locked line: something moved the pointer past the hook (a shortcut's
-        // SetCursorPos, another program). Lock from there instead of pulling it back.
-        if ((_axis == LockAxis.Horizontal && Math.Abs(current.Y - _anchor.Y) > 1)
-            || (_axis == LockAxis.Vertical && Math.Abs(current.X - _anchor.X) > 1))
+        // Not where this filter let it go: something moved the pointer past the hook (a shortcut's
+        // SetCursorPos, another program) or a later filter clamped it. Measure and lock from
+        // there instead of pulling it back. Locked, only the line's coordinate matters.
+        var moved = _axis switch
+        {
+            LockAxis.Horizontal => Math.Abs(current.Y - _anchor.Y) > 1,
+            LockAxis.Vertical => Math.Abs(current.X - _anchor.X) > 1,
+            _ => Math.Abs(current.X - _last.X) > 1 || Math.Abs(current.Y - _last.Y) > 1,
+        };
+        if (moved)
         {
             _anchor = current;
         }
@@ -82,6 +90,7 @@ public sealed class AxisLock : IPointerMoveFilter
             var dy = Math.Abs(requested.Y - _anchor.Y);
             if (Math.Max(dx, dy) < Threshold)
             {
+                _last = requested;
                 return requested;
             }
 

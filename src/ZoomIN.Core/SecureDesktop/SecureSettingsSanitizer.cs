@@ -103,6 +103,9 @@ public static class SecureSettingsSanitizer
             // Overview not on the secure desktop for now (B2 plan: low-level hook and UIAccess there unchecked).
             OverviewHotkey = default,
             WheelModifiers = Wheel(s.WheelModifiers, d.WheelModifiers),
+
+            // Not used on the secure desktop (A6 runs in the tray app only); bounded for the copy.
+            PointerConstraint = PointerConstraintOptions.Normalize(s.PointerConstraint),
         };
     }
 

@@ -333,9 +333,14 @@ an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten
   Richtung ohne gemeinsame Komponente (an einer Ecke wackelt die Hand zwischen „rechts“ und
   „rechts unten“, das bleibt ein Drücken). Nach dem Hinüberwechseln gilt der Puffer auf dem neuen
   Monitor wieder, in beide Richtungen.
-- **Lücken versetzter Monitore:** Ein Ziel auf keinem Monitor (z. B. rechts neben einem kürzeren
-  Monitor) wird an den eigenen Monitor geklemmt und zählt nicht als Drücken. Windows würde den
-  Zeiger dort auf den nächsten Monitor setzen, an einer Ecke womöglich auf den Nachbarn.
+- **Ziel auf keinem Monitor:** Schräg über eine Ecke (z. B. an der Taskleiste nach rechts, die
+  Hand zieht leicht nach unten) zählt als Drücken entlang der Achse, die auf einen Nachbarn führt,
+  wie Windows es abschneiden würde. Sonst (Lücke versetzter Monitore, z. B. rechts neben einem
+  kürzeren Monitor) wird das Ziel an den eigenen Monitor geklemmt und zählt nicht als Drücken.
+- **Drücken gehört zu einem Monitor:** Wechselt der Zeiger (z. B. per Kürzel) auf einen anderen
+  Monitor, beginnt die Druckzeit dort von vorn.
+- **Monitore beim Anzeigewechsel:** Liefert Windows mitten im Aufzählen keine vollständige Liste,
+  behält der Puffer die zuletzt bekannten Monitore, statt sich bis zum nächsten Wechsel abzuschalten.
 - **Eingefrorene Monitore:** Der Puffer gibt eine Bewegung frei, danach wirken die gesperrten
   Bereiche des Zauns. Ein eingefrorener Monitor bleibt also gesperrt, der Puffer gilt nur zwischen
   freien Monitoren.

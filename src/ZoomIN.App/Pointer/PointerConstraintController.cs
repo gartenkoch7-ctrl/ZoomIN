@@ -32,6 +32,7 @@ public sealed class PointerConstraintController : IDisposable
     // thread takes it in OnRecomputed while Apply may hold _gate and wait for that thread.
     private readonly Lock _configure = new();
     private EdgeBufferLevel _bufferLevel;
+    private IReadOnlyList<PhysicalRect> _lastBounds = [];
     private PointerConstraintOptions? _applied;
     private bool _bufferOn;
     private bool _axisOn;
@@ -75,7 +76,7 @@ public sealed class PointerConstraintController : IDisposable
     /// <summary>Applies <paramref name="options"/> if they differ from the running ones; internal for tests.</summary>
     internal void Apply(PointerConstraintOptions? options)
     {
-        var wanted = (options ?? PointerConstraintOptions.Default).Normalized();
+        var wanted = PointerConstraintOptions.Normalize(options);
         lock (_gate)
         {
             // After Dispose a late settings change must not install anything again.
@@ -148,9 +149,15 @@ public sealed class PointerConstraintController : IDisposable
         lock (_configure)
         {
             _bufferLevel = level ?? _bufferLevel;
-            IReadOnlyList<PhysicalRect> bounds = _bufferLevel == EdgeBufferLevel.Off ? [] : _monitors.AllBounds();
-            _buffer.Configure(bounds, _bufferLevel);
-            return bounds.Count;
+            if (_bufferLevel != EdgeBufferLevel.Off && _monitors.AllBounds() is { Count: > 0 } bounds)
+            {
+                _lastBounds = bounds;
+            }
+
+            // Empty while Windows is still enumerating after a display change: keep the last known
+            // monitors rather than switching the buffer off until the next change.
+            _buffer.Configure(_lastBounds, _bufferLevel);
+            return _lastBounds.Count;
         }
     }
 

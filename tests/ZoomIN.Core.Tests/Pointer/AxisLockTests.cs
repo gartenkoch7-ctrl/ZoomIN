@@ -96,6 +96,18 @@ public sealed class AxisLockTests
     }
 
     [Fact]
+    public void PointerMovedByOthers_BeforeTheAxisIsChosen_MeasuresFromThere()
+    {
+        _lock.SetHeld(true);
+        Move(500, 300, 503, 301);
+
+        // Jumped to another monitor while still free: the next 3 px are no 2500 px swing.
+        Assert.Equal(new PhysicalPoint(3003, 901), Move(3000, 900, 3003, 901));
+        Assert.Equal(LockAxis.None, _lock.Axis);
+        Assert.Equal(new PhysicalPoint(3010, 900), Move(3003, 901, 3010, 902));
+    }
+
+    [Fact]
     public void Lock_IsCounted()
     {
         var before = PointerConstraintMetrics.AxisLocks(LockAxis.Vertical);

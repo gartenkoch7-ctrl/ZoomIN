@@ -33,7 +33,7 @@ public sealed class HoldKeyWatchTests : IDisposable
     [InlineData(AxisLockKey.LeftAlt, 0xA4)]
     [InlineData(AxisLockKey.RightAlt, 0xA5)]
     public void Keys_TellLeftAndRightApart(AxisLockKey key, int virtualKey) =>
-        Assert.Equal(virtualKey, Win32HoldKeyWatch.VirtualKey(key));
+        Assert.Equal(virtualKey, HoldKeyCodes.VirtualKey(key));
 
     [Fact]
     public void PressAndRelease_AreReportedOnce()
@@ -145,7 +145,7 @@ public sealed class HoldKeyWatchTests : IDisposable
     {
         _watch.Start(AxisLockKey.LeftControl, _changes.Add);
 
-        _watch.OnKey(0xA2, Win32HoldKeyWatch.AltGrFakeControlScanCode, down: true, up: false);
+        _watch.OnKey(0xA2, HoldKeyCodes.AltGrFakeControlScanCode, down: true, up: false);
         Assert.Empty(_changes);
 
         _watch.OnKey(0xA2, 0x1D, down: true, up: false);

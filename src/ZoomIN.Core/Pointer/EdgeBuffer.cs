@@ -25,6 +25,7 @@ public sealed class EdgeBuffer : IPointerMoveFilter
 
     // Hook thread only.
     private Setup? _pressSetup;
+    private int _pressHome;
     private long _pressStart;
     private long _lastPress;
     private int _dirX;
@@ -76,17 +77,32 @@ public sealed class EdgeBuffer : IPointerMoveFilter
 
         if (IndexOf(setup.Monitors, requested) < 0)
         {
-            // Into no monitor (a gap of an offset layout): Windows would put the pointer on the
-            // nearest one, at a corner possibly the neighbour. It stays here, as it would at a
-            // plain outer edge, and this is no pressing: there is nothing to cross to.
-            return Clamp(home, requested);
+            // Into no monitor: a diagonal past a corner (e.g. right and down along the bottom
+            // edge) is a push along the one axis that leads onto a neighbour, as Windows would
+            // clip it. Otherwise (a gap of an offset layout) it stays here, as at an outer edge,
+            // and is no pressing: there is nothing to cross to.
+            var alongX = new PhysicalPoint(requested.X, Clamp(home, requested).Y);
+            var alongY = new PhysicalPoint(Clamp(home, requested).X, requested.Y);
+            if (IndexOf(setup.Monitors, alongX) >= 0 && !home.Contains(alongX))
+            {
+                requested = alongX;
+            }
+            else if (IndexOf(setup.Monitors, alongY) >= 0 && !home.Contains(alongY))
+            {
+                requested = alongY;
+            }
+            else
+            {
+                return Clamp(home, requested);
+            }
         }
 
         var dirX = requested.X >= home.Right ? 1 : requested.X < home.X ? -1 : 0;
         var dirY = requested.Y >= home.Bottom ? 1 : requested.Y < home.Y ? -1 : 0;
-        if (!ContinuesPress(setup, timestamp, dirX, dirY))
+        if (!ContinuesPress(setup, from, timestamp, dirX, dirY))
         {
             _pressSetup = setup;
+            _pressHome = from;
             _pressStart = timestamp;
             _dirX = dirX;
             _dirY = dirY;
@@ -107,10 +123,11 @@ public sealed class EdgeBuffer : IPointerMoveFilter
         Math.Clamp(point.X, home.X, Math.Max(home.X, home.Right - 1)),
         Math.Clamp(point.Y, home.Y, Math.Max(home.Y, home.Bottom - 1)));
 
-    // Same setup, no long pause, and at least one outward direction in common (at a corner the
-    // hand wobbles between "right" and "right and down").
-    private bool ContinuesPress(Setup setup, long timestamp, int dirX, int dirY) =>
+    // Same setup and home monitor, no long pause, and at least one outward direction in common
+    // (at a corner the hand wobbles between "right" and "right and down").
+    private bool ContinuesPress(Setup setup, int home, long timestamp, int dirX, int dirY) =>
         ReferenceEquals(_pressSetup, setup)
+        && _pressHome == home
         && timestamp - _lastPress <= setup.MaxPauseTicks
         && ((dirX != 0 && dirX == _dirX) || (dirY != 0 && dirY == _dirY));
 

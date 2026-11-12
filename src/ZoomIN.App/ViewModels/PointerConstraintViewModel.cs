@@ -60,14 +60,14 @@ public sealed partial class PointerConstraintViewModel : ObservableObject
     }
 
     private static PointerConstraintOptions Options(SettingsService settings) =>
-        (settings.Current.PointerConstraint ?? PointerConstraintOptions.Default).Normalized();
+        PointerConstraintOptions.Normalize(settings.Current.PointerConstraint);
 
     // Only the changed field, applied to the stored options.
     private void Change(Func<PointerConstraintOptions, PointerConstraintOptions> change)
     {
         if (_ready)
         {
-            _settings.Update(s => s with { PointerConstraint = change((s.PointerConstraint ?? PointerConstraintOptions.Default).Normalized()) });
+            _settings.Update(s => s with { PointerConstraint = change(PointerConstraintOptions.Normalize(s.PointerConstraint)) });
         }
     }
 }

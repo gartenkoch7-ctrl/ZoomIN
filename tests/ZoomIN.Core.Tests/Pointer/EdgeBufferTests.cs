@@ -175,6 +175,31 @@ public sealed class EdgeBufferTests
     }
 
     [Fact]
+    public void DiagonalPastTheBottomCorner_PressesTowardsTheNeighbour()
+    {
+        _buffer.Configure([Left, Right], EdgeBufferLevel.Light);
+
+        // Sliding right along the taskbar with the hand drifting down: the target lies below both.
+        Assert.Equal(new PhysicalPoint(1919, 1079), Move(0, 1919, 1079, 1925, 1085));
+        Assert.True(_buffer.IsPressing);
+        Assert.Equal(new PhysicalPoint(1925, 1079), Move(200, 1919, 1079, 1925, 1085));
+    }
+
+    [Fact]
+    public void PressOnAnotherMonitor_StartsOver()
+    {
+        var third = new PhysicalRect(3840, 0, 1920, 1080);
+        _buffer.Configure([Left, Right, third], EdgeBufferLevel.Medium);
+        Move(0, 1919, 10, 1925, 10);
+        Move(200, 1919, 10, 1925, 10);
+
+        // Moved by a shortcut onto the next monitor's right edge, still pushing right.
+        Assert.Equal(new PhysicalPoint(3839, 10), Move(300, 3839, 10, 3845, 10));
+        Assert.Equal(new PhysicalPoint(3839, 10), Move(450, 3839, 10, 3845, 10));
+        Assert.Equal(new PhysicalPoint(3845, 10), Move(700, 3839, 10, 3845, 10));
+    }
+
+    [Fact]
     public void OffsetMonitors_GapIsNoCrossing()
     {
         var lower = new PhysicalRect(1920, 200, 1920, 1080);

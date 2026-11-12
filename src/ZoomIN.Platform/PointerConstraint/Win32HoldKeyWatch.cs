@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Windows.Win32;
 using Windows.Win32.Foundation;
-using Windows.Win32.UI.Input.KeyboardAndMouse;
 using Windows.Win32.UI.WindowsAndMessaging;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Platform.Input;
@@ -9,19 +8,14 @@ using ZoomIN.Platform.Input;
 namespace ZoomIN.Platform.PointerConstraint;
 
 /// <summary>
-/// The held key of the axis lock (A6): a read-only low-level keyboard hook on its own thread, so
-/// left and right keys are told apart and nothing is swallowed. It runs only while the axis lock is
-/// switched on (the activity hook is shared with other lanes and stays untouched). A release
-/// Windows never delivered (key let go on the lock screen or a UAC prompt) is caught by a check of
-/// the physical key state twice a second while the key counts as held: the pointer must never stay
-/// locked.
+/// The held key of the axis lock (A6): a read-only low-level keyboard hook on its own thread, only
+/// while the axis lock is on; left and right keys apart, nothing swallowed. A release Windows never
+/// delivered (lock screen, UAC) is caught by a check of the physical key state twice a second while
+/// the key counts as held: the pointer must never stay locked.
 /// </summary>
 public sealed unsafe class Win32HoldKeyWatch : IHoldKeyWatch
 {
     internal static readonly TimeSpan CheckInterval = TimeSpan.FromMilliseconds(500);
-
-    // AltGr sends a fake left Ctrl with this scan code before the right Alt: not a held Ctrl.
-    internal const uint AltGrFakeControlScanCode = 0x21D;
 
     private readonly ILogger _log;
     private readonly TimeProvider _time;
@@ -68,7 +62,7 @@ public sealed unsafe class Win32HoldKeyWatch : IHoldKeyWatch
             {
                 ReleaseHeld();
                 _timer = timer;
-                _watch = new Watch(VirtualKey(key), changed);
+                _watch = new Watch(HoldKeyCodes.VirtualKey(key), changed);
             }
 
             EnsureHook();
@@ -127,7 +121,7 @@ public sealed unsafe class Win32HoldKeyWatch : IHoldKeyWatch
     /// <summary>One key event as the hook sees it; internal for tests.</summary>
     internal void OnKey(int virtualKey, uint scanCode, bool down, bool up)
     {
-        if (scanCode == AltGrFakeControlScanCode)
+        if (scanCode == HoldKeyCodes.AltGrFakeControlScanCode)
         {
             return;
         }
@@ -250,16 +244,6 @@ public sealed unsafe class Win32HoldKeyWatch : IHoldKeyWatch
             Interlocked.Increment(ref _failures);
         }
     }
-
-    internal static int VirtualKey(AxisLockKey key) => (int)(key switch
-    {
-        AxisLockKey.RightShift => VIRTUAL_KEY.VK_RSHIFT,
-        AxisLockKey.LeftControl => VIRTUAL_KEY.VK_LCONTROL,
-        AxisLockKey.RightControl => VIRTUAL_KEY.VK_RCONTROL,
-        AxisLockKey.LeftAlt => VIRTUAL_KEY.VK_LMENU,
-        AxisLockKey.RightAlt => VIRTUAL_KEY.VK_RMENU,
-        _ => VIRTUAL_KEY.VK_LSHIFT,
-    });
 
     private sealed record Watch(int VirtualKey, Action<bool> Changed);
 }

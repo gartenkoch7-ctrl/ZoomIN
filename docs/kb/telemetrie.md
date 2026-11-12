@@ -275,7 +275,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2961 | Info | Axis lock key watch stopped |
 | 2962 | Warnung | Axis lock: installing the keyboard hook failed; the axis lock does not react to its key |
 | 2963 | Debug | Axis lock key release was missed (e.g. another desktop was active); released by the check – Taste bei der Prüfung nicht gedrückt (Prüfung alle 0,5 s, nur solange sie als gehalten gilt) |
-| 2964 | Fehler | Axis lock key handler failed {Count} times – vom Prüftakt (auch einmal 0,5 s nach dem Loslassen), `Reset` oder `Stop` gemeldet, nie aus dem Tastatur-Hook || 3001 | Info | Zoom pipeline ready for {Monitor} |
+| 2964 | Fehler | Axis lock key handler failed {Count} times – vom Prüftakt (auch einmal 0,5 s nach dem Loslassen), `Reset` oder `Stop` gemeldet, nie aus dem Tastatur-Hook |
+| 3001 | Info | Zoom pipeline ready for {Monitor} |
 | 3002 | Info | Display changed on {Monitor}: {Reason} |
 | 3003 | Fehler | Zoom pipeline for {Monitor} failed |
 | 3004 | Info | Monitors: {Monitors} |

@@ -23,6 +23,10 @@ public sealed record PointerConstraintOptions
         AxisLockKey = Enum.IsDefined(AxisLockKey) ? AxisLockKey : AxisLockKey.LeftShift,
     };
 
+    /// <summary>Stored options as they apply: missing (null in the file) means the factory values.</summary>
+    public static PointerConstraintOptions Normalize(PointerConstraintOptions? options) =>
+        (options ?? Default).Normalized();
+
     /// <summary>How long the pointer has to press against an edge; zero when the buffer is off.</summary>
     public static TimeSpan PressTime(EdgeBufferLevel level) => level switch
     {
