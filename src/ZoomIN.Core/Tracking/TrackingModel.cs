@@ -28,6 +28,24 @@ public sealed class TrackingModel
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// Changes the options from their current state in one step, so Strg+Alt+T or a profile switch on
+    /// another thread is not overwritten by a settings page changing one field (M18 review).
+    /// </summary>
+    public void UpdateOptions(Func<TrackingOptions, TrackingOptions> change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        TrackingOptions current, next;
+        do
+        {
+            current = Volatile.Read(ref _options);
+            next = change(current);
+        }
+        while (Interlocked.CompareExchange(ref _options, next, current) != current);
+
+        Changed?.Invoke();
+    }
+
     /// <summary>Strg+Alt+T.</summary>
     public void ToggleEnabled()
     {

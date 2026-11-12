@@ -183,7 +183,7 @@ public sealed partial class TrackingViewModel : ObservableObject
     {
         if (_ready)
         {
-            _tracking.SetOptions(change(_tracking.Options));
+            _tracking.UpdateOptions(change);
         }
     }
 

@@ -112,6 +112,13 @@ public sealed class EffectsModel
 
     public void SetCursor(PointerStyle style) => Update(e => e with { Cursor = style.Normalized() });
 
+    /// <summary>Changes the pointer style from its current state in one step (e.g. one field, so Strg+Alt+K is not lost).</summary>
+    public void UpdateCursor(Func<PointerStyle, PointerStyle> change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        Update(e => e with { Cursor = change(e.Cursor).Normalized() });
+    }
+
     /// <summary>Strg+Alt+K: crosshair on/off.</summary>
     public void ToggleCrosshair() => Update(e => e with { Cursor = e.Cursor with { CrosshairEnabled = !e.Cursor.CrosshairEnabled } });
 

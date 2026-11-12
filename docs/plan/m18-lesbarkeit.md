@@ -131,6 +131,13 @@ E2 und E1 laufen in **einer** Spur hintereinander, weil beide diese Dateien änd
     die Ersetzungsliste nur als Referenz.
 - **Ruhe und Bewegung:** Der Zustand zwischen „Halten beendet“ und „Strg tippen“ kann in einem
   Fenster von Mikrosekunden noch ein Tippen verschlucken (Runde 5 hat den häufigeren Fall behoben).
+- **Aktivität:** Mausrad und Klicks zählen nicht als Aktivität und beenden kein Halten (KB, „Offen“).
+  Strg als Haltetaste plus Strg+Mausrad zeigt die Markierungen deshalb nach 250 ms.
+  „Strg allein“ unterscheidet nicht zwischen links und rechts.
+- **Fadenkreuz:** Wird es aus- oder unter seine Zoomschwelle geschaltet, verschwindet es ohne
+  Überblendung. Die Überblendung zu 0 erzwingt dann noch etwa 100 ms Frames, die nichts zeigen.
+- **Ungenutzte API:** `ReplacementTable.Any` und `EffectsModel.SetEnhancement` haben keinen
+  Aufrufer im Produktivcode.
 - Das Review lief, bis eine Runde keine Codeänderung mehr ergab.
 
 ## Offen für Menschen
