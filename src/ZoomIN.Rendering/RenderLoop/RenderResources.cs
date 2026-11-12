@@ -4,6 +4,7 @@ using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Rendering.Capture;
 using ZoomIN.Rendering.Gpu;
+using ZoomIN.Rendering.Islands;
 using ZoomIN.Rendering.Overlay;
 using ZoomIN.Rendering.TextEnhance;
 
@@ -53,6 +54,8 @@ internal sealed class RenderResources : IDisposable
                 Desktop = new DesktopLayer(
                     pass, smart, Own(new GpuPassTimer(Gpu.Device, deviceName, "magnify")), Own(new PassCostProbe(Gpu.Device)),
                     Own(new EnhanceCost(Gpu.Device, deviceName)));
+                Islands = Own(new IslandLayer(
+                    pass, cursorPass, new IslandStills(Gpu.Device, log), new GpuPassTimer(Gpu.Device, deviceName, "islands")));
             }
         }
         catch
@@ -79,6 +82,9 @@ internal sealed class RenderResources : IDisposable
     public OverviewLayer OverviewLayer { get; }
 
     public DesktopLayer Desktop { get; }
+
+    /// <summary>Islands above the zoom (M19 B1).</summary>
+    public IslandLayer Islands { get; }
 
     public void Dispose()
     {

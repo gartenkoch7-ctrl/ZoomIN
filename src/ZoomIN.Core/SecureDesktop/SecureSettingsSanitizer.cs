@@ -1,6 +1,7 @@
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
+using ZoomIN.Core.Islands;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Settings;
@@ -117,6 +118,12 @@ public static class SecureSettingsSanitizer
 
             // Overview not on the secure desktop for now (B2 plan: low-level hook and UIAccess there unchecked).
             OverviewHotkey = default,
+
+            // No islands on the secure desktop (B1): its edit mode swallows clicks, and the lock
+            // screen has no clock or chat to keep in view.
+            Islands = new IslandOptions { Visible = false },
+            IslandsHotkey = default,
+            IslandEditHotkey = default,
             WheelModifiers = Wheel(s.WheelModifiers, d.WheelModifiers),
         };
     }

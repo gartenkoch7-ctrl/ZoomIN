@@ -1,3 +1,5 @@
+using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using ZoomIN.App.ViewModels;
@@ -6,6 +8,8 @@ namespace ZoomIN.App.Views.Pages;
 
 public sealed partial class ZoomPage : Page
 {
+    private DispatcherQueueTimer? _timer;
+
     public ZoomPage()
     {
         InitializeComponent();
@@ -16,11 +20,37 @@ public sealed partial class ZoomPage : Page
     /// <summary>Zoom while moving windows (G1).</summary>
     public WindowDragViewModel? Drag { get; private set; }
 
+    /// <summary>Islands (M19 B1).</summary>
+    public IslandsViewModel? Islands { get; private set; }
+
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         var services = (PageServices)e.Parameter;
         Vm = services.Create<ZoomViewModel>();
         Drag = services.Create<WindowDragViewModel>();
+        Islands = services.Create<IslandsViewModel>();
         Bindings.Update();
+
+        // The edit mode and the shortcuts change the islands too; render threads never call into the UI.
+        _timer = DispatcherQueue.CreateTimer();
+        _timer.Interval = TimeSpan.FromMilliseconds(500);
+        _timer.Tick += (_, _) => Islands.Refresh();
+        _timer.Start();
+    }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        _timer?.Stop();
+        base.OnNavigatedFrom(e);
+    }
+
+    private void OnEditIslands(object sender, RoutedEventArgs e) => Islands?.Edit();
+
+    private void OnRemoveIsland(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: IslandRow row })
+        {
+            Islands?.Remove(row);
+        }
     }
 }

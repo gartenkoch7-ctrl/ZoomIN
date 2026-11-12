@@ -68,6 +68,7 @@ public static class ProfileFields
         FocusFrameShow = profile.FocusFrameShow,
         AnimationMilliseconds = profile.AnimationMilliseconds,
         WindowDrag = profile.WindowDrag,
+        Islands = profile.Islands,
     };
 
     /// <summary>

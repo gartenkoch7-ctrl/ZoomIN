@@ -64,5 +64,6 @@ internal sealed class FrameChangeTracker
         && ReferenceEquals(a.TrackingOptions, b.TrackingOptions)
         && a.PointerHidden == b.PointerHidden
         && ReferenceEquals(a.Windows, b.Windows)
-        && a.WindowsFiltered == b.WindowsFiltered;
+        && a.WindowsFiltered == b.WindowsFiltered
+        && ReferenceEquals(a.Islands, b.Islands);
 }

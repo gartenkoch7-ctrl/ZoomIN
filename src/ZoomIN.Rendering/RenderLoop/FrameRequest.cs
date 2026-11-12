@@ -1,4 +1,5 @@
 using ZoomIN.Core.Filters;
+using ZoomIN.Core.Islands;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Overview;
 using ZoomIN.Core.Tracking;
@@ -18,6 +19,7 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// <param name="ViewHeld">A temporary level (window drag) holds the monitor below the user's level, also while gliding there:
 /// the overview keeps the view from before it.</param>
 /// <param name="Activity">Mouse, typing and hold key for the show conditions of the highlights (E1).</param>
+/// <param name="Islands">Islands to draw on this monitor (M19 B1), or null; drawing them needs the desktop even at 1× (edit mode).</param>
 internal readonly record struct FrameRequest(
     ZoomMode Mode,
     ZoomMode AnchorMode,
@@ -35,8 +37,9 @@ internal readonly record struct FrameRequest(
     double OverviewLevel = 1,
     ViewPlacement Placement = default,
     bool ViewHeld = false,
-    MarkerActivitySample Activity = default)
+    MarkerActivitySample Activity = default,
+    IslandScene? Islands = null)
 {
     /// <summary>Not magnified and no colour filter: only pointer, crosshair or locator are drawn.</summary>
-    public bool OverlayOnly => Zoom <= 1.01 && !Effects.Filter.ChangesColors && !WindowsFiltered;
+    public bool OverlayOnly => Zoom <= 1.01 && !Effects.Filter.ChangesColors && !WindowsFiltered && Islands is null;
 }

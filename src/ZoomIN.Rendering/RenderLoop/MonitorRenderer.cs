@@ -143,12 +143,13 @@ internal sealed class MonitorRenderer : IDisposable
             var windows = _windows.Regions;
             var windowsFiltered = session.FiltersWindows(windows, effects);
             var overview = _demand.Overview;
+            var islands = _demand.Islands(animator.Current);
 
             // Filters work at 1× too (M5 decision); so do the pointer options (larger or coloured
             // pointer, crosshair, hiding while typing); the locator needs a few frames as well.
             // The filter per window pauses the overlay while no window here needs it (ADR-0020).
-            // The overview frame is drawn at 1× too (B2).
-            if (unzoomed && overview is null && !_demand.NeedsOverlayUnzoomed(effects) && !windowsFiltered && !session.LocatorActive
+            // The overview frame is drawn at 1× too (B2), so is the island edit mode (B1).
+            if (unzoomed && overview is null && islands is null && !_demand.NeedsOverlayUnzoomed(effects) && !windowsFiltered && !session.LocatorActive
                 && !_demand.LocatorRequested(effects))
             {
                 if (session.IsVisible)
@@ -177,7 +178,7 @@ internal sealed class MonitorRenderer : IDisposable
             var request = new FrameRequest(mode, _demand.AnchorMode(mode, unzoomed, overview, lowered), animator.Current, _model.Lens, _model.Dock, effects,
                 _effects.LocateRequestedAt, _tracking.Snapshot, _tracking.Options, _effects.PointerHiddenByTyping,
                 windows, windowsFiltered, overview, _model.TargetFor(_deviceName), _models.ViewRequests.PlacementFor(_deviceName),
-                lowered, _models.Markers.Sample);
+                lowered, _models.Markers.Sample, islands);
             var wasVisible = session.IsVisible;
             _stats.Record(session.RenderFrame(request), !wasVisible && session.IsVisible);
 

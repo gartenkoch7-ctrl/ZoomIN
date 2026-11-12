@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using ZoomIN.App.Islands;
 using ZoomIN.App.Localization;
 using ZoomIN.App.Markers;
 using ZoomIN.App.Overview;
@@ -9,6 +10,7 @@ using ZoomIN.App.Zoom;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
+using ZoomIN.Core.Islands;
 using ZoomIN.Core.Localization;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Monitors;
@@ -59,7 +61,8 @@ internal static class EngineRegistration
             sp.GetRequiredService<DebugSnapshots>(),
             sp.GetRequiredService<SmartInvertHealth>(),
             sp.GetRequiredService<OverviewModel>(),
-            sp.GetRequiredService<ViewCenterRequests>()));
+            sp.GetRequiredService<ViewCenterRequests>()) { Islands = sp.GetRequiredService<IslandModel>() });
+        services.AddSingleton(sp => IslandMapping.Create(sp.GetRequiredService<AppSettings>()));
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton(sp => new OverviewModel(sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<ViewCenterRequests>();
@@ -83,6 +86,8 @@ internal static class EngineRegistration
         services.AddSingleton<IInputActivitySource, Win32InputActivityHook>();
         services.AddSingleton<OverviewKeyWatch>();
         services.AddSingleton<IOverviewKeys>(sp => sp.GetRequiredService<OverviewKeyWatch>());
+        services.AddSingleton<IslandEditCapture>();
+        services.AddSingleton<IIslandEditInput>(sp => sp.GetRequiredService<IslandEditCapture>());
         services.AddSingleton<IAnnouncer, UiaAnnouncer>();
 
         // The tray app registers the shared localizer itself. The secure instance only needs one to build
@@ -108,6 +113,7 @@ internal static class EngineRegistration
         services.AddSingleton<DockedStripSync>();
         services.AddSingleton<OverviewController>();
         services.AddSingleton<OverviewDebug>();
+        services.AddSingleton<IslandController>();
         services.AddSingleton<WindowDragSync>();
         services.AddSingleton<ZoomController>();
         return services;

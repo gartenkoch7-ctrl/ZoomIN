@@ -1,0 +1,235 @@
+using System.Threading.Channels;
+using ZoomIN.Core.Islands;
+using ZoomIN.Core.Viewport;
+
+namespace ZoomIN.Platform.Input;
+
+/// <summary>
+/// The capturing mode of the low-level hooks of <see cref="Win32InputActivityHook"/> for the
+/// island edit mode (M19 B1). Only while it runs: mouse buttons, the wheel, Esc and Del are
+/// swallowed and handed to the edit mode; pointer moves always go on to Windows. A button or key
+/// pressed while capturing keeps its release from applications too, even after the mode ended, so
+/// no application sees half a click. <see cref="OnMouse"/> and <see cref="OnKey"/> run on the hook
+/// thread: they only queue (Windows removes slow hooks); the handler runs on a worker, in order.
+/// </summary>
+public sealed class IslandEditCapture : IIslandEditInput
+{
+    // Window messages of the low-level mouse hook.
+    internal const uint MouseMove = 0x0200;
+    internal const uint LeftDown = 0x0201;
+    internal const uint LeftUp = 0x0202;
+    internal const uint RightDown = 0x0204;
+    internal const uint RightUp = 0x0205;
+    internal const uint MiddleDown = 0x0207;
+    internal const uint MiddleUp = 0x0208;
+    internal const uint Wheel = 0x020A;
+    internal const uint ExtraDown = 0x020B;
+    internal const uint ExtraUp = 0x020C;
+    internal const uint HorizontalWheel = 0x020E;
+
+    internal const int EscapeKey = 0x1B;
+    internal const int DeleteKey = 0x2E;
+
+    private const double WheelDelta = 120;
+
+    private Session? _session;
+
+    // Hook thread only: buttons and keys whose press was swallowed, so their release is too.
+    private int _heldButtons;
+    private bool _escapeHeld;
+    private bool _deleteHeld;
+
+    /// <summary>True while the edit mode takes the input.</summary>
+    public bool IsCapturing => Volatile.Read(ref _session) is not null;
+
+    public void Start(IIslandEditInputHandler handler)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        Interlocked.Exchange(ref _session, new Session(handler))?.Complete();
+    }
+
+    public void Stop() => Interlocked.Exchange(ref _session, null)?.Complete();
+
+    /// <summary>Hook thread, every mouse event. Returns true if it must not reach applications.</summary>
+    internal bool OnMouse(uint message, int x, int y, uint mouseData)
+    {
+        var session = Volatile.Read(ref _session);
+        var point = new PhysicalPoint(x, y);
+        switch (message)
+        {
+            case MouseMove:
+                session?.Move(x, y);
+                return false; // the pointer must move, also while dragging
+            case Wheel:
+            case HorizontalWheel:
+                if (session is null)
+                {
+                    return false;
+                }
+
+                if (message == Wheel)
+                {
+                    session.Post(new Input(InputKind.Wheel, point, (short)(mouseData >> 16) / WheelDelta));
+                }
+
+                return true;
+            case LeftDown or RightDown or MiddleDown or ExtraDown:
+                if (session is null)
+                {
+                    return false;
+                }
+
+                _heldButtons |= ButtonOf(message);
+                if (message == LeftDown)
+                {
+                    session.Post(new Input(InputKind.Press, point, 0));
+                }
+
+                return true;
+            case LeftUp or RightUp or MiddleUp or ExtraUp:
+                var button = ButtonOf(message);
+                if ((_heldButtons & button) == 0)
+                {
+                    return false; // pressed before the edit mode: the application gets its release
+                }
+
+                _heldButtons &= ~button;
+                if (message == LeftUp)
+                {
+                    session?.Post(new Input(InputKind.Release, point, 0));
+                }
+
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>Hook thread, every key event. Returns true if it must not reach applications.</summary>
+    internal bool OnKey(int virtualKey, bool down, bool up)
+    {
+        if (virtualKey is not (EscapeKey or DeleteKey))
+        {
+            return false;
+        }
+
+        ref var held = ref virtualKey == EscapeKey ? ref _escapeHeld : ref _deleteHeld;
+        if (up)
+        {
+            var swallow = held;
+            held = false;
+            return swallow;
+        }
+
+        if (!down)
+        {
+            return false;
+        }
+
+        // Key repeat of a swallowed press: swallowed, but not handed on again.
+        if (held)
+        {
+            return true;
+        }
+
+        if (Volatile.Read(ref _session) is not { } session)
+        {
+            return false;
+        }
+
+        held = true;
+        session.Post(new Input(virtualKey == EscapeKey ? InputKind.Escape : InputKind.Delete, default, 0));
+        return true;
+    }
+
+    // Extra buttons share one bit: which of the two hardly matters for keeping the release.
+    private static int ButtonOf(uint message) => message switch
+    {
+        LeftDown or LeftUp => 1,
+        RightDown or RightUp => 2,
+        MiddleDown or MiddleUp => 4,
+        _ => 8,
+    };
+
+    private enum InputKind
+    {
+        Press,
+        Move,
+        Release,
+        Wheel,
+        Escape,
+        Delete,
+    }
+
+    private readonly record struct Input(InputKind Kind, PhysicalPoint Point, double Notches);
+
+    /// <summary>One edit mode: its queue and the worker that hands the input on in order.</summary>
+    private sealed class Session
+    {
+        private readonly IIslandEditInputHandler _handler;
+        private readonly Channel<Input> _queue = Channel.CreateUnbounded<Input>(new UnboundedChannelOptions { SingleReader = true });
+
+        // The latest move, packed; queued as one marker until the worker took it (moves come fast).
+        private long _move;
+        private int _moveQueued;
+
+        public Session(IIslandEditInputHandler handler)
+        {
+            _handler = handler;
+            _ = Task.Run(RunAsync);
+        }
+
+        public void Post(Input input) => _queue.Writer.TryWrite(input);
+
+        public void Move(int x, int y)
+        {
+            Volatile.Write(ref _move, ((long)x << 32) | (uint)y);
+            if (Interlocked.Exchange(ref _moveQueued, 1) == 0)
+            {
+                Post(new Input(InputKind.Move, default, 0));
+            }
+        }
+
+        public void Complete() => _queue.Writer.TryComplete();
+
+        private async Task RunAsync()
+        {
+            await foreach (var input in _queue.Reader.ReadAllAsync().ConfigureAwait(false))
+            {
+                Hand(input);
+            }
+        }
+
+        // The handler logs its own failures; the worker must outlive one of them.
+        private void Hand(Input input)
+        {
+            try
+            {
+                switch (input.Kind)
+                {
+                    case InputKind.Move:
+                        Interlocked.Exchange(ref _moveQueued, 0);
+                        var packed = Volatile.Read(ref _move);
+                        _handler.Moved(new PhysicalPoint((int)(packed >> 32), (int)packed));
+                        break;
+                    case InputKind.Press:
+                        _handler.Pressed(input.Point);
+                        break;
+                    case InputKind.Release:
+                        _handler.Released(input.Point);
+                        break;
+                    case InputKind.Wheel:
+                        _handler.Wheel(input.Notches, input.Point);
+                        break;
+                    default:
+                        _handler.Key(input.Kind == InputKind.Escape ? IslandEditKey.Escape : IslandEditKey.Delete);
+                        break;
+                }
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                // Swallowed on purpose; see the comment above.
+            }
+        }
+    }
+}

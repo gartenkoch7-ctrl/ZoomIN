@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
+using ZoomIN.Core.Islands;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Tracking;
@@ -238,4 +239,7 @@ public sealed record AppSettings : InputSettings
 
     /// <summary>Zoom while moving or resizing windows (G1): lift to 1× by default, for both.</summary>
     public WindowDragOptions WindowDrag { get; set; } = WindowDragOptions.Default;
+
+    /// <summary>Islands of the profile (M19 B1): shown or hidden, and up to four of them.</summary>
+    public IslandOptions Islands { get; set; } = IslandOptions.Default;
 }

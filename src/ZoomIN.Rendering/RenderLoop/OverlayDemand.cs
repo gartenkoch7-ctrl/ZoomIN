@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ZoomIN.Core.Filters;
+using ZoomIN.Core.Islands;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Overview;
 using ZoomIN.Core.Zoom;
@@ -12,6 +13,9 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// </summary>
 internal sealed class OverlayDemand
 {
+    // As FrameRequest.OverlayOnly: below this the picture counts as 1×.
+    private const double ZoomedAbove = 1.01;
+
     private readonly string _deviceName;
     private readonly RenderModels _models;
     private readonly ZoomModel _zoom;
@@ -62,8 +66,18 @@ internal sealed class OverlayDemand
     public ZoomMode AnchorMode(ZoomMode frameMode, bool unzoomed, OverviewSession? overview, bool lowered) =>
         unzoomed && (overview is not null || lowered) ? _zoom.Mode : frameMode;
 
+    /// <summary>
+    /// The islands this monitor draws at <paramref name="zoom"/> (M19 B1), or null: in fullscreen
+    /// while zoomed in, and on every monitor while they are edited (also at 1×). Lock-free, 0 B.
+    /// </summary>
+    public IslandScene? Islands(double zoom)
+    {
+        var scene = _models.Islands.Scene;
+        return scene.ShowsOn(_deviceName, _zoom.Mode == ZoomMode.Fullscreen && zoom > ZoomedAbove) ? scene : null;
+    }
+
     /// <summary>After a pipeline failure: retry soon if the monitor should show anything, else wait for a change.</summary>
     public bool NeededAfterFailure() =>
         _zoom.EffectiveTargetFor(_deviceName) > ZoomLimits.Min || NeedsOverlayUnzoomed(_effects.CurrentFor(_deviceName))
-        || _models.Windows.Regions.Count > 0 || Overview is not null;
+        || _models.Windows.Regions.Count > 0 || Overview is not null || _models.Islands.Scene.Editing;
 }

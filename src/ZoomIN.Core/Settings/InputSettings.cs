@@ -41,6 +41,11 @@ public abstract record InputSettings
     /// <summary>Overview at the push of a key (B2, M17).</summary>
     public HotkeyGesture OverviewHotkey { get; set; } = HotkeyGesture.Overview;
 
+    /// <summary>Islands on/off and their edit mode (M19 B1).</summary>
+    public HotkeyGesture IslandsHotkey { get; set; } = HotkeyGesture.ToggleIslands;
+
+    public HotkeyGesture IslandEditHotkey { get; set; } = HotkeyGesture.EditIslands;
+
     public HotkeyModifiers WheelModifiers { get; set; } = HotkeyModifiers.Control;
 
     /// <summary>Key that shows highlights set to "only while held" (E1).</summary>

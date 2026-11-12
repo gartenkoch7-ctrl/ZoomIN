@@ -4,11 +4,11 @@ using ZoomIN.Core.Viewport;
 
 namespace ZoomIN.Rendering.Gpu;
 
-/// <summary>Constant buffer of Magnify.hlsl. 128 bytes, matching the HLSL cbuffer layout.</summary>
+/// <summary>Constant buffer of Magnify.hlsl. 144 bytes, matching the HLSL cbuffer layout.</summary>
 [StructLayout(LayoutKind.Sequential)]
 internal readonly struct MagnifyConstants
 {
-    public const int SizeInBytes = 128;
+    public const int SizeInBytes = 144;
 
     public readonly float SourceOffsetU;
     public readonly float SourceOffsetV;
@@ -28,12 +28,14 @@ internal readonly struct MagnifyConstants
     public readonly uint MonitorSmart;
     public readonly float Sharpness;
     public readonly float BoldPixels;
-    private readonly float _enhancePadding0;
-    private readonly float _enhancePadding1;
+    public readonly StillMap Still;
+    private readonly float _stillPadding0;
+    private readonly float _stillPadding1;
 
     private MagnifyConstants(
         PhysicalRect source, PhysicalRect monitor, PhysicalRect target, PhysicalRect viewport,
-        FrameColor frame, in ColorMatrix color, Smoothing smoothing, bool smart = false, TextEnhancement enhance = default)
+        FrameColor frame, in ColorMatrix color, Smoothing smoothing, bool smart = false, TextEnhancement enhance = default,
+        StillMap? still = null)
     {
         SourceOffsetU = (float)((source.X - monitor.X) / monitor.Width);
         SourceOffsetV = (float)((source.Y - monitor.Y) / monitor.Height);
@@ -55,8 +57,9 @@ internal readonly struct MagnifyConstants
         var applied = TextEnhancement.WorksWith(smoothing) ? enhance : TextEnhancement.Off;
         Sharpness = (float)applied.Sharpness;
         BoldPixels = (float)applied.BoldPixels;
-        _enhancePadding0 = 0;
-        _enhancePadding1 = 0;
+        Still = still ?? StillMap.Live;
+        _stillPadding0 = 0;
+        _stillPadding1 = 0;
     }
 
     /// <summary>"Schärfe" or "Fett" is on: <see cref="MagnifyPass"/> binds PSEnhanced instead of PSMain (M18, D1).</summary>
@@ -85,4 +88,13 @@ internal readonly struct MagnifyConstants
         PhysicalRect source, PhysicalRect monitor, PhysicalRect target, PhysicalRect viewport,
         FrameColor frame, in ColorMatrix color, Smoothing smoothing, bool smart = false, TextEnhancement enhance = default) =>
         new(source, monitor, target, viewport, frame, color, smoothing, smart, enhance);
+
+    /// <summary>
+    /// An island (M19 B1): like <see cref="WithFrame(PhysicalRect, PhysicalRect, PhysicalRect, PhysicalRect, FrameColor, in ColorMatrix, Smoothing, bool, TextEnhancement)"/>,
+    /// and with <paramref name="still"/> the bound texture is a still image of part of the desktop.
+    /// </summary>
+    public static MagnifyConstants ForIsland(
+        PhysicalRect source, PhysicalRect monitor, PhysicalRect target, PhysicalRect viewport,
+        FrameColor frame, in ColorMatrix color, Smoothing smoothing, bool smart, TextEnhancement enhance, StillMap still) =>
+        new(source, monitor, target, viewport, frame, color, smoothing, smart, enhance, still);
 }

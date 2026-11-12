@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using ZoomIN.App.Islands;
 using ZoomIN.App.Localization;
 using ZoomIN.App.Overview;
 using ZoomIN.App.Settings;
+using ZoomIN.App.Tests.Islands;
 using ZoomIN.App.Tests.Overview;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Filters;
@@ -81,8 +83,10 @@ public sealed class HotkeyBindingsTests
         var hotkeys = new FakeHotkeys(taken);
         var overview = new OverviewController(service, zoom, monitors, new FixedCursor(), new FakeOverviewKeys(), new RecordingAnnouncer(),
             AppTexts.CreateLocalizer(), TimeProvider.System, NullLogger<OverviewController>.Instance);
+        var islands = new IslandController(service, monitors, new FakeIslandInput(), new FakeFence(), new RecordingAnnouncer(),
+            AppTexts.CreateLocalizer(), TimeProvider.System, NullLogger<IslandController>.Instance);
         var bindings = new HotkeyBindings(
-            service, new ProfileService(service, new NoProfiles()), hotkeys, zoom, windowFilter, overview, NullLogger<HotkeyBindings>.Instance);
+            service, new ProfileService(service, new NoProfiles()), hotkeys, zoom, windowFilter, overview, islands, NullLogger<HotkeyBindings>.Instance);
         return (bindings, hotkeys, models);
     }
 

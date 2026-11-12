@@ -16,7 +16,13 @@ cbuffer MagnifyConstants : register(b0)
     uint MonitorSmart;   // 1 = the monitor matrix is the smart inversion (ADR-0024)
     float Sharpness;     // "Schärfe" 0–1 (M18, D1); read by PSEnhanced only
     float BoldPx;        // "Fett" 0–3 output pixels (M18, D1); read by PSEnhanced only
-    float2 EnhancePadding;
+    // Island with a still image (M19 B1): Desktop holds only the still part, at whole desktop
+    // pixels. Coordinates stay in desktop UV (window regions, smart weights, texel grid) and are
+    // mapped into the bound texture only where it is sampled (TexUv). Live: scale 1, offset 0,
+    // which leaves every coordinate bit for bit as it was.
+    float2 StillOffset;
+    float2 StillScale;
+    float2 StillPadding;
 };
 
 // Filter per window (ADR-0020): window rectangles front to back, each with a palette entry. The
@@ -69,6 +75,12 @@ VertexOutput VSMain(uint id : SV_VertexID)
     return output;
 }
 
+// Desktop UV → UV of the bound texture (the desktop, or an island's still image).
+float2 TexUv(float2 uv)
+{
+    return uv * StillScale + StillOffset;
+}
+
 // Catmull-Rom bicubic with 9 bilinear taps instead of 16 point taps. Sharper than bilinear,
 // which keeps text edges crisp at high zoom.
 float3 SampleCatmullRom(float2 uv)
@@ -88,15 +100,15 @@ float3 SampleCatmullRom(float2 uv)
     float2 texPos12 = (texPos1 + w2 / w12) / TextureSize;
 
     float3 result = 0;
-    result += Desktop.SampleLevel(LinearSampler, float2(texPos0.x, texPos0.y), 0).rgb * w0.x * w0.y;
-    result += Desktop.SampleLevel(LinearSampler, float2(texPos12.x, texPos0.y), 0).rgb * w12.x * w0.y;
-    result += Desktop.SampleLevel(LinearSampler, float2(texPos3.x, texPos0.y), 0).rgb * w3.x * w0.y;
-    result += Desktop.SampleLevel(LinearSampler, float2(texPos0.x, texPos12.y), 0).rgb * w0.x * w12.y;
-    result += Desktop.SampleLevel(LinearSampler, float2(texPos12.x, texPos12.y), 0).rgb * w12.x * w12.y;
-    result += Desktop.SampleLevel(LinearSampler, float2(texPos3.x, texPos12.y), 0).rgb * w3.x * w12.y;
-    result += Desktop.SampleLevel(LinearSampler, float2(texPos0.x, texPos3.y), 0).rgb * w0.x * w3.y;
-    result += Desktop.SampleLevel(LinearSampler, float2(texPos12.x, texPos3.y), 0).rgb * w12.x * w3.y;
-    result += Desktop.SampleLevel(LinearSampler, float2(texPos3.x, texPos3.y), 0).rgb * w3.x * w3.y;
+    result += Desktop.SampleLevel(LinearSampler, TexUv(float2(texPos0.x, texPos0.y)), 0).rgb * w0.x * w0.y;
+    result += Desktop.SampleLevel(LinearSampler, TexUv(float2(texPos12.x, texPos0.y)), 0).rgb * w12.x * w0.y;
+    result += Desktop.SampleLevel(LinearSampler, TexUv(float2(texPos3.x, texPos0.y)), 0).rgb * w3.x * w0.y;
+    result += Desktop.SampleLevel(LinearSampler, TexUv(float2(texPos0.x, texPos12.y)), 0).rgb * w0.x * w12.y;
+    result += Desktop.SampleLevel(LinearSampler, TexUv(float2(texPos12.x, texPos12.y)), 0).rgb * w12.x * w12.y;
+    result += Desktop.SampleLevel(LinearSampler, TexUv(float2(texPos3.x, texPos12.y)), 0).rgb * w3.x * w12.y;
+    result += Desktop.SampleLevel(LinearSampler, TexUv(float2(texPos0.x, texPos3.y)), 0).rgb * w0.x * w3.y;
+    result += Desktop.SampleLevel(LinearSampler, TexUv(float2(texPos12.x, texPos3.y)), 0).rgb * w12.x * w3.y;
+    result += Desktop.SampleLevel(LinearSampler, TexUv(float2(texPos3.x, texPos3.y)), 0).rgb * w3.x * w3.y;
     return result;
 }
 
@@ -108,8 +120,8 @@ float3 SampleDesktop(float2 uv)
     }
 
     return Smoothing == 1
-        ? Desktop.SampleLevel(LinearSampler, uv, 0).rgb
-        : Desktop.SampleLevel(PointSampler, uv, 0).rgb;
+        ? Desktop.SampleLevel(LinearSampler, TexUv(uv), 0).rgb
+        : Desktop.SampleLevel(PointSampler, TexUv(uv), 0).rgb;
 }
 
 #include "SmartWeight.hlsli"

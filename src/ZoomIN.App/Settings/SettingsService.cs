@@ -1,5 +1,6 @@
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Filters;
+using ZoomIN.Core.Islands;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.WindowDrag;
@@ -44,6 +45,7 @@ public sealed class SettingsService : IDisposable
         _models.Tracking.Changed += ScheduleSave;
         _models.Windows.OptionsChanged += ScheduleSave;
         _windowDrag.OptionsChanged += ScheduleSave;
+        _models.Islands.Saved += ScheduleSave;
     }
 
     /// <summary>Raised after shared settings changed (language, hotkeys, …), on the caller's thread.</summary>
@@ -66,6 +68,7 @@ public sealed class SettingsService : IDisposable
             settings = EffectsMapping.Apply(settings, _models.Effects);
             settings = TrackingMapping.Apply(settings, _models.Tracking);
             settings = WindowDragMapping.Apply(settings, _windowDrag);
+            settings = IslandMapping.Apply(settings, _models.Islands);
 
             // Shared by all profiles (ADR-0020): ApplyDisplay never takes it from a profile.
             return settings with { WindowFilter = _models.Windows.Options };
@@ -90,6 +93,7 @@ public sealed class SettingsService : IDisposable
         _models.Effects.Replace(EffectsMapping.Effects(profile));
         _models.Tracking.SetOptions(TrackingMapping.Options(profile));
         _windowDrag.Options = WindowDragMapping.Options(profile);
+        IslandMapping.ApplyTo(_models.Islands, profile);
     }
 
     public void SaveNow()
@@ -110,6 +114,7 @@ public sealed class SettingsService : IDisposable
         _models.Tracking.Changed -= ScheduleSave;
         _models.Windows.OptionsChanged -= ScheduleSave;
         _windowDrag.OptionsChanged -= ScheduleSave;
+        _models.Islands.Saved -= ScheduleSave;
         _saveTimer.Dispose();
         SaveNow();
     }

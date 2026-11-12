@@ -9,6 +9,7 @@ using ZoomIN.Core.Viewport;
 using ZoomIN.Core.WindowFilters;
 using ZoomIN.Rendering.Capture;
 using ZoomIN.Rendering.Gpu;
+using ZoomIN.Rendering.Islands;
 using ZoomIN.Rendering.Overlay;
 using ZoomIN.Rendering.Snapshots;
 
@@ -33,6 +34,7 @@ internal sealed class RenderSession : IDisposable
     private readonly HighlightLayer _highlights;
     private readonly OverviewLayer _overview;
     private readonly DesktopLayer _desktop;
+    private readonly IslandLayer _islands;
     private readonly SnapshotTaker _snapshots;
     private readonly AnchorController _anchors = new();
     private readonly FrameChangeTracker _changes = new();
@@ -62,6 +64,7 @@ internal sealed class RenderSession : IDisposable
         _highlights = _resources.Highlights;
         _overview = _resources.OverviewLayer;
         _desktop = _resources.Desktop;
+        _islands = _resources.Islands;
         _lastCursor = new PhysicalPoint(_monitor.Bounds.X + (_monitor.Width / 2), _monitor.Bounds.Y + (_monitor.Height / 2));
     }
 
@@ -154,7 +157,8 @@ internal sealed class RenderSession : IDisposable
         // A highlight fading in or out under its show condition (E1) also needs the frame drawn.
         var fading = _alphas.Update(request.Effects.Cursor, request.Zoom, request.TrackingOptions, request.Activity,
             Stopwatch.GetTimestamp(), Stopwatch.Frequency);
-        var animating = LocatorActive || fading || (!request.OverlayOnly && _desktop.SmartSettling) || _overview.NeedsRedraw;
+        _islands.Update(request.Islands, Stopwatch.GetTimestamp());
+        var animating = LocatorActive || fading || (!request.OverlayOnly && _desktop.SmartSettling) || _overview.NeedsRedraw || _islands.NeedsRedraw;
         var changes = _changes.Compare(newImage, request, frame, _cursorInside, _lastCursor, shape,
             animating, _snapshots.IsRequested, _shown);
         if (!changes.NeedsRedraw)
@@ -182,6 +186,14 @@ internal sealed class RenderSession : IDisposable
         }
 
         _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions, _alphas);
+
+        // Islands (M19 B1) above the zoom and its highlights, below the overview frame and the pointer.
+        if (!request.OverlayOnly)
+        {
+            _islands.Draw(_gpu.Context, _duplicator.ShaderResource, _duplicator.Texture, _swapchain.RenderTarget, _monitor.DeviceName,
+                _monitor.Bounds, request.Islands, request.Effects, weights);
+        }
+
         _overview.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame);
         LocatorActive = _cursorInside && _cursorLayer.Draw(
             _gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Mode, request.Zoom, _lastCursor,

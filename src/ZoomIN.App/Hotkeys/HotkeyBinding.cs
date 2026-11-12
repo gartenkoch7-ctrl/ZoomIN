@@ -26,5 +26,7 @@ public sealed record HotkeyBinding(
         new("Act.Profile", s => s.ProfileHotkey, (s, g) => s with { ProfileHotkey = g }),
         new("Act.WindowFilter", s => s.WindowFilterHotkey, (s, g) => s with { WindowFilterHotkey = g }, Optional: true),
         new("Act.Overview", s => s.OverviewHotkey, (s, g) => s with { OverviewHotkey = g }, Optional: true, HintKey: "Act.Overview.Hint"),
+        new("Act.Islands", s => s.IslandsHotkey, (s, g) => s with { IslandsHotkey = g }, Optional: true),
+        new("Act.IslandEdit", s => s.IslandEditHotkey, (s, g) => s with { IslandEditHotkey = g }, Optional: true, HintKey: "Act.IslandEdit.Hint"),
     ];
 }
