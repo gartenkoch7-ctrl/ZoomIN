@@ -33,23 +33,20 @@ public sealed class IslandEditCapture : IIslandEditInput
     internal const int DeleteKey = (int)VIRTUAL_KEY.VK_DELETE;
 
     private const double WheelDelta = 120;
-    private const uint RepeatGapMilliseconds = 2500;
 
     private readonly Func<int, bool> _isDown;
+    private readonly Func<bool> _buttonsSwapped;
+    private readonly IslandKeyGate _escape = new();
+    private readonly IslandKeyGate _delete = new();
+    private readonly Func<bool> _takeEscape;
+    private readonly Func<bool> _takeDelete;
     private IslandEditQueue? _session;
 
-    // Hook thread only: buttons and keys whose press was swallowed, so their release is too.
+    // Hook thread only: buttons whose press was swallowed, so their release is too; wheel rest of a run.
     private int _heldButtons;
-    private bool _escapeHeld;
-    private bool _deleteHeld;
-    private uint _escapeAt;
-    private uint _deleteAt;
     private int _wheelRest;
     private IslandEditQueue? _wheelSession;
     private volatile bool _hooksInstalled;
-    private volatile bool _escapePass;
-    private volatile bool _deletePass;
-    private readonly Func<bool> _buttonsSwapped;
     private volatile uint _primaryDown = LeftDown;
     private volatile uint _primaryUp = LeftUp;
 
@@ -64,6 +61,8 @@ public sealed class IslandEditCapture : IIslandEditInput
     {
         _isDown = isDown;
         _buttonsSwapped = buttonsSwapped ?? (() => false);
+        _takeEscape = () => Take(IslandEditKey.Escape); // made once: no allocation per key in the hook
+        _takeDelete = () => Take(IslandEditKey.Delete);
     }
 
     public bool IsAvailable => _hooksInstalled;
@@ -76,8 +75,8 @@ public sealed class IslandEditCapture : IIslandEditInput
         ArgumentNullException.ThrowIfNull(handler);
 
         // Esc or Del held at the start belongs to whoever got its press: its repeats and release too.
-        _escapePass = _isDown(EscapeKey);
-        _deletePass = _isDown(DeleteKey);
+        _escape.Starting(_isDown(EscapeKey));
+        _delete.Starting(_isDown(DeleteKey));
 
         // Low-level hooks report the physical buttons: with swapped buttons (left-handed) the primary
         // one, that drags, arrives as the right button.
@@ -163,69 +162,22 @@ public sealed class IslandEditCapture : IIslandEditInput
 
     /// <summary>Hook thread, every key event. Returns true if it must not reach applications.</summary>
     /// <param name="time">Event time in milliseconds (KBDLLHOOKSTRUCT.time, wraps around).</param>
-    internal bool OnKey(int virtualKey, bool down, bool up, uint time)
+    internal bool OnKey(int virtualKey, bool down, bool up, uint time) => virtualKey switch
     {
-        if (virtualKey is not (EscapeKey or DeleteKey))
-        {
-            return false;
-        }
+        EscapeKey => _escape.OnKey(down, up, time, _takeEscape),
+        DeleteKey => _delete.OnKey(down, up, time, _takeDelete),
+        _ => false,
+    };
 
-        ref var held = ref virtualKey == EscapeKey ? ref _escapeHeld : ref _deleteHeld;
-        ref var last = ref virtualKey == EscapeKey ? ref _escapeAt : ref _deleteAt;
-        if (virtualKey == EscapeKey ? _escapePass : _deletePass)
-        {
-            // Held when the edit mode started. Its press reached the application (repeats and release go
-            // on), unless ZoomIN swallowed that press itself (held): then its release stays swallowed.
-            if ((up || held) && virtualKey == EscapeKey)
-            {
-                _escapePass = false; // only this key's flag: Start may set the other one right now
-            }
-            else if (up || held)
-            {
-                _deletePass = false;
-            }
-
-            if (!held)
-            {
-                last = time;
-                return false;
-            }
-        }
-
-        // Key repeat starts within 1 s (2 s with FilterKeys): a "repeat" later than that is a new
-        // press whose release before it was never seen (secure desktop, hook timeout).
-        if (down && held && time - last > RepeatGapMilliseconds)
-        {
-            held = false;
-        }
-
-        last = time;
-        if (up)
-        {
-            var swallow = held;
-            held = false;
-            return swallow;
-        }
-
-        if (!down)
-        {
-            return false;
-        }
-
-        // Key repeat of a swallowed press: swallowed, but not handed on again.
-        if (held)
-        {
-            return true;
-        }
-
-        // Ctrl+Shift+Esc, Ctrl+Esc, Shift+Del and the like stay the system's and the applications'.
+    // A new press of Esc or Del. Ctrl+Shift+Esc, Ctrl+Esc, Shift+Del and the like stay the system's.
+    private bool Take(IslandEditKey key)
+    {
         if (Volatile.Read(ref _session) is not { } session || AnyModifierDown())
         {
             return false;
         }
 
-        held = true;
-        session.Key(virtualKey == EscapeKey ? IslandEditKey.Escape : IslandEditKey.Delete);
+        session.Key(key);
         return true;
     }
 

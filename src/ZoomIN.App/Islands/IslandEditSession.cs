@@ -35,6 +35,9 @@ internal sealed class IslandEditSession : IDisposable
 
     public IslandEditor Editor { get; }
 
+    /// <summary>Ends this run and never a later one (made once, not per model change).</summary>
+    public Action<string>? EndThisRun { get; set; }
+
     /// <summary>A new run on the islands as drawn now, fitted to the monitors; its operation starts with it.</summary>
     public static IslandEditSession Create(
         IslandModel model, IMonitorProvider monitors, ZoomModel zoom, TimeProvider time, TimeSpan idleLimit, Action<IslandEditSession> idle)

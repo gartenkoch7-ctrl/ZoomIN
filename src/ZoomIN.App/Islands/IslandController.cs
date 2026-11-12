@@ -47,7 +47,7 @@ public sealed class IslandController : IDisposable
         _log = log;
         _report = new IslandReport(announcer, texts, log);
         _watch = new IslandEditWatch(
-            fence, _zoom, _model, () => _takeover.Monitors, () => Volatile.Read(ref _edit) is { } run ? reason => End(reason, run) : null, EndIfChangedOutside, log);
+            fence, _zoom, _model, () => _takeover.Monitors, () => Volatile.Read(ref _edit)?.EndThisRun, EndIfChangedOutside, log);
 
         // The monitors may differ from when the islands were saved: push them back onto their monitor.
         _model.FitTo(monitors.BoundsOf);
@@ -96,6 +96,8 @@ public sealed class IslandController : IDisposable
         {
             _takeover.ShowOneTimes();
             session = IslandEditSession.Create(_model, _monitors, _zoom, _time, IdleLimit, idle => EndLogged("idle", idle));
+            var run = session;
+            session.EndThisRun = reason => End(reason, run);
             lock (_gate)
             {
                 _edit = session;
@@ -167,7 +169,7 @@ public sealed class IslandController : IDisposable
                     // A drag in progress is undone, not saved half way; a change from outside (profile
                     // switch, settings page) is kept instead of the edit mode's islands.
                     edit.Editor.CancelDrag();
-                    _model.EndEdit(edit.Published, edit.Result, edit.HasChanges, edit.Commit);
+                    _model.EndEdit(edit.Published, edit.Result, edit.HasChanges, edit.HasChanges ? edit.Commit : null);
                 }
             }
             finally

@@ -76,6 +76,23 @@ public sealed class IslandEditCaptureEdgeTests
     }
 
     [Fact]
+    public void KeyHeldAtTheStart_WhoseReleaseWasLost_TheNextPressAfterTheGapIsTaken()
+    {
+        var escDown = true;
+        var capture = new IslandEditCapture(key => escDown && key == IslandEditCapture.EscapeKey);
+        var handler = new RecordingIslandHandler();
+        capture.Start(handler);
+        escDown = false;
+
+        Assert.False(capture.OnKey(IslandEditCapture.EscapeKey, down: true, up: false, 1000)); // a repeat: passes
+        Assert.True(capture.OnKey(IslandEditCapture.EscapeKey, down: true, up: false, 10_000)); // release was lost
+
+        handler.WaitFor(1);
+        Assert.Equal(["key Escape"], handler.Calls);
+        capture.Stop();
+    }
+
+    [Fact]
     public void CtrlWheel_StaysTheZooms()
     {
         var ctrl = true;

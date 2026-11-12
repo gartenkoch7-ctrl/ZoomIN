@@ -178,7 +178,8 @@ Befunde der Reviews, die bewusst nicht als Code umgesetzt sind (Designvorschläg
   CsWin32 (gelebte Ausnahme der Regel „nur in Interop/“).
 - **Monitorwechsel bei offener Einstellungsseite:** Die Zeilen aktualisieren Monitornummer und
   „nicht angeschlossen“ erst bei der nächsten gespeicherten Änderung oder beim erneuten Öffnen.
-- **Dateigröße:** `IslandController.cs`, `IslandEditor.cs`, `IslandEditCapture.cs` und
+- **`PointerStyle`** nutzt 1,01 noch als Zahl; `ZoomLimits.UnzoomedUpTo` gilt für Inseln und Overlay.
+- **Dateigröße:** `IslandController.cs`, `IslandEditor.cs` und
   `IslandEditorTests.cs` liegen knapp unter 250 Zeilen.
 - **Einpassen im Modell:** Gezeichnete (eingepasste) und gespeicherte Inseln werden im Modell getrennt
   geführt (`Committed`, `WithUntouchedFrom`). Einpassen erst beim Zeichnen und Greifen wäre einfacher
