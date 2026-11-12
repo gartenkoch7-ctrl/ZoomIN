@@ -15,4 +15,24 @@ public interface IMonitorProvider
 
     /// <summary>Bounds in physical desktop pixels; null if the monitor is gone.</summary>
     PhysicalRect? BoundsOf(string monitorId);
+
+    /// <summary>
+    /// Bounds of all current monitors, read in one pass where the platform can (pointer fence, M19);
+    /// empty if they cannot all be read.
+    /// </summary>
+    IReadOnlyList<PhysicalRect> AllBounds()
+    {
+        var all = new List<PhysicalRect>();
+        foreach (var id in MonitorIds())
+        {
+            if (BoundsOf(id) is not { } bounds)
+            {
+                return [];
+            }
+
+            all.Add(bounds);
+        }
+
+        return all;
+    }
 }

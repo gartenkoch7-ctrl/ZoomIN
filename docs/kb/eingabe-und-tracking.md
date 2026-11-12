@@ -176,6 +176,86 @@ Schema und Standardbelegung: [ADR-0008](../adr/0008-tastenkuerzel-strg-alt.md)
 (Strg+Alt+Taste ohne AltGr-Belegung, Strg+Mausrad mit Vorrang vor Anwendungen).
 Globale Kürzel per `RegisterHotKey`, Mausrad per `WH_MOUSE_LL`.
 
+## Zeigerzaun und Zeiger versetzen (M19 Schritt 0, ADR-0028)
+Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bearbeitungsmodus).
+
+- **Geometrie** (`Core/PointerFence/FenceGeometry`, rein): erlaubt = Vereinigung der Monitore
+  minus gesperrte Rechtecke, als disjunkte Teilrechtecke. Gespiegelte Monitore zählen einmal.
+  Ist das Ergebnis genau ein Rechteck (`SingleRect`), reicht `ClipCursor`; sonst braucht es den
+  Hook. Pixelraster wie bei `RECT`: letzter erreichbarer Pixel ist `Right − 1`.
+- **Klemmen statt Springen:** Eine Bewegung in einen gesperrten Bereich endet am Rand des
+  Teilrechtecks, in dem der Zeiger gerade ist, oder eines Teilrechtecks, das eine Kante mit ihm
+  teilt (eine gemeinsame Ecke reicht nicht, sonst rutscht er diagonal auf einen dritten Monitor; so
+  gleitet er an einer Insel-Kante weiter statt an einer unsichtbaren Naht zu hängen), nie auf
+  einem freien Monitor jenseits des gesperrten. Geprüft
+  wird nur das Ziel, nicht der Weg: Absolute Eingaben (Stift, Fernsteuerung, `SendInput`) dürfen
+  über einen gesperrten Monitor hinweg auf einen freien springen; mit der Maus (relativ, wenige
+  Pixel je Ereignis) kommt das nicht vor. Gewollt: Wer mit dem Stift auf Monitor 2 tippt, will
+  dorthin.
+- **Nie einsperren:** Ist der Zeiger schon in einem gesperrten Bereich (Anzeigewechsel, ein
+  anderes Programm hat ihn versetzt), bewegt er sich frei. Bliebe gar nichts erlaubt (alle
+  Monitore gesperrt, letzter freier abgesteckt), bleibt der Zaun aus (Log 2942).
+- **Modi** (`IPointerFence`, `Platform/PointerFence/Win32PointerFence`): aus · `ClipCursor` ·
+  schreibender `WH_MOUSE_LL`-Hook (`Win32FenceHook`, eigene Klasse und eigener Thread, der
+  lesende `Win32InputActivityHook` bleibt unberührt). Ohne gesperrte Bereiche und ohne Filter
+  läuft nichts. Braucht es den Hook nur wegen Filtern und ist der erlaubte Bereich ein Rechteck,
+  hält zusätzlich `ClipCursor` ihn (stärker: auch absolute Eingaben, keine Lücke beim
+  Neuinstallieren des Hooks).
+- **Hook:** Er fragt pro `WM_MOUSEMOVE` die unveränderliche `FenceDecision` (lock-frei, `0 B`,
+  Test `PointerFenceFailureTests.HookPath_DoesNotAllocate`). Eine abgelehnte Bewegung wird
+  verschluckt (Rückgabe 1), der Zeiger per `SetCursorPos` auf den erlaubten Punkt gesetzt. Das
+  ist die Hook-Form dessen, was `ClipCursor` selbst tut, kein Versetzen im Sinne von ADR-0028.
+  Ohne Klemmen bliebe der Zeiger bei schneller Bewegung einige Pixel vor dem Rand stehen
+  (Bildlaufleisten am Monitorrand wären nicht erreichbar). `GetCursorPos` liefert im Hook noch
+  die alte Position.
+- **Filterkette** (`IPointerMoveFilter`, Reihenfolge `PointerFilterOrder`): Bearbeitungsmodus
+  (100) → Achsensperre (200) → Maus-Puffer (300). Danach wirken immer die gesperrten Bereiche: ein
+  eingefrorener Monitor bleibt gesperrt, egal was ein Filter erlaubt. Filter laufen im Hook:
+  nur rechnen, nicht loggen. Wirft einer, gelten für diese Bewegung nur die gesperrten Bereiche, der Fehler wird vom
+  Prüftakt gemeldet (Log 2947). Zeitstempel in `TimeProvider.GetTimestamp()`-Ticks.
+- **Windows setzt `ClipCursor` zurück** bei Desktopwechsel (Win+L, UAC, Strg+Alt+Entf). Der
+  Wächter (`Win32FenceWatcher`, verstecktes Top-Level-Fenster auf eigenem Thread, nur solange
+  der Zaun an ist) reagiert auf `EVENT_SYSTEM_DESKTOPSWITCH`, `WM_WTSSESSION_CHANGE`
+  (Entsperren, Wiederverbinden) und `WM_DISPLAYCHANGE` (nur Top-Level-Fenster bekommen es) und
+  setzt neu. Dazu prüft er jede Sekunde `GetClipCursor`: ganzer virtueller Bildschirm = von
+  Windows gelöst → neu setzen; ein Rechteck innerhalb unseres = von Windows nach Anzeigewechseln
+  zugeschnitten → bleibt unseres (ein fremdes Rechteck darin ist nicht unterscheidbar und wird
+  ersetzt: lieber das als ein zurückgelassener eigener Clip); jedes andere Rechteck = fremdes
+  Programm (Spiel, Fernsteuerung) → nicht überschreiben und beim Lösen nicht freigeben (Log 2948).
+  Auch beim Setzen, Lösen und bei `ProcessExit` wird so geprüft. Nach `ProcessExit` lässt der
+  Hook alles durch, und der Zaun ändert sich nicht mehr.
+- **Hook verweigert:** Ist der erlaubte Bereich ein Rechteck, hält `ClipCursor` ihn weiter (nur
+  die Filter fallen aus). Der Prüftakt versucht den Hook erneut (Abstand 1, 2, 4 … bis 64 s), solange Besitzer ihn
+  brauchen (Log 2943 einmal bis zum Erfolg). Auf einem fremden Desktop
+  schlägt `ClipCursor` fehl (Log 2944 einmal), der Prüftakt versucht es wieder.
+- **Anzeigewechsel:** Der Zaun rechnet gegen die aktuellen Monitore neu und meldet
+  `Recomputed`; die Besitzer (G2) prüfen dann ihre Bereiche, z. B. Einfrieren eines abgesteckten
+  Monitors aufheben.
+- **Freigabe in jedem Fehlerfall:** Fehler beim Setzen, Hook verweigert, Monitore nicht lesbar
+  → alles lösen (Log 2943/2949). `Dispose`, `ProcessExit` und `UnhandledException` lösen den
+  Clip; den Hook entfernt Windows mit dem Prozess. `Environment.FailFast` überspringt alle
+  Handler: dafür gibt der Watchdog nach einem Absturz `ClipCursor(NULL)` frei
+  (`PointerClipCleanup`). Im laufenden Betrieb löst ZoomIN nur einen Clip, den es selbst gesetzt
+  hat; der Watchdog kann das nach einem Absturz nicht unterscheiden und löst jeden (ein Spiel
+  setzt seinen beim nächsten Aktivieren neu).
+- **Hook verschwunden:** Windows entfernt einen zu langsamen `WH_MOUSE_LL`-Hook ohne Meldung
+  (`LowLevelHooksTimeout`). Der Prüftakt merkt es (`HookHeartbeat`: zweimal hintereinander Zeiger
+  bewegt, Hook nicht aufgerufen; ein einzelnes `SetCursorPos` reicht nicht, das läuft an
+  Low-Level-Hooks vorbei) und installiert ihn neu (Auslöser `HookLost`).
+- **Wächter bleibt**, solange Besitzer Bereiche oder Filter haben, auch wenn der Zaun gerade aus
+  ist (z. B. nichts erlaubt während eines Anzeigewechsels): der nächste Wechsel schaltet ihn
+  wieder ein.
+- **Reihenfolge für Besitzer:** erst den Zeiger versetzen, dann sperren. `ClipCursor` zieht einen
+  Zeiger außerhalb des Rechtecks sonst auf dessen Rand.
+- **Zeiger versetzen** (`IPointerMover`, `Win32PointerMover`, `SetCursorPos`): nur aus
+  Kürzel-Controllern der App (Architekturtest `PointerMoverCallerTests`), jedes Versetzen mit
+  Grund und Ziel-Monitor im Log (2945).
+- **Tests** greifen nie den echten Zeiger an: Logik gegen ein gefälschtes `IFenceNative`; der
+  echte Clip-Test setzt nur den ganzen virtuellen Bildschirm und löst in `finally`, der echte
+  Hook lässt alles durch.
+- **Offen:** Ausnahmeliste für Spiele und Fernsteuerung (ADR-0028), injizierte Bewegungen
+  (`LLMHF_INJECTED`) werden derzeit wie echte behandelt.
+
 ## Fokus & Caret – Verhalten (M6)
 - Fokus-Schwenk weich (~200 ms) oder sofort, einstellbar. **Jeder** Fokuswechsel wird in die
   Bildmitte gelegt, auch wenn das Element schon sichtbar war (Entscheidung 2026-11-03).

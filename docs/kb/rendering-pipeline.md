@@ -219,6 +219,18 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   (32 B/Frame) – der teure Teil steht deshalb in einer eigenen Methode.
 - PNG ohne Bibliothek: `PngWriter` (RGBA8, Filter 0, ein zlib-IDAT, CRC-32).
 
+## Standbild (M19 Schritt 0)
+- `Rendering/Still/StillFrame` kopiert auf Anforderung die Desktop-Kopie eines Monitors
+  (`DesktopDuplicator.Texture`) oder einen Teil davon in eine eigene Textur und hält sie bis
+  `Release`. Für eingefrorene Monitore (G2) und Inseln (B1) mit „Standbild“.
+- Kopie per rohem `CopyResource` bzw. `CopySubresourceRegion` (`DxgiInterop`, Slots 47/46), weil
+  Vorticies Wrapper pro Aufruf allozieren. Gleiche Größe → Textur wiederverwendet, `0 B`
+  (`StillFrameTests`); neue Größe oder erstes Bild → neue Textur (nur auf Anforderung).
+- Nur `B8G8R8A8_UNorm` ohne Multisampling (Format der Desktop-Kopie). Ein 4K-Bild hält ~33 MB
+  GPU-Speicher; Zähler `zoomin.render.still_images`.
+- Gehört wie das Gerät einem Render-Thread. Verdrahtung in `RenderSession`/`DesktopLayer` machen
+  die Spuren G2/B1.
+
 ## Shader-Regeln
 - HLSL-Dateien in `ZoomIN.Rendering/Shaders/`. Seit M14 Schritt 4 übersetzt sie der Build mit
   `tools/ZoomIN.ShaderCompiler` (derselbe d3dcompiler_47 aus Windows über Vortice, `O3`, also

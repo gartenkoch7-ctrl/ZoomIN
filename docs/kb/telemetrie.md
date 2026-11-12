@@ -70,8 +70,8 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | Bereich | Projekt |
 |---|---|
 | 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug) |
-| 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe) |
-| 3000–3999 | Rendering |
+| 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe, 2940 Zeigerzaun und Zeiger versetzen) |
+| 3000–3999 | Rendering (3300 Standbild) |
 | 4000–4999 | Watchdog |
 | 5000–5999 | Setup |
 | 6000–6999 | Core (noch keine) |
@@ -108,6 +108,8 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.debug.snapshot` | app | Debug-Schnappschuss eines Monitors schreiben (Tag `zoomin.monitor`; Fehler: Ausnahmetyp) |
 | `zoomin.windowfilter.toggle` | app | Kürzel „Filter für aktives Fenster“ (Tags `process.name`, `zoomin.choice`: `None`, `Filter`) |
 | `zoomin.agent.command` | app | Ein KI-Debug-Befehl über die Pipe (ADR-0027; Tag `zoomin.agent.tool`: Werkzeugname oder `unknown`; Fehler: Ausnahmetyp bzw. `failed`) |
+| `zoomin.pointer.fence` | app, secure | Zeigerzaun neu berechnet und durchgesetzt (ADR-0028; Tags `zoomin.fence.mode`: `off`, `clip`, `hook`; `zoomin.fence.trigger`: `request`, `desktop_switch`, `session_unlock`, `display_change`; `zoomin.fence.forbidden`: Zahl der gesperrten Rechtecke) |
+| `zoomin.pointer.move` | app | Zeiger per Kürzel versetzt (ADR-0028; Tags `zoomin.reason`: `FreezeMonitor`, `NextMonitor`; `zoomin.monitor`; abgelehnt → Status Error) |
 
 ## Katalog: Messwerte
 Nur mit Export-Adresse und Stufe „Ausführlich“/„Benutzerdefiniert + Messwerte“. Im Render-Loop
@@ -135,6 +137,9 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.windowfilter.update_duration` | ms | – | Fenster auflisten und Bereiche bauen nach einer Fensteränderung |
 | `zoomin.windowfilter.regions` | Bereiche | – | Bereiche, die der Shader nach einer Änderung bekommt (höchstens 64) |
 | `zoomin.windowfilter.regions_dropped` | Fenster | – | Fenster über dem Limit von 64 Bereichen, die den Monitorfilter zeigen (je Aktualisierung; dazu Log 2705) |
+| `zoomin.pointer.fence_blocked` | Bewegungen | – | Mausbewegungen, die der Zaun-Hook verschluckt oder an den Rand geklemmt hat (beobachtbarer Zähler: der Hook zählt nur, ohne Allokation) |
+| `zoomin.pointer.fence_changes` | Änderungen | `zoomin.fence.mode`, `zoomin.fence.trigger` (wie oben, dazu `clip_lost`, `hook_lost`, `dispose`) | Zaun gesetzt, neu gesetzt (z. B. nach Win+L) oder gelöst |
+| `zoomin.render.still_images` | Bilder | – | Gehaltene Standbilder auf der GPU (M19, Baustein „Standbild“): +1 beim Anlegen, −1 beim Freigeben |
 
 ## Katalog: Logmeldungen
 | Id | Stufe | Meldung |
@@ -226,6 +231,16 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2802 | Info | KI-Debug pipe closed |
 | 2803 | Warnung | KI-Debug connection failed |
 | 2804 | Info | KI-Debug: ZoomIN not reachable ({Reason}) |
+| 2940 | Info | Pointer fence {Mode} after {Trigger} ({Forbidden} forbidden areas, {Filters} filters) |
+| 2941 | Warnung | Pointer fence: watching desktop switches failed; the fence is not re-applied after Win+L or UAC |
+| 2942 | Warnung | Pointer fence: nothing would be left for the pointer; the pointer stays free |
+| 2943 | Fehler | Pointer fence: installing the mouse hook failed; move filters and non-rectangular areas are not kept until it works – einmal bis zum nächsten Erfolg; ein Rechteck hält dann `ClipCursor` allein, der Prüftakt versucht den Hook erneut (Abstand 1, 2, 4 … bis 64 s) |
+| 2944 | Warnung | Pointer fence: ClipCursor failed (error {Error}); retried on the next check – einmal bis zum nächsten Erfolg |
+| 2945 | Info | Pointer moved to {Monitor} by command ({Reason}) |
+| 2946 | Warnung | Moving the pointer ({Reason}) failed (error {Error}) |
+| 2947 | Fehler | Pointer fence: {Count} move filter failures; only the forbidden areas applied to those moves – vom Prüftakt gemeldet, nie aus dem Hook |
+| 2948 | Info | Pointer fence: another program confines the pointer; not overriding it |
+| 2949 | Fehler | Pointer fence update failed ({Trigger}); the pointer is released |
 | 3001 | Info | Zoom pipeline ready for {Monitor} |
 | 3002 | Info | Display changed on {Monitor}: {Reason} |
 | 3003 | Fehler | Zoom pipeline for {Monitor} failed |
@@ -235,6 +250,9 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 3007 | Warnung | Smart inversion on {Monitor} falls back to keep hue: {Reason} ({Milliseconds} ms) – `gpu_feature` oder `budget`, einmal je Pipeline |
 | 3050 | Info | Debug snapshot of {Monitor} saved to {Folder} (nur der Ordnername) |
 | 3051 | Warnung | Debug snapshot of {Monitor} failed |
+| 3300 | Info | Still image of {Width}x{Height} px held |
+| 3301 | Info | Still image released |
+| 3302 | Warnung | Still image not taken: source format {Format} is not supported |
 | 4001 | Warnung | Cannot watch process {ProcessId}: {Reason} |
 | 4002 | Fehler | ZoomIN ended unexpectedly (exit code 0x{ExitCode:X8}) |
 | 4003 | Warnung | Restarting ZoomIN |

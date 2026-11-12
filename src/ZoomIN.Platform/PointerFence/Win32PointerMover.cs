@@ -13,14 +13,14 @@ public sealed class Win32PointerMover : IPointerMover
 {
     private readonly ILogger _log;
     private readonly IMonitorProvider _monitors;
-    private readonly Func<int, int, (bool Moved, int Error)> _setPosition;
+    private readonly Func<PhysicalPoint, (bool Moved, int Error)> _setPosition;
 
     public Win32PointerMover(ILogger<Win32PointerMover> log, IMonitorProvider monitors)
         : this(log, monitors, SetCursorPosition)
     {
     }
 
-    internal Win32PointerMover(ILogger log, IMonitorProvider monitors, Func<int, int, (bool Moved, int Error)> setPosition)
+    internal Win32PointerMover(ILogger log, IMonitorProvider monitors, Func<PhysicalPoint, (bool Moved, int Error)> setPosition)
     {
         _log = log;
         _monitors = monitors;
@@ -30,11 +30,14 @@ public sealed class Win32PointerMover : IPointerMover
     public bool MoveTo(PhysicalPoint target, PointerMoveReason reason)
     {
         using var activity = Telemetry.Source.StartActivity("zoomin.pointer.move");
-        var monitor = _monitors.MonitorAt(target);
+
+        // SetCursorPos takes whole physical pixels (the process is per-monitor DPI aware v2). Floor,
+        // as in the fence hook: rounding up could land on the next (maybe just frozen) monitor.
+        var pixel = new PhysicalPoint(Math.Floor(target.X), Math.Floor(target.Y));
+        var monitor = _monitors.MonitorAt(pixel);
         activity?.SetTag("zoomin.reason", reason.ToString());
         activity?.SetTag("zoomin.monitor", monitor);
-
-        var (moved, error) = _setPosition((int)Math.Round(target.X), (int)Math.Round(target.Y));
+        var (moved, error) = _setPosition(pixel);
         if (moved)
         {
             _log.PointerMoved(monitor, reason);
@@ -46,6 +49,6 @@ public sealed class Win32PointerMover : IPointerMover
         return false;
     }
 
-    private static (bool Moved, int Error) SetCursorPosition(int x, int y) =>
-        PInvoke.SetCursorPos(x, y) ? (true, 0) : (false, Marshal.GetLastPInvokeError());
+    private static (bool Moved, int Error) SetCursorPosition(PhysicalPoint point) =>
+        PInvoke.SetCursorPos((int)point.X, (int)point.Y) ? (true, 0) : (false, Marshal.GetLastPInvokeError());
 }

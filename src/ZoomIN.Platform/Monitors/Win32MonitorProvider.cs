@@ -25,6 +25,15 @@ public sealed unsafe class Win32MonitorProvider : IMonitorProvider
     public PhysicalRect? BoundsOf(string monitorId) =>
         Enumerate().Where(m => m.Id == monitorId).Select(m => (PhysicalRect?)m.Bounds).FirstOrDefault();
 
+    // One enumeration: no race between listing the monitors and reading each one's bounds. If one
+    // monitor cannot be read (mid display change), none is reported: a fence must then let go
+    // rather than treat a live monitor as missing.
+    public IReadOnlyList<PhysicalRect> AllBounds()
+    {
+        var monitors = Enumerate();
+        return monitors.Exists(m => m.Id.Length == 0) ? [] : [.. monitors.Select(m => m.Bounds)];
+    }
+
     private static List<(string Id, PhysicalRect Bounds)> Enumerate()
     {
         var monitors = new List<(string Id, PhysicalRect Bounds)>();

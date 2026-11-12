@@ -32,6 +32,8 @@ internal sealed unsafe class Win32FenceNative : IFenceNative
             : null;
     }
 
+    public PhysicalPoint? CursorPosition() => PInvoke.GetCursorPos(out var position) ? new PhysicalPoint(position.X, position.Y) : null;
+
     public PhysicalRect VirtualScreen() => new(
         PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_XVIRTUALSCREEN),
         PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_YVIRTUALSCREEN),

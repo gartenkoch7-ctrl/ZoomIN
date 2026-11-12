@@ -81,14 +81,9 @@ internal sealed class StillFrame : IDisposable
         var width = (int)(right - left);
         var height = (int)(bottom - top);
         EnsureTexture(width, height);
-        if (left == 0 && top == 0 && right == description.Width && bottom == description.Height)
-        {
-            DxgiInterop.CopyResource(context.NativePointer, _texture!.NativePointer, source.NativePointer);
-        }
-        else
-        {
-            DxgiInterop.CopySubresourceRegion(context.NativePointer, _texture!.NativePointer, source.NativePointer, left, top, right, bottom);
-        }
+        // Always a region of subresource 0: unlike CopyResource it also works for a source with
+        // mip levels or array slices, which CopyResource would silently skip.
+        DxgiInterop.CopySubresourceRegion(context.NativePointer, _texture!.NativePointer, source.NativePointer, left, top, right, bottom);
 
         Source = new PhysicalRect(left, top, width, height);
         return true;
@@ -132,9 +127,20 @@ internal sealed class StillFrame : IDisposable
         }
 
         Release();
-        _texture = _device.CreateTexture2D(new Texture2DDescription(
+        var texture = _device.CreateTexture2D(new Texture2DDescription(
             Format.B8G8R8A8_UNorm, (uint)width, (uint)height, arraySize: 1, mipLevels: 1, bindFlags: BindFlags.ShaderResource));
-        ShaderResource = _device.CreateShaderResourceView(_texture);
+        try
+        {
+            ShaderResource = _device.CreateShaderResourceView(texture);
+        }
+        catch
+        {
+            // Device removed or out of memory: hold nothing rather than half an image.
+            texture.Dispose();
+            throw;
+        }
+
+        _texture = texture;
         Width = width;
         Height = height;
         s_held.Add(1);

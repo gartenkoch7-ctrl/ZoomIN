@@ -18,6 +18,9 @@ public enum FenceTrigger
     /// <summary>The periodic check found ClipCursor reset by Windows.</summary>
     ClipLost,
 
+    /// <summary>The pointer moved but the hook saw nothing: Windows removed it (too slow); installed again.</summary>
+    HookLost,
+
     /// <summary>The fence is disposed (ZoomIN ends).</summary>
     Dispose,
 }

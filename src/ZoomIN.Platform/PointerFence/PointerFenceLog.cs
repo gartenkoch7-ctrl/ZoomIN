@@ -18,7 +18,7 @@ internal static partial class PointerFenceLog
     [LoggerMessage(EventId = 2942, Level = LogLevel.Warning, Message = "Pointer fence: nothing would be left for the pointer; the pointer stays free")]
     public static partial void NothingAllowed(this ILogger logger);
 
-    [LoggerMessage(EventId = 2943, Level = LogLevel.Error, Message = "Pointer fence: installing the mouse hook failed; the pointer stays free")]
+    [LoggerMessage(EventId = 2943, Level = LogLevel.Error, Message = "Pointer fence: installing the mouse hook failed; move filters and non-rectangular areas are not kept until it works")]
     public static partial void HookUnavailable(this ILogger logger);
 
     [LoggerMessage(EventId = 2944, Level = LogLevel.Warning, Message = "Pointer fence: ClipCursor failed (error {Error}); retried on the next check")]
@@ -30,7 +30,7 @@ internal static partial class PointerFenceLog
     [LoggerMessage(EventId = 2946, Level = LogLevel.Warning, Message = "Moving the pointer ({Reason}) failed (error {Error})")]
     public static partial void MoveFailed(this ILogger logger, PointerMoveReason reason, int error);
 
-    [LoggerMessage(EventId = 2947, Level = LogLevel.Error, Message = "Pointer fence: {Count} move filter failures; those moves were let through")]
+    [LoggerMessage(EventId = 2947, Level = LogLevel.Error, Message = "Pointer fence: {Count} move filter failures; only the forbidden areas applied to those moves")]
     public static partial void FilterFailures(this ILogger logger, long count);
 
     [LoggerMessage(EventId = 2948, Level = LogLevel.Information, Message = "Pointer fence: another program confines the pointer; not overriding it")]

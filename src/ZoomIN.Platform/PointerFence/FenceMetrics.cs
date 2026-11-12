@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.PointerFence;
@@ -25,12 +26,21 @@ internal static class FenceMetrics
 
     public static void Changed(FenceMode mode, FenceTrigger trigger)
     {
-        // Keeps the observable counter alive and published once the fence is used.
+        // The static field already roots the instrument; this read only tells the analyzer it is used.
         GC.KeepAlive(s_blockedCounter);
         s_changes.Add(
             1,
             new KeyValuePair<string, object?>("zoomin.fence.mode", ModeName(mode)),
             new KeyValuePair<string, object?>("zoomin.fence.trigger", TriggerName(trigger)));
+    }
+
+    /// <summary>After the fence was enforced: tags of <c>zoomin.pointer.fence</c> and the change counter.</summary>
+    public static void Applied(Activity? activity, FenceMode mode, FenceTrigger trigger, int forbidden)
+    {
+        activity?.SetTag("zoomin.fence.mode", ModeName(mode));
+        activity?.SetTag("zoomin.fence.trigger", TriggerName(trigger));
+        activity?.SetTag("zoomin.fence.forbidden", forbidden);
+        Changed(mode, trigger);
     }
 
     public static string ModeName(FenceMode mode) => mode switch
@@ -46,6 +56,7 @@ internal static class FenceMetrics
         FenceTrigger.SessionUnlock => "session_unlock",
         FenceTrigger.DisplayChange => "display_change",
         FenceTrigger.ClipLost => "clip_lost",
+        FenceTrigger.HookLost => "hook_lost",
         FenceTrigger.Dispose => "dispose",
         _ => "request",
     };

@@ -15,18 +15,18 @@ namespace ZoomIN.Platform.PointerFence;
 /// </summary>
 internal sealed unsafe class Win32FenceHook : IDisposable
 {
-    // One fence hook per process; the static callback needs a way back to it.
-    private static readonly HOOKPROC s_proc = MouseProc;
-    private static Win32FenceHook? s_active;
-
+    // Each hook has its own callback delegate (kept in a field so the GC never collects it):
+    // an old hook whose thread outlived its 2 s join must not answer for the new one.
+    private readonly HOOKPROC _proc;
     private readonly IFenceHookTarget _target;
     private readonly LowLevelHookThread _thread;
+    private volatile bool _disposed;
 
     private Win32FenceHook(IFenceHookTarget target)
     {
         _target = target;
-        Volatile.Write(ref s_active, this);
-        _thread = new LowLevelHookThread("ZoomIN Pointer Fence", (WINDOWS_HOOK_ID.WH_MOUSE_LL, s_proc));
+        _proc = MouseProc;
+        _thread = new LowLevelHookThread("ZoomIN Pointer Fence", (WINDOWS_HOOK_ID.WH_MOUSE_LL, _proc));
     }
 
     /// <summary>Null if Windows refused the hook.</summary>
@@ -44,30 +44,40 @@ internal sealed unsafe class Win32FenceHook : IDisposable
 
     public void Dispose()
     {
+        // Passes everything on from now on, even if the thread outlives its join.
+        _disposed = true;
         _thread.Dispose();
-        Interlocked.CompareExchange(ref s_active, null, this);
     }
 
-    private static LRESULT MouseProc(int code, WPARAM wParam, LPARAM lParam)
+    private LRESULT MouseProc(int code, WPARAM wParam, LPARAM lParam)
     {
-        if (code >= 0 && (uint)wParam.Value == PInvoke.WM_MOUSEMOVE && Volatile.Read(ref s_active) is { } self)
+        if (code >= 0 && !_disposed && (uint)wParam.Value == PInvoke.WM_MOUSEMOVE && Swallow((MSLLHOOKSTRUCT*)lParam.Value))
         {
-            var info = (MSLLHOOKSTRUCT*)lParam.Value;
-            var requested = new PhysicalPoint(info->pt.X, info->pt.Y);
-
-            // Inside the hook the pointer has not moved yet: this is where it comes from.
-            var current = PInvoke.GetCursorPos(out var position) ? new PhysicalPoint(position.X, position.Y) : requested;
-            if (self._target.OnMove(current, requested, out var allowed))
-            {
-                if (allowed != current)
-                {
-                    PInvoke.SetCursorPos((int)allowed.X, (int)allowed.Y);
-                }
-
-                return new LRESULT(1);
-            }
+            return new LRESULT(1);
         }
 
         return PInvoke.CallNextHookEx(HHOOK.Null, code, wParam, lParam);
+    }
+
+    /// <returns>True if the move is swallowed; the pointer is then already on the allowed point.</returns>
+    private bool Swallow(MSLLHOOKSTRUCT* info)
+    {
+        var requested = new PhysicalPoint(info->pt.X, info->pt.Y);
+
+        // Inside the hook the pointer has not moved yet: this is where it comes from.
+        var current = PInvoke.GetCursorPos(out var position) ? new PhysicalPoint(position.X, position.Y) : requested;
+        if (!_target.OnMove(current, requested, out var allowed))
+        {
+            return false;
+        }
+
+        if (allowed != current)
+        {
+            // Floor, not a cast: truncation would move negative coordinates (monitors left of the
+            // primary) one pixel towards 0, possibly onto a forbidden one.
+            PInvoke.SetCursorPos((int)Math.Floor(allowed.X), (int)Math.Floor(allowed.Y));
+        }
+
+        return true;
     }
 }

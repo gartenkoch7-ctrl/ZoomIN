@@ -69,7 +69,9 @@ Schritt 0: Zeigerzaun + Standbild ──┬─► Spur A: G2 Einfrieren + Monito
 **Nutzen:** etwa 3 Wochen statt 5 hintereinander.
 
 ## Aufgaben (Integration)
-- [ ] ADR-0028 liegt vor; Integrationsbranch anlegen, Schritt 0 mit Tests, Review (§9), Commit
+- [x] ADR-0028 liegt vor; Integrationsbranch anlegen, Schritt 0 mit Tests, Review (§9), Commit
+      (Zaun: `IPointerFence`/`FenceGeometry`/`IPointerMoveFilter`, `IPointerMover`; Standbild:
+      `Rendering/Still/StillFrame`; Watchdog löst `ClipCursor` nach Absturz)
 - [ ] Spuren A, B, C gleichzeitig starten (Worktree je Spur)
 - [ ] Mergen C → A → B, nach jedem Merge Build + Tests
 - [ ] Gesamt-Review (§9) bis ohne Befunde

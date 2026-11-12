@@ -20,7 +20,7 @@ public sealed class FenceGeometry
     {
         _pieces = pieces;
         IsRestricted = restricted;
-        SingleRect = Bounding(pieces);
+        SingleRect = FencePieces.Bounding(pieces);
     }
 
     /// <summary>True if at least one forbidden rectangle overlaps a monitor.</summary>
@@ -42,34 +42,17 @@ public sealed class FenceGeometry
     {
         ArgumentNullException.ThrowIfNull(monitors);
         ArgumentNullException.ThrowIfNull(forbidden);
-
-        var pieces = new List<PhysicalRect>(monitors.Count);
-        foreach (var monitor in monitors)
-        {
-            // Mirrored displays overlap (often with the same rectangle): only the part not yet
-            // covered is added, so the pieces stay disjoint.
-            var fresh = new List<PhysicalRect> { monitor };
-            foreach (var piece in pieces)
-            {
-                fresh = Cut(fresh, piece, out _);
-            }
-
-            pieces.AddRange(fresh.Where(rect => !IsEmptyRect(rect)));
-        }
-
-        var restricted = false;
-        foreach (var cut in forbidden)
-        {
-            pieces = Cut(pieces, cut, out var overlapped);
-            restricted |= overlapped;
-        }
-
-        return new FenceGeometry([.. pieces], restricted);
+        var pieces = FencePieces.Build(monitors, forbidden, out var restricted);
+        return new FenceGeometry(pieces, restricted);
     }
 
     public bool IsAllowed(PhysicalPoint point) => PieceAt(point) >= 0;
 
-    /// <summary>The allowed pixel closest to <paramref name="point"/>; the point itself if allowed or nothing is.</summary>
+    /// <summary>
+    /// The allowed pixel closest to <paramref name="point"/>; the point itself if allowed or nothing
+    /// is. For choosing a target (e.g. where a shortcut puts the pointer), not for moves: it may pick
+    /// a piece beyond a forbidden area. Moves go through <see cref="Constrain"/>.
+    /// </summary>
     public PhysicalPoint Nearest(PhysicalPoint point)
     {
         var best = point;
@@ -77,9 +60,7 @@ public sealed class FenceGeometry
         for (var i = 0; i < _pieces.Length; i++)
         {
             var candidate = Clamp(_pieces[i], point);
-            var dx = candidate.X - point.X;
-            var dy = candidate.Y - point.Y;
-            var distance = (dx * dx) + (dy * dy);
+            var distance = Distance(candidate, point);
             if (distance < bestDistance)
             {
                 best = candidate;
@@ -105,8 +86,40 @@ public sealed class FenceGeometry
         }
 
         var from = PieceAt(current);
-        return from < 0 ? requested : Clamp(_pieces[from], requested);
+        if (from < 0)
+        {
+            return requested;
+        }
+
+        // The current piece or one touching it (pieces of one area share edges): the pointer
+        // slides along a forbidden edge instead of sticking at an inner seam between pieces.
+        var home = _pieces[from];
+        var best = Clamp(home, requested);
+        var bestDistance = Distance(best, requested);
+        for (var i = 0; i < _pieces.Length; i++)
+        {
+            if (i != from && Touches(home, _pieces[i]))
+            {
+                var candidate = Clamp(_pieces[i], requested);
+                var distance = Distance(candidate, requested);
+                if (distance < bestDistance)
+                {
+                    best = candidate;
+                    bestDistance = distance;
+                }
+            }
+        }
+
+        return best;
     }
+
+    private static double Distance(PhysicalPoint a, PhysicalPoint b) => ((a.X - b.X) * (a.X - b.X)) + ((a.Y - b.Y) * (a.Y - b.Y));
+
+    // A shared edge of positive length; a common corner alone does not count, or the pointer could
+    // slip diagonally onto a third monitor next to a forbidden one.
+    private static bool Touches(PhysicalRect a, PhysicalRect b) =>
+        (a.X < b.Right && b.X < a.Right && (a.Y == b.Bottom || b.Y == a.Bottom))
+        || (a.Y < b.Bottom && b.Y < a.Bottom && (a.X == b.Right || b.X == a.Right));
 
     private int PieceAt(PhysicalPoint point)
     {
@@ -124,85 +137,4 @@ public sealed class FenceGeometry
     private static PhysicalPoint Clamp(PhysicalRect piece, PhysicalPoint point) => new(
         Math.Clamp(point.X, piece.X, Math.Max(piece.X, piece.Right - 1)),
         Math.Clamp(point.Y, piece.Y, Math.Max(piece.Y, piece.Bottom - 1)));
-
-    private static bool IsEmptyRect(PhysicalRect rect) => !(rect.Width > 0 && rect.Height > 0);
-
-    private static bool Overlaps(PhysicalRect a, PhysicalRect b) =>
-        a.X < b.Right && b.X < a.Right && a.Y < b.Bottom && b.Y < a.Bottom;
-
-    private static List<PhysicalRect> Cut(List<PhysicalRect> pieces, PhysicalRect cut, out bool overlapped)
-    {
-        overlapped = false;
-        if (IsEmptyRect(cut))
-        {
-            return pieces;
-        }
-
-        var next = new List<PhysicalRect>(pieces.Count + 4);
-        foreach (var piece in pieces)
-        {
-            if (Overlaps(piece, cut))
-            {
-                overlapped = true;
-                Subtract(piece, cut, next);
-            }
-            else
-            {
-                next.Add(piece);
-            }
-        }
-
-        return next;
-    }
-
-    // Up to four disjoint pieces of 'piece' outside 'cut': full-width bands above and below,
-    // then the parts left and right within the height of the cut.
-    private static void Subtract(PhysicalRect piece, PhysicalRect cut, List<PhysicalRect> into)
-    {
-        var top = Math.Max(piece.Y, cut.Y);
-        var bottom = Math.Min(piece.Bottom, cut.Bottom);
-        var left = Math.Max(piece.X, cut.X);
-        var right = Math.Min(piece.Right, cut.Right);
-        if (top > piece.Y)
-        {
-            into.Add(new PhysicalRect(piece.X, piece.Y, piece.Width, top - piece.Y));
-        }
-
-        if (bottom < piece.Bottom)
-        {
-            into.Add(new PhysicalRect(piece.X, bottom, piece.Width, piece.Bottom - bottom));
-        }
-
-        if (left > piece.X)
-        {
-            into.Add(new PhysicalRect(piece.X, top, left - piece.X, bottom - top));
-        }
-
-        if (right < piece.Right)
-        {
-            into.Add(new PhysicalRect(right, top, piece.Right - right, bottom - top));
-        }
-    }
-
-    // The pieces are disjoint, so they fill their bounding box exactly when their areas add up to it.
-    private static PhysicalRect? Bounding(PhysicalRect[] pieces)
-    {
-        if (pieces.Length == 0)
-        {
-            return null;
-        }
-
-        double left = double.MaxValue, top = double.MaxValue, right = double.MinValue, bottom = double.MinValue, area = 0;
-        foreach (var piece in pieces)
-        {
-            left = Math.Min(left, piece.X);
-            top = Math.Min(top, piece.Y);
-            right = Math.Max(right, piece.Right);
-            bottom = Math.Max(bottom, piece.Bottom);
-            area += piece.Width * piece.Height;
-        }
-
-        var box = new PhysicalRect(left, top, right - left, bottom - top);
-        return Math.Abs((box.Width * box.Height) - area) < 0.5 ? box : null;
-    }
 }

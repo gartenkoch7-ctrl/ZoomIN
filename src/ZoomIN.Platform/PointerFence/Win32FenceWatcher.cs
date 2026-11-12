@@ -18,6 +18,7 @@ internal sealed unsafe class Win32FenceWatcher : IDisposable
 {
     private const string ClassName = "ZoomIN.PointerFenceWatcher";
     private const uint CheckIntervalMs = 1000;
+    private static readonly TimeSpan s_startTimeout = TimeSpan.FromSeconds(5);
     private static readonly nuint s_checkTimer = 1;
 
     // Kept in static fields so the GC never collects the delegates Windows calls back into; one
@@ -33,16 +34,29 @@ internal sealed unsafe class Win32FenceWatcher : IDisposable
     private uint _threadId;
     private HWND _window;
     private Exception? _startError;
+    private volatile bool _abandoned;
     private bool _disposed;
 
     public Win32FenceWatcher(IFenceEvents events)
     {
         _events = events;
         Volatile.Write(ref s_active, this);
-        using var started = new ManualResetEventSlim();
+        var started = new ManualResetEventSlim();
         _thread = new Thread(() => Run(started)) { IsBackground = true, Name = "ZoomIN Pointer Fence Watcher" };
         _thread.Start();
-        started.Wait();
+
+        // Bounded: the caller holds the fence's lock, and the session service may hang. On a
+        // timeout the event stays undisposed (the thread still sets it) and the thread ends itself.
+        if (!started.Wait(s_startTimeout))
+        {
+            // Flag first, then WM_QUIT: the thread either sees the flag before its loop or gets the quit.
+            _abandoned = true;
+            PInvoke.PostThreadMessage(_threadId, PInvoke.WM_QUIT, default, default);
+            Interlocked.CompareExchange(ref s_active, null, this);
+            throw new TimeoutException("The pointer fence watcher did not start in time.");
+        }
+
+        started.Dispose();
         if (_startError is not null)
         {
             Interlocked.CompareExchange(ref s_active, null, this);
@@ -58,7 +72,12 @@ internal sealed unsafe class Win32FenceWatcher : IDisposable
         }
 
         _disposed = true;
-        PInvoke.PostThreadMessage(_threadId, PInvoke.WM_QUIT, default, default);
+
+        // Only to a living loop: Windows may have given a finished thread's id to another thread.
+        if (_thread.IsAlive)
+        {
+            PInvoke.PostThreadMessage(_threadId, PInvoke.WM_QUIT, default, default);
+        }
 
         // The fence may release itself from one of our own callbacks: then the loop ends after it returns.
         if (Environment.CurrentManagedThreadId != _thread.ManagedThreadId)
@@ -84,8 +103,9 @@ internal sealed unsafe class Win32FenceWatcher : IDisposable
                 PInvoke.EVENT_SYSTEM_DESKTOPSWITCH, PInvoke.EVENT_SYSTEM_DESKTOPSWITCH, HMODULE.Null, s_winEvent, 0, 0, PInvoke.WINEVENT_OUTOFCONTEXT);
             PInvoke.SetTimer(_window, s_checkTimer, CheckIntervalMs, null);
         }
-        catch (Win32Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
+            // Reported to the constructor; escaping here would end ZoomIN from a background thread.
             _startError = ex;
         }
         finally
@@ -95,7 +115,7 @@ internal sealed unsafe class Win32FenceWatcher : IDisposable
 
         try
         {
-            while (_startError is null && PInvoke.GetMessage(out var msg, HWND.Null, 0, 0) > 0)
+            while (_startError is null && !_abandoned && PInvoke.GetMessage(out var msg, HWND.Null, 0, 0) > 0)
             {
                 PInvoke.TranslateMessage(msg);
                 PInvoke.DispatchMessage(msg);

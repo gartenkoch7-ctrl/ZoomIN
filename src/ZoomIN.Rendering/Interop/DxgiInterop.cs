@@ -3,7 +3,8 @@ using System.Runtime.InteropServices;
 namespace ZoomIN.Rendering.Interop;
 
 /// <summary>
-/// Raw COM vtable calls for the per-frame capture path. Vortice's managed overloads create a
+/// Raw COM vtable calls for the per-frame capture path and the still image (StillFrame, which
+/// may be taken on the render thread and promises 0 B for repeated captures). Vortice's managed overloads create a
 /// wrapper object per call, which would break "0 B per frame" (AGENTS.md 2.3, docs/kb/performance.md).
 /// Slot numbers follow the interface declarations in dxgi1_2.h and d3d11.h.
 /// </summary>

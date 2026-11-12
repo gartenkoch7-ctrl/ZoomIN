@@ -18,6 +18,9 @@ internal interface IFenceNative
     /// <summary>GetClipCursor; null if it cannot be read.</summary>
     PhysicalRect? CurrentClip();
 
+    /// <summary>GetCursorPos; null if it cannot be read (another desktop).</summary>
+    PhysicalPoint? CursorPosition();
+
     /// <summary>The whole virtual screen: what GetClipCursor reports while nothing is confined.</summary>
     PhysicalRect VirtualScreen();
 
