@@ -338,7 +338,9 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
     werden zur jeweils letzten zusammengefasst. Wurde ein Druck verschluckt, wird auch sein
     Loslassen verschluckt – auch nach dem Ende des Modus; ein Druck von vorher behält sein
     Loslassen für die Anwendung. Esc und Entf prüft der Hook vor dem Esc der Übersicht (B2). Beim Ende
-    noch wartende Eingaben werden verworfen, nicht mehr weitergegeben.
+    noch wartende Eingaben werden verworfen, nicht mehr weitergegeben. Esc/Entf mit Strg, Alt, Umschalt
+    oder Win (Task-Manager, Start, Umschalt+Entf) bleiben beim System. Eine Folge von Bewegungen wird
+    nur bis zur nächsten anderen Eingabe zusammengefasst (Reihenfolge Drücken → Bewegen bleibt).
   - Strg+Mausrad zoomt weiter (eigener Hook, der vorher greift) – unsichtbar, denn die 1× gilt.
   - **Zeigerzaun:** Während eines Ziehens hält `IslandDragFence` (Filter `PointerFilterOrder.IslandEdit`
     = 100, erster der Kette) den Zeiger auf dem Monitor der Insel (eine Insel gehört genau einem

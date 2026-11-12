@@ -172,6 +172,7 @@ internal sealed class MonitorRenderer : IDisposable
             var delta = Math.Min(Stopwatch.GetElapsedTime(lastFrame, now).TotalSeconds, 0.1);
             lastFrame = now;
             animator.Advance(delta, _model.AnimationSeconds);
+            islands = _demand.Islands(animator.Current); // for the zoom this frame is drawn at
 
             // Unzoomed: the whole monitor, no lens or strip.
             var mode = unzoomed ? ZoomMode.Fullscreen : _model.Mode;

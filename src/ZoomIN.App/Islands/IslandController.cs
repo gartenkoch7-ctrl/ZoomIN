@@ -46,7 +46,8 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
         _time = time;
         _log = log;
         _report = new IslandReport(announcer, texts, log);
-        _watch = new IslandEditWatch(fence, _zoom, _model, monitors, () => IsEditing, End, EndIfChangedOutside, log);
+        _watch = new IslandEditWatch(
+            fence, _zoom, _model, monitors, () => Volatile.Read(ref _edit) is { } run ? reason => End(reason, run) : null, EndIfChangedOutside, log);
 
         // The monitors may differ from when the islands were saved: push them back onto their monitor.
         _model.FitTo(monitors.BoundsOf);
@@ -194,6 +195,7 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
         try
         {
             string? end;
+            IslandEditSession run;
             lock (_gate)
             {
                 if (_edit is not { } edit)
@@ -201,12 +203,13 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
                     return; // input queued before the end
                 }
 
+                run = edit;
                 end = edit.Step(step, _model, _takeover.DragFence, _report);
             }
 
             if (end is not null)
             {
-                End(end);
+                End(end, run); // only this run: a new one may have started meanwhile
             }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -219,15 +222,15 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
     // for a change from outside; anything else than the edit mode's own islands ends it.
     private void EndIfChangedOutside()
     {
-        bool outside;
+        IslandEditSession? outside;
         lock (_gate)
         {
-            outside = _edit is { } edit && !ReferenceEquals(_model.Scene.Set, edit.Published);
+            outside = _edit is { } edit && !ReferenceEquals(_model.Scene.Set, edit.Published) ? edit : null;
         }
 
-        if (outside)
+        if (outside is not null)
         {
-            End("changed");
+            End("changed", outside);
         }
     }
 

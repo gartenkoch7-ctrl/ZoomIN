@@ -6,18 +6,19 @@ namespace ZoomIN.Platform.Input;
 
 /// <summary>
 /// One run of the island edit mode's input (M19 B1): the hook thread queues, a worker hands the
-/// input on to the handler one at a time and in order. Moves come fast and are folded into the
-/// latest one. After <see cref="Complete"/> inputs still queued are dropped: they belong to an edit
-/// mode that is over.
+/// input on to the handler one at a time and in order. Moves come fast: a burst of moves between two
+/// other inputs is folded into its latest one, which keeps its place in the order (a move after a
+/// press reaches the handler after the press). After <see cref="Complete"/> inputs still queued are
+/// dropped: they belong to an edit mode that is over.
 /// </summary>
 internal sealed class IslandEditQueue
 {
     private readonly IIslandEditInputHandler _handler;
     private readonly Channel<Input> _queue = Channel.CreateUnbounded<Input>(new UnboundedChannelOptions { SingleReader = true });
 
-    // The latest move, packed; queued as one marker until the worker took it.
-    private long _move;
-    private int _moveQueued;
+    // The move burst queued last and not yet handed on; a new move only updates it. One small object
+    // per burst (not per move) on the hook thread.
+    private MoveBox? _pending;
     private volatile bool _stopped;
 
     public IslandEditQueue(IIslandEditInputHandler handler)
@@ -36,21 +37,26 @@ internal sealed class IslandEditQueue
         Delete,
     }
 
-    public void Press(PhysicalPoint point) => Post(new Input(InputKind.Press, point, 0));
+    public void Press(PhysicalPoint point) => Post(new Input(InputKind.Press, point, 0, null));
 
-    public void Release(PhysicalPoint point) => Post(new Input(InputKind.Release, point, 0));
+    public void Release(PhysicalPoint point) => Post(new Input(InputKind.Release, point, 0, null));
 
-    public void Wheel(double notches, PhysicalPoint point) => Post(new Input(InputKind.Wheel, point, notches));
+    public void Wheel(double notches, PhysicalPoint point) => Post(new Input(InputKind.Wheel, point, notches, null));
 
-    public void Key(IslandEditKey key) => Post(new Input(key == IslandEditKey.Escape ? InputKind.Escape : InputKind.Delete, default, 0));
+    public void Key(IslandEditKey key) =>
+        Post(new Input(key == IslandEditKey.Escape ? InputKind.Escape : InputKind.Delete, default, 0, null));
 
     public void Move(int x, int y)
     {
-        Volatile.Write(ref _move, ((long)x << 32) | (uint)y);
-        if (Interlocked.Exchange(ref _moveQueued, 1) == 0)
+        var packed = ((long)x << 32) | (uint)y;
+        if (Volatile.Read(ref _pending) is { } burst && burst.TryUpdate(packed))
         {
-            Post(new Input(InputKind.Move, default, 0));
+            return;
         }
+
+        var box = new MoveBox(packed);
+        Volatile.Write(ref _pending, box);
+        _queue.Writer.TryWrite(new Input(InputKind.Move, default, 0, box));
     }
 
     public void Complete()
@@ -59,7 +65,12 @@ internal sealed class IslandEditQueue
         _queue.Writer.TryComplete();
     }
 
-    private void Post(Input input) => _queue.Writer.TryWrite(input);
+    // Any other input closes the move burst before it: later moves start a new one after it.
+    private void Post(Input input)
+    {
+        Volatile.Write(ref _pending, null);
+        _queue.Writer.TryWrite(input);
+    }
 
     private async Task RunAsync()
     {
@@ -80,8 +91,7 @@ internal sealed class IslandEditQueue
             switch (input.Kind)
             {
                 case InputKind.Move:
-                    Interlocked.Exchange(ref _moveQueued, 0);
-                    var packed = Volatile.Read(ref _move);
+                    var packed = input.Box!.Take();
                     _handler.Moved(new PhysicalPoint((int)(packed >> 32), (int)packed));
                     break;
                 case InputKind.Press:
@@ -104,5 +114,26 @@ internal sealed class IslandEditQueue
         }
     }
 
-    private readonly record struct Input(InputKind Kind, PhysicalPoint Point, double Notches);
+    private readonly record struct Input(InputKind Kind, PhysicalPoint Point, double Notches, MoveBox? Box);
+
+    /// <summary>The latest position of one move burst; closed once the worker took it.</summary>
+    private sealed class MoveBox(long packed)
+    {
+        private long _packed = packed;
+        private int _taken;
+
+        // Hook thread. False once the worker took it: the move must go into a new burst.
+        public bool TryUpdate(long packed)
+        {
+            Interlocked.Exchange(ref _packed, packed); // full fence: written before the flag is read (pairs with Take)
+            return Volatile.Read(ref _taken) == 0;
+        }
+
+        // Worker. A move written after this read starts a new burst (TryUpdate sees the flag).
+        public long Take()
+        {
+            Interlocked.Exchange(ref _taken, 1);
+            return Volatile.Read(ref _packed);
+        }
+    }
 }

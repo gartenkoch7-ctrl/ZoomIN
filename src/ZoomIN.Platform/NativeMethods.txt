@@ -226,3 +226,9 @@ SystemParametersInfo
 IsZoomed
 GetWindowPlacement
 WINDOWPLACEMENT
+
+// Input/IslandEditCapture
+WM_MBUTTONUP
+WM_XBUTTONDOWN
+WM_XBUTTONUP
+WM_MOUSEHWHEEL

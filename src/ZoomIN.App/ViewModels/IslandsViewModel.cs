@@ -60,11 +60,11 @@ public sealed partial class IslandsViewModel : ObservableObject
 
         _shown = set;
         Rows.Clear();
-        var monitors = _monitors.MonitorIds();
+        var monitors = _monitors.MonitorIds().ToList();
         for (var i = 0; i < set.Count; i++)
         {
             var island = set[i];
-            var monitor = IndexOf(monitors, island.MonitorId) + 1;
+            var monitor = monitors.IndexOf(island.MonitorId) + 1;
             Rows.Add(new IslandRow(island, i + 1, monitor, _texts, OnStillChanged));
         }
 
@@ -118,18 +118,5 @@ public sealed partial class IslandsViewModel : ObservableObject
         {
             _shown = _model.Committed;
         }
-    }
-
-    private static int IndexOf(IReadOnlyList<string> monitors, string id)
-    {
-        for (var i = 0; i < monitors.Count; i++)
-        {
-            if (string.Equals(monitors[i], id, StringComparison.Ordinal))
-            {
-                return i;
-            }
-        }
-
-        return -1;
     }
 }

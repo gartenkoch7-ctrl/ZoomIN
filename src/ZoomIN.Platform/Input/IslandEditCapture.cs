@@ -1,3 +1,5 @@
+using Windows.Win32;
+using Windows.Win32.UI.Input.KeyboardAndMouse;
 using ZoomIN.Core.Islands;
 using ZoomIN.Core.Viewport;
 
@@ -13,25 +15,26 @@ namespace ZoomIN.Platform.Input;
 /// </summary>
 public sealed class IslandEditCapture : IIslandEditInput
 {
-    // Window messages of the low-level mouse hook.
-    internal const uint MouseMove = 0x0200;
-    internal const uint LeftDown = 0x0201;
-    internal const uint LeftUp = 0x0202;
-    internal const uint RightDown = 0x0204;
-    internal const uint RightUp = 0x0205;
-    internal const uint MiddleDown = 0x0207;
-    internal const uint MiddleUp = 0x0208;
-    internal const uint Wheel = 0x020A;
-    internal const uint ExtraDown = 0x020B;
-    internal const uint ExtraUp = 0x020C;
-    internal const uint HorizontalWheel = 0x020E;
+    // Window messages of the low-level mouse hook, as the hook passes them.
+    internal const uint MouseMove = PInvoke.WM_MOUSEMOVE;
+    internal const uint LeftDown = PInvoke.WM_LBUTTONDOWN;
+    internal const uint LeftUp = PInvoke.WM_LBUTTONUP;
+    internal const uint RightDown = PInvoke.WM_RBUTTONDOWN;
+    internal const uint RightUp = PInvoke.WM_RBUTTONUP;
+    internal const uint MiddleDown = PInvoke.WM_MBUTTONDOWN;
+    internal const uint MiddleUp = PInvoke.WM_MBUTTONUP;
+    internal const uint Wheel = PInvoke.WM_MOUSEWHEEL;
+    internal const uint ExtraDown = PInvoke.WM_XBUTTONDOWN;
+    internal const uint ExtraUp = PInvoke.WM_XBUTTONUP;
+    internal const uint HorizontalWheel = PInvoke.WM_MOUSEHWHEEL;
 
-    internal const int EscapeKey = 0x1B;
-    internal const int DeleteKey = 0x2E;
+    internal const int EscapeKey = (int)VIRTUAL_KEY.VK_ESCAPE;
+    internal const int DeleteKey = (int)VIRTUAL_KEY.VK_DELETE;
 
     private const double WheelDelta = 120;
     private const uint RepeatGapMilliseconds = 2500;
 
+    private readonly Func<int, bool> _isDown;
     private IslandEditQueue? _session;
 
     // Hook thread only: buttons and keys whose press was swallowed, so their release is too.
@@ -41,6 +44,17 @@ public sealed class IslandEditCapture : IIslandEditInput
     private uint _escapeAt;
     private uint _deleteAt;
     private volatile bool _hooksInstalled;
+
+    public IslandEditCapture()
+        : this(KeyState.IsDown)
+    {
+    }
+
+    /// <param name="isDown">Physical key state by virtual-key code (tests replace it).</param>
+    internal IslandEditCapture(Func<int, bool> isDown)
+    {
+        _isDown = isDown;
+    }
 
     /// <summary>True while the edit mode takes the input.</summary>
     public bool IsCapturing => Volatile.Read(ref _session) is not null;
@@ -154,7 +168,8 @@ public sealed class IslandEditCapture : IIslandEditInput
             return true;
         }
 
-        if (Volatile.Read(ref _session) is not { } session)
+        // Ctrl+Shift+Esc, Ctrl+Esc, Shift+Del and the like stay the system's and the applications'.
+        if (Volatile.Read(ref _session) is not { } session || AnyModifierDown())
         {
             return false;
         }
@@ -163,6 +178,10 @@ public sealed class IslandEditCapture : IIslandEditInput
         session.Key(virtualKey == EscapeKey ? IslandEditKey.Escape : IslandEditKey.Delete);
         return true;
     }
+
+    private bool AnyModifierDown() =>
+        _isDown(KeyState.Control) || _isDown(KeyState.Alt) || _isDown(KeyState.Shift)
+        || _isDown(KeyState.LeftWindows) || _isDown(KeyState.RightWindows);
 
     // Extra buttons share one bit: which of the two hardly matters for keeping the release.
     private static int ButtonOf(uint message) => message switch

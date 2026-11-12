@@ -18,24 +18,21 @@ internal sealed class IslandEditWatch : IDisposable
     private readonly ZoomModel _zoom;
     private readonly IslandModel _model;
     private readonly IMonitorProvider _monitors;
-    private readonly Func<bool> _editing;
-    private readonly Action<string> _end;
+    private readonly Func<Action<string>?> _endOfRun;
     private readonly Action _checkOutside;
     private readonly ILogger _log;
 
-    /// <param name="editing">True while the edit mode runs.</param>
-    /// <param name="end">Ends the edit mode with a reason.</param>
+    /// <param name="endOfRun">Ends the run that is current when it is called (never a later one), or null while none runs.</param>
     /// <param name="checkOutside">Ends it if the islands changed from outside (the controller compares under its lock).</param>
     public IslandEditWatch(
-        IPointerFence fence, ZoomModel zoom, IslandModel model, IMonitorProvider monitors, Func<bool> editing, Action<string> end,
+        IPointerFence fence, ZoomModel zoom, IslandModel model, IMonitorProvider monitors, Func<Action<string>?> endOfRun,
         Action checkOutside, ILogger log)
     {
         _fence = fence;
         _zoom = zoom;
         _model = model;
         _monitors = monitors;
-        _editing = editing;
-        _end = end;
+        _endOfRun = endOfRun;
         _checkOutside = checkOutside;
         _log = log;
         _fence.Recomputed += OnFenceRecomputed;
@@ -58,14 +55,17 @@ internal sealed class IslandEditWatch : IDisposable
         if (trigger is FenceTrigger.DesktopSwitch or FenceTrigger.SessionUnlock or FenceTrigger.DisplayChange)
         {
             var reason = trigger.ToString();
-            _ = Task.Run(() => Safely(() => _end(reason)));
+            if (_endOfRun() is { } end)
+            {
+                _ = Task.Run(() => Safely(() => end(reason)));
+            }
         }
     }
 
     // A zoom command of the user (zoom off, mode, step to 1×) cleared the edit mode's 1×.
     private void OnTemporaryChanged()
     {
-        if (!_editing())
+        if (_endOfRun() is not { } end)
         {
             return;
         }
@@ -74,7 +74,7 @@ internal sealed class IslandEditWatch : IDisposable
         {
             if (_zoom.Temporary.LevelFor(TemporaryZoomOwner.IslandEdit, monitor) is null)
             {
-                Safely(() => _end("cleared"));
+                Safely(() => end("cleared"));
                 return;
             }
         }
@@ -83,7 +83,7 @@ internal sealed class IslandEditWatch : IDisposable
     // Also raised for the edit mode's own steps; the controller tells them apart under its lock.
     private void OnModelChanged()
     {
-        if (_editing())
+        if (_endOfRun() is not null)
         {
             Safely(_checkOutside);
         }
