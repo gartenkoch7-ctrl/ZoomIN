@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using ZoomIN.App.Settings;
 using ZoomIN.Core.Localization;
+using ZoomIN.Core.Modes;
 using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Overview;
 using ZoomIN.Core.Pointer;
@@ -110,9 +111,12 @@ public sealed class MonitorFreezeController : IDisposable
         // The overview shows 1× for a moment; frozen, its frame would stay and the view before it
         // would be lost. The user ends it first (tap again or Esc).
         var id = layout.Ids[index];
-        if (_overview.Current is { } session && session.MonitorId == id)
+        // The docked strip reserves screen space and takes every zoom command (ZoomModel.Step): frozen,
+        // the reservation would follow the live mode and zooming elsewhere would go nowhere.
+        var docked = _zoom.Mode == ZoomMode.Docked && _zoom.IsOn && _zoom.DockedMonitor == id;
+        if (docked || (_overview.Current is { } session && session.MonitorId == id))
         {
-            Refuse("overview", "Freeze.Overview");
+            Refuse(docked ? "docked" : "overview", docked ? "Freeze.Docked" : "Freeze.Overview");
             return;
         }
 

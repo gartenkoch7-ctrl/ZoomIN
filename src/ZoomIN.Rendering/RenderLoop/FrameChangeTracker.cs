@@ -51,20 +51,21 @@ internal sealed class FrameChangeTracker
     }
 
     // By reference for the snapshots (immutable, a change is a new object), by value for the rest.
-    // A frozen monitor (G2, same freeze) uses no focus, caret, locator or pointer: their news change nothing there.
+    // Same freeze (G2): focus, caret, locator and pointer are not used there, and a held still image keeps
+    // the window regions it was taken with. FrozenStill is copied into the request, so a still image
+    // given up on during the freeze (it then shows live) is a change.
     private static bool SameRequest(in FrameRequest a, in FrameRequest b) =>
         a.Mode == b.Mode
         && a.Zoom == b.Zoom
         && a.Lens == b.Lens
         && a.Dock == b.Dock
         && ReferenceEquals(a.Effects, b.Effects)
-        && ((a.Frozen is not null && ReferenceEquals(a.Frozen, b.Frozen))
+        && ReferenceEquals(a.Frozen, b.Frozen)
+        && a.FrozenStill == b.FrozenStill
+        && (a.Frozen is not null
             || (a.LocateRequestedAt == b.LocateRequestedAt
                 && ReferenceEquals(a.Tracking, b.Tracking)
                 && ReferenceEquals(a.TrackingOptions, b.TrackingOptions)
                 && a.PointerHidden == b.PointerHidden))
-        && ReferenceEquals(a.Windows, b.Windows)
-        && a.WindowsFiltered == b.WindowsFiltered
-        && ReferenceEquals(a.Frozen, b.Frozen)
-        && a.OverlayOnly == b.OverlayOnly; // a still image given up on (same freeze) shows live again
+        && (a.FrozenStill || (ReferenceEquals(a.Windows, b.Windows) && a.WindowsFiltered == b.WindowsFiltered));
 }

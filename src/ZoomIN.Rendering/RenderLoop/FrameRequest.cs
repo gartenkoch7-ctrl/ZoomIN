@@ -19,6 +19,7 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// <param name="ViewHeld">A temporary level (window drag) holds the monitor below the user's level, also while gliding there:
 /// the overview keeps the view from before it.</param>
 /// <param name="Frozen">The monitor is frozen (G2): anchor, level and mode stay, no pointer or marks; null = live.</param>
+/// <param name="FrozenStill">Frozen with a still image that is (to be) shown, read once per frame: <see cref="FrozenMonitor.StillUnavailable"/> may change during a freeze.</param>
 internal readonly record struct FrameRequest(
     ZoomMode Mode,
     ZoomMode AnchorMode,
@@ -36,11 +37,12 @@ internal readonly record struct FrameRequest(
     double OverviewLevel = 1,
     ViewPlacement Placement = default,
     bool ViewHeld = false,
-    FrozenMonitor? Frozen = null)
+    FrozenMonitor? Frozen = null,
+    bool FrozenStill = false)
 {
     /// <summary>
     /// Not magnified and no colour filter: only pointer, crosshair or locator are drawn. A frozen
     /// still image is drawn at 1× too, or the live desktop would show through.
     /// </summary>
-    public bool OverlayOnly => Zoom <= 1.01 && !Effects.Filter.ChangesColors && !WindowsFiltered && Frozen is not { Still: true, StillUnavailable: false };
+    public bool OverlayOnly => Zoom <= 1.01 && !Effects.Filter.ChangesColors && !WindowsFiltered && !FrozenStill;
 }

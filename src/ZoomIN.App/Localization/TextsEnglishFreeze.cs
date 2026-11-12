@@ -12,6 +12,7 @@ internal static class TextsEnglishFreeze
         ["Freeze.Lifted"] = "Monitors unfrozen",
         ["Freeze.OneMonitor"] = "Freezing needs at least two monitors.",
         ["Freeze.Overview"] = "End the overview first, then freeze.",
+        ["Freeze.Docked"] = "The docked monitor cannot be frozen.",
         ["Freeze.NoPointer"] = "The pointer is not on any monitor.",
         ["Freeze.LayoutUnavailable"] = "The monitors are changing right now. Please try again in a moment.",
         ["Freeze.MoveRefused"] = "Windows refused to move the pointer.",

@@ -359,8 +359,9 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
 - **Wechselwirkungen:** Vorübergehende Stufen (Fenster-Verschieben G1, Übersicht B2) wirken
   auf einem eingefrorenen Monitor nicht; dessen Stufe, Modus, Lupe und Dock gelten vom Augenblick
   des Einfrierens. Zoom aus (`Strg+Alt+Z`) oder Moduswechsel ändern ihn nicht – der Rahmen zeigt
-  den Zustand. Ein eingefrorener Angedockt-Streifen verliert seine Reservierung, wenn der Modus
-  wechselt (bewusst hingenommen, selten).
+  den Zustand. Der Monitor mit dem angedockten Streifen wird nicht eingefroren (Hinweis): Der
+  Streifen reserviert Bildschirmfläche nach dem Live-Modus, und Zoombefehle gingen im Modus
+  Angedockt an ihn statt an den Monitor, auf dem man arbeitet.
 - **Ansagen:** „Monitor 2 eingefroren“, „Einfrieren aufgehoben“, „Monitor 3“ (Windows-Nummer aus
   dem Gerätenamen, `MonitorNames.Number`).
 

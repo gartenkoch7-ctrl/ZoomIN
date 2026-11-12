@@ -182,7 +182,7 @@ internal sealed class MonitorRenderer : IDisposable
                 frozen?.Lens ?? _model.Lens, frozen?.Dock ?? _model.Dock, effects,
                 _effects.LocateRequestedAt, _tracking.Snapshot, _tracking.Options, _effects.PointerHiddenByTyping,
                 windows, windowsFiltered, overview, _model.TargetFor(_deviceName), _models.ViewRequests.PlacementFor(_deviceName),
-                lowered, frozen);
+                lowered, frozen, frozen is { Still: true, StillUnavailable: false });
             var wasVisible = session.IsVisible;
             _stats.Record(session.RenderFrame(request), !wasVisible && session.IsVisible);
 

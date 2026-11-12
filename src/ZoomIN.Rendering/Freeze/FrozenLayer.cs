@@ -25,7 +25,6 @@ internal sealed class FrozenLayer : IDisposable
     private readonly ILogger _log;
     private FrozenMonitor? _current;
     private FrozenMonitor? _stillFor;
-    private FrozenMonitor? _stillFailedFor;
     private WindowRegions? _stillWindows;
     private bool _pointerLeft;
 
@@ -97,7 +96,7 @@ internal sealed class FrozenLayer : IDisposable
     /// <param name="windows">The window regions now: the filter per window stays with the windows in the image.</param>
     public bool TryCapture(FrozenMonitor? frozen, ID3D11DeviceContext context, ID3D11Texture2D desktop, bool current, WindowRegions windows)
     {
-        if (frozen is not { Still: true } || !current || ReferenceEquals(frozen, _stillFor) || ReferenceEquals(frozen, _stillFailedFor))
+        if (frozen is not { Still: true, StillUnavailable: false } || !current || ReferenceEquals(frozen, _stillFor))
         {
             return false;
         }
@@ -107,7 +106,6 @@ internal sealed class FrozenLayer : IDisposable
         if (!frozen.ClaimStill() || !_still.Capture(context, desktop))
         {
             // Tried again with the next freeze, not every frame.
-            _stillFailedFor = frozen;
             frozen.MarkStillUnavailable();
             _log.StillNotTaken(_monitorId);
             return false;

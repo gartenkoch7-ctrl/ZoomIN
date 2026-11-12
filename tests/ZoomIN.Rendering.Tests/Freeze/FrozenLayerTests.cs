@@ -159,7 +159,7 @@ public sealed class FrozenLayerTests
             0, Core.Tracking.TrackingSnapshot.Empty, Core.Tracking.TrackingOptions.Default, false, WindowRegions.Empty, false);
         Assert.True(request.OverlayOnly);
         Assert.True((request with { Frozen = Frozen(still: false) }).OverlayOnly);
-        Assert.False((request with { Frozen = Frozen(still: true) }).OverlayOnly);
+        Assert.False((request with { Frozen = Frozen(still: true), FrozenStill = true }).OverlayOnly);
 
         var tracker = new FrameChangeTracker();
         var frame = ModeGeometry.Compute(ZoomMode.Fullscreen, s_monitor, default, 1, LensSize.Default, DockLayout.Default);
@@ -172,6 +172,11 @@ public sealed class FrozenLayerTests
         tracker.Presented(frozen, frame, false, default, 0);
         var typed = frozen with { Tracking = new Core.Tracking.TrackingSnapshot(null, 0, new PhysicalRect(1, 1, 1, 9), 5) };
         Assert.False(tracker.Compare(false, typed, frame, false, default, 0, false, false, true).NeedsRedraw);
+
+        // A still image given up on during the same freeze shows live again: that is a change.
+        var still = frozen with { FrozenStill = true };
+        tracker.Presented(still, frame, false, default, 0);
+        Assert.True(tracker.Compare(false, still with { FrozenStill = false }, frame, false, default, 0, false, false, true).NeedsRedraw);
     }
 
     private static FrozenMonitor Frozen(bool still) =>

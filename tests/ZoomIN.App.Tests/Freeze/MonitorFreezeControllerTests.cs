@@ -128,6 +128,22 @@ public sealed class MonitorFreezeControllerTests
     }
 
     [Fact]
+    public void TheDockedMonitor_IsNotFrozen_OthersAre()
+    {
+        using var rig = new FreezeRig();
+        rig.Models.Zoom.Activate(ZoomMode.Docked, One, [One, Two, Three]);
+        rig.PointerTo(One);
+
+        rig.Controller.ToggleFreeze();
+        Assert.False(rig.Frozen.Any);
+        Assert.Equal(["The docked monitor cannot be frozen."], rig.Hints);
+
+        rig.PointerTo(Two);
+        rig.Controller.ToggleFreeze();
+        Assert.True(rig.Frozen.IsFrozen(Two));
+    }
+
+    [Fact]
     public void WhileAnOverviewRunsOnTheMonitor_FreezingIsRefused()
     {
         using var rig = new FreezeRig();
