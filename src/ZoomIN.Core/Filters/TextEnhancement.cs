@@ -33,8 +33,12 @@ public readonly record struct TextEnhancement(double Sharpness, double BoldPixel
     /// </summary>
     public static bool WorksWith(Smoothing smoothing) => smoothing == Smoothing.Text;
 
-    /// <summary>Within range; NaN and infinities count as off.</summary>
-    public TextEnhancement Normalized() => new(Clamp(Sharpness, MaxSharpness), Clamp(BoldPixels, MaxBoldPixels));
+    /// <summary>
+    /// Within range and on the steps of the sliders (1 %, 0.1 px), so a value the slider shows as 0 is
+    /// off. NaN and infinities count as off.
+    /// </summary>
+    public TextEnhancement Normalized() =>
+        new(Math.Round(Clamp(Sharpness, MaxSharpness), 2), Math.Round(Clamp(BoldPixels, MaxBoldPixels), 1));
 
     /// <summary>What the shader gets at <paramref name="zoom"/>: these values or <see cref="Off"/>. Per frame, no allocation.</summary>
     public TextEnhancement At(double zoom, Smoothing smoothing) =>

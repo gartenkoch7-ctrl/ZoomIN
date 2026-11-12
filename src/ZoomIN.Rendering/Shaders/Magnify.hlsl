@@ -16,8 +16,7 @@ cbuffer MagnifyConstants : register(b0)
     uint MonitorSmart;   // 1 = the monitor matrix is the smart inversion (ADR-0024)
     float Sharpness;     // "Schärfe" 0–1 (M18, D1); read by PSEnhanced only
     float BoldPx;        // "Fett" 0–3 output pixels (M18, D1); read by PSEnhanced only
-    uint EnhanceActive;  // 1 = sharpness or bold is on (MagnifyConstants.Enhanced, picks PSEnhanced on the CPU)
-    float EnhancePadding;
+    float2 EnhancePadding;
 };
 
 // Filter per window (ADR-0020): window rectangles front to back, each with a palette entry. The

@@ -21,17 +21,22 @@ internal sealed class EnhanceWatch : IDisposable
     {
         _effects = effects;
         _log = log;
-        var current = effects.Current;
-        _values = current.Enhancement;
-        _state = State(current);
 
-        // The start state is worth one line only when the user turned it on.
-        if (_state != "off")
+        // Subscribed first and read under the lock: a change on another thread in between is then
+        // either part of the start state or logged against it, never lost.
+        lock (_gate)
         {
-            Log(current);
-        }
+            _effects.Changed += OnChanged;
+            var current = effects.Current;
+            _values = current.Enhancement;
+            _state = State(current);
 
-        _effects.Changed += OnChanged;
+            // The start state is worth one line only when the user turned it on.
+            if (_state != "off")
+            {
+                Log(current);
+            }
+        }
     }
 
     public void Dispose() => _effects.Changed -= OnChanged;

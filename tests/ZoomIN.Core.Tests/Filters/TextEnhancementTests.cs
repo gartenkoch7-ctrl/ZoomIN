@@ -34,6 +34,8 @@ public sealed class TextEnhancementTests
     [InlineData(2, 5, 1, 3)]
     [InlineData(0.4, 2.5, 0.4, 2.5)]
     [InlineData(double.NaN, double.PositiveInfinity, 0, 0)]
+    [InlineData(0.004, 0.04, 0, 0)] // below the slider steps: shown as 0, so off
+    [InlineData(0.456, 1.26, 0.46, 1.3)]
     public void Normalized_ClampsToTheSliderRanges(double sharpness, double bold, double wantSharpness, double wantBold)
     {
         var normalized = new TextEnhancement(sharpness, bold).Normalized();

@@ -18,13 +18,13 @@
 
 // Photo content (risk 2): at full strength bold turned hard photo edges into stairs and sharpness
 // into visible pixel blocks. A tap is colourful from its chroma (thresholds of the photo test in
-// Ambient.hlsl). The four corner taps of the bicubic footprint (4 × 4 texels) decide: with three or
-// four colourful the pixel is photo and both fade out. Grey text and its ClearType fringes (a
+// Ambient.hlsl). The four corner taps of the bicubic footprint (4 × 4 texels) decide: up to two
+// colourful ones keep both, with three or four they are off. Grey text and its ClearType fringes (a
 // minority) keep them; text on a strongly coloured area loses them too (documented trade-off).
 #define CHROMA_LOW 0.10
 #define CHROMA_HIGH 0.25
 #define PHOTO_FROM 2.0
-#define PHOTO_FULL 3.5
+#define PHOTO_FULL 3.0
 
 static const float2 BoldDirections[4] = { float2(1, 0), float2(-1, 0), float2(0, 1), float2(0, -1) };
 

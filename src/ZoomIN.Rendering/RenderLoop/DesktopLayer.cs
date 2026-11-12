@@ -68,7 +68,7 @@ internal sealed class DesktopLayer(
 
         // Only the magnified view is enhanced; the rest of the monitor around a lens shows 1×.
         var enhance = effects.Enhancement.At(frame, effects.Smoothing);
-        var viewport = frame.HasFrame ? Expand(frame.Target, FrameThickness, monitor) : monitor;
+        var viewport = frame.HasFrame ? Expand(frame.Target, FrameThickness, monitor) : new PhysicalRect(monitor.X, monitor.Y, width, height);
         if (enhanceCost.Tick(context, enhance))
         {
             ProbeEnhanceCost(context, desktop, target, monitor, viewport, frame, effects, monitorSmart, weights, enhance);

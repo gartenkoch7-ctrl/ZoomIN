@@ -291,8 +291,8 @@ Plan: [d1-schaerfen-fetter.md](../plan/features/d1-schaerfen-fetter.md). Code: `
   farbigen Pixel. Folge: Der verbreiterte Rand farbiger Schrift wird grau-dunkel, nicht farbig.
 - **Risiko 2, Fotos** *(selbst entschieden)*: Die 4 Eck-Abtastungen des Bikubik-Fensters (4 × 4
   Texel, liegen immer auf Texelmitten) werden zuerst gelesen. Sind 3–4 davon farbig (Chroma-Schwellen
-  wie `Ambient.hlsl`, 0,10–0,25), gilt der Pixel als Foto: **Schärfe und Fett blenden aus**
-  (`smoothstep(2, 3,5, farbige Ecken)`). Ohne Zusatz-Abtastung. Bekannte Grenze: Text auf kräftig
+  wie `Ambient.hlsl`, 0,10–0,25), gilt der Pixel als Foto: **Schärfe und Fett sind dort aus**
+  (`smoothstep(2, 3, farbige Ecken)`: bis 2 voll, ab 3 aus). Ohne Zusatz-Abtastung. Bekannte Grenze: Text auf kräftig
   farbiger Fläche (blaue Schaltfläche) wird ebenfalls nicht verbessert; graue Fotos werden verbessert.
 - **Risiko 3, Glättung** *(selbst entschieden)*: Nur bei „Text-optimiert“. Bei „Weich“/„Pixel“
   sind die Regler deaktiviert, die Beschreibung sagt „Wirkt nur mit der Glättung ‚Text-optimiert‘“;
