@@ -64,12 +64,14 @@ public sealed class HotkeyBindings(
         Add(s.ProfileHotkey, profiles.Next);
         Add(s.WindowFilterHotkey, () => windowFilter.Toggle());
         Add(s.OverviewHotkey, () => overview.Press());
+        var refusedBefore = unavailable.Count;
         Add(s.FreezeMonitorHotkey, freeze.ToggleFreeze);
+        var freezeLost = s.FreezeMonitorHotkey.VirtualKey == 0 || unavailable.Count > refusedBefore;
         Add(s.NextMonitorHotkey, monitorSwitch.NextMonitor);
         Unavailable = unavailable;
 
         // Without Ctrl+Alt+H nothing could give a frozen monitor back (G2).
-        if (s.FreezeMonitorHotkey.VirtualKey == 0 || unavailable.Contains(s.FreezeMonitorHotkey))
+        if (freezeLost)
         {
             freeze.LiftAll("shortcut_gone");
         }

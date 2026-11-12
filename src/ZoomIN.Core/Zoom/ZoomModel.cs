@@ -49,7 +49,7 @@ public sealed class ZoomModel
 
     public ZoomMode Mode => (ZoomMode)Volatile.Read(ref _mode);
 
-    public bool IsOn => Volatile.Read(ref _targets).Values.Any(level => level > ZoomLimits.Min);
+    public bool IsOn => Volatile.Read(ref _targets).Any(target => target.Value > ZoomLimits.Min && !Frozen.IsFrozen(target.Key)); // frozen: own level (G2)
 
     /// <summary>Monitor showing the docked strip while <see cref="Mode"/> is Docked.</summary>
     public string DockedMonitor => Volatile.Read(ref _dockedMonitor);
@@ -156,11 +156,11 @@ public sealed class ZoomModel
 
     /// <summary>Strg+Alt+Z: anything zoomed → off; otherwise on in the current mode.</summary>
     public void Toggle(string monitorAtMouse, IReadOnlyCollection<string> monitors) =>
-        Switch(Mode, monitorAtMouse, monitors, offIfOn: true);
+        Switch(Mode, monitorAtMouse, Frozen.WithoutFrozen(monitors), offIfOn: true);
 
     /// <summary>Strg+Alt+F/L/D: switch to the mode and zoom; the active mode's key switches off (M4 decision).</summary>
     public void Activate(ZoomMode mode, string monitorAtMouse, IReadOnlyCollection<string> monitors) =>
-        Switch(mode, monitorAtMouse, monitors, offIfOn: mode == Mode);
+        Switch(mode, monitorAtMouse, Frozen.WithoutFrozen(monitors), offIfOn: mode == Mode);
 
     /// <summary>
     /// Zooms by wheel notches or key steps. Up from 1× starts zooming; down to 1× stops zooming.
@@ -168,6 +168,7 @@ public sealed class ZoomModel
     /// </summary>
     public void Step(double notches, string monitorAtMouse, IReadOnlyCollection<string> monitors)
     {
+        monitors = Frozen.WithoutFrozen(monitors); // a frozen monitor keeps its level (G2)
         IReadOnlyList<TemporaryZoomOwner> cleared;
         lock (_gate)
         {
@@ -211,7 +212,7 @@ public sealed class ZoomModel
         {
             if (offIfOn && ZoomTargetRules.AnyOn(Volatile.Read(ref _targets), monitors))
             {
-                Volatile.Write(ref _targets, s_allOff);
+                Volatile.Write(ref _targets, Frozen.KeepFrozen(s_allOff, Volatile.Read(ref _targets)));
             }
             else
             {
@@ -222,7 +223,8 @@ public sealed class ZoomModel
                 }
 
                 Volatile.Write(ref _mode, (int)mode);
-                Volatile.Write(ref _targets, ZoomTargetRules.SwitchOn(mode, monitorAtMouse, monitors, id => _levels.Get(mode, id, _perMonitor)));
+                var on = ZoomTargetRules.SwitchOn(mode, monitorAtMouse, monitors, id => _levels.Get(mode, id, _perMonitor));
+                Volatile.Write(ref _targets, Frozen.KeepFrozen(on, Volatile.Read(ref _targets))); // a frozen monitor keeps its target (G2)
             }
 
             // An explicit on/off or mode command ends every temporary view (see TemporaryZoom),

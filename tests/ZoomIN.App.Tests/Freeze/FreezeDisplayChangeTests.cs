@@ -77,4 +77,22 @@ public sealed class FreezeDisplayChangeTests
         Assert.False(rig.Frozen.Any);
         Assert.Equal(["Monitors unfrozen"], rig.Announcer.Messages.Skip(announced));
     }
+
+    [Fact]
+    public void PointerSeenOnTheFrozenMonitor_LiftsIt_IfItIsStillThere()
+    {
+        using var rig = new FreezeRig();
+        rig.PointerTo(Two);
+        rig.Controller.ToggleFreeze();
+        var frozen = rig.Frozen.For(Two)!;
+
+        // Seen in the moment before the freeze's second move: the pointer is gone again.
+        frozen.ReportPointerInside();
+        Assert.True(rig.Frozen.IsFrozen(Two));
+
+        // The fence failed (hook lost): the pointer is really on the frozen monitor.
+        rig.PointerTo(Two);
+        frozen.ReportPointerInside();
+        Assert.False(rig.Frozen.Any);
+    }
 }

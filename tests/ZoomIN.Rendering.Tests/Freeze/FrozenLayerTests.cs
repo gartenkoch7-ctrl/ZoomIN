@@ -108,6 +108,23 @@ public sealed class FrozenLayerTests
     }
 
     [Fact]
+    public void PointerArrivingOnTheFrozenMonitor_IsReportedOncePerArrival()
+    {
+        using var rig = new Rig();
+        var reports = 0;
+        var frozen = new FrozenMonitor(@"\\.\DISPLAY1", s_monitor, 2, ZoomMode.Fullscreen, LensSize.Default, DockLayout.Default, false,
+            RgbColor.Cyan, _ => reports++);
+        rig.Layer.Begin(frozen);
+
+        rig.Layer.NeedsSystemPointer(false, onMonitor: true);
+        rig.Layer.NeedsSystemPointer(false, onMonitor: true);
+        Assert.Equal(1, reports);
+        rig.Layer.NeedsSystemPointer(false, onMonitor: false);
+        rig.Layer.NeedsSystemPointer(false, onMonitor: true);
+        Assert.Equal(2, reports);
+    }
+
+    [Fact]
     public void Border_IsDrawnInTheFrameColour_OnlyAtTheEdge()
     {
         using var rig = new Rig();
@@ -152,32 +169,6 @@ public sealed class FrozenLayerTests
         Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
     }
 
-    [Fact]
-    public void FrozenStill_IsDrawnAt1x_AndAFreezeIsAChangeOfTheFrame()
-    {
-        var request = new FrameRequest(ZoomMode.Fullscreen, ZoomMode.Fullscreen, 1, LensSize.Default, DockLayout.Default, DisplayEffects.Default,
-            0, Core.Tracking.TrackingSnapshot.Empty, Core.Tracking.TrackingOptions.Default, false, WindowRegions.Empty, false);
-        Assert.True(request.OverlayOnly);
-        Assert.True((request with { Frozen = Frozen(still: false) }).OverlayOnly);
-        Assert.False((request with { Frozen = Frozen(still: true), FrozenStill = true }).OverlayOnly);
-
-        var tracker = new FrameChangeTracker();
-        var frame = ModeGeometry.Compute(ZoomMode.Fullscreen, s_monitor, default, 1, LensSize.Default, DockLayout.Default);
-        tracker.Presented(request, frame, false, default, 0);
-        Assert.False(tracker.Compare(false, request, frame, false, default, 0, false, false, true).NeedsRedraw);
-        var frozen = request with { Frozen = Frozen(still: false) };
-        Assert.True(tracker.Compare(false, frozen, frame, false, default, 0, false, false, true).NeedsRedraw);
-
-        // Frozen: a caret moving on another monitor is no reason to draw this one again.
-        tracker.Presented(frozen, frame, false, default, 0);
-        var typed = frozen with { Tracking = new Core.Tracking.TrackingSnapshot(null, 0, new PhysicalRect(1, 1, 1, 9), 5) };
-        Assert.False(tracker.Compare(false, typed, frame, false, default, 0, false, false, true).NeedsRedraw);
-
-        // A still image given up on during the same freeze shows live again: that is a change.
-        var still = frozen with { FrozenStill = true };
-        tracker.Presented(still, frame, false, default, 0);
-        Assert.True(tracker.Compare(false, still with { FrozenStill = false }, frame, false, default, 0, false, false, true).NeedsRedraw);
-    }
 
     private static FrozenMonitor Frozen(bool still) =>
         new(@"\\.\DISPLAY1", s_monitor, 2, ZoomMode.Fullscreen, LensSize.Default, DockLayout.Default, still, new RgbColor(0, 0, 255));

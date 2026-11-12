@@ -27,6 +27,7 @@ internal sealed class FrozenLayer : IDisposable
     private FrozenMonitor? _stillFor;
     private WindowRegions? _stillWindows;
     private bool _pointerLeft;
+    private bool _pointerOnFrozen;
 
     public FrozenLayer(CursorPass pass, StillFrame still, string monitorId, ILogger log)
     {
@@ -58,6 +59,7 @@ internal sealed class FrozenLayer : IDisposable
         }
 
         _current = frozen;
+        _pointerOnFrozen = false;
         if (_stillFor is not null)
         {
             _still.Release();
@@ -82,6 +84,14 @@ internal sealed class FrozenLayer : IDisposable
             _pointerLeft &= !onMonitor;
             return false;
         }
+
+        // The fence should keep it out; if it failed, the owner may end the freeze (once per arrival).
+        if (onMonitor && !_pointerOnFrozen)
+        {
+            _current.ReportPointerInside();
+        }
+
+        _pointerOnFrozen = onMonitor;
 
         var show = onMonitor || _pointerLeft;
         _pointerLeft = false;

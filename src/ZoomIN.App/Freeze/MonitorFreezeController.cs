@@ -37,6 +37,7 @@ public sealed class MonitorFreezeController : IDisposable
     private readonly ILogger _log;
     private readonly FreezeOperations _operations = new();
     private readonly FreezeFenceEvents _events;
+    private readonly Action<Action> _dispatch;
     private volatile bool _freezing;
 
     public MonitorFreezeController(
@@ -54,7 +55,7 @@ public sealed class MonitorFreezeController : IDisposable
         (_settings, _switch, _zoom) = (settings, monitorSwitch, settings.Models.Zoom);
         (_frozen, _overview) = (_zoom.Frozen, settings.Models.Overview);
         (_monitors, _cursor, _fence, _mover) = (monitors, cursor, fence, mover);
-        (_announcer, _texts, _log) = (announcer, texts, log);
+        (_announcer, _texts, _log, _dispatch) = (announcer, texts, log, dispatch);
         _events = new FreezeFenceEvents(fence, _frozen, () => _freezing, dispatch,
             (trigger, seen, freezing) => Guarded("recompute", () => Recheck(trigger, seen, freezing)));
     }
@@ -137,7 +138,7 @@ public sealed class MonitorFreezeController : IDisposable
         var shared = _settings.Current;
         var monitor = new FrozenMonitor(
             id, layout.Bounds[index], _zoom.TargetFor(id), _zoom.Mode, _zoom.Lens, _zoom.Dock,
-            shared.FrozenContent == FrozenContent.Still, RgbColor.ParseOrDefault(shared.FrozenFrameColor, RgbColor.Cyan));
+            shared.FrozenContent == FrozenContent.Still, RgbColor.ParseOrDefault(shared.FrozenFrameColor, RgbColor.Cyan), OnPointerInside);
         _frozen.Freeze(monitor);
         _operations.Start(monitor);
         _fence.Forbid(FenceOwner.FrozenMonitors, _frozen.State.Areas());
@@ -156,6 +157,16 @@ public sealed class MonitorFreezeController : IDisposable
         _log.MonitorFrozen(id, monitor.Level, image, layout.Ids[target]);
         _announcer.Announce(_texts.Format("Freeze.Frozen", MonitorNames.Label(id)));
     }
+
+    // A render thread saw the pointer on a frozen monitor (the fence failed, e.g. its hook was lost):
+    // checked again here, as it may have been the moment before the second move of a freeze.
+    private void OnPointerInside(FrozenMonitor monitor) => _dispatch(() => Guarded("pointer_inside", () =>
+    {
+        if (_cursor.TryGetPosition(out var now) && monitor.Bounds.Contains(now))
+        {
+            Lift(m => ReferenceEquals(m, monitor), "pointer_inside");
+        }
+    }));
 
     private void Recheck(FenceTrigger trigger, FreezeState seen, bool freezing)
     {

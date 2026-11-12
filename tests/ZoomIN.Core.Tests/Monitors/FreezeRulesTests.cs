@@ -40,6 +40,23 @@ public sealed class FreezeRulesTests
     }
 
     [Fact]
+    public void ZoomCommands_IgnoreAFrozenMonitorsLevel()
+    {
+        string[] all = ["L", "R"];
+        var model = new ZoomIN.Core.Zoom.ZoomModel(new ZoomIN.Core.Zoom.ZoomLevels(), ZoomMode.Fullscreen, true, 0);
+        model.Step(4, "R", all); // only R is zoomed (per monitor)
+        model.Frozen.Freeze(Frozen("R", s_right, false));
+        Assert.False(model.IsOn);
+
+        // Ctrl+Alt+Z on the free monitor switches zoom on there at the first press, R's level stays.
+        model.Toggle("L", all);
+        Assert.True(model.TargetFor("L") > 1);
+        Assert.True(model.TargetFor("R") > 1);
+        model.Step(-20, "L", all);
+        Assert.False(model.IsOn);
+    }
+
+    [Fact]
     public void DefaultAllMonitors_PairsIdsWithBounds_OrGivesNothing()
     {
         IMonitorProvider monitors = new Fixed(("L", s_left), ("R", s_right));

@@ -358,7 +358,12 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
   `shortcut_gone`): sonst gäbe nichts den Monitor zurück.
 - **Wechselwirkungen:** Vorübergehende Stufen (Fenster-Verschieben G1, Übersicht B2) wirken
   auf einem eingefrorenen Monitor nicht; dessen Stufe, Modus, Lupe und Dock gelten vom Augenblick
-  des Einfrierens. Zoom aus (`Strg+Alt+Z`) oder Moduswechsel ändern ihn nicht – der Rahmen zeigt
+  des Einfrierens. Zoombefehle (`ZoomModel.Toggle/Activate/Step`, `IsOn`) zählen nur die freien
+  Monitore: ein bei 4× eingefrorener Monitor macht „Zoom an“ nicht wahr, und sein Ziel bleibt für
+  das Aufheben erhalten (`MonitorFreeze.WithoutFrozen/KeepFrozen`). Sieht ein Render-Thread den
+  Zeiger doch auf dem eingefrorenen Monitor (Zaun versagt, z. B. Hook verloren), meldet er das
+  (`FrozenMonitor.ReportPointerInside`); steht er dort noch, endet das Einfrieren (Grund
+  `pointer_inside`). Zoom aus (`Strg+Alt+Z`) oder Moduswechsel ändern ihn nicht – der Rahmen zeigt
   den Zustand. Der Monitor mit dem angedockten Streifen wird nicht eingefroren (Hinweis): Der
   Streifen reserviert Bildschirmfläche nach dem Live-Modus, und Zoombefehle gingen im Modus
   Angedockt an ihn statt an den Monitor, auf dem man arbeitet.

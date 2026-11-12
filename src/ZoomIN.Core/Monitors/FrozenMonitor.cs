@@ -16,8 +16,11 @@ namespace ZoomIN.Core.Monitors;
 /// <param name="level">The user's level on that monitor (temporary levels such as the overview do not count).</param>
 /// <param name="still">Show the image of the moment of freezing instead of the live desktop.</param>
 /// <param name="frameColor">Colour of the border that marks the monitor as frozen.</param>
+/// <param name="pointerInside">Called once, on a render thread, if the pointer gets onto the frozen monitor anyway
+/// (the fence failed): the owner then lifts the freeze, as nothing there would match what clicks hit.</param>
 public sealed class FrozenMonitor(
-    string id, PhysicalRect bounds, double level, ZoomMode mode, LensSize lens, DockLayout dock, bool still, RgbColor frameColor)
+    string id, PhysicalRect bounds, double level, ZoomMode mode, LensSize lens, DockLayout dock, bool still, RgbColor frameColor,
+    Action<FrozenMonitor>? pointerInside = null)
 {
     // The anchor is two doubles (not atomic): written once, then published through the state.
     private const int Empty = 0;
@@ -71,6 +74,9 @@ public sealed class FrozenMonitor(
     /// pipeline's GPU device; a pipeline rebuilt while frozen must not take a new one of a later desktop.
     /// </summary>
     public bool ClaimStill() => Interlocked.Exchange(ref _stillClaimed, 1) == 0;
+
+    /// <summary>The render thread saw the pointer arrive on this frozen monitor (once per arrival).</summary>
+    public void ReportPointerInside() => pointerInside?.Invoke(this);
 
     /// <summary>The still image could not be taken or kept: the monitor shows live (and at 1× needs no copy).</summary>
     public bool StillUnavailable => Volatile.Read(ref _stillUnavailable);

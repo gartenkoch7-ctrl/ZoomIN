@@ -24,6 +24,47 @@ public sealed class MonitorFreeze
 
     public bool IsFrozen(string monitorId) => For(monitorId) is not null;
 
+    /// <summary>
+    /// The monitors that are not frozen: zoom commands (on/off, steps) act on these only, because a
+    /// frozen monitor keeps its own level and must not make "zoom is on" true for the others.
+    /// </summary>
+    public IReadOnlyCollection<string> WithoutFrozen(IReadOnlyCollection<string> monitors)
+    {
+        ArgumentNullException.ThrowIfNull(monitors);
+        var state = State;
+        return state.Count == 0 ? monitors : [.. monitors.Where(id => !state.Contains(id))];
+    }
+
+    /// <summary>
+    /// <paramref name="next"/> with the frozen monitors' targets kept from <paramref name="current"/>:
+    /// zoom on/off on the free monitors does not change what a frozen one returns to when unfrozen.
+    /// </summary>
+    public IReadOnlyDictionary<string, double> KeepFrozen(IReadOnlyDictionary<string, double> next, IReadOnlyDictionary<string, double> current)
+    {
+        ArgumentNullException.ThrowIfNull(next);
+        ArgumentNullException.ThrowIfNull(current);
+        var state = State;
+        if (state.Count == 0)
+        {
+            return next;
+        }
+
+        var merged = new Dictionary<string, double>(next, StringComparer.Ordinal);
+        foreach (var monitor in state.Monitors)
+        {
+            if (current.TryGetValue(monitor.Id, out var level))
+            {
+                merged[monitor.Id] = level;
+            }
+            else
+            {
+                merged.Remove(monitor.Id);
+            }
+        }
+
+        return merged;
+    }
+
     /// <summary>Freezes a monitor; a monitor frozen again gets the new freeze (a new view and still image).</summary>
     public void Freeze(FrozenMonitor monitor)
     {
