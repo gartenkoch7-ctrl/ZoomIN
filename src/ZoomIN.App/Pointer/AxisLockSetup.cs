@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.PointerFence;
 
@@ -13,13 +14,15 @@ internal sealed class AxisLockSetup
 {
     private readonly IPointerFence _fence;
     private readonly IHoldKeyWatch _keys;
+    private readonly ILogger _log;
     private readonly Action<bool> _setHeld;
     private bool _on;
 
-    public AxisLockSetup(IPointerFence fence, IHoldKeyWatch keys)
+    public AxisLockSetup(IPointerFence fence, IHoldKeyWatch keys, ILogger log)
     {
         _fence = fence;
         _keys = keys;
+        _log = log;
         _setHeld = Axis.SetHeld;
     }
 
@@ -53,14 +56,29 @@ internal sealed class AxisLockSetup
         }
     }
 
-    /// <summary>Each step on its own through <paramref name="attempt"/>: one failing must not keep the other running.</summary>
-    public void TurnOff(Action<Action> attempt)
+    /// <summary>Each step on its own: one failing must not keep the other running.</summary>
+    public void TurnOff()
     {
         if (_on)
         {
             _on = false;
-            attempt(_keys.Stop);
-            attempt(() => _fence.RemoveFilter(Axis));
+            try
+            {
+                _keys.Stop();
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                _log.ApplyFailed(ex);
+            }
+
+            try
+            {
+                _fence.RemoveFilter(Axis);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                _log.ApplyFailed(ex);
+            }
         }
 
         Axis.SetHeld(false);

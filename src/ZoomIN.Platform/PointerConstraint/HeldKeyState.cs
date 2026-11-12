@@ -9,11 +9,15 @@ namespace ZoomIN.Platform.PointerConstraint;
 /// </summary>
 internal sealed class HeldKeyState(Func<int, bool> isDown, TimeSpan checkInterval)
 {
+    // Checks (0.5 s apart) that may read "up" after a fake key up before the key counts as released.
+    private const int FakeUpChecks = 4;
+
     private readonly Lock _state = new();
     private Watch? _watch;
     private ITimer? _timer;
     private bool _held;
     private bool _fakeUp;
+    private int _fakeUpChecks;
     private int _failures;
 
     public bool IsWatching
@@ -75,10 +79,12 @@ internal sealed class HeldKeyState(Func<int, bool> isDown, TimeSpan checkInterva
                 // Windows' own Shift up (NumLock) also sets the key state to up while the user
                 // still holds Shift: the check must not take that for a missed release.
                 _fakeUp = up || (_fakeUp && !down);
+                _fakeUpChecks = 0;
                 return;
             }
 
             _fakeUp = false;
+            _fakeUpChecks = 0;
 
             // Key repeat sends further "down" events while held; only the first one counts.
             if (down && !_held)
@@ -99,15 +105,24 @@ internal sealed class HeldKeyState(Func<int, bool> isDown, TimeSpan checkInterva
     {
         lock (_state)
         {
-            // The first check runs half a second after the press, long after Windows set the key
-            // state: one "not down" is a release the hook never saw.
-            if (_watch is { } watch && _held && !_fakeUp && !isDown(watch.VirtualKey))
+            if (_watch is not { } watch || !_held || isDown(watch.VirtualKey))
             {
-                Release();
-                return true;
+                _fakeUpChecks = 0;
+                return false;
             }
 
-            return false;
+            // The first check runs half a second after the press, long after Windows set the key
+            // state: one "not down" is a release the hook never saw. After a fake up (NumLock
+            // Shift, AltGr) the state may read up while the key is held, but only for a while:
+            // the pointer must never stay locked, so a few seconds of "up" release it anyway.
+            if (_fakeUp && ++_fakeUpChecks < FakeUpChecks)
+            {
+                return false;
+            }
+
+            _fakeUpChecks = 0;
+            Release();
+            return true;
         }
     }
 

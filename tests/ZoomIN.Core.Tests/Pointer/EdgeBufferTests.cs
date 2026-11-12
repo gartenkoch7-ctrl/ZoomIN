@@ -111,6 +111,19 @@ public sealed class EdgeBufferTests
     }
 
     [Fact]
+    public void SmallWobbleBack_KeepsPressing()
+    {
+        _buffer.Configure([Left, Right], EdgeBufferLevel.Medium);
+        Move(0, 1919, 10, 1925, 10);
+
+        // A tremor of 2 px back from the edge is no retreat.
+        Assert.Equal(new PhysicalPoint(1917, 10), Move(100, 1919, 10, 1917, 10));
+        Assert.True(_buffer.IsPressing);
+        Move(200, 1917, 10, 1925, 10);
+        Assert.Equal(new PhysicalPoint(1925, 10), Move(400, 1919, 10, 1925, 10));
+    }
+
+    [Fact]
     public void SlidingAlongTheEdge_KeepsPressing()
     {
         _buffer.Configure([Left, Right], EdgeBufferLevel.Medium);

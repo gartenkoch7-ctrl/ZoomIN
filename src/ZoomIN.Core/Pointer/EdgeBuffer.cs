@@ -17,6 +17,9 @@ namespace ZoomIN.Core.Pointer;
 /// </remarks>
 public sealed class EdgeBuffer : IPointerMoveFilter
 {
+    /// <summary>Pixels the pointer may wobble back from the pressed edge without starting over.</summary>
+    public const double RetreatTolerance = 3;
+
     /// <summary>Longer without an outward move and the pressing starts over.</summary>
     public static readonly TimeSpan MaxPause = TimeSpan.FromMilliseconds(250);
 
@@ -138,11 +141,14 @@ public sealed class EdgeBuffer : IPointerMoveFilter
         && ((dirX != 0 && dirX == _dirX) || (dirY != 0 && dirY == _dirY));
 
     // Moving away from every pressed edge; sliding along one of them keeps pressing (also from a
-    // press that began diagonally at a corner).
+    // press that began diagonally at a corner). A wobble of a few pixels back (tremor) is no retreat.
+    // Sliding does not count as pushing, though: a slide longer than MaxPause starts over.
     private bool Retreats(PhysicalRect home, PhysicalPoint requested)
     {
-        var onX = (_dirX > 0 && requested.X >= home.Right - 1) || (_dirX < 0 && requested.X <= home.X);
-        var onY = (_dirY > 0 && requested.Y >= home.Bottom - 1) || (_dirY < 0 && requested.Y <= home.Y);
+        var onX = (_dirX > 0 && requested.X >= home.Right - 1 - RetreatTolerance)
+            || (_dirX < 0 && requested.X <= home.X + RetreatTolerance);
+        var onY = (_dirY > 0 && requested.Y >= home.Bottom - 1 - RetreatTolerance)
+            || (_dirY < 0 && requested.Y <= home.Y + RetreatTolerance);
         return !onX && !onY;
     }
 

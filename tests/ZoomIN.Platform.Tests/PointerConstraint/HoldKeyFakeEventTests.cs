@@ -39,6 +39,22 @@ public sealed class HoldKeyFakeEventTests : IDisposable
     }
 
     [Fact]
+    public void FakeUpThenMissedRealRelease_IsReleasedAfterAFewChecks()
+    {
+        _watch.Start(AxisLockKey.LeftControl, _changes.Add);
+        _watch.OnKey(0xA2, 0x1D, extended: false, down: true, up: false);
+        _watch.OnKey(0xA2, HoldKeyCodes.AltGrFakeControlScanCode, extended: false, down: false, up: true);
+
+        // The real release is never seen (e.g. over an elevated window): never locked for good.
+        _watch.Check();
+        _watch.Check();
+        _watch.Check();
+        Assert.Equal([true], _changes);
+        _watch.Check();
+        Assert.Equal([true, false], _changes);
+    }
+
+    [Fact]
     public void InjectedExtendedRightShift_Counts()
     {
         _watch.Start(AxisLockKey.RightShift, _changes.Add);

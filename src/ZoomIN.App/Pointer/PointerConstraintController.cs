@@ -23,7 +23,6 @@ public sealed class PointerConstraintController : IDisposable
     private readonly EdgeBuffer _buffer;
     private readonly BufferSetup _bufferSetup;
     private readonly AxisLockSetup _axis;
-    private readonly Action<Action> _attempt;
     private readonly Lock _gate = new();
     private PointerConstraintOptions? _applied;
     private bool _bufferOn;
@@ -39,8 +38,7 @@ public sealed class PointerConstraintController : IDisposable
         _log = log;
         _buffer = new EdgeBuffer(time);
         _bufferSetup = new BufferSetup(_buffer, monitors);
-        _axis = new AxisLockSetup(fence, keys);
-        _attempt = Attempt;
+        _axis = new AxisLockSetup(fence, keys, log);
     }
 
     internal EdgeBuffer Buffer => _buffer;
@@ -117,11 +115,11 @@ public sealed class PointerConstraintController : IDisposable
             if (_bufferOn)
             {
                 _fence.RemoveFilter(_buffer);
-                _bufferSetup.Configure(EdgeBufferLevel.Off);
                 _bufferOn = false;
             }
 
-            return 0;
+            // Also read while off: the log reports the real number of monitors.
+            return _bufferSetup.Configure(EdgeBufferLevel.Off);
         }
 
         // Registered even with one monitor: only a registered filter keeps the fence watching
@@ -146,7 +144,7 @@ public sealed class PointerConstraintController : IDisposable
             Attempt(() => _fence.RemoveFilter(_buffer));
         }
 
-        _axis.TurnOff(_attempt);
+        _axis.TurnOff();
         Attempt(() => _bufferSetup.Configure(EdgeBufferLevel.Off));
     }
 

@@ -16,13 +16,14 @@ internal sealed class BufferSetup(EdgeBuffer buffer, IMonitorProvider monitors)
     private EdgeBufferLevel _level;
     private IReadOnlyList<PhysicalRect> _lastBounds = [];
 
-    /// <summary>Sets the level, or with null keeps it, and reads the monitors; returns how many the buffer knows.</summary>
+    /// <summary>Sets the level, or with null keeps it, and reads the monitors; returns how many are known.</summary>
     public int Configure(EdgeBufferLevel? level)
     {
         lock (_gate)
         {
+            // Read also while off: switching on later must not start from an old layout.
             _level = level ?? _level;
-            if (_level != EdgeBufferLevel.Off && monitors.AllBounds() is { Count: > 0 } bounds)
+            if (monitors.AllBounds() is { Count: > 0 } bounds)
             {
                 _lastBounds = bounds;
             }

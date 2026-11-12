@@ -328,8 +328,8 @@ an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten
 - **Maus-Puffer** (`Core/Pointer/EdgeBuffer`, Reihenfolge 300): Eine Bewegung von einem Monitor
   auf einen anderen endet am Rand (letzter Pixel `Right − 1`), bis der Zeiger die Druckzeit der
   Stufe lang gegen den Rand drückt: Leicht 0,2 s, Mittel 0,4 s, Stark 0,8 s. „Drücken“ = weitere
-  Bewegungen zeigen nach außen. Es beginnt von vorn bei einem Rückzug vom Rand (Entlanggleiten am
-  Rand zählt nicht als Rückzug), bei einer Pause über 250 ms ohne Druck und bei einer neuen
+  Bewegungen zeigen nach außen. Es beginnt von vorn bei einem Rückzug vom Rand um mehr als 3 px
+  (Zittern zählt nicht; Entlanggleiten am Rand auch nicht, zählt aber auch nicht als Drücken), bei einer Pause über 250 ms ohne Druck und bei einer neuen
   Richtung ohne gemeinsame Komponente (an einer Ecke wackelt die Hand zwischen „rechts“ und
   „rechts unten“, das bleibt ein Drücken). Nach dem Hinüberwechseln gilt der Puffer auf dem neuen
   Monitor wieder, in beide Richtungen.
@@ -361,7 +361,10 @@ an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten
   Alt Gr nicht als gehaltenes Strg links zählt). Ebenso ignoriert werden die unechten
   Umschalt-Ereignisse, die Windows bei eingeschaltetem NumLock um Ziffernblock- und
   Navigationstasten legt (Scancode mit Bit `0x200` oder erweitertes `0x2A`/`0x36`): Umschalt
-  halten und eine Pfeiltaste des Ziffernblocks drücken löst die Sperre nicht. Die Tastenwiederholung beim Halten zählt nur
+  halten und eine Pfeiltaste des Ziffernblocks drücken löst die Sperre nicht. Nach so einem
+  unechten Loslassen meldet `GetAsyncKeyState` die Taste eine Weile als oben; die Prüfung wartet
+  dann bis zu vier Takte (2 s), bevor sie die Sperre löst. Injizierte Tasten mit Erweiterungs-Flag
+  (Tastenumbelegung, Hilfsprogramme) gelten nicht als unecht. Die Tastenwiederholung beim Halten zählt nur
   einmal. Der Hook läuft nur, solange die Achsensperre eingeschaltet ist. Ein eigener Hook statt
   des Tastatur-Hooks von `Win32InputActivityHook`, weil dieser mit B1 geteilt ist; nach der
   Integration lässt er sich dort als Beobachter einhängen (wie `OverviewKeyWatch`). Injizierte

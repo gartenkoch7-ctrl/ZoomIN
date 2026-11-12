@@ -57,8 +57,10 @@ public sealed unsafe class Win32HoldKeyWatch : IHoldKeyWatch
             }
 
             _key.Follow(HoldKeyCodes.VirtualKey(key), changed, _timer);
-            EnsureHook();
-            _log.KeyWatchStarted(key);
+            if (EnsureHook())
+            {
+                _log.KeyWatchStarted(key);
+            }
         }
     }
 
@@ -71,7 +73,7 @@ public sealed unsafe class Win32HoldKeyWatch : IHoldKeyWatch
             // A hook Windows refused earlier gets another try (Reset follows a desktop switch).
             if (_key.IsWatching)
             {
-                EnsureHook();
+                _ = EnsureHook();
             }
         }
 
@@ -114,12 +116,12 @@ public sealed unsafe class Win32HoldKeyWatch : IHoldKeyWatch
         }
     }
 
-    // Under _gate.
-    private void EnsureHook()
+    // Under _gate. False if Windows refused the hook (logged).
+    private bool EnsureHook()
     {
         if (!_installHook || _thread is not null)
         {
-            return;
+            return true;
         }
 
         LowLevelHookThread thread;
@@ -131,12 +133,13 @@ public sealed unsafe class Win32HoldKeyWatch : IHoldKeyWatch
         if (thread.AllInstalled)
         {
             _thread = thread;
-            return;
+            return true;
         }
 
         // Not kept: the next Start or Reset tries again.
         thread.Dispose();
         _log.KeyHookUnavailable();
+        return false;
     }
 
     private void ReportFailures()
