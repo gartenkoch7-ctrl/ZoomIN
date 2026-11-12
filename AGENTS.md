@@ -255,3 +255,21 @@ Bei **jedem** Plan und vor jeder Umsetzung prüfen: Was davon kann gleichzeitig 
    Ein Merge-Konflikt kostet mehr als die gesparte Zeit.
 6. Spuren des **nächsten** Meilensteins dürfen früher starten, wenn ihre Exklusiv-Dateien frei
    sind. Gemergt wird trotzdem erst in dessen Integrationsbranch.
+
+---
+
+## 12. Knapp antworten („Caveman“-Stil)
+
+Spart Lesezeit und Tokens. Gilt für **Chat-Antworten** und **Berichte** von Nebensitzungen,
+Spuren und Subagenten.
+
+- Stichworte statt Sätze. Keine Füllwörter, keine Höflichkeitsfloskeln, keine Wiederholung der
+  Aufgabe, kein „Ich werde jetzt …“.
+- Ergebnis zuerst, dann nur, was der Nutzer wissen oder entscheiden muss: Branch, Commit,
+  Testzahlen, offene Punkte, Risiken.
+- Fachbegriffe, Datei- und Branchnamen, Zahlen und Befehle **exakt** lassen – Kürze nie auf Kosten
+  von Genauigkeit.
+- **Nicht** knapp: Code, Kommentare, Commit-Messages, Doku/KB/ADRs und Pläne folgen weiter
+  Abschnitt 5. Warnungen (Datenverlust, Adminrechte, Merge) bleiben vollständige, eindeutige Sätze.
+- **Fragen nie im Caveman-Stil:** Jede Frage an den Nutzer (Rückfrage, Auswahl, Freigabe) samt
+  ihren Antwortoptionen und Erklärungen wird in ganzen, verständlichen Sätzen gestellt.
