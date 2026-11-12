@@ -43,7 +43,7 @@ internal sealed class IslandEditSession : IDisposable
         IslandModel model, IMonitorProvider monitors, ZoomModel zoom, TimeProvider time, TimeSpan idleLimit, Action<IslandEditSession> idle)
     {
         var current = model.Scene.Set;
-        var set = current.FitTo(monitors.BoundsOf);
+        var set = model.Committed.FitTo(monitors.BoundsOf); // from the saved islands: a shrunk drawing is never edited and saved
         var editor = new IslandEditor(set, monitors, monitor => IslandRules.StartLevel(zoom, monitor));
         var operation = IslandOperation.StartEdit(set.Count);
         try
@@ -143,6 +143,23 @@ internal sealed class IslandEditSession : IDisposable
 
         Published = before;
         return false;
+    }
+
+    /// <summary>
+    /// The run has ended (its islands are in the model): gives back 1×, input and drag filter, then
+    /// operation, log and announcement, whatever fails in between.
+    /// </summary>
+    public void Close(IslandEditTakeover takeover, string reason, IslandModel model, ILogger log, IslandReport report)
+    {
+        try
+        {
+            takeover.GiveBack();
+        }
+        finally
+        {
+            Dispose();
+            Finish(reason, model.Scene.Set.Count, log, report);
+        }
     }
 
     /// <summary>The run is over: operation, log and announcement.</summary>

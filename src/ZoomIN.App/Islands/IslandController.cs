@@ -143,6 +143,7 @@ public sealed class IslandController : IDisposable
                 session?.Dispose();
                 IslandOperation.StopEdit(session?.Operation, notStarted, _model.Scene.Set.Count);
                 _takeover.GiveBack();
+                _report.Say("Islands.NoStart");
             }
         }
     }
@@ -174,18 +175,7 @@ public sealed class IslandController : IDisposable
             }
             finally
             {
-                if (edit is not null)
-                {
-                    try
-                    {
-                        _takeover.GiveBack();
-                    }
-                    finally
-                    {
-                        edit.Dispose();
-                        edit.Finish(reason, _model.Scene.Set.Count, _log, _report);
-                    }
-                }
+                edit?.Close(_takeover, reason, _model, _log, _report);
             }
         }
     }

@@ -72,7 +72,7 @@ public sealed class IslandDemandTests
             TrackingSnapshot.Empty, TrackingOptions.Default, false, WindowRegions.Empty, false);
 
         Assert.True(request.OverlayOnly);
-        Assert.False((request with { Islands = IslandScene.Empty }).OverlayOnly);
+        Assert.False((request with { Islands = new IslandScene(IslandSet.Empty, true, null) }).OverlayOnly);
     }
 
     private static RenderModels Models(ZoomMode mode)

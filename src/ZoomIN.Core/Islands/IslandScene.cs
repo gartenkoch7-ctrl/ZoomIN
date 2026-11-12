@@ -8,8 +8,6 @@ namespace ZoomIN.Core.Islands;
 /// <param name="Edit">The edit mode, or null while it is off.</param>
 public sealed record IslandScene(IslandSet Set, bool Visible, IslandEditView? Edit)
 {
-    public static IslandScene Empty { get; } = new(IslandSet.Empty, true, null);
-
     public bool Editing => Edit is not null;
 
     /// <summary>

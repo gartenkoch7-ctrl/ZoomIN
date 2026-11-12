@@ -38,6 +38,7 @@ public sealed class IslandEditCapture : IIslandEditInput
 
     private readonly Func<int, bool> _isDown;
     private readonly Func<bool> _buttonsSwapped;
+    private readonly TimeProvider _time;
     private readonly IslandKeyGate _escape = new();
     private readonly IslandKeyGate _delete = new();
     private readonly Func<bool> _takeEscape;
@@ -47,21 +48,23 @@ public sealed class IslandEditCapture : IIslandEditInput
     // Hook thread only: buttons whose press was swallowed, so their release is too; wheel rest of a run.
     private int _heldButtons;
     private int _wheelRest;
-    private IslandEditQueue? _wheelSession;
+    private int _wheelRun;
+    private int _run; // counted up by Start; a number, so no ended run is kept alive by the hook
     private volatile bool _hooksInstalled;
     private volatile uint _primaryDown = LeftDown;
     private volatile uint _primaryUp = LeftUp;
 
-    public IslandEditCapture()
-        : this(KeyState.IsDown, () => PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_SWAPBUTTON) != 0)
+    public IslandEditCapture(TimeProvider time)
+        : this(KeyState.IsDown, () => PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_SWAPBUTTON) != 0, time)
     {
     }
 
     /// <param name="isDown">Physical key state by virtual-key code (tests replace it).</param>
     /// <param name="buttonsSwapped">The user swapped the primary and secondary mouse button.</param>
-    internal IslandEditCapture(Func<int, bool> isDown, Func<bool>? buttonsSwapped = null)
+    internal IslandEditCapture(Func<int, bool> isDown, Func<bool>? buttonsSwapped = null, TimeProvider? time = null)
     {
         _isDown = isDown;
+        _time = time ?? TimeProvider.System;
         _buttonsSwapped = buttonsSwapped ?? (() => false);
         _takeEscape = () => Take(IslandEditKey.Escape); // made once: no allocation per key in the hook
         _takeDelete = () => Take(IslandEditKey.Delete);
@@ -82,7 +85,7 @@ public sealed class IslandEditCapture : IIslandEditInput
 
         // Windows updates the key state only after the hook returned: a release passing the hook right
         // now still reads as down. A second look a moment later (as the overview does).
-        _ = Task.Delay(RecheckDelay).ContinueWith(
+        _ = Task.Delay(RecheckDelay, _time).ContinueWith(
             static (_, state) => ((IslandEditCapture)state!).Recheck(), this, TaskScheduler.Default);
 
         // Low-level hooks report the physical buttons: with swapped buttons (left-handed) the primary
@@ -90,6 +93,7 @@ public sealed class IslandEditCapture : IIslandEditInput
         var swapped = _buttonsSwapped();
         _primaryDown = swapped ? RightDown : LeftDown;
         _primaryUp = swapped ? RightUp : LeftUp;
+        Interlocked.Increment(ref _run);
         Interlocked.Exchange(ref _session, new IslandEditQueue(handler))?.Complete();
     }
 
@@ -122,9 +126,9 @@ public sealed class IslandEditCapture : IIslandEditInput
                 {
                     // Touchpads and fine wheels send parts of a notch: only whole notches change the level
                     // (one step, one save, one announcement). A new run starts from no rest (hook thread only).
-                    if (!ReferenceEquals(session, _wheelSession))
+                    if (_wheelRun != Volatile.Read(ref _run))
                     {
-                        _wheelSession = session;
+                        _wheelRun = Volatile.Read(ref _run);
                         _wheelRest = 0;
                     }
 
