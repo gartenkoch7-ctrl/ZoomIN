@@ -1,4 +1,5 @@
 using ZoomIN.Core.Modes;
+using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Settings;
 
 namespace ZoomIN.Core.Zoom;
@@ -23,9 +24,15 @@ public static class ZoomMapping
         ApplyLayout(model, settings);
     }
 
+    /// <summary>
+    /// What is saved as "zoom on" (secure desktop, next start): a frozen zoomed monitor counts too (G2),
+    /// although commands treat zoom as off while only it is zoomed.
+    /// </summary>
+    public static bool SavedOn(ZoomModel model) => model.IsOn || FrozenTargets.AnyFrozenZoomed(model.Frozen.State);
+
     public static AppSettings Apply(AppSettings settings, ZoomModel model) => model.Read(levels => settings with
     {
-        ZoomOn = model.IsOn,
+        ZoomOn = SavedOn(model),
         LastMode = model.Mode,
         PerMonitorZoom = model.PerMonitor,
         AnimationMilliseconds = (int)Math.Round(model.AnimationSeconds * 1000),

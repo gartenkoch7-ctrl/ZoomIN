@@ -111,7 +111,7 @@ public sealed class SettingsService : IDisposable
     // Strg+Alt+Z must not wait for the debounce.
     private void OnZoomChanged()
     {
-        if (_models.Zoom.IsOn != Volatile.Read(ref _savedZoomOn))
+        if (ZoomMapping.SavedOn(_models.Zoom) != Volatile.Read(ref _savedZoomOn))
         {
             SaveNow();
         }

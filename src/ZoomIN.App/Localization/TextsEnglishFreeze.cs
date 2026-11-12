@@ -22,7 +22,7 @@ internal static class TextsEnglishFreeze
         ["Switch.NoFree"] = "There is no other free monitor.",
         ["Freeze.Group"] = "Frozen monitors",
         ["Freeze.Content"] = "Content",
-        ["Freeze.Content.Desc"] = "Ctrl+Alt+H freezes the monitor under the pointer. \"Live\" keeps the view moving (a video keeps playing), \"Still image\" keeps the picture of that moment. After a restart nothing is frozen.",
+        ["Freeze.Content.Desc"] = "The shortcut \"Freeze monitor\" (Ctrl+Alt+H by default) freezes the monitor under the pointer. \"Live\" keeps the view moving (a video keeps playing), \"Still image\" keeps the picture of that moment. After a restart nothing is frozen.",
         ["Freeze.Live"] = "Live",
         ["Freeze.Still"] = "Still image",
         ["Freeze.Color"] = "Frame colour",

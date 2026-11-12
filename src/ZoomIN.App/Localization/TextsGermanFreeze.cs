@@ -22,7 +22,7 @@ internal static class TextsGermanFreeze
         ["Switch.NoFree"] = "Es gibt keinen weiteren freien Monitor.",
         ["Freeze.Group"] = "Eingefrorene Monitore",
         ["Freeze.Content"] = "Inhalt",
-        ["Freeze.Content.Desc"] = "Strg+Alt+H friert den Monitor unter dem Mauszeiger ein. „Live“ zeigt den Ausschnitt weiter bewegt (ein Video läuft weiter), „Standbild“ hält das Bild des Augenblicks fest. Nach einem Neustart ist nichts eingefroren.",
+        ["Freeze.Content.Desc"] = "Das Kürzel „Monitor einfrieren“ (ab Werk Strg+Alt+H) friert den Monitor unter dem Mauszeiger ein. „Live“ zeigt den Ausschnitt weiter bewegt (ein Video läuft weiter), „Standbild“ hält das Bild des Augenblicks fest. Nach einem Neustart ist nichts eingefroren.",
         ["Freeze.Live"] = "Live",
         ["Freeze.Still"] = "Standbild",
         ["Freeze.Color"] = "Rahmenfarbe",

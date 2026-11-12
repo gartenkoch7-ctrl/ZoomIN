@@ -54,6 +54,9 @@ public sealed class FreezeRulesTests
         Assert.True(model.TargetFor("R") > 1);
         model.Step(-20, "L", all);
         Assert.False(model.IsOn);
+
+        // Saved for the secure desktop and the next start: the frozen zoomed monitor counts.
+        Assert.True(ZoomIN.Core.Zoom.ZoomMapping.SavedOn(model));
     }
 
     [Fact]
