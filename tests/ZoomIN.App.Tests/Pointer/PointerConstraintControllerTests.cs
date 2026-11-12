@@ -153,6 +153,20 @@ public sealed class PointerConstraintControllerTests : IDisposable
     }
 
     [Fact]
+    public void FailedRequest_IsNotRetriedByUnrelatedChanges()
+    {
+        _controller.Start();
+        _fence.FailNextAdd = true;
+        Set(new PointerConstraintOptions { Buffer = EdgeBufferLevel.Light });
+
+        _rig.Settings.Update(s => s with { CloseToTrayHintShown = true });
+        Assert.Empty(_fence.Filters);
+
+        Set(new PointerConstraintOptions { Buffer = EdgeBufferLevel.Medium });
+        Assert.Single(_fence.Filters);
+    }
+
+    [Fact]
     public void LateApplyAfterDispose_InstallsNothing()
     {
         _controller.Start();

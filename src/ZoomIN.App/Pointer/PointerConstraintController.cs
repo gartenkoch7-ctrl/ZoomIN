@@ -25,6 +25,7 @@ public sealed class PointerConstraintController : IDisposable
     private readonly AxisLockSetup _axis;
     private readonly Lock _gate = new();
     private PointerConstraintOptions? _applied;
+    private PointerConstraintOptions? _failed;
     private bool _bufferOn;
     private bool _started;
     private bool _disposed;
@@ -70,7 +71,9 @@ public sealed class PointerConstraintController : IDisposable
         lock (_gate)
         {
             // After Dispose a late settings change must not install anything again.
-            if (_disposed || wanted == _applied)
+            // A request that just failed is not retried on every unrelated settings change (log
+            // and hook churn); changing an A6 setting tries again.
+            if (_disposed || wanted == _applied || wanted == _failed)
             {
                 return;
             }
@@ -81,6 +84,7 @@ public sealed class PointerConstraintController : IDisposable
                 var monitors = ApplyBuffer(wanted.Buffer);
                 _axis.Apply(wanted, _applied);
                 Volatile.Write(ref _applied, wanted);
+                _failed = null;
                 _log.Applied(wanted.Buffer, wanted.AxisLock, wanted.AxisLockKey, monitors);
                 activity?.SetTag("zoomin.buffer", wanted.Buffer.ToString())
                     .SetTag("zoomin.axis_lock", wanted.AxisLock)
@@ -92,6 +96,7 @@ public sealed class PointerConstraintController : IDisposable
                 _log.ApplyFailed(ex);
                 activity?.SetStatus(ActivityStatusCode.Error, ex.GetType().Name);
                 TurnOff();
+                _failed = wanted;
             }
         }
     }

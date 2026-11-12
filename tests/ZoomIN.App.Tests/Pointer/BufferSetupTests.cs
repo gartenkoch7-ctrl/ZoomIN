@@ -29,6 +29,25 @@ public sealed class BufferSetupTests
     }
 
     [Fact]
+    public void RetryBudget_StartsAgainWithEveryRequest()
+    {
+        using var setup = new BufferSetup(_buffer, _monitors, _time, NullLogger.Instance);
+        _monitors.Readable = false;
+        setup.Configure(EdgeBufferLevel.Light);
+        for (var i = 0; i < 20; i++)
+        {
+            _time.Fire();
+        }
+
+        // A later display change while Windows still enumerates: retried again once readable.
+        setup.Configure(null);
+        _monitors.Readable = true;
+        _time.Fire();
+
+        Assert.Equal(new PhysicalPoint(1919, 10), _buffer.Filter(0, new PhysicalPoint(1919, 10), new PhysicalPoint(1925, 10)));
+    }
+
+    [Fact]
     public void Off_NeedsNoRetry()
     {
         using var setup = new BufferSetup(_buffer, _monitors, _time, NullLogger.Instance);

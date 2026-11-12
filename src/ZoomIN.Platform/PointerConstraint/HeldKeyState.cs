@@ -133,6 +133,9 @@ internal sealed class HeldKeyState(Func<int, bool> isDown, TimeSpan checkInterva
     // Under _state.
     private void Release()
     {
+        // A fake up from before (e.g. before a desktop switch) must not delay the next check.
+        _fakeUp = false;
+        _fakeUpChecks = 0;
         if (!_held)
         {
             return;

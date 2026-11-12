@@ -25,17 +25,26 @@ internal sealed class BufferSetup(EdgeBuffer buffer, IMonitorProvider monitors, 
     private bool _disposed;
 
     /// <summary>Sets the level, or with null keeps it, and reads the monitors; returns how many are known.</summary>
-    public int Configure(EdgeBufferLevel? level)
+    public int Configure(EdgeBufferLevel? level) => Configure(level, retry: false);
+
+    private int Configure(EdgeBufferLevel? level, bool retry)
     {
         lock (_gate)
         {
+            // A new request (settings, display change) gets the full retry budget again.
+            if (!retry)
+            {
+                _retries = 0;
+            }
+
             _level = level ?? _level;
             var bounds = monitors.AllBounds();
 
-            // Empty while Windows is still enumerating: an old layout could put an edge in the
-            // middle of a real monitor, so the buffer rests until the list can be read again.
+            // Empty or one monitor while Windows is still enumerating: an old layout could put an
+            // edge in the middle of a real monitor, so the buffer rests (it needs two) and reads
+            // again a few times. With really one monitor that costs ten cheap reads.
             buffer.Configure(bounds, _level);
-            if (bounds.Count > 0 || _level == EdgeBufferLevel.Off || _disposed)
+            if (bounds.Count >= 2 || _level == EdgeBufferLevel.Off || _disposed)
             {
                 _retries = 0;
             }
@@ -68,7 +77,7 @@ internal sealed class BufferSetup(EdgeBuffer buffer, IMonitorProvider monitors, 
     {
         try
         {
-            var count = Configure(null);
+            var count = Configure(null, retry: true);
             log.Reapplied(FenceTrigger.DisplayChange, count);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)

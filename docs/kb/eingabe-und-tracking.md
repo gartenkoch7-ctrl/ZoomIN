@@ -342,7 +342,9 @@ an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten
   Monitor, beginnt die Druckzeit dort von vorn.
 - **Monitore beim Anzeigewechsel:** Liefert Windows mitten im Aufzählen keine vollständige Liste,
   ruht der Puffer (eine alte Anordnung könnte eine Kante mitten in einen echten Monitor legen)
-  und liest die Monitore jede Sekunde neu, bis zu zehnmal (`BufferSetup`).
+  und liest die Monitore jede Sekunde neu, bis zu zehnmal je Anlass (`BufferSetup`). Das gilt auch
+  für nur einen gelesenen Monitor (ein zweiter kann noch fehlen). Ein fehlgeschlagenes Anwenden
+  wird erst bei der nächsten Änderung einer A6-Einstellung wiederholt, nicht bei jeder anderen.
 - **Eingefrorene Monitore:** Der Puffer gibt eine Bewegung frei, danach wirken die gesperrten
   Bereiche des Zauns. Ein eingefrorener Monitor bleibt also gesperrt, der Puffer gilt nur zwischen
   freien Monitoren.
