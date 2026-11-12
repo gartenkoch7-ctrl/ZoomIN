@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using ZoomIN.Core.SecureDesktop;
 
 namespace ZoomIN.App.SecureDesktop;
 
@@ -34,4 +35,7 @@ internal static partial class SecureHostLog
 
     [LoggerMessage(EventId = 1110, Level = LogLevel.Error, Message = "Starting the secure desktop switch failed")]
     public static partial void SwitchStartFailed(this ILogger logger, Exception exception);
+
+    [LoggerMessage(EventId = 1140, Level = LogLevel.Information, Message = "Secure desktop runs the core engine (scope {Scope})")]
+    public static partial void CoreEngine(this ILogger logger, EngineScope scope);
 }

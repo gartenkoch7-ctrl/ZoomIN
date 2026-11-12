@@ -18,6 +18,7 @@ using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Overview;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.PointerFence;
+using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Shell;
 using ZoomIN.Core.Tracking;
@@ -44,8 +45,10 @@ namespace ZoomIN.App.Composition;
 internal static class EngineRegistration
 {
     /// <summary>Expects telemetry (AddTelemetry), ISettingsStore and IProfileStore to be registered by the caller.</summary>
-    public static IServiceCollection AddEngine(this IServiceCollection services)
+    public static IServiceCollection AddEngine(this IServiceCollection services, EngineScope scope)
     {
+        services.AddSingleton(typeof(EngineScope), scope);
+
         // Settings and models
         services.AddSingleton<SettingsLoader>();
         services.AddSingleton(sp => sp.GetRequiredService<SettingsLoader>().Load());
@@ -63,7 +66,10 @@ internal static class EngineRegistration
             sp.GetRequiredService<SmartInvertHealth>(),
             sp.GetRequiredService<OverviewModel>(),
             sp.GetRequiredService<ViewCenterRequests>()) { Islands = sp.GetRequiredService<IslandModel>() });
-        services.AddSingleton(sp => IslandMapping.Create(sp.GetRequiredService<AppSettings>()));
+        // Islands need a user to arrange them: the secure desktop starts with none and keeps them hidden.
+        services.AddSingleton(sp => scope == EngineScope.SecureDesktop
+            ? new IslandModel(IslandSet.Empty, visible: false)
+            : IslandMapping.Create(sp.GetRequiredService<AppSettings>()));
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton(sp => new OverviewModel(sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<ViewCenterRequests>();

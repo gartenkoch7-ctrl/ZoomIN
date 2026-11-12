@@ -182,6 +182,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1108 | Info | Secure desktop support switched {State} |
 | 1109 | Fehler | Changing the secure desktop registration failed |
 | 1110 | Fehler | Starting the secure desktop switch failed |
+| 1140 | Info | Secure desktop runs the core engine (scope {Scope}) |
 | 1201 | Info | Setup: release list unavailable: {Reason} |
 | 1202 | Warnung | Setup {Version} not started: {Reason} |
 | 1203 | Info | Setup {Version} started |

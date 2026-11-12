@@ -14,6 +14,7 @@ using ZoomIN.Core.Folders;
 using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.Localization;
 using ZoomIN.Core.Pointer;
+using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.AgentDebug;
@@ -51,7 +52,7 @@ internal static class ServiceRegistration
 
         services.AddSingleton<ISettingsStore, JsonSettingsStore>();
         services.AddSingleton<IProfileStore, JsonProfileStore>();
-        services.AddEngine();
+        services.AddEngine(EngineScope.Full);
 
         services.AddSingleton<ITrayIcon, Win32TrayIcon>();
         services.AddSingleton<IAutostart, RegistryAutostart>();
@@ -130,7 +131,7 @@ internal static class ServiceRegistration
             sp.GetRequiredService<ILogger<SecureSettingsStore>>(), sp.GetRequiredService<SessionUser>(), folders.Local));
         services.AddSingleton<IProfileStore>(sp => new SecureProfileStore(sp.GetRequiredService<SessionUser>()));
         services.AddSingleton<IWatchdogLauncher, ShellWatchdogLauncher>();
-        services.AddEngine();
+        services.AddEngine(EngineScope.SecureDesktop);
         return services;
     }
 }
