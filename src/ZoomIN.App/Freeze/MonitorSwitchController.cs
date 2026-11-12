@@ -86,7 +86,7 @@ public sealed class MonitorSwitchController(
             return;
         }
 
-        _memory.KeepOnly(layout.Ids);
+        _memory.KeepOnly(monitors.MonitorIds()); // all monitors Windows lists, also one without an area just now
         var from = index >= 0 ? layout.Ids[index] : string.Empty;
         if (index >= 0)
         {

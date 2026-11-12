@@ -134,7 +134,7 @@ public sealed class MonitorFreezeController : IDisposable
         var mask = new bool[layout.Count];
         mask[index] = true;
         var target = MonitorCycle.NearestFree(layout.Bounds, mask, pointer);
-        _switch.KeepOnly(layout.Ids);
+        _switch.KeepOnly(_monitors.MonitorIds()); // all monitors Windows lists, also one without an area just now
         _switch.Remember(id, pointer);
         var point = _switch.LandingPoint(layout, target, [layout.Bounds[index]]);
 
