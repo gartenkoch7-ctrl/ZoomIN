@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Islands;
-using ZoomIN.Core.Monitors;
 using ZoomIN.Core.PointerFence;
 using ZoomIN.Core.Zoom;
 
@@ -17,21 +16,22 @@ internal sealed class IslandEditWatch : IDisposable
     private readonly IPointerFence _fence;
     private readonly ZoomModel _zoom;
     private readonly IslandModel _model;
-    private readonly IMonitorProvider _monitors;
+    private readonly Func<IReadOnlyList<string>> _editedMonitors;
     private readonly Func<Action<string>?> _endOfRun;
     private readonly Action _checkOutside;
     private readonly ILogger _log;
 
+    /// <param name="editedMonitors">The monitors the run set to 1× (one attached later is no zoom command).</param>
     /// <param name="endOfRun">Ends the run that is current when it is called (never a later one), or null while none runs.</param>
     /// <param name="checkOutside">Ends it if the islands changed from outside (the controller compares under its lock).</param>
     public IslandEditWatch(
-        IPointerFence fence, ZoomModel zoom, IslandModel model, IMonitorProvider monitors, Func<Action<string>?> endOfRun,
+        IPointerFence fence, ZoomModel zoom, IslandModel model, Func<IReadOnlyList<string>> editedMonitors, Func<Action<string>?> endOfRun,
         Action checkOutside, ILogger log)
     {
         _fence = fence;
         _zoom = zoom;
         _model = model;
-        _monitors = monitors;
+        _editedMonitors = editedMonitors;
         _endOfRun = endOfRun;
         _checkOutside = checkOutside;
         _log = log;
@@ -70,7 +70,7 @@ internal sealed class IslandEditWatch : IDisposable
             return;
         }
 
-        foreach (var monitor in _monitors.MonitorIds())
+        foreach (var monitor in _editedMonitors())
         {
             if (_zoom.Temporary.LevelFor(TemporaryZoomOwner.IslandEdit, monitor) is null)
             {

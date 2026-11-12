@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Logging;
 using ZoomIN.App.Islands;
@@ -68,7 +69,7 @@ public sealed partial class IslandsViewModel : ObservableObject
         for (var i = 0; i < set.Count; i++)
         {
             var island = set[i];
-            var monitor = monitors.IndexOf(island.MonitorId) + 1;
+            var monitor = DisplayNumber(island.MonitorId, monitors);
             Rows.Add(new IslandRow(island, i + 1, monitor, _texts, OnStillChanged));
         }
 
@@ -135,5 +136,22 @@ public sealed partial class IslandsViewModel : ObservableObject
         {
             _shown = _model.Committed;
         }
+    }
+
+    // The number Windows shows for the display ("\\.\DISPLAY2" → 2), not the place in the list;
+    // 0 if the monitor is not attached.
+    private static int DisplayNumber(string monitorId, List<string> attached)
+    {
+        const string Prefix = @"\\.\DISPLAY";
+        var index = attached.IndexOf(monitorId);
+        if (index < 0)
+        {
+            return 0;
+        }
+
+        return monitorId.StartsWith(Prefix, StringComparison.Ordinal)
+            && int.TryParse(monitorId.AsSpan(Prefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out var number)
+            ? number
+            : index + 1;
     }
 }

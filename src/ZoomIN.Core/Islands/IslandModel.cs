@@ -47,21 +47,27 @@ public sealed class IslandModel
     public void Replace(IslandSet set, bool visible)
     {
         ArgumentNullException.ThrowIfNull(set);
-        Publish(scene => scene with { Set = Fitted(set.Renumbered(scene.Set.NextId)), Visible = visible, Edit = null }, save: true);
+        IslandSet? saved = null;
+        Publish(scene =>
+        {
+            saved = set.Renumbered(scene.Set.NextId);
+            return scene with { Set = Fitted(saved), Visible = visible, Edit = null };
+        }, save: true, () => saved);
     }
 
     /// <summary>
     /// Fits every island to its monitor as it is now, and every profile's islands from now on (the
-    /// app passes the monitors at start). Not saved until the next change.
+    /// app passes the monitors at start). Only what is drawn: the saved islands keep their rectangles,
+    /// so a smaller monitor for a while (projector) never shrinks them for good.
     /// </summary>
     public void FitTo(Func<string, PhysicalRect?> boundsOf)
     {
         ArgumentNullException.ThrowIfNull(boundsOf);
         Volatile.Write(ref _boundsOf, boundsOf);
-        Publish(scene => scene.Edit is null ? scene with { Set = scene.Set.FitTo(boundsOf) } : scene, save: false, commit: true);
+        Publish(scene => scene.Edit is null ? scene with { Set = scene.Set.FitTo(boundsOf) } : scene, save: false, () => null);
     }
 
-    public void SetVisible(bool visible) => Publish(scene => scene with { Visible = visible }, save: true, commit: false);
+    public void SetVisible(bool visible) => Publish(scene => scene with { Visible = visible }, save: true, () => null);
 
     /// <summary>Live or still image for one island (settings page); false if it is gone.</summary>
     public bool SetStill(int id, bool still) =>
@@ -94,12 +100,17 @@ public sealed class IslandModel
 
     /// <summary>
     /// Ends the edit mode: its islands <paramref name="edited"/> are kept if the islands are still
-    /// <paramref name="expected"/>, otherwise the change from outside stays. Atomic, saved.
+    /// <paramref name="expected"/>, otherwise the change from outside stays. Atomic.
     /// </summary>
-    public void EndEdit(IslandSet expected, IslandSet edited)
+    /// <param name="changed">The run changed something: saved and committed. Otherwise only drawn
+    /// (fitting the islands to the monitors at its start is no change to save).</param>
+    public void EndEdit(IslandSet expected, IslandSet edited, bool changed = true)
     {
         ArgumentNullException.ThrowIfNull(edited);
-        Publish(scene => scene with { Set = ReferenceEquals(scene.Set, expected) ? edited : scene.Set, Edit = null }, save: true);
+        Publish(
+            scene => scene with { Set = ReferenceEquals(scene.Set, expected) ? edited : scene.Set, Edit = null },
+            save: changed,
+            changed ? null : () => null);
     }
 
     // Built on the committed islands, never on a drag in progress (which would be saved with it);
@@ -107,19 +118,21 @@ public sealed class IslandModel
     private bool Change(int id, Func<IslandSet, int, IslandSet> change)
     {
         var changed = false;
+        IslandSet? saved = null;
         Publish(scene =>
         {
-            var committed = Fitted(_committed);
-            var index = committed.IndexOf(id);
+            var index = _committed.IndexOf(id);
             changed = index >= 0;
-            return changed ? scene with { Set = change(committed, index), Edit = null } : scene;
-        }, save: true);
+            saved = changed ? change(_committed, index) : null;
+            return saved is not null ? scene with { Set = Fitted(saved), Edit = null } : scene;
+        }, save: true, () => saved);
         return changed;
     }
 
     private IslandSet Fitted(IslandSet set) => Volatile.Read(ref _boundsOf) is { } boundsOf ? set.FitTo(boundsOf) : set;
 
-    private void Publish(Func<IslandScene, IslandScene> change, bool save, bool? commit = null)
+    // commitAs: what becomes Committed, null = keep it; without it a saved change commits what is shown.
+    private void Publish(Func<IslandScene, IslandScene> change, bool save, Func<IslandSet?>? commitAs = null)
     {
         IslandScene before;
         IslandScene after;
@@ -134,11 +147,11 @@ public sealed class IslandModel
 
             Volatile.Write(ref _scene, after);
 
-            // A drag step shows its islands but does not commit them; any other saved change of the
-            // islands commits what is shown (visibility alone commits nothing: it may come mid-drag).
-            if (commit ?? save)
+            // A drag step shows its islands but does not commit them; a saved change of the edit mode
+            // commits what is shown; visibility and fitting commit nothing.
+            if ((commitAs is null ? (save ? after.Set : null) : commitAs()) is { } committed)
             {
-                Volatile.Write(ref _committed, after.Set);
+                Volatile.Write(ref _committed, committed);
             }
         }
 

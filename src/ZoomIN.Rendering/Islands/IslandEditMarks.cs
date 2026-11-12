@@ -25,28 +25,28 @@ internal sealed class IslandEditMarks(CursorPass pass)
 
     public void DrawHandles(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor, PhysicalRect island, FrameColor color)
     {
-        Fill(context, target, monitor, island.X - (Handle / 2), island.Y - (Handle / 2), Handle, Handle, color);
-        Fill(context, target, monitor, island.Right - (Handle / 2), island.Y - (Handle / 2), Handle, Handle, color);
-        Fill(context, target, monitor, island.X - (Handle / 2), island.Bottom - (Handle / 2), Handle, Handle, color);
-        Fill(context, target, monitor, island.Right - (Handle / 2), island.Bottom - (Handle / 2), Handle, Handle, color);
+        Fill(context, target, monitor, new PhysicalRect(island.X - (Handle / 2), island.Y - (Handle / 2), Handle, Handle), color);
+        Fill(context, target, monitor, new PhysicalRect(island.Right - (Handle / 2), island.Y - (Handle / 2), Handle, Handle), color);
+        Fill(context, target, monitor, new PhysicalRect(island.X - (Handle / 2), island.Bottom - (Handle / 2), Handle, Handle), color);
+        Fill(context, target, monitor, new PhysicalRect(island.Right - (Handle / 2), island.Bottom - (Handle / 2), Handle, Handle), color);
     }
 
     /// <summary>White dashes on a dark line, so the band shows on light and dark content alike.</summary>
     public void DrawRubberBand(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor, PhysicalRect band)
     {
-        Fill(context, target, monitor, band.X, band.Y, band.Width, DashLine, s_dashShade);
-        Fill(context, target, monitor, band.X, band.Bottom - DashLine, band.Width, DashLine, s_dashShade);
-        Fill(context, target, monitor, band.X, band.Y, DashLine, band.Height, s_dashShade);
-        Fill(context, target, monitor, band.Right - DashLine, band.Y, DashLine, band.Height, s_dashShade);
-        Dashes(context, target, monitor, band.X, band.Y, band.Width, horizontal: true);
-        Dashes(context, target, monitor, band.X, band.Bottom - DashLine, band.Width, horizontal: true);
-        Dashes(context, target, monitor, band.X, band.Y, band.Height, horizontal: false);
-        Dashes(context, target, monitor, band.Right - DashLine, band.Y, band.Height, horizontal: false);
+        Fill(context, target, monitor, new PhysicalRect(band.X, band.Y, band.Width, DashLine), s_dashShade);
+        Fill(context, target, monitor, new PhysicalRect(band.X, band.Bottom - DashLine, band.Width, DashLine), s_dashShade);
+        Fill(context, target, monitor, new PhysicalRect(band.X, band.Y, DashLine, band.Height), s_dashShade);
+        Fill(context, target, monitor, new PhysicalRect(band.Right - DashLine, band.Y, DashLine, band.Height), s_dashShade);
+        Dashes(context, target, monitor, new PhysicalPoint(band.X, band.Y), band.Width, horizontal: true);
+        Dashes(context, target, monitor, new PhysicalPoint(band.X, band.Bottom - DashLine), band.Width, horizontal: true);
+        Dashes(context, target, monitor, new PhysicalPoint(band.X, band.Y), band.Height, horizontal: false);
+        Dashes(context, target, monitor, new PhysicalPoint(band.Right - DashLine, band.Y), band.Height, horizontal: false);
     }
 
     public void End(ID3D11DeviceContext context) => pass.End(context);
 
-    private void Dashes(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor, double x, double y, double length, bool horizontal)
+    private void Dashes(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor, PhysicalPoint start, double length, bool horizontal)
     {
         var period = Math.Max(DashLength + DashGap, length / MaxDashes);
         var dash = period * DashLength / (DashLength + DashGap);
@@ -55,23 +55,23 @@ internal sealed class IslandEditMarks(CursorPass pass)
             var size = Math.Min(dash, length - at);
             if (horizontal)
             {
-                Fill(context, target, monitor, x + at, y, size, DashLine, s_dash);
+                Fill(context, target, monitor, new PhysicalRect(start.X + at, start.Y, size, DashLine), s_dash);
             }
             else
             {
-                Fill(context, target, monitor, x, y + at, DashLine, size, s_dash);
+                Fill(context, target, monitor, new PhysicalRect(start.X, start.Y + at, DashLine, size), s_dash);
             }
         }
     }
 
     // A filled rectangle (line thickness ≥ 0.5 of the rectangle fills it), clipped to the monitor.
     private void Fill(
-        ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor, double x, double y, double width, double height, FrameColor color)
+        ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor, PhysicalRect rect, FrameColor color)
     {
-        var left = Math.Max(x, monitor.X);
-        var top = Math.Max(y, monitor.Y);
-        var right = Math.Min(x + width, monitor.Right);
-        var bottom = Math.Min(y + height, monitor.Bottom);
+        var left = Math.Max(rect.X, monitor.X);
+        var top = Math.Max(rect.Y, monitor.Y);
+        var right = Math.Min(rect.Right, monitor.Right);
+        var bottom = Math.Min(rect.Bottom, monitor.Bottom);
         if (right <= left || bottom <= top)
         {
             return;

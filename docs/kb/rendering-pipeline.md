@@ -305,7 +305,9 @@ Plan: [b1-inseln.md](../plan/features/b1-inseln.md). Code: `Core/Islands/`, `Ren
   Rechteck-Shader des Zeigerdurchgangs.
 - **Monitor geändert:** Insel außerhalb ihres Monitors oder auf einem fehlenden Monitor wird nicht
   gezeichnet (nie Absturz), ebenso eine Stufe außerhalb 1×–16× (von Hand geänderte Datei). Beim
-  Start von ZoomIN und beim nächsten Bearbeiten schiebt `Fit` sie zurück in den Monitor; nach einem
+  Start von ZoomIN und beim nächsten Bearbeiten schiebt `Fit` sie zurück in den Monitor – nur für die Anzeige;
+  gespeichert bleiben die alten Rechtecke, bis der Nutzer eine Insel ändert (ein Beamer für eine
+  Weile verkleinert sie nicht dauerhaft). Nach einem
   Anzeigewechsel im laufenden Betrieb bleibt sie bis dahin ausgeblendet (offen: kein Monitor-Ereignis
   in Core).
 - **Kosten:** CPU je Frame 2,5 ns, 0 B (`IslandBenchmarks`); `IslandLayer.Draw` mit 4 Inseln,

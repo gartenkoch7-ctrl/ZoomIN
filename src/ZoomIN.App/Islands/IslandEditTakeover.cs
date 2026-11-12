@@ -16,13 +16,17 @@ internal sealed class IslandEditTakeover(ZoomModel zoom, IMonitorProvider monito
     /// <summary>Keeps a drag on its monitor; confined by the edit steps.</summary>
     public IslandDragFence DragFence { get; } = new();
 
+    /// <summary>The monitors set to 1× by the last <see cref="ShowOneTimes"/>.</summary>
+    public IReadOnlyList<string> Monitors { get; private set; } = [];
+
     /// <summary>
     /// 1× on every monitor. First, before the edit mode counts as running: the levels' Changed must
     /// not find a running edit mode with a monitor still unset.
     /// </summary>
     public void ShowOneTimes()
     {
-        foreach (var monitor in monitors.MonitorIds())
+        Monitors = monitors.MonitorIds();
+        foreach (var monitor in Monitors)
         {
             zoom.Temporary.Set(TemporaryZoomOwner.IslandEdit, monitor, ZoomLimits.Min);
         }

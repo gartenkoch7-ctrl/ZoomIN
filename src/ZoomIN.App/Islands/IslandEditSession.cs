@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Islands;
+using ZoomIN.Core.Monitors;
+using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.App.Islands;
 
@@ -22,7 +24,7 @@ internal sealed class IslandEditSession : IDisposable
         Editor = editor;
         Operation = operation;
         Published = published;
-        Original = published;
+        Fitted = editor.Set;
         _time = time;
         StartedAt = time.GetTimestamp();
         _idleLimit = idleLimit;
@@ -30,6 +32,25 @@ internal sealed class IslandEditSession : IDisposable
     }
 
     public IslandEditor Editor { get; }
+
+    /// <summary>A new run on the islands as drawn now, fitted to the monitors; its operation starts with it.</summary>
+    public static IslandEditSession Create(
+        IslandModel model, IMonitorProvider monitors, ZoomModel zoom, TimeProvider time, TimeSpan idleLimit, Action<IslandEditSession> idle)
+    {
+        var current = model.Scene.Set;
+        var set = current.FitTo(monitors.BoundsOf);
+        var editor = new IslandEditor(set, monitors, monitor => IslandRules.StartLevel(zoom, monitor));
+        var operation = IslandOperation.StartEdit(set.Count);
+        try
+        {
+            return new IslandEditSession(editor, current, operation, time, idleLimit, idle);
+        }
+        catch
+        {
+            IslandOperation.StopEdit(operation, "failed", set.Count); // never a started operation left open
+            throw;
+        }
+    }
 
     /// <summary>
     /// Start in <see cref="TimeProvider.GetTimestamp"/> ticks; the render threads blink from it with
@@ -42,14 +63,14 @@ internal sealed class IslandEditSession : IDisposable
     /// <summary>The set this edit mode last gave the model; any other set there came from outside.</summary>
     public IslandSet Published { get; private set; }
 
-    /// <summary>The islands before the run; kept if the run changed nothing (only fitting them is no change to save).</summary>
-    public IslandSet Original { get; }
+    /// <summary>The islands at the start, fitted to the monitors; drawn after a run that changed nothing (and not saved).</summary>
+    public IslandSet Fitted { get; }
 
     /// <summary>A step finished a change (created, moved, resized, level, deleted).</summary>
     public bool HasChanges { get; private set; }
 
-    /// <summary>What the run leaves behind: its islands, or the ones before it if it changed nothing.</summary>
-    public IslandSet Result => HasChanges ? Editor.Set : Original;
+    /// <summary>What the run leaves behind: its islands, or the fitted ones of its start if it changed nothing.</summary>
+    public IslandSet Result => HasChanges ? Editor.Set : Fitted;
 
     /// <summary>What the render threads draw for the editor's state now.</summary>
     public IslandEditView View() => new(Editor.Selected, Editor.RubberBand, StartedAt, Editor.DragBounds is not null);
@@ -83,6 +104,13 @@ internal sealed class IslandEditSession : IDisposable
         }
 
         report.Outcome(outcome, Editor);
+
+        // A new island is meant to be seen: hidden islands (Ctrl+Alt+I) come back on.
+        if (outcome == IslandEditOutcome.Created && !model.Scene.Visible)
+        {
+            model.SetVisible(true);
+        }
+
         return null;
     }
 

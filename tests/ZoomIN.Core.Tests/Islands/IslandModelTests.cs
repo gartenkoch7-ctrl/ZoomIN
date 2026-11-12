@@ -124,7 +124,7 @@ public sealed class IslandModelTests
     }
 
     [Fact]
-    public void FitTo_PushesIslandsOntoTheirMonitor()
+    public void FitTo_PushesIslandsOntoTheirMonitor_ButKeepsTheSavedOnes()
     {
         var model = new IslandModel(
             IslandSet.Empty.Add(new Island(0, IslandMonitors.First, new PhysicalRect(10, 10, 50, 50), new PhysicalPoint(5000, 100), 2))!, true);
@@ -132,7 +132,7 @@ public sealed class IslandModelTests
         model.FitTo(new IslandMonitors().BoundsOf);
 
         Assert.Equal(1820, model.Scene.Set[0].TargetOrigin.X);
-        Assert.Same(model.Scene.Set, model.Committed);
+        Assert.Equal(5000, model.Committed[0].TargetOrigin.X); // only drawn fitted: a smaller monitor for a while never shrinks the saved islands
     }
 
     [Theory]

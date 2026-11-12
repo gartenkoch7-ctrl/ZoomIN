@@ -47,7 +47,7 @@ public sealed class IslandController : IDisposable
         _log = log;
         _report = new IslandReport(announcer, texts, log);
         _watch = new IslandEditWatch(
-            fence, _zoom, _model, monitors, () => Volatile.Read(ref _edit) is { } run ? reason => End(reason, run) : null, EndIfChangedOutside, log);
+            fence, _zoom, _model, () => _takeover.Monitors, () => Volatile.Read(ref _edit) is { } run ? reason => End(reason, run) : null, EndIfChangedOutside, log);
 
         // The monitors may differ from when the islands were saved: push them back onto their monitor.
         _model.FitTo(monitors.BoundsOf);
@@ -90,18 +90,12 @@ public sealed class IslandController : IDisposable
     private void Start()
     {
         IslandEditSession? session = null;
-        System.Diagnostics.Activity? operation = null;
         var started = false;
         var notStarted = "failed";
         try
         {
             _takeover.ShowOneTimes();
-            var current = _model.Scene.Set;
-            var set = current.FitTo(_monitors.BoundsOf);
-            var editor = new IslandEditor(set, _monitors, monitor => IslandRules.StartLevel(_zoom, monitor));
-            operation = IslandOperation.StartEdit(set.Count);
-            session = new IslandEditSession(
-                editor, current, operation, _time, IdleLimit, idle => EndLogged("idle", idle));
+            session = IslandEditSession.Create(_model, _monitors, _zoom, _time, IdleLimit, idle => EndLogged("idle", idle));
             lock (_gate)
             {
                 _edit = session;
@@ -112,7 +106,7 @@ public sealed class IslandController : IDisposable
             if (started)
             {
                 _takeover.TakeInput(new IslandEditInputRun(this, session));
-                _log.EditStarted(set.Count);
+                _log.EditStarted(session.Editor.Set.Count);
                 _report.Say("Islands.Edit.On");
                 return;
             }
@@ -121,10 +115,14 @@ public sealed class IslandController : IDisposable
             notStarted = "changed";
             _log.EditRefused(notStarted);
         }
-        catch when (started)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            End("failed");
-            throw;
+            // Never into the shortcut or the button's click handler (that would end the app).
+            _log.EditFailed(ex, "start");
+            if (started)
+            {
+                End("failed");
+            }
         }
         finally
         {
@@ -136,12 +134,12 @@ public sealed class IslandController : IDisposable
                     if (session is not null && ReferenceEquals(_edit, session))
                     {
                         _edit = null;
-                        _model.EndEdit(session.Published, session.Published);
+                        _model.EndEdit(session.Published, session.Published, changed: false);
                     }
                 }
 
                 session?.Dispose();
-                IslandOperation.StopEdit(operation, notStarted, _model.Scene.Set.Count);
+                IslandOperation.StopEdit(session?.Operation, notStarted, _model.Scene.Set.Count);
                 _takeover.GiveBack();
             }
         }
@@ -169,7 +167,7 @@ public sealed class IslandController : IDisposable
                     // A drag in progress is undone, not saved half way; a change from outside (profile
                     // switch, settings page) is kept instead of the edit mode's islands.
                     edit.Editor.CancelDrag();
-                    _model.EndEdit(edit.Published, edit.Result);
+                    _model.EndEdit(edit.Published, edit.Result, edit.HasChanges);
                 }
             }
             finally
