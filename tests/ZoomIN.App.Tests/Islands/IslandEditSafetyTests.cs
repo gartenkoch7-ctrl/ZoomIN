@@ -108,6 +108,23 @@ public sealed class IslandEditSafetyTests
     }
 
     [Fact]
+    public void SettingsSavedDuringADrag_HoldTheIslandsBeforeIt()
+    {
+        using var rig = new IslandRig();
+        rig.Controller.ToggleEdit();
+        rig.Handler.Pressed(new PhysicalPoint(100, 100));
+        rig.Handler.Released(new PhysicalPoint(140, 120));
+        var placed = rig.Islands.Scene.Set[0].TargetOrigin;
+        var picture = rig.Islands.Scene.Set[0].Target;
+        rig.Handler.Pressed(new PhysicalPoint(picture.X + 5, picture.Y + (picture.Height / 2)));
+        rig.Handler.Moved(new PhysicalPoint(picture.X + 400, picture.Y + 300));
+
+        var saved = Assert.Single(rig.Settings.Current.Islands.Items);
+
+        Assert.Equal((placed.X, placed.Y), (saved.TargetX, saved.TargetY));
+    }
+
+    [Fact]
     public void EditMode_LeavesHiddenIslandsHidden()
     {
         using var rig = new IslandRig(new AppSettings { Islands = new IslandOptions { Visible = false } });

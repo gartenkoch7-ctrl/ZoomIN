@@ -213,7 +213,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1740 | Info | Islands shown: {Visible} ({Count} islands) – `Strg+Alt+I` oder Schalter (B1) |
 | 1741 | Info | Island edit mode on ({Count} islands) |
 | 1742 | Info | Island edit mode off: {Reason} ({Count} islands, {Seconds:0.0} s) – Gründe wie `zoomin.islands.end` |
-| 1743 | Info | Island edit mode not started: {Reason} – `docked`, `no_input` (Aktivitäts-Hook nicht installiert) |
+| 1743 | Info | Island edit mode not started: {Reason} – `docked`, `no_input` (Aktivitäts-Hook nicht installiert), `changed` (Inseln änderten sich während des Starts) |
 | 1744 | Info | Island {Index} {Outcome} on {Monitor}: source {Source}, picture {Picture}, level {Level:0.00}, still {Still} – `Created`, `Changed`, `LevelChanged`; nur Rechtecke und Stufe, nie Inhalt |
 | 1745 | Info | New island refused: all {Max} places are taken |
 | 1746 | Info | Island removed ({Count} left) |

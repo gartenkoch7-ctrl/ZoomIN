@@ -105,7 +105,7 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
             var up = message is PInvoke.WM_KEYUP or PInvoke.WM_SYSKEYUP;
 
             // Keys this hook swallows: Esc and Del while islands are edited (B1), Esc while the overview runs (B2).
-            if (self.SwallowForIslandEdit((int)info->vkCode, down, up) || self.SwallowForOverview((int)info->vkCode, down, up, info->time))
+            if (self.SwallowForIslandEdit((int)info->vkCode, down, up, info->time) || self.SwallowForOverview((int)info->vkCode, down, up, info->time))
             {
                 // Ctrl+Esc is not "Ctrl alone", even though OnKey never sees the Esc.
                 self._ctrlAlone = false;
@@ -182,11 +182,11 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
         }
     }
 
-    private bool SwallowForIslandEdit(int key, bool down, bool up)
+    private bool SwallowForIslandEdit(int key, bool down, bool up, uint time)
     {
         try
         {
-            return _islandEdit.OnKey(key, down, up);
+            return _islandEdit.OnKey(key, down, up, time);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {

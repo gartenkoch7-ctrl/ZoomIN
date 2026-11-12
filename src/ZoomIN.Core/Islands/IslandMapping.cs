@@ -23,9 +23,10 @@ public static class IslandMapping
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(model);
         var scene = model.Scene;
+        var committed = model.Committed; // never a drag that is still running
         return settings with
         {
-            Islands = new IslandOptions { Visible = scene.Visible, Items = [.. scene.Set.Items.Select(IslandEntry.From)] },
+            Islands = new IslandOptions { Visible = scene.Visible, Items = [.. committed.Items.Select(IslandEntry.From)] },
         };
     }
 

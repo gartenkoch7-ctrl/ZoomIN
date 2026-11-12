@@ -127,7 +127,7 @@ public sealed class IslandEditorTests
         var editor = Editor(One());
 
         // Bottom-right corner of the picture (100,100)–(200,200) at 2×.
-        editor.Press(new PhysicalPoint(199, 199));
+        editor.Press(new PhysicalPoint(200, 200));
         editor.Release(new PhysicalPoint(300, 240));
 
         var island = editor.Set[0];
@@ -141,7 +141,7 @@ public sealed class IslandEditorTests
     {
         var editor = Editor(One());
 
-        editor.Press(new PhysicalPoint(101, 101));
+        editor.Press(new PhysicalPoint(100, 100));
         editor.Release(new PhysicalPoint(60, 80));
 
         var island = editor.Set[0];
@@ -155,7 +155,7 @@ public sealed class IslandEditorTests
     {
         var editor = Editor(One());
 
-        editor.Press(new PhysicalPoint(199, 199));
+        editor.Press(new PhysicalPoint(200, 200));
         editor.Release(new PhysicalPoint(0, 0));
 
         Assert.Equal(IslandRules.MinSize, editor.Set[0].Source.Width);

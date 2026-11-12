@@ -31,6 +31,7 @@ public sealed class IslandEditCapture : IIslandEditInput
     internal const int DeleteKey = 0x2E;
 
     private const double WheelDelta = 120;
+    private const uint RepeatGapMilliseconds = 2500;
 
     private Session? _session;
 
@@ -38,6 +39,8 @@ public sealed class IslandEditCapture : IIslandEditInput
     private int _heldButtons;
     private bool _escapeHeld;
     private bool _deleteHeld;
+    private uint _escapeAt;
+    private uint _deleteAt;
     private volatile bool _hooksInstalled;
 
     /// <summary>True while the edit mode takes the input.</summary>
@@ -82,6 +85,9 @@ public sealed class IslandEditCapture : IIslandEditInput
             case LeftDown or RightDown or MiddleDown or ExtraDown:
                 if (session is null)
                 {
+                    // A new press: the release of a swallowed one was never seen (secure desktop,
+                    // hook timeout); this press's release belongs to the application.
+                    _heldButtons &= ~ButtonOf(message);
                     return false;
                 }
 
@@ -112,7 +118,8 @@ public sealed class IslandEditCapture : IIslandEditInput
     }
 
     /// <summary>Hook thread, every key event. Returns true if it must not reach applications.</summary>
-    internal bool OnKey(int virtualKey, bool down, bool up)
+    /// <param name="time">Event time in milliseconds (KBDLLHOOKSTRUCT.time, wraps around).</param>
+    internal bool OnKey(int virtualKey, bool down, bool up, uint time)
     {
         if (virtualKey is not (EscapeKey or DeleteKey))
         {
@@ -120,6 +127,16 @@ public sealed class IslandEditCapture : IIslandEditInput
         }
 
         ref var held = ref virtualKey == EscapeKey ? ref _escapeHeld : ref _deleteHeld;
+        ref var last = ref virtualKey == EscapeKey ? ref _escapeAt : ref _deleteAt;
+
+        // Key repeat starts within 1 s (2 s with FilterKeys): a "repeat" later than that is a new
+        // press whose release before it was never seen (secure desktop, hook timeout).
+        if (down && held && time - last > RepeatGapMilliseconds)
+        {
+            held = false;
+        }
+
+        last = time;
         if (up)
         {
             var swallow = held;

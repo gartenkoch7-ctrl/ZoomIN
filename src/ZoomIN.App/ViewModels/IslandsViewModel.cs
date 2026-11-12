@@ -17,15 +17,18 @@ public sealed partial class IslandsViewModel : ObservableObject
 {
     private readonly IslandModel _model;
     private readonly IslandController _controller;
+    private readonly IslandVisibility _visibility;
     private readonly IMonitorProvider _monitors;
     private readonly ILocalizer _texts;
     private IslandSet? _shown;
     private bool _loading;
 
-    public IslandsViewModel(SettingsService settings, IslandController controller, IMonitorProvider monitors, ILocalizer texts)
+    public IslandsViewModel(
+        SettingsService settings, IslandController controller, IslandVisibility visibility, IMonitorProvider monitors, ILocalizer texts)
     {
         _model = settings.Models.Islands;
         _controller = controller;
+        _visibility = visibility;
         _monitors = monitors;
         _texts = texts;
         Refresh();
@@ -78,7 +81,7 @@ public sealed partial class IslandsViewModel : ObservableObject
     {
         if (!_loading && value != _model.Scene.Visible)
         {
-            _controller.Toggle();
+            _visibility.Toggle();
         }
     }
 

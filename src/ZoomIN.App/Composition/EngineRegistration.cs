@@ -114,6 +114,7 @@ internal static class EngineRegistration
         services.AddSingleton<OverviewController>();
         services.AddSingleton<OverviewDebug>();
         services.AddSingleton<IslandController>();
+        services.AddSingleton<IslandVisibility>();
         services.AddSingleton<WindowDragSync>();
         services.AddSingleton<ZoomController>();
         return services;

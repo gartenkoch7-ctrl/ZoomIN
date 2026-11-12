@@ -1,12 +1,14 @@
 using System.Diagnostics.Metrics;
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Viewport;
 
 namespace ZoomIN.Core.Islands;
 
 /// <summary>
 /// The islands at run time (M19 B1). Writers (settings, profile switch, the edit mode, the settings
 /// page) run under a lock; render threads read <see cref="Scene"/> lock-free, one immutable object
-/// per change (AGENTS.md 2.3).
+/// per change (AGENTS.md 2.3). <see cref="Committed"/> is what is saved: the scene may show a drag
+/// in progress, which is never written to the settings.
 /// </summary>
 public sealed class IslandModel
 {
@@ -15,11 +17,13 @@ public sealed class IslandModel
 
     private readonly Lock _gate = new();
     private IslandScene _scene;
+    private IslandSet _committed;
 
     public IslandModel(IslandSet set, bool visible)
     {
         ArgumentNullException.ThrowIfNull(set);
         _scene = new IslandScene(set, visible, null);
+        _committed = set;
         s_count.Add(set.Count);
     }
 
@@ -31,14 +35,25 @@ public sealed class IslandModel
 
     public IslandScene Scene => Volatile.Read(ref _scene);
 
-    /// <summary>The islands of a newly applied profile; ends nothing, an edit mode keeps its view.</summary>
+    /// <summary>The islands as they are saved: without a drag that is still running.</summary>
+    public IslandSet Committed => Volatile.Read(ref _committed);
+
+    /// <summary>
+    /// The islands of a newly applied profile, with new ids (ids are never reused while ZoomIN runs:
+    /// still images and the settings rows belong to them). Ends nothing; a running edit mode sees the
+    /// change from outside and ends itself.
+    /// </summary>
     public void Replace(IslandSet set, bool visible)
     {
         ArgumentNullException.ThrowIfNull(set);
-        Publish(scene => scene with { Set = set, Visible = visible }, save: true);
+        Publish(scene => scene with { Set = set.Renumbered(scene.Set.NextId), Visible = visible }, save: true);
     }
 
-    public void SetVisible(bool visible) => Publish(scene => scene with { Visible = visible }, save: true);
+    /// <summary>Fits every island to its monitor as it is now (at start); not saved until the next change.</summary>
+    public void FitTo(Func<string, PhysicalRect?> boundsOf) =>
+        Publish(scene => scene.Edit is null ? scene with { Set = scene.Set.FitTo(boundsOf) } : scene, save: false, commit: true);
+
+    public void SetVisible(bool visible) => Publish(scene => scene with { Visible = visible }, save: true, commit: false);
 
     /// <summary>Live or still image for one island (settings page); false if it is gone.</summary>
     public bool SetStill(int id, bool still) => Change(id, (set, index) => set.Replace(index, set[index] with { Still = still }));
@@ -46,26 +61,20 @@ public sealed class IslandModel
     /// <summary>Removes one island (settings page); false if it is gone.</summary>
     public bool Remove(int id) => Change(id, (set, index) => set.RemoveAt(index));
 
-    /// <summary>A step of the edit mode: islands and what the mode draws; <paramref name="edit"/> null ends it.</summary>
-    /// <param name="save">The step finished a change (not a drag in progress).</param>
-    public void ShowEdit(IslandSet set, IslandEditView? edit, bool save)
+    /// <summary>
+    /// A step of the edit mode (<paramref name="edit"/> = what it draws), but only if the islands are
+    /// still <paramref name="expected"/> (what the edit mode published last): a change from outside
+    /// (profile switch, settings page) in between is never overwritten. Atomic.
+    /// </summary>
+    /// <param name="save">The step finished a change (not a drag in progress): saved and committed.</param>
+    /// <returns>False if the islands changed from outside; nothing was published.</returns>
+    public bool ShowEdit(IslandSet expected, IslandSet set, IslandEditView edit, bool save)
     {
         ArgumentNullException.ThrowIfNull(set);
+        ArgumentNullException.ThrowIfNull(edit);
+        var current = true;
 
         // Visibility stays the user's: the scene shows every island while editing anyway (IslandScene.ShowsOn).
-        Publish(scene => scene with { Set = set, Edit = edit }, save);
-    }
-
-    /// <summary>
-    /// A step of the edit mode, but only if the islands are still <paramref name="expected"/> (what
-    /// the edit mode published last): a change from outside (profile switch, settings page) in
-    /// between is never overwritten. Atomic.
-    /// </summary>
-    /// <returns>False if the islands changed from outside; nothing was published.</returns>
-    public bool ShowEdit(IslandSet expected, IslandSet set, IslandEditView? edit, bool save)
-    {
-        ArgumentNullException.ThrowIfNull(set);
-        var current = true;
         Publish(scene =>
         {
             current = ReferenceEquals(scene.Set, expected);
@@ -90,18 +99,13 @@ public sealed class IslandModel
         Publish(scene =>
         {
             var index = scene.Set.IndexOf(id);
-            if (index < 0)
-            {
-                return scene;
-            }
-
-            changed = true;
-            return scene with { Set = change(scene.Set, index) };
+            changed = index >= 0;
+            return changed ? scene with { Set = change(scene.Set, index) } : scene;
         }, save: true);
         return changed;
     }
 
-    private void Publish(Func<IslandScene, IslandScene> change, bool save)
+    private void Publish(Func<IslandScene, IslandScene> change, bool save, bool? commit = null)
     {
         IslandScene before;
         IslandScene after;
@@ -115,6 +119,13 @@ public sealed class IslandModel
             }
 
             Volatile.Write(ref _scene, after);
+
+            // A drag step shows its islands but does not commit them; any other saved change of the
+            // islands commits what is shown (visibility alone commits nothing: it may come mid-drag).
+            if (commit ?? save)
+            {
+                Volatile.Write(ref _committed, after.Set);
+            }
         }
 
         s_count.Add(after.Set.Count - before.Set.Count);

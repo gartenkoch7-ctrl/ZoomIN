@@ -301,7 +301,10 @@ Plan: [b1-inseln.md](../plan/features/b1-inseln.md). Code: `Core/Islands/`, `Ren
   gestricheltes Rechteck (weiße Striche auf dunkler Linie, höchstens 64 Striche je Seite) über den
   Rechteck-Shader des Zeigerdurchgangs.
 - **Monitor geändert:** Insel außerhalb ihres Monitors oder auf einem fehlenden Monitor wird nicht
-  gezeichnet (nie Absturz); beim nächsten Bearbeiten schiebt `Fit` sie zurück in den Monitor.
+  gezeichnet (nie Absturz), ebenso eine Stufe außerhalb 1×–16× (von Hand geänderte Datei). Beim
+  Start von ZoomIN und beim nächsten Bearbeiten schiebt `Fit` sie zurück in den Monitor; nach einem
+  Anzeigewechsel im laufenden Betrieb bleibt sie bis dahin ausgeblendet (offen: kein Monitor-Ereignis
+  in Core).
 - **Kosten:** CPU je Frame 2,5 ns, 0 B (`IslandBenchmarks`); `IslandLayer.Draw` mit 4 Inseln,
   Standbild und Bearbeitungsmarken 0 B (`IslandRenderPathTests`). GPU (`IslandGpuTimeTests`,
   `ZOOMIN_GPU_TIMING=1`, 1080p bei 4×, 4 Inseln 600 × 160, RTX 3060 Ti): +0,014 ms schlicht,

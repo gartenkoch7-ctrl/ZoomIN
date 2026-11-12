@@ -46,16 +46,57 @@ public sealed class IslandModelTests
         var saved = 0;
         model.Saved += () => saved++;
 
-        model.ShowEdit(One(), new IslandEditView(-1, new PhysicalRect(0, 0, 10, 10), 0), save: false);
+        var dragged = One();
+        Assert.True(model.ShowEdit(IslandSet.Empty, dragged, new IslandEditView(-1, new PhysicalRect(0, 0, 10, 10), 0), save: false));
 
         Assert.Equal(0, saved);
         Assert.True(model.Scene.Editing);
+        Assert.Same(IslandSet.Empty, model.Committed); // a drag in progress is never saved
         Assert.False(model.Scene.Visible); // the user's choice stays; editing shows them anyway
         Assert.True(model.Scene.ShowsOn(IslandMonitors.First, fullscreenZoomed: false));
 
-        model.ShowEdit(model.Scene.Set, null, save: true);
+        model.EndEdit(dragged, dragged);
         Assert.Equal(1, saved);
+        Assert.Same(dragged, model.Committed);
         Assert.False(model.Scene.Editing);
+    }
+
+    [Fact]
+    public void ShowEdit_AfterAChangeFromOutside_PublishesNothing_AndEndEditKeepsTheOutsideChange()
+    {
+        var model = new IslandModel(IslandSet.Empty, visible: true);
+        var view = new IslandEditView(-1, null, 0);
+        model.Replace(One(), visible: true);
+        var outside = model.Scene.Set;
+
+        Assert.False(model.ShowEdit(IslandSet.Empty, IslandSet.Empty, view, save: true));
+        model.EndEdit(IslandSet.Empty, IslandSet.Empty);
+
+        Assert.Same(outside, model.Scene.Set);
+    }
+
+    [Fact]
+    public void Replace_GivesNewIds_SoStillImagesAndRowsOfOldIslandsDoNotMatch()
+    {
+        var model = new IslandModel(One(), visible: true);
+        var before = model.Scene.Set[0].Id;
+
+        model.Replace(One(), visible: true);
+
+        Assert.NotEqual(before, model.Scene.Set[0].Id);
+        Assert.False(model.Remove(before));
+    }
+
+    [Fact]
+    public void FitTo_PushesIslandsOntoTheirMonitor()
+    {
+        var model = new IslandModel(
+            IslandSet.Empty.Add(new Island(0, IslandMonitors.First, new PhysicalRect(10, 10, 50, 50), new PhysicalPoint(5000, 100), 2))!, true);
+
+        model.FitTo(new IslandMonitors().BoundsOf);
+
+        Assert.Equal(1820, model.Scene.Set[0].TargetOrigin.X);
+        Assert.Same(model.Scene.Set, model.Committed);
     }
 
     [Theory]

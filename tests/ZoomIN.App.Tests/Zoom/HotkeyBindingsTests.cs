@@ -86,7 +86,9 @@ public sealed class HotkeyBindingsTests
         var islands = new IslandController(service, monitors, new FakeIslandInput(), new FakeFence(), new RecordingAnnouncer(),
             AppTexts.CreateLocalizer(), TimeProvider.System, NullLogger<IslandController>.Instance);
         var bindings = new HotkeyBindings(
-            service, new ProfileService(service, new NoProfiles()), hotkeys, zoom, windowFilter, overview, islands, NullLogger<HotkeyBindings>.Instance);
+            service, new ProfileService(service, new NoProfiles()), hotkeys, zoom, windowFilter, overview, islands,
+            new IslandVisibility(service, new RecordingAnnouncer(), AppTexts.CreateLocalizer(), NullLogger<IslandVisibility>.Instance),
+            NullLogger<HotkeyBindings>.Instance);
         return (bindings, hotkeys, models);
     }
 

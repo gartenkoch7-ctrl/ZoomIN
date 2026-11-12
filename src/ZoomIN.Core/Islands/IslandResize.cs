@@ -5,23 +5,30 @@ namespace ZoomIN.Core.Islands;
 /// <summary>
 /// Resizing an island by a corner (M19 B1): the level stays, the picture and with it the source
 /// grow or shrink; the opposite corner of both stays where it is, so the island shows more or
-/// less of its surroundings on that side. Pure; <see cref="IslandRules.Fit"/> runs afterwards.
+/// less of its surroundings on that side. At the monitor edge the drag stops (neither source nor
+/// picture may leave the monitor, or <see cref="IslandRules.Fit"/> would move the fixed corner or
+/// lower the level). Pure; <see cref="IslandRules.Fit"/> runs afterwards.
 /// </summary>
 public static class IslandResize
 {
-    public static Island ToCorner(Island island, IslandCorner corner, PhysicalPoint point)
+    /// <param name="corner">Where the dragged corner is now (the pointer plus where in the handle it was grabbed).</param>
+    public static Island ToCorner(Island island, IslandCorner which, PhysicalPoint corner, PhysicalRect monitor)
     {
         ArgumentNullException.ThrowIfNull(island);
         var level = island.Level;
         var target = island.Target;
         var source = island.Source;
         var minimum = IslandRules.MinSize * level;
-        var left = corner is IslandCorner.TopLeft or IslandCorner.BottomLeft;
-        var top = corner is IslandCorner.TopLeft or IslandCorner.TopRight;
+        var left = which is IslandCorner.TopLeft or IslandCorner.BottomLeft;
+        var top = which is IslandCorner.TopLeft or IslandCorner.TopRight;
+
+        // Room towards the dragged side, for the picture and (times the level) for the source.
+        var roomX = Math.Min(left ? target.Right - monitor.X : monitor.Right - target.X, (left ? source.Right - monitor.X : monitor.Right - source.X) * level);
+        var roomY = Math.Min(top ? target.Bottom - monitor.Y : monitor.Bottom - target.Y, (top ? source.Bottom - monitor.Y : monitor.Bottom - source.Y) * level);
 
         // The far edge never passes the fixed one: below the minimum size the drag stops.
-        var width = Math.Max(left ? target.Right - point.X : point.X - target.X, minimum);
-        var height = Math.Max(top ? target.Bottom - point.Y : point.Y - target.Y, minimum);
+        var width = Math.Max(Math.Min(left ? target.Right - corner.X : corner.X - target.X, roomX), minimum);
+        var height = Math.Max(Math.Min(top ? target.Bottom - corner.Y : corner.Y - target.Y, roomY), minimum);
         var sourceWidth = width / level;
         var sourceHeight = height / level;
         var newSource = new PhysicalRect(
@@ -32,4 +39,13 @@ public static class IslandResize
         var origin = new PhysicalPoint(left ? target.Right - width : target.X, top ? target.Bottom - height : target.Y);
         return island with { Source = newSource, TargetOrigin = origin };
     }
+
+    /// <summary>Where the corner of the picture is.</summary>
+    public static PhysicalPoint CornerOf(PhysicalRect picture, IslandCorner which) => which switch
+    {
+        IslandCorner.TopLeft => new(picture.X, picture.Y),
+        IslandCorner.TopRight => new(picture.Right, picture.Y),
+        IslandCorner.BottomLeft => new(picture.X, picture.Bottom),
+        _ => new(picture.Right, picture.Bottom),
+    };
 }

@@ -79,6 +79,18 @@ public sealed class IslandSet
         return changed ? new IslandSet(items, NextId) : this;
     }
 
+    /// <summary>The same islands with ids from <paramref name="firstId"/> on (a profile's islands replace others).</summary>
+    public IslandSet Renumbered(int firstId)
+    {
+        var items = new Island[_items.Length];
+        for (var i = 0; i < items.Length; i++)
+        {
+            items[i] = _items[i] with { Id = firstId + i };
+        }
+
+        return new IslandSet(items, firstId + items.Length);
+    }
+
     /// <summary>Adds an island (it gets <see cref="NextId"/>); null if the set is full.</summary>
     public IslandSet? Add(Island island)
     {

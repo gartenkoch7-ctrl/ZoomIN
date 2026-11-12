@@ -86,7 +86,7 @@ public static class IslandRules
     }
 
     /// <summary>
-    /// True if source and picture lie on <paramref name="monitor"/> (half a pixel of tolerance:
+    /// True if source and picture lie on <paramref name="monitor"/> and the level is in range (half a pixel of tolerance:
     /// <see cref="Fit"/> rounds to whole pixels, a monitor may have a fractional origin). Islands
     /// that do not are not drawn and cannot be grabbed. Per frame: no allocation.
     /// </summary>
@@ -95,7 +95,10 @@ public static class IslandRules
         ArgumentNullException.ThrowIfNull(island);
         var source = island.Source;
         var picture = island.Target;
+
+        // A level out of range (a hand-edited file) is never drawn: it would give a picture of no or negative size.
         return monitor.Width > 0 && source.Width > 0 && source.Height > 0
+            && island.Level >= ZoomLimits.Min && island.Level <= ZoomLimits.Max
             && Within(source, monitor) && Within(picture, monitor);
     }
 

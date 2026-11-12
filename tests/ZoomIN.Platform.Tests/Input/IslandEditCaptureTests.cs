@@ -21,8 +21,8 @@ public sealed class IslandEditCaptureTests
         Assert.False(capture.OnMouse(IslandEditCapture.LeftDown, 10, 10, 0));
         Assert.False(capture.OnMouse(IslandEditCapture.LeftUp, 10, 10, 0));
         Assert.False(capture.OnMouse(IslandEditCapture.Wheel, 10, 10, WheelUp));
-        Assert.False(capture.OnKey(IslandEditCapture.EscapeKey, down: true, up: false));
-        Assert.False(capture.OnKey(IslandEditCapture.DeleteKey, down: true, up: false));
+        Assert.False(capture.OnKey(IslandEditCapture.EscapeKey, down: true, up: false, 1000));
+        Assert.False(capture.OnKey(IslandEditCapture.DeleteKey, down: true, up: false, 1000));
     }
 
     [Fact]
@@ -38,9 +38,9 @@ public sealed class IslandEditCaptureTests
         Assert.True(capture.OnMouse(IslandEditCapture.Wheel, 50, 60, WheelUp));
         Assert.True(capture.OnMouse(IslandEditCapture.RightDown, 50, 60, 0));
         Assert.True(capture.OnMouse(IslandEditCapture.RightUp, 50, 60, 0));
-        Assert.True(capture.OnKey(IslandEditCapture.DeleteKey, down: true, up: false));
-        Assert.True(capture.OnKey(IslandEditCapture.DeleteKey, down: false, up: true));
-        Assert.True(capture.OnKey(IslandEditCapture.EscapeKey, down: true, up: false));
+        Assert.True(capture.OnKey(IslandEditCapture.DeleteKey, down: true, up: false, 1000));
+        Assert.True(capture.OnKey(IslandEditCapture.DeleteKey, down: false, up: true, 1000));
+        Assert.True(capture.OnKey(IslandEditCapture.EscapeKey, down: true, up: false, 1000));
 
         handler.WaitFor(6);
         Assert.Equal(["press 10,20", "move 30,40", "release 50,60", "wheel 1 50,60", "key Delete", "key Escape"], handler.Calls);
@@ -53,8 +53,8 @@ public sealed class IslandEditCaptureTests
         var capture = new IslandEditCapture();
         capture.Start(new RecordingHandler());
 
-        Assert.False(capture.OnKey(0x41, down: true, up: false));
-        Assert.False(capture.OnKey(0x41, down: false, up: true));
+        Assert.False(capture.OnKey(0x41, down: true, up: false, 1000));
+        Assert.False(capture.OnKey(0x41, down: false, up: true, 1000));
         capture.Stop();
     }
 
@@ -64,12 +64,12 @@ public sealed class IslandEditCaptureTests
         var capture = new IslandEditCapture();
         capture.Start(new RecordingHandler());
         capture.OnMouse(IslandEditCapture.LeftDown, 1, 1, 0);
-        capture.OnKey(IslandEditCapture.EscapeKey, down: true, up: false);
+        capture.OnKey(IslandEditCapture.EscapeKey, down: true, up: false, 1000);
 
         capture.Stop();
 
         Assert.True(capture.OnMouse(IslandEditCapture.LeftUp, 1, 1, 0));
-        Assert.True(capture.OnKey(IslandEditCapture.EscapeKey, down: false, up: true));
+        Assert.True(capture.OnKey(IslandEditCapture.EscapeKey, down: false, up: true, 1000));
         Assert.False(capture.OnMouse(IslandEditCapture.LeftUp, 1, 1, 0));
     }
 
@@ -78,12 +78,12 @@ public sealed class IslandEditCaptureTests
     {
         var capture = new IslandEditCapture();
         capture.OnMouse(IslandEditCapture.LeftDown, 1, 1, 0);
-        capture.OnKey(IslandEditCapture.DeleteKey, down: true, up: false);
+        capture.OnKey(IslandEditCapture.DeleteKey, down: true, up: false, 1000);
 
         capture.Start(new RecordingHandler());
 
         Assert.False(capture.OnMouse(IslandEditCapture.LeftUp, 1, 1, 0));
-        Assert.False(capture.OnKey(IslandEditCapture.DeleteKey, down: false, up: true));
+        Assert.False(capture.OnKey(IslandEditCapture.DeleteKey, down: false, up: true, 1000));
         capture.Stop();
     }
 
@@ -96,10 +96,10 @@ public sealed class IslandEditCaptureTests
 
         for (var i = 0; i < 5; i++)
         {
-            Assert.True(capture.OnKey(IslandEditCapture.DeleteKey, down: true, up: false));
+            Assert.True(capture.OnKey(IslandEditCapture.DeleteKey, down: true, up: false, 1000));
         }
 
-        capture.OnKey(IslandEditCapture.DeleteKey, down: false, up: true);
+        capture.OnKey(IslandEditCapture.DeleteKey, down: false, up: true, 1000);
         capture.OnMouse(IslandEditCapture.LeftDown, 0, 0, 0);
         handler.WaitFor(2);
         Assert.Equal(["key Delete", "press 0,0"], handler.Calls);
@@ -114,11 +114,26 @@ public sealed class IslandEditCaptureTests
         capture.Start(handler);
 
         capture.OnMouse(IslandEditCapture.LeftDown, 0, 0, 0);
-        capture.OnKey(IslandEditCapture.EscapeKey, down: true, up: false);
+        capture.OnKey(IslandEditCapture.EscapeKey, down: true, up: false, 1000);
 
         handler.WaitFor(1);
         Assert.Equal(["key Escape"], handler.Calls);
         capture.Stop();
+    }
+
+    [Fact]
+    public void LostRelease_DoesNotSwallowTheNextClickOrKey_AfterTheEnd()
+    {
+        var capture = new IslandEditCapture();
+        capture.Start(new RecordingHandler());
+        capture.OnMouse(IslandEditCapture.LeftDown, 1, 1, 0);
+        capture.OnKey(IslandEditCapture.EscapeKey, down: true, up: false, 1000);
+        capture.Stop(); // e.g. Win+L: the hooks never see both releases
+
+        Assert.False(capture.OnMouse(IslandEditCapture.LeftDown, 1, 1, 0));
+        Assert.False(capture.OnMouse(IslandEditCapture.LeftUp, 1, 1, 0));
+        Assert.False(capture.OnKey(IslandEditCapture.EscapeKey, down: true, up: false, 60_000));
+        Assert.False(capture.OnKey(IslandEditCapture.EscapeKey, down: false, up: true, 60_100));
     }
 
     [Fact]
@@ -131,8 +146,8 @@ public sealed class IslandEditCaptureTests
 
         capture.OnMouse(IslandEditCapture.LeftDown, 1, 1, 0); // the worker waits in this one
         Assert.True(SpinWait.SpinUntil(() => handler.Waiting, TimeSpan.FromSeconds(5)));
-        capture.OnKey(IslandEditCapture.DeleteKey, down: true, up: false);
-        capture.OnKey(IslandEditCapture.EscapeKey, down: true, up: false);
+        capture.OnKey(IslandEditCapture.DeleteKey, down: true, up: false, 1000);
+        capture.OnKey(IslandEditCapture.EscapeKey, down: true, up: false, 1000);
         capture.Stop();
         gate.Set();
 

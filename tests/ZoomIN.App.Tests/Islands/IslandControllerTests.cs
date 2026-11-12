@@ -16,9 +16,9 @@ public sealed class IslandControllerTests
     {
         using var rig = new IslandRig();
 
-        rig.Controller.Toggle();
+        rig.Visibility.Toggle();
         Assert.False(rig.Islands.Scene.Visible);
-        rig.Controller.Toggle();
+        rig.Visibility.Toggle();
 
         Assert.True(rig.Islands.Scene.Visible);
         Assert.Equal(["Islands off", "Islands on"], rig.Announcer.Messages);

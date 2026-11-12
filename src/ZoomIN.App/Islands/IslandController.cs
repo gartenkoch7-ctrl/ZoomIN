@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using ZoomIN.App.Settings;
 using ZoomIN.Core.Islands;
@@ -13,7 +12,7 @@ using ZoomIN.Core.Zoom;
 namespace ZoomIN.App.Islands;
 
 /// <summary>
-/// Carries out the islands (M19 B1): Ctrl+Alt+I shows or hides them; Ctrl+Alt+Shift+I starts the
+/// Carries out the island edit mode (M19 B1; showing and hiding: <see cref="IslandVisibility"/>). Ctrl+Alt+Shift+I starts the
 /// edit mode, which shows every monitor at 1× (temporary level), takes clicks, wheel, Esc and Del
 /// (<see cref="IIslandEditInput"/>), keeps a drag on its monitor (<see cref="IslandDragFence"/>)
 /// and feeds the <see cref="IslandEditor"/>. It ends with Esc, the shortcut again, 2 minutes
@@ -51,20 +50,12 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
         _log = log;
         _report = new IslandReport(announcer, texts, log);
         _watch = new IslandEditWatch(fence, _zoom, _model, monitors, () => IsEditing, End, EndIfChangedOutside, log);
+
+        // The monitors may differ from when the islands were saved: push them back onto their monitor.
+        _model.FitTo(monitors.BoundsOf);
     }
 
     public bool IsEditing => Volatile.Read(ref _edit) is not null;
-
-    /// <summary>Ctrl+Alt+I: shows or hides all islands.</summary>
-    public void Toggle()
-    {
-        var visible = !_model.Scene.Visible;
-        _model.SetVisible(visible);
-        var count = _model.Scene.Set.Count;
-        IslandOperation.Toggled(visible, count);
-        _log.IslandsToggled(visible, count);
-        _report.Say(visible ? "Islands.On" : "Islands.Off");
-    }
 
     /// <summary>Ctrl+Alt+Shift+I or the settings page: starts the edit mode, or ends it if it runs.</summary>
     public void ToggleEdit()
@@ -91,13 +82,27 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
                 _zoom.Temporary.Set(TemporaryZoomOwner.IslandEdit, monitor, ZoomLimits.Min);
             }
 
-            var set = _model.Scene.Set.FitTo(_monitors.BoundsOf);
+            var current = _model.Scene.Set;
+            var set = current.FitTo(_monitors.BoundsOf);
             var editor = new IslandEditor(set, _monitors, monitor => IslandRules.StartLevel(_zoom, monitor));
-            session = new IslandEditSession(editor, IslandOperation.StartEdit(set.Count), _time, IdleLimit, idle => EndLogged("idle", idle));
+            session = new IslandEditSession(
+                editor, current, IslandOperation.StartEdit(set.Count), _time, IdleLimit, idle => EndLogged("idle", idle));
+            bool started;
             lock (_gate)
             {
                 _edit = session;
-                _model.ShowEdit(set, session.View(), save: false);
+                started = session.Publish(_model, save: false);
+                _edit = started ? session : null;
+            }
+
+            if (!started)
+            {
+                // The islands changed from outside since they were read: start again with the shortcut.
+                session.Dispose();
+                IslandOperation.StopEdit(session.Operation, "changed", _model.Scene.Set.Count);
+                _zoom.Temporary.ReleaseAll(TemporaryZoomOwner.IslandEdit);
+                _log.EditRefused("changed");
+                return;
             }
 
             _fence.AddFilter(_dragFence);
@@ -157,11 +162,7 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
         finally
         {
             edit.Dispose();
-            var count = _model.Scene.Set.Count;
-            IslandOperation.StopEdit(edit.Operation, reason, count);
-            var seconds = Stopwatch.GetElapsedTime(edit.StartedAt).TotalSeconds;
-            _log.EditEnded(reason, count, seconds);
-            _report.Say("Islands.Edit.Off");
+            edit.Finish(reason, _model.Scene.Set.Count, _log, _report);
         }
     }
 
@@ -200,30 +201,7 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
                     return; // input queued before the end
                 }
 
-                var editor = edit.Editor;
-                var outcome = step(editor);
-                edit.Touch();
-                _dragFence.Confine(editor.DragBounds);
-                if (outcome is not (IslandEditOutcome.None or IslandEditOutcome.End))
-                {
-                    var saved = outcome is IslandEditOutcome.Created or IslandEditOutcome.Changed
-                        or IslandEditOutcome.LevelChanged or IslandEditOutcome.Deleted;
-
-                    // Published first: the model's Changed of this very step reaches EndIfChangedOutside on this thread.
-                    var before = edit.Published;
-                    edit.Published = editor.Set;
-                    if (_model.ShowEdit(before, editor.Set, edit.View(), saved))
-                    {
-                        _report.Outcome(outcome, editor);
-                    }
-                    else
-                    {
-                        edit.Published = before;
-                        end = "changed";
-                    }
-                }
-
-                end ??= outcome == IslandEditOutcome.End ? "escape" : null;
+                end = edit.Step(step, _model, _dragFence, _report);
             }
 
             if (end is not null)

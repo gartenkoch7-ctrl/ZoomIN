@@ -42,7 +42,7 @@ public sealed class IslandDemandTests
     public void EditMode_DrawsOnEveryMonitor_AtOneTimes_AndKeepsARetry()
     {
         var models = Models(ZoomMode.Lens);
-        models.Islands.ShowEdit(models.Islands.Scene.Set, new IslandEditView(-1, null, 0), save: false);
+        models.Islands.ShowEdit(models.Islands.Scene.Set, models.Islands.Scene.Set, new IslandEditView(-1, null, 0), save: false);
         var second = new OverlayDemand(Second, models);
 
         Assert.NotNull(second.Islands(1));

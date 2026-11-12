@@ -87,7 +87,7 @@ public sealed class IslandEditor
                 var moved = _drag.Kind == DragKind.Move
                     ? island with { TargetOrigin = new PhysicalPoint(
                         island.TargetOrigin.X + point.X - _drag.Start.X, island.TargetOrigin.Y + point.Y - _drag.Start.Y) }
-                    : IslandResize.ToCorner(island, _drag.Corner, point);
+                    : IslandResize.ToCorner(island, _drag.Corner, Grabbed(island, point), _drag.Monitor);
                 Set = _before.Replace(index, IslandRules.Fit(moved, _drag.Monitor));
                 return IslandEditOutcome.Dragged;
             default:
@@ -188,6 +188,13 @@ public sealed class IslandEditor
         RubberBand = null;
         _drag = default;
         return true;
+    }
+
+    // The corner follows the pointer from where it was grabbed (up to the handle reach beside it), no jump.
+    private PhysicalPoint Grabbed(Island atPress, PhysicalPoint point)
+    {
+        var corner = IslandResize.CornerOf(atPress.Target, _drag.Corner);
+        return new PhysicalPoint(point.X + corner.X - _drag.Start.X, point.Y + corner.Y - _drag.Start.Y);
     }
 
     private int Grab(PhysicalPoint point, bool withCorners, out IslandCorner? corner, out PhysicalRect monitor) =>

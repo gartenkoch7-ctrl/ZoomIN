@@ -32,6 +32,7 @@ internal sealed class IslandRig : IDisposable
         var texts = AppTexts.CreateLocalizer();
         texts.SetLanguage(AppLanguage.English);
         Controller = new IslandController(Settings, Monitors, Input, Fence, Announcer, texts, Clock, NullLogger<IslandController>.Instance);
+        Visibility = new IslandVisibility(Settings, Announcer, texts, NullLogger<IslandVisibility>.Instance);
     }
 
     public TwoMonitors Monitors { get; } = new();
@@ -49,6 +50,8 @@ internal sealed class IslandRig : IDisposable
     public SettingsService Settings { get; }
 
     public IslandController Controller { get; }
+
+    public IslandVisibility Visibility { get; }
 
     public IslandModel Islands => Models.Islands;
 

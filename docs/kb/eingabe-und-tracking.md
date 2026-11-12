@@ -362,6 +362,18 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
   - Ohne installierten Aktivitäts-Hook (`IIslandEditInput.IsAvailable`) startet der Modus nicht
     (Ansage): die Klicks würden sonst die Programme unter den Inseln treffen. Entfernt Windows den
     Hook später stillschweigend, merkt ZoomIN das nicht (offen).
+  - **Gespeichert** wird nur der übernommene Stand (`IslandModel.Committed`): Ein laufendes Ziehen
+    landet nie in `settings.json` oder einem Profil, auch nicht bei Profilwechsel mitten im Ziehen.
+    Jedes Bearbeitungs-Ergebnis geht atomar an das Modell (nur wenn die Inseln noch die zuletzt
+    veröffentlichten sind); Profilwechsel vergeben neue Inselnummern (Standbilder, Zeilen der
+    Einstellungsseite gehören zur Nummer).
+  - Ecke ziehen: Die Ecke folgt dem Zeiger ab der Stelle, wo sie gegriffen wurde (kein Sprung um
+    die Griffreichweite), und hält am Monitorrand an; Gegenecke und Stufe bleiben.
+  - Verlorenes Loslassen (Win+L mitten im Klick): Der nächste Druck derselben Maustaste gehört wieder
+    der Anwendung; ein Esc/Entf-„Wiederholen“ nach mehr als 2,5 s gilt als neuer Druck.
+  - Grenze: Klemmt der Zaun-Filter eine Bewegung am Monitorrand, versetzt er den Zeiger mit
+    `SetCursorPos`, das kein Low-Level-Hook sieht. Die gezogene Insel folgt dann bis zum Loslassen
+    nur bis zur letzten gesehenen Position; das Loslassen setzt sie richtig.
   - Die Sichtbarkeit (`Strg+Alt+I`) bleibt die des Nutzers: Beim Bearbeiten werden auch
     ausgeblendete Inseln gezeigt, danach sind sie wieder aus.
   - Inseln, die gerade nicht gezeichnet werden (Monitor fehlt, Bild ragt heraus), lassen sich nicht
