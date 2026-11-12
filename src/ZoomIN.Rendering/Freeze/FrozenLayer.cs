@@ -85,6 +85,7 @@ internal sealed class FrozenLayer : IDisposable
         {
             // Tried again with the next freeze, not every frame.
             _stillFailedFor = frozen;
+            frozen.MarkStillUnavailable();
             _log.StillNotTaken(_monitorId);
             return false;
         }

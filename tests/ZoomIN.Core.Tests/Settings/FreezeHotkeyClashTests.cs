@@ -28,12 +28,21 @@ public sealed class FreezeHotkeyClashTests
     }
 
     [Fact]
-    public void BothOnOneGesture_KeepsFreeze()
+    public void FreezeOnTheNextMonitorDefault_UnassignsNext()
     {
-        var settings = SettingsMigration.WithoutFreezeClashes(new AppSettings { NextMonitorHotkey = HotkeyGesture.FreezeMonitor });
+        var settings = SettingsMigration.WithoutFreezeClashes(new AppSettings { FreezeMonitorHotkey = HotkeyGesture.NextMonitor });
 
-        Assert.Equal(HotkeyGesture.FreezeMonitor, settings.FreezeMonitorHotkey);
+        Assert.Equal(HotkeyGesture.NextMonitor, settings.FreezeMonitorHotkey);
         Assert.Equal(default, settings.NextMonitorHotkey);
+    }
+
+    [Fact]
+    public void AGestureTheUserRecorded_IsKept_EvenIfUsedTwice()
+    {
+        var chosen = new HotkeyGesture(HotkeyModifiers.Control | HotkeyModifiers.Alt, 0x50); // Ctrl+Alt+P, also Profile
+        var settings = SettingsMigration.WithoutFreezeClashes(new AppSettings { FreezeMonitorHotkey = chosen });
+
+        Assert.Equal(chosen, settings.FreezeMonitorHotkey);
     }
 
     [Fact]

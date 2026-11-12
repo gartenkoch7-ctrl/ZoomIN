@@ -38,14 +38,14 @@ public static class SettingsMigration
     /// The freeze shortcuts (G2, M19) came without a schema change, so a file without them gets their
     /// defaults: if the user already gave such a gesture to an older action, the new shortcut stays
     /// unassigned instead of failing as "unavailable" (as with the overview in schema 2). Applied at
-    /// every load; the hotkey editor never stores one gesture twice, so nothing else is affected.
+    /// every load, and only to the factory gestures: one the user recorded is never touched.
     /// </summary>
     public static AppSettings WithoutFreezeClashes(AppSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
         HotkeyGesture[] older = [.. OlderHotkeys(settings), settings.OverviewHotkey];
-        var freeze = Unclashed(settings.FreezeMonitorHotkey, older);
-        var next = Unclashed(settings.NextMonitorHotkey, [.. older, freeze]);
+        var freeze = Unclashed(settings.FreezeMonitorHotkey, HotkeyGesture.FreezeMonitor, older);
+        var next = Unclashed(settings.NextMonitorHotkey, HotkeyGesture.NextMonitor, [.. older, freeze]);
         return freeze == settings.FreezeMonitorHotkey && next == settings.NextMonitorHotkey
             ? settings
             : settings with { FreezeMonitorHotkey = freeze, NextMonitorHotkey = next };
@@ -67,7 +67,8 @@ public static class SettingsMigration
         s.NextFilterHotkey, s.LocateHotkey, s.CrosshairHotkey, s.TrackingHotkey, s.ProfileHotkey, s.WindowFilterHotkey,
     ];
 
-    // Unassigned (VirtualKey 0) never clashes; an assigned gesture another action holds becomes unassigned.
-    private static HotkeyGesture Unclashed(HotkeyGesture gesture, HotkeyGesture[] taken) =>
-        gesture.VirtualKey != 0 && taken.Contains(gesture) ? default : gesture;
+    // Only the factory default gives way (it may have come from a file without the property); a
+    // gesture the user recorded on purpose stays, even if it is also used elsewhere.
+    private static HotkeyGesture Unclashed(HotkeyGesture gesture, HotkeyGesture factory, HotkeyGesture[] taken) =>
+        gesture == factory && taken.Contains(gesture) ? default : gesture;
 }

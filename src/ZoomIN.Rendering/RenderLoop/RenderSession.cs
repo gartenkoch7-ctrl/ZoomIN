@@ -150,13 +150,16 @@ internal sealed class RenderSession : IDisposable
         // A monitor without the mouse keeps its last view (M3 decision). A frozen one never draws it;
         // should the pointer be there anyway, Windows shows its own instead of none.
         var hasCursor = _pointer.Position.TryGetPosition(out var cursor);
+        // Also the frame a freeze moved the pointer away: this monitor had hidden the system pointer,
+        // and the one it went to may sleep at 1× and never show it again.
         var onMonitor = hasCursor && _monitor.Bounds.Contains(cursor);
+        var wasInside = _cursorInside;
         _cursorInside = onMonitor && frozen is null;
         if (_cursorInside)
         {
             _lastCursor = cursor;
         }
-        else if (onMonitor)
+        else if (onMonitor || (wasInside && frozen is not null))
         {
             _cursorLayer.ShowSystemCursor();
         }

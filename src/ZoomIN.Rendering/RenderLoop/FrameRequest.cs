@@ -42,5 +42,5 @@ internal readonly record struct FrameRequest(
     /// Not magnified and no colour filter: only pointer, crosshair or locator are drawn. A frozen
     /// still image is drawn at 1× too, or the live desktop would show through.
     /// </summary>
-    public bool OverlayOnly => Zoom <= 1.01 && !Effects.Filter.ChangesColors && !WindowsFiltered && Frozen is not { Still: true };
+    public bool OverlayOnly => Zoom <= 1.01 && !Effects.Filter.ChangesColors && !WindowsFiltered && Frozen is not { Still: true, StillUnavailable: false };
 }

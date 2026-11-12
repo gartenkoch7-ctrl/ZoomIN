@@ -7,6 +7,7 @@ using ZoomIN.Core.Pointer;
 using ZoomIN.Core.PointerFence;
 using ZoomIN.Core.Shell;
 using ZoomIN.Core.Tracking;
+using ZoomIN.Core.Viewport;
 using ZoomIN.Core.Zoom;
 
 namespace ZoomIN.App.Freeze;
@@ -85,7 +86,7 @@ public sealed class MonitorFreezeController : IDisposable
     public void Dispose()
     {
         _fence.Recomputed -= OnFenceRecomputed;
-        Guarded("exit", () => Lift(_ => true, "exit"));
+        Guarded("exit", () => Lift(_ => true, "exit", announce: false));
     }
 
     private void FreezeUnderPointer()
@@ -140,7 +141,7 @@ public sealed class MonitorFreezeController : IDisposable
         if (_cursor.TryGetPosition(out var now) && monitor.Bounds.Contains(now) && !_mover.MoveTo(point, PointerMoveReason.FreezeMonitor))
         {
             // Never leave the pointer on a frozen monitor, whose view neither draws nor follows it.
-            Lift(m => ReferenceEquals(m, monitor), "move_refused");
+            Lift(m => ReferenceEquals(m, monitor), "move_refused", announce: false);
             Refuse("move_refused", "Freeze.MoveRefused");
             return;
         }
@@ -151,48 +152,40 @@ public sealed class MonitorFreezeController : IDisposable
     }
 
     // Raised on the fence's watcher thread, which the fence may join while releasing (up to 2 s):
-    // never wait for this controller's lock there. Back from another desktop (Win+L, UAC,
-    // Ctrl+Alt+Del) every freeze ends (M10 decision); after a display change only where the monitor
-    // is gone or changed, still images (the pipeline is rebuilt), or all if no free monitor is left.
+    // never wait for this controller's lock there. What ends is decided by FreezeRules.ToLift, with
+    // what was frozen (or being frozen) when the event came.
     private void OnFenceRecomputed(object? sender, FenceTrigger trigger)
     {
-        if (trigger is not (FenceTrigger.DesktopSwitch or FenceTrigger.SessionUnlock or FenceTrigger.DisplayChange))
+        if (trigger is FenceTrigger.DesktopSwitch or FenceTrigger.SessionUnlock or FenceTrigger.DisplayChange)
         {
-            return;
+            var seen = _frozen.State;
+            var freezing = _freezing;
+            _dispatch(() => Guarded("recompute", () => Recheck(trigger, seen, freezing)));
         }
-
-        // What was frozen when the event came, or about to be (a freeze between move and publish): a
-        // queued event must not lift a freeze the user makes after it.
-        var seen = _frozen.State;
-        var freezing = _freezing;
-        _dispatch(() => Guarded("recompute", () => Recheck(trigger, seen, freezing)));
     }
 
     private void Recheck(FenceTrigger trigger, FreezeState seen, bool freezing)
     {
-        if (trigger != FenceTrigger.DisplayChange)
+        // Mid-change Windows may not describe every monitor yet (empty): then the next event decides,
+        // and the fence lets the pointer go meanwhile, as it never traps it.
+        var monitors = trigger == FenceTrigger.DisplayChange ? _monitors.AllMonitors() : [];
+        if (monitors.Count > 0)
         {
-            var reason = trigger == FenceTrigger.DesktopSwitch ? "desktop_switch" : "session_unlock";
-            Lift(m => freezing || seen.Monitors.Contains(m), reason);
-            return;
+            _switch.KeepOnly([.. monitors.Select(m => m.Id)]);
         }
 
-        // Mid-change Windows may not describe every monitor yet: decide on the next event, not on
-        // nothing (the fence lets the pointer go meanwhile, as it never traps it).
-        var monitors = _monitors.AllMonitors();
-        if (monitors.Count == 0)
+        var mouse = _cursor.TryGetPosition(out var position) ? position : (PhysicalPoint?)null;
+        var lift = FreezeRules.ToLift(trigger, _frozen.State, seen, freezing, monitors, mouse);
+        Lift(lift.Contains, trigger switch
         {
-            return;
-        }
-
-        _switch.KeepOnly([.. monitors.Select(m => m.Id)]);
-        var kept = FreezeRules.KeptAfterDisplayChange(
-            _frozen.State, monitors, _cursor.TryGetPosition(out var pointer) ? pointer : null);
-        Lift(m => !kept.Contains(m), "display_change");
+            FenceTrigger.DesktopSwitch => "desktop_switch",
+            FenceTrigger.SessionUnlock => "session_unlock",
+            _ => "display_change",
+        });
     }
 
     // Unfreezes first, then frees the area: the monitor follows the pointer again before it can get there.
-    private void Lift(Func<FrozenMonitor, bool> which, string reason)
+    private void Lift(Func<FrozenMonitor, bool> which, string reason, bool announce = true)
     {
         var removed = _frozen.Unfreeze(which);
         if (removed.Count == 0)
@@ -203,12 +196,11 @@ public sealed class MonitorFreezeController : IDisposable
         _fence.Forbid(FenceOwner.FrozenMonitors, _frozen.State.Areas());
         _operations.Stop(removed, reason);
         _log.FreezeLifted(removed.Count, reason);
-        if (reason != "exit")
+        if (announce)
         {
             _announcer.Announce(_texts.Get("Freeze.Lifted"));
         }
     }
-
 
     private void Refuse(string reason, string textKey)
     {

@@ -325,7 +325,7 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
   Monitor. Beide anpassbar (Seite „Tastenkürzel“), auf dem sicheren Bildschirm abgeschaltet
   (`SecureSettingsSanitizer`: ein Zaun dort könnte Anmeldung oder UAC-Abfrage versperren). Die
   Kürzel kamen ohne Schema-Wechsel: Hat der Nutzer `Strg+Alt+H`/`N` schon einer älteren Aktion
-  gegeben, bleiben sie beim Laden unbelegt (`SettingsMigration.WithoutFreezeClashes`).
+  gegeben, bleiben die Werkskürzel beim Laden unbelegt (`SettingsMigration.WithoutFreezeClashes`); selbst aufgenommene Kürzel bleiben unangetastet.
 - **Ablauf beim Einfrieren** (`App/Freeze/MonitorFreezeController`): Ziel ist der nächstgelegene
   freie Monitor (`MonitorCycle.NearestFree`, Abstand zum Monitorrechteck; bei Gleichstand rechts
   zuerst – `FenceGeometry.Nearest` kennt diese Regel nicht und prüft nur noch, dass der Zielpunkt

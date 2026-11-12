@@ -24,13 +24,13 @@ public class FreezeBenchmarks
         _model.Frozen.Freeze(monitor);
     }
 
-    /// <summary>What every render thread reads per frame: its freeze (here: frozen and not frozen) and the kept anchor.</summary>
+    /// <summary>What every render thread reads per frame: its freeze (here: frozen and not frozen) and the frozen anchor (AnchorOr, as RenderSession).</summary>
     [Benchmark]
     public double FrozenLookup()
     {
         var frozen = _model.Frozen.For(@"\\.\DISPLAY2");
         var live = _model.Frozen.For(@"\\.\DISPLAY1");
-        return (frozen is not null && frozen.TryGetAnchor(out var anchor) ? anchor.X : 0) + (live?.Level ?? 0);
+        return (frozen?.AnchorOr(default).X ?? 0) + (live?.Level ?? 0);
     }
 
     /// <summary>Ctrl+Alt+N with the right monitor frozen.</summary>

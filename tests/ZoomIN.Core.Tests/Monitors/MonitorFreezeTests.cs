@@ -73,6 +73,23 @@ public sealed class MonitorFreezeTests
     }
 
     [Fact]
+    public void AnchorOr_KeepsTheFirstAnchor_WithoutAllocating()
+    {
+        var monitors = Enumerable.Range(0, 1_000).Select(_ => Frozen(First)).ToArray();
+        _ = Frozen(First).AnchorOr(new PhysicalPoint(1, 1)); // JIT
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var sum = 0.0;
+        foreach (var monitor in monitors)
+        {
+            sum += monitor.AnchorOr(new PhysicalPoint(3, 4)).X + monitor.AnchorOr(new PhysicalPoint(9, 9)).Y;
+        }
+
+        Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+        Assert.Equal(1_000 * 7, sum);
+    }
+
+    [Fact]
     public void PerFrameReads_AreLockFree_AndDoNotAllocate()
     {
         var model = new ZoomModel(new ZoomLevels(), ZoomMode.Fullscreen, true, 0);

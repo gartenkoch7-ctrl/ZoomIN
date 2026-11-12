@@ -27,6 +27,7 @@ public sealed class FrozenMonitor(
     private double _anchorX;
     private double _anchorY;
     private int _stillClaimed;
+    private bool _stillUnavailable;
 
     public string Id { get; } = id ?? throw new ArgumentNullException(nameof(id));
 
@@ -67,6 +68,11 @@ public sealed class FrozenMonitor(
     /// pipeline's GPU device; a pipeline rebuilt while frozen must not take a new one of a later desktop.
     /// </summary>
     public bool ClaimStill() => Interlocked.Exchange(ref _stillClaimed, 1) == 0;
+
+    /// <summary>The still image could not be taken or kept: the monitor shows live (and at 1× needs no copy).</summary>
+    public bool StillUnavailable => Volatile.Read(ref _stillUnavailable);
+
+    public void MarkStillUnavailable() => Volatile.Write(ref _stillUnavailable, true);
 
     /// <summary>
     /// The anchor of the frozen view: the kept one, or else <paramref name="last"/> (the anchor of the
