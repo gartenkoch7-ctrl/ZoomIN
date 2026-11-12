@@ -88,6 +88,7 @@ public sealed partial class IslandsViewModel : ObservableObject
         Unwatch();
         _watching = () => onUiThread(Refresh);
         _model.Saved += _watching;
+        Refresh(); // changes while nobody watched
     }
 
     public void Unwatch()
@@ -113,9 +114,9 @@ public sealed partial class IslandsViewModel : ObservableObject
 
     partial void OnVisibleChanged(bool value)
     {
-        if (!_loading && value != _model.Scene.Visible)
+        if (!_loading)
         {
-            _visibility.Toggle();
+            _visibility.Set(value);
         }
     }
 

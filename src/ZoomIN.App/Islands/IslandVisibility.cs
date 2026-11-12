@@ -12,10 +12,23 @@ public sealed class IslandVisibility(SettingsService settings, IAnnouncer announ
     private readonly IslandModel _model = settings.Models.Islands;
     private readonly IslandReport _report = new(announcer, texts, log);
 
-    public void Toggle()
+    /// <summary>The shortcut: the other state, in one step.</summary>
+    public void Toggle() => Report(_model.ToggleVisible());
+
+    /// <summary>The switch: exactly the state it shows (a shortcut at the same moment must not invert it).</summary>
+    public void Set(bool visible)
     {
-        var visible = !_model.Scene.Visible;
+        if (_model.Scene.Visible == visible)
+        {
+            return;
+        }
+
         _model.SetVisible(visible);
+        Report(visible);
+    }
+
+    private void Report(bool visible)
+    {
         var count = _model.Scene.Set.Count;
         IslandOperation.Toggled(visible, count);
         log.IslandsToggled(visible, count);

@@ -13,6 +13,7 @@ public sealed partial class ZoomPage : Page
 
         // Closing the settings window ends the page without a navigation.
         Unloaded += (_, _) => Islands?.Unwatch();
+        Loaded += (_, _) => WatchIslands(); // loaded again without a navigation (window rebuilt)
     }
 
     public ZoomViewModel? Vm { get; private set; }
@@ -32,7 +33,7 @@ public sealed partial class ZoomPage : Page
         Bindings.Update();
 
         // The edit mode, the shortcuts and profile switches change the islands on other threads.
-        Islands.Watch(refresh => DispatcherQueue.TryEnqueue(() => refresh()));
+        WatchIslands();
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -40,6 +41,8 @@ public sealed partial class ZoomPage : Page
         Islands?.Unwatch();
         base.OnNavigatedFrom(e);
     }
+
+    private void WatchIslands() => Islands?.Watch(refresh => DispatcherQueue.TryEnqueue(() => refresh()));
 
     private void OnEditIslands(object sender, RoutedEventArgs e) => Islands?.Edit();
 

@@ -69,6 +69,15 @@ public sealed class IslandModel
 
     public void SetVisible(bool visible) => Publish(scene => scene with { Visible = visible }, save: true, () => null);
 
+    /// <summary>Shows hidden islands or hides shown ones in one step (no lost toggle between two threads).</summary>
+    /// <returns>Whether they are shown now.</returns>
+    public bool ToggleVisible()
+    {
+        var visible = false;
+        Publish(scene => scene with { Visible = visible = !scene.Visible }, save: true, () => null);
+        return visible;
+    }
+
     /// <summary>Live or still image for one island (settings page); false if it is gone.</summary>
     public bool SetStill(int id, bool still) =>
         Change(id, (set, index) => set.Replace(index, set[index] with { Still = still, Take = set[index].Take + (still ? 1 : 0) }));
