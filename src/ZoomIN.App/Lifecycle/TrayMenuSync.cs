@@ -49,8 +49,8 @@ public sealed class TrayMenuSync
         _windowFilter.Toggled += rule => _tray.Notify(Text.Get("WinFilter.Title"), WindowFilterStatus(rule));
 
         // Why Ctrl+Alt+H or Ctrl+Alt+N did nothing, e.g. "freezing needs at least two monitors" (G2).
-        _freeze.Refused += hint => _tray.Notify(Text.Get("Freeze.Title"), hint);
-        _switch.Refused += hint => _tray.Notify(Text.Get("Freeze.Title"), hint);
+        _freeze.Refused += hint => _tray.Notify(_texts.Get("Freeze.Title"), hint);
+        _switch.Refused += hint => _tray.Notify(_texts.Get("Freeze.Title"), hint);
     }
 
     /// <summary>Runs a zoom or profile command; the shell handles Open and Exit itself.</summary>

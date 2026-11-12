@@ -16,8 +16,8 @@ namespace ZoomIN.App.Freeze;
 /// Frozen monitors (G2). Ctrl+Alt+H freezes the monitor under the pointer, or lifts every freeze if
 /// one is frozen. The pointer first jumps to the nearest free monitor (ADR-0028: move, then forbid),
 /// then the fence keeps it out. Desktop switches lift every freeze, a display change lifts it where
-/// the monitor is gone or changed (and a still image, which the rebuilt pipeline cannot keep), so the
-/// pointer is never trapped. Ctrl+Alt+N is <see cref="MonitorSwitchController"/>.
+/// the monitor is gone or changed (<see cref="FreezeRules"/>), so the pointer is never trapped.
+/// Ctrl+Alt+N is <see cref="MonitorSwitchController"/>.
 /// </summary>
 public sealed class MonitorFreezeController : IDisposable
 {
@@ -34,8 +34,8 @@ public sealed class MonitorFreezeController : IDisposable
     private readonly IAnnouncer _announcer;
     private readonly ILocalizer _texts;
     private readonly ILogger _log;
-    private readonly Action<Action> _dispatch;
     private readonly FreezeOperations _operations = new();
+    private readonly FreezeFenceEvents _events;
     private volatile bool _freezing;
 
     public MonitorFreezeController(
@@ -50,14 +50,12 @@ public sealed class MonitorFreezeController : IDisposable
         SettingsService settings, MonitorSwitchController monitorSwitch, IMonitorProvider monitors, ICursorSource cursor, IPointerFence fence,
         IPointerMover mover, IAnnouncer announcer, ILocalizer texts, ILogger log, Action<Action> dispatch)
     {
-        _settings = settings;
-        _switch = monitorSwitch;
-        _zoom = settings.Models.Zoom;
-        _frozen = _zoom.Frozen;
-        _overview = settings.Models.Overview;
+        (_settings, _switch, _zoom) = (settings, monitorSwitch, settings.Models.Zoom);
+        (_frozen, _overview) = (_zoom.Frozen, settings.Models.Overview);
         (_monitors, _cursor, _fence, _mover) = (monitors, cursor, fence, mover);
-        (_announcer, _texts, _log, _dispatch) = (announcer, texts, log, dispatch);
-        _fence.Recomputed += OnFenceRecomputed;
+        (_announcer, _texts, _log) = (announcer, texts, log);
+        _events = new FreezeFenceEvents(fence, _frozen, () => _freezing, dispatch,
+            (trigger, seen, freezing) => Guarded("recompute", () => Recheck(trigger, seen, freezing)));
     }
 
     /// <summary>Ctrl+Alt+H did nothing; the localised hint for a tray notice.</summary>
@@ -83,9 +81,15 @@ public sealed class MonitorFreezeController : IDisposable
         }
     });
 
+    /// <summary>
+    /// Lifts every freeze without a shortcut, e.g. while the shortcuts are being edited or when
+    /// Ctrl+Alt+H is no longer registered: otherwise nothing could give the frozen monitor back.
+    /// </summary>
+    public void LiftAll(string reason) => Guarded("lift_all", () => Lift(_ => true, reason));
+
     public void Dispose()
     {
-        _fence.Recomputed -= OnFenceRecomputed;
+        _events.Dispose();
         Guarded("exit", () => Lift(_ => true, "exit", announce: false));
     }
 
@@ -93,15 +97,9 @@ public sealed class MonitorFreezeController : IDisposable
     {
         var layout = MonitorLayout.Read(_monitors);
         var index = _cursor.TryGetPosition(out var pointer) ? layout.IndexAt(pointer) : -1;
-        if (layout.Count < 2)
+        if (layout.Count < 2 || index < 0)
         {
-            Refuse("one_monitor", "Freeze.OneMonitor");
-            return;
-        }
-
-        if (index < 0)
-        {
-            Refuse("no_pointer", "Freeze.NoPointer");
+            Refuse(layout.Count < 2 ? "one_monitor" : "no_pointer", layout.Count < 2 ? "Freeze.OneMonitor" : "Freeze.NoPointer");
             return;
         }
 
@@ -146,22 +144,9 @@ public sealed class MonitorFreezeController : IDisposable
             return;
         }
 
-        var image = FreezeOperation.Image(monitor);
+        var image = monitor.ImageKind;
         _log.MonitorFrozen(id, monitor.Level, image, layout.Ids[target]);
-        _announcer.Announce(_texts.Format("Freeze.Frozen", monitor.Number));
-    }
-
-    // Raised on the fence's watcher thread, which the fence may join while releasing (up to 2 s):
-    // never wait for this controller's lock there. What ends is decided by FreezeRules.ToLift, with
-    // what was frozen (or being frozen) when the event came.
-    private void OnFenceRecomputed(object? sender, FenceTrigger trigger)
-    {
-        if (trigger is FenceTrigger.DesktopSwitch or FenceTrigger.SessionUnlock or FenceTrigger.DisplayChange)
-        {
-            var seen = _frozen.State;
-            var freezing = _freezing;
-            _dispatch(() => Guarded("recompute", () => Recheck(trigger, seen, freezing)));
-        }
+        _announcer.Announce(_texts.Format("Freeze.Frozen", MonitorNames.Label(id)));
     }
 
     private void Recheck(FenceTrigger trigger, FreezeState seen, bool freezing)
@@ -223,23 +208,18 @@ public sealed class MonitorFreezeController : IDisposable
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
                 _log.FreezeFailed(ex, step);
-                ReleaseAll();
+                try
+                {
+                    _frozen.UnfreezeAll();
+                    _operations.StopAll("failure");
+                    _fence.Forbid(FenceOwner.FrozenMonitors, []);
+                }
+                catch (Exception inner) when (inner is not OutOfMemoryException)
+                {
+                    // The fence releases itself on every failure of its own; nothing more to do here.
+                    _log.FreezeFailed(inner, "release");
+                }
             }
-        }
-    }
-
-    private void ReleaseAll()
-    {
-        try
-        {
-            _frozen.UnfreezeAll();
-            _operations.StopAll("failure");
-            _fence.Forbid(FenceOwner.FrozenMonitors, []);
-        }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
-        {
-            // The fence releases itself on every failure of its own; nothing more to do here.
-            _log.FreezeFailed(ex, "release");
         }
     }
 }

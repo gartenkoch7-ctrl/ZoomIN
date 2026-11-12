@@ -18,4 +18,16 @@ public static class MonitorNames
 
         return start < monitorId.Length && int.TryParse(monitorId.AsSpan(start), out var number) ? number : 0;
     }
+
+    /// <summary>
+    /// What to call the monitor in an announcement ("Monitor {0}"): its number, or else the device
+    /// name without the "\\.\" prefix, never "0".
+    /// </summary>
+    public static string Label(string monitorId)
+    {
+        var number = Number(monitorId);
+        return number > 0
+            ? number.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            : monitorId.StartsWith(@"\\.\", StringComparison.Ordinal) ? monitorId[4..] : monitorId;
+    }
 }

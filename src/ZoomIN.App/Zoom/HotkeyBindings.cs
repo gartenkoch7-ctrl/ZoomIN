@@ -67,8 +67,18 @@ public sealed class HotkeyBindings(
         Add(s.FreezeMonitorHotkey, freeze.ToggleFreeze);
         Add(s.NextMonitorHotkey, monitorSwitch.NextMonitor);
         Unavailable = unavailable;
+
+        // Without Ctrl+Alt+H nothing could give a frozen monitor back (G2).
+        if (s.FreezeMonitorHotkey.VirtualKey == 0 || unavailable.Contains(s.FreezeMonitorHotkey))
+        {
+            freeze.LiftAll("shortcut_gone");
+        }
     }
 
-    /// <summary>Releases all shortcuts while the hotkey editor records a new combination.</summary>
-    public void Suspend() => hotkeys.UnregisterAll();
+    /// <summary>Releases all shortcuts while the hotkey editor records a new combination; a freeze ends (G2).</summary>
+    public void Suspend()
+    {
+        hotkeys.UnregisterAll();
+        freeze.LiftAll("shortcut_gone");
+    }
 }

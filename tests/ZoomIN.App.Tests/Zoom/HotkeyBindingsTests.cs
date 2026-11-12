@@ -71,6 +71,19 @@ public sealed class HotkeyBindingsTests
         Assert.Empty(hotkeys.Registered);
     }
 
+    [Fact]
+    public void EditingShortcuts_OrLosingCtrlAltH_LiftsAFreeze()
+    {
+        var (bindings, hotkeys, models) = Create(new AppSettings(), taken: HotkeyGesture.FreezeMonitor);
+        models.Zoom.Frozen.Freeze(new Core.Monitors.FrozenMonitor(
+            @"\\.\DISPLAY1", default, 1, Core.Modes.ZoomMode.Fullscreen, Core.Modes.LensSize.Default, Core.Modes.DockLayout.Default, false, default));
+
+        bindings.Register(); // Ctrl+Alt+H is taken by another application
+
+        Assert.False(models.Zoom.Frozen.Any);
+        Assert.DoesNotContain(HotkeyGesture.FreezeMonitor, hotkeys.Registered.Keys);
+    }
+
     private static (HotkeyBindings Bindings, FakeHotkeys Hotkeys, RenderModels Models) Create(
         AppSettings settings, HotkeyGesture? taken = null)
     {

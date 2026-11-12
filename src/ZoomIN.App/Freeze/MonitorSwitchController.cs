@@ -110,7 +110,7 @@ public sealed class MonitorSwitchController(
 
         _direction = direction;
         log.MonitorSwitched(from, to, skipped);
-        announcer.Announce(texts.Format("Switch.Done", MonitorNames.Number(to)));
+        announcer.Announce(texts.Format("Switch.Done", MonitorNames.Label(to)));
     }
 
     private void Refuse(string reason, string textKey)

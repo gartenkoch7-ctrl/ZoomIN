@@ -54,7 +54,7 @@ internal sealed class FrozenLayer : IDisposable
 
         if (frozen is not null)
         {
-            _log.FrozenViewStarted(_monitorId, frozen.Still ? "still" : "live");
+            _log.FrozenViewStarted(_monitorId, frozen.ImageKind);
         }
 
         _current = frozen;

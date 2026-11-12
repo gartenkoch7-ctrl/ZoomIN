@@ -353,7 +353,9 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
   gesetzt (sein eigener wurde abgesteckt), alle. Die Ereignisse kommen auf dem Wächter-Thread des
   Zauns, der Controller arbeitet sie im Thread-Pool ab: der Zaun kann den Wächter beim Lösen bis zu
   2 s joinen, und der darf dann nicht auf das Schloss des Controllers warten. Jeder Fehler im
-  Controller hebt alles auf und gibt den Zaun frei (Log 1725).
+  Controller hebt alles auf und gibt den Zaun frei (Log 1725). Werden die Kürzel bearbeitet oder ist
+  `Strg+Alt+H` nicht (mehr) registriert, endet ein Einfrieren auch (`HotkeyBindings`, Grund
+  `shortcut_gone`): sonst gäbe nichts den Monitor zurück.
 - **Wechselwirkungen:** Vorübergehende Stufen (Fenster-Verschieben G1, Übersicht B2) wirken
   auf einem eingefrorenen Monitor nicht; dessen Stufe, Modus, Lupe und Dock gelten vom Augenblick
   des Einfrierens. Zoom aus (`Strg+Alt+Z`) oder Moduswechsel ändern ihn nicht – der Rahmen zeigt

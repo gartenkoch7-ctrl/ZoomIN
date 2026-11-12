@@ -28,12 +28,12 @@ internal static class FreezeOperation
             .SetTag("zoomin.monitor.number", monitor.Number)
             .SetTag("zoomin.zoom.level", Math.Round(monitor.Level, 2))
             .SetTag("zoomin.mode", monitor.Mode.ToString())
-            .SetTag("zoomin.freeze.image", Image(monitor));
+            .SetTag("zoomin.freeze.image", monitor.ImageKind);
         Activity.Current = previous;
         return operation;
     }
 
-    /// <param name="reason">Why it ended: <c>command</c>, <c>display_change</c>, <c>desktop_switch</c>, <c>session_unlock</c>, <c>move_refused</c>, <c>failure</c>, <c>exit</c>.</param>
+    /// <param name="reason">Why it ended: <c>command</c>, <c>display_change</c>, <c>desktop_switch</c>, <c>session_unlock</c>, <c>move_refused</c>, <c>shortcut_gone</c>, <c>failure</c>, <c>exit</c>.</param>
     public static void Stop(Activity? operation, string reason)
     {
         s_frozen.Add(-1);
@@ -47,6 +47,4 @@ internal static class FreezeOperation
         operation.Stop();
         Activity.Current = ReferenceEquals(current, operation) ? null : current;
     }
-
-    public static string Image(FrozenMonitor monitor) => monitor.Still ? "still" : "live";
 }

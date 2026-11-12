@@ -48,12 +48,15 @@ public sealed class FrozenMonitor(
     /// <summary>The number Windows shows for the monitor (for announcements).</summary>
     public int Number => MonitorNames.Number(Id);
 
+    /// <summary>"still" or "live": the value of log 3310 and the tag <c>zoomin.freeze.image</c>.</summary>
+    public string ImageKind => Still ? "still" : "live";
+
     /// <summary>
     /// Keeps the view's anchor at the moment of freezing. The first call wins: a render pipeline
     /// rebuilt while frozen (display change) shows the same view again instead of the monitor's middle.
     /// </summary>
     /// <remarks>Called on a render thread: no allocation.</remarks>
-    public void KeepAnchor(PhysicalPoint anchor)
+    private void KeepAnchor(PhysicalPoint anchor)
     {
         if (Interlocked.CompareExchange(ref _anchorState, Writing, Empty) == Empty)
         {
@@ -90,7 +93,7 @@ public sealed class FrozenMonitor(
     }
 
     /// <summary>The kept anchor; per frame, lock-free, 0 B.</summary>
-    public bool TryGetAnchor(out PhysicalPoint anchor)
+    private bool TryGetAnchor(out PhysicalPoint anchor)
     {
         // The state is written last (release) and read first (acquire): a kept anchor is whole.
         var kept = Volatile.Read(ref _anchorState) == Kept;

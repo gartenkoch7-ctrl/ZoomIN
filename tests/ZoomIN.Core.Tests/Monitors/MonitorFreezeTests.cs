@@ -60,15 +60,13 @@ public sealed class MonitorFreezeTests
     public void FrozenMonitor_KeepsTheFirstAnchor_AndClampsItsLevel()
     {
         var monitor = new FrozenMonitor(Second, default, 40, ZoomMode.Lens, LensSize.Default, DockLayout.Default, true, RgbColor.Cyan);
-        Assert.False(monitor.TryGetAnchor(out _));
+
         Assert.Equal(ZoomLimits.Max, monitor.Level);
         Assert.Equal(2, monitor.Number);
 
-        monitor.KeepAnchor(new PhysicalPoint(10, 20));
-        monitor.KeepAnchor(new PhysicalPoint(30, 40));
-
-        Assert.True(monitor.TryGetAnchor(out var anchor));
-        Assert.Equal(new PhysicalPoint(10, 20), anchor);
+        Assert.Equal(new PhysicalPoint(10, 20), monitor.AnchorOr(new PhysicalPoint(10, 20)));
+        Assert.Equal(new PhysicalPoint(10, 20), monitor.AnchorOr(new PhysicalPoint(30, 40)));
+        Assert.Equal("still", monitor.ImageKind);
         Assert.Throws<ArgumentNullException>(() => new FrozenMonitor(null!, default, 2, ZoomMode.Lens, LensSize.Default, DockLayout.Default, false, default));
     }
 
@@ -94,7 +92,7 @@ public sealed class MonitorFreezeTests
     {
         var model = new ZoomModel(new ZoomLevels(), ZoomMode.Fullscreen, true, 0);
         var monitor = Frozen(Second);
-        monitor.KeepAnchor(new PhysicalPoint(1, 2));
+        monitor.AnchorOr(new PhysicalPoint(1, 2));
         model.Frozen.Freeze(Frozen(First));
         model.Frozen.Freeze(monitor);
 
@@ -131,7 +129,7 @@ public sealed class MonitorFreezeTests
 
     // Second is always frozen with its anchor (1, 2).
     private static double Read(ZoomModel model) =>
-        model.Frozen.For(Second) is { } frozen && frozen.TryGetAnchor(out var anchor) ? anchor.X + anchor.Y : 0;
+        model.Frozen.For(Second) is { } frozen && frozen.AnchorOr(default) is var anchor ? anchor.X + anchor.Y : 0;
 
     private static FrozenMonitor Frozen(string id) =>
         new(id, new PhysicalRect(0, 0, 100, 100), 2, ZoomMode.Fullscreen, LensSize.Default, DockLayout.Default, false, RgbColor.Cyan);

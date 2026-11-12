@@ -20,7 +20,7 @@ public class FreezeBenchmarks
     public void Setup()
     {
         var monitor = new FrozenMonitor(@"\\.\DISPLAY2", _monitors[1], 4, ZoomMode.Fullscreen, LensSize.Default, DockLayout.Default, false, RgbColor.Cyan);
-        monitor.KeepAnchor(new PhysicalPoint(4000, 300));
+        monitor.AnchorOr(new PhysicalPoint(4000, 300));
         _model.Frozen.Freeze(monitor);
     }
 
