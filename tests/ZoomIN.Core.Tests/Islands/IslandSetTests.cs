@@ -67,19 +67,6 @@ public sealed class IslandSetTests
     }
 
     [Fact]
-    public void HitTest_FindsTheTopmost_AndGrowsByTheReach()
-    {
-        var set = IslandSet.Empty
-            .Add(new Island(0, IslandMonitors.First, new PhysicalRect(0, 0, 50, 50), new PhysicalPoint(100, 100), 2))!
-            .Add(new Island(0, IslandMonitors.First, new PhysicalRect(0, 0, 50, 50), new PhysicalPoint(150, 150), 2))!;
-
-        Assert.Equal(1, set.HitTest(new PhysicalPoint(160, 160)));
-        Assert.Equal(0, set.HitTest(new PhysicalPoint(120, 120)));
-        Assert.Equal(-1, set.HitTest(new PhysicalPoint(95, 95)));
-        Assert.Equal(0, set.HitTest(new PhysicalPoint(95, 95), grow: 10));
-    }
-
-    [Fact]
     public void HasIslandOn_ChecksTheMonitor()
     {
         var set = IslandSet.Empty.Add(At(0))!;

@@ -77,6 +77,37 @@ public sealed class IslandEditSafetyTests
     }
 
     [Fact]
+    public void LateIdleTimer_OfAnEndedRun_DoesNotEndTheNextOne()
+    {
+        using var rig = new IslandRig();
+        rig.Controller.ToggleEdit();
+        var first = rig.Clock.Timers[0];
+        rig.Controller.ToggleEdit();
+        rig.Controller.ToggleEdit();
+
+        first.Fire();
+
+        Assert.True(rig.Controller.IsEditing);
+        rig.Clock.Timers[1].Fire();
+        Assert.False(rig.Controller.IsEditing);
+    }
+
+    [Fact]
+    public void ClickOnEmptySpace_TakesTheRubberBandAway()
+    {
+        using var rig = new IslandRig();
+        rig.Controller.ToggleEdit();
+        rig.Handler.Pressed(new PhysicalPoint(500, 500));
+        rig.Handler.Moved(new PhysicalPoint(505, 505));
+        Assert.NotNull(rig.Islands.Scene.Edit!.RubberBand);
+
+        rig.Handler.Released(new PhysicalPoint(505, 505));
+
+        Assert.Null(rig.Islands.Scene.Edit!.RubberBand);
+        Assert.Equal(0, rig.Islands.Scene.Set.Count);
+    }
+
+    [Fact]
     public void EditMode_LeavesHiddenIslandsHidden()
     {
         using var rig = new IslandRig(new AppSettings { Islands = new IslandOptions { Visible = false } });

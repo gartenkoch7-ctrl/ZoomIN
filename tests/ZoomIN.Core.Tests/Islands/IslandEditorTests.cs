@@ -56,7 +56,7 @@ public sealed class IslandEditorTests
 
         editor.Press(new PhysicalPoint(900, 500));
 
-        Assert.Equal(IslandEditOutcome.None, editor.Release(new PhysicalPoint(905, 560)));
+        Assert.Equal(IslandEditOutcome.Dragged, editor.Release(new PhysicalPoint(905, 560)));
         Assert.Equal(0, editor.Set.Count);
     }
 
@@ -222,45 +222,6 @@ public sealed class IslandEditorTests
 
         Assert.Equal(IslandEditOutcome.Dragged, editor.Press(new PhysicalPoint(150, 95)));
         Assert.Equal(-1, editor.Selected);
-    }
-
-    [Fact]
-    public void PressInsideAnIsland_NextToAHigherOnesEdge_GrabsTheLowerOne()
-    {
-        // Lower (index 0): picture (100,100)–(200,200). Higher (index 1): picture (205,100)–(305,200).
-        var set = One().Add(new Island(0, IslandMonitors.First, new PhysicalRect(400, 400, 50, 50), new PhysicalPoint(205, 100), 2))!;
-        var editor = Editor(set);
-
-        Assert.Equal(IslandEditOutcome.Selected, editor.Press(new PhysicalPoint(196, 150)));
-        Assert.Equal(0, editor.Selected);
-    }
-
-    [Fact]
-    public void IslandsThatAreNotDrawn_CannotBeGrabbedOrDeleted()
-    {
-        var hidden = IslandSet.Empty
-            .Add(new Island(0, @"\\.\GONE", new PhysicalRect(0, 0, 50, 50), new PhysicalPoint(100, 100), 2))!
-            .Add(new Island(0, IslandMonitors.First, new PhysicalRect(0, 0, 50, 50), new PhysicalPoint(1900, 100), 2))!;
-        var editor = Editor(hidden);
-
-        editor.Move(new PhysicalPoint(150, 150));
-        Assert.Equal(IslandEditOutcome.None, editor.Delete());
-        Assert.Equal(IslandEditOutcome.None, editor.Wheel(1, new PhysicalPoint(1910, 150)));
-        Assert.Equal(IslandEditOutcome.Dragged, editor.Press(new PhysicalPoint(150, 150)));
-        Assert.Equal(2, editor.Set.Count);
-    }
-
-    [Fact]
-    public void CancelDrag_UndoesAMove_AndReportsWhetherOneRan()
-    {
-        var editor = Editor(One());
-        Assert.False(editor.CancelDrag());
-        editor.Press(new PhysicalPoint(150, 150));
-        editor.Move(new PhysicalPoint(300, 300));
-
-        Assert.True(editor.CancelDrag());
-        Assert.Equal(new PhysicalPoint(100, 100), editor.Set[0].TargetOrigin);
-        Assert.Null(editor.DragBounds);
     }
 
     private static IslandEditor Editor(IslandSet? set = null) => new(set ?? IslandSet.Empty, new IslandMonitors(), _ => 3);

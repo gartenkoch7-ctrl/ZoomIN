@@ -82,11 +82,15 @@ public sealed partial class IslandsViewModel : ObservableObject
         }
     }
 
-    // The row already shows the new state: keep it (and the keyboard focus on its switch).
+    // The row already shows the new state: keep it (and the keyboard focus on its switch), unless the
+    // islands changed meanwhile or the island is gone – then the next Refresh rebuilds the rows.
     private void OnStillChanged(IslandRow row)
     {
-        _model.SetStill(row.Id, row.Still);
-        _shown = _model.Scene.Set;
+        var before = _model.Scene.Set;
+        if (_model.SetStill(row.Id, row.Still) && ReferenceEquals(before, _shown))
+        {
+            _shown = _model.Scene.Set;
+        }
     }
 
     private static int IndexOf(IReadOnlyList<string> monitors, string id)

@@ -128,22 +128,4 @@ public sealed class IslandSet
 
         return false;
     }
-
-    /// <summary>
-    /// The topmost island whose picture contains <paramref name="point"/> on the monitor, or −1.
-    /// <paramref name="grow"/> widens each picture, e.g. by the size of the corner handles.
-    /// </summary>
-    public int HitTest(PhysicalPoint point, double grow = 0)
-    {
-        for (var i = _items.Length - 1; i >= 0; i--)
-        {
-            var t = _items[i].Target;
-            if (point.X >= t.X - grow && point.X < t.Right + grow && point.Y >= t.Y - grow && point.Y < t.Bottom + grow)
-            {
-                return i;
-            }
-        }
-
-        return -1;
-    }
 }

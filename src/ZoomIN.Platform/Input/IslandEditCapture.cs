@@ -178,6 +178,7 @@ public sealed class IslandEditCapture : IIslandEditInput
         // The latest move, packed; queued as one marker until the worker took it (moves come fast).
         private long _move;
         private int _moveQueued;
+        private volatile bool _stopped;
 
         public Session(IIslandEditInputHandler handler)
         {
@@ -196,13 +197,21 @@ public sealed class IslandEditCapture : IIslandEditInput
             }
         }
 
-        public void Complete() => _queue.Writer.TryComplete();
+        // Inputs still queued are dropped, not handed on: they belong to an edit mode that is over.
+        public void Complete()
+        {
+            _stopped = true;
+            _queue.Writer.TryComplete();
+        }
 
         private async Task RunAsync()
         {
             await foreach (var input in _queue.Reader.ReadAllAsync().ConfigureAwait(false))
             {
-                Hand(input);
+                if (!_stopped)
+                {
+                    Hand(input);
+                }
             }
         }
 

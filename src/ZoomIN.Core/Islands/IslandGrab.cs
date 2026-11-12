@@ -4,8 +4,8 @@ using ZoomIN.Core.Viewport;
 namespace ZoomIN.Core.Islands;
 
 /// <summary>
-/// Which island a point of the edit mode hits (M19 B1). Pure: the topmost island the user sees at the
-/// point, whose picture contains it or (with corners) has a corner within <see cref="HandleReach"/>.
+/// Which island a point of the edit mode hits (M19 B1). Pure: the topmost island the user sees under
+/// the point, else (with corners) the topmost one with a corner within <see cref="HandleReach"/>.
 /// Islands that are not drawn (monitor gone, picture outside it) cannot be hit, and a higher island's
 /// reach never hides a lower island under the point.
 /// </summary>
@@ -20,18 +20,20 @@ public static class IslandGrab
     {
         ArgumentNullException.ThrowIfNull(set);
         ArgumentNullException.ThrowIfNull(monitors);
-        for (var i = set.Count - 1; i >= 0; i--)
-        {
-            if (!IsShown(set[i], monitors, out monitor))
-            {
-                continue;
-            }
 
-            var target = set[i].Target;
-            corner = withCorners ? CornerAt(target, point) : null;
-            if (corner is not null || target.Contains(point))
+        // First the island under the point (topmost), with its corner if one is in reach; only beside
+        // every island does a corner's reach outside a picture count.
+        for (var pass = 0; pass < (withCorners ? 2 : 1); pass++)
+        {
+            for (var i = set.Count - 1; i >= 0; i--)
             {
-                return i;
+                var target = set[i].Target;
+                var hit = pass == 0 ? target.Contains(point) : CornerAt(target, point) is not null;
+                if (hit && IsShown(set[i], monitors, out monitor))
+                {
+                    corner = withCorners ? CornerAt(target, point) : null;
+                    return i;
+                }
             }
         }
 
@@ -49,13 +51,17 @@ public static class IslandGrab
         return IslandRules.Fits(island, monitor);
     }
 
-    /// <summary>A corner of the picture within reach of the point, or null.</summary>
+    /// <summary>
+    /// A corner of the picture within reach of the point, or null. The reach shrinks to a quarter of
+    /// a small picture's side, so its middle still moves it instead of always resizing.
+    /// </summary>
     public static IslandCorner? CornerAt(PhysicalRect target, PhysicalPoint point)
     {
-        var left = Math.Abs(point.X - target.X) <= HandleReach;
-        var right = Math.Abs(point.X - target.Right) <= HandleReach;
-        var top = Math.Abs(point.Y - target.Y) <= HandleReach;
-        var bottom = Math.Abs(point.Y - target.Bottom) <= HandleReach;
+        var reach = Math.Min(HandleReach, Math.Min(target.Width, target.Height) / 4);
+        var left = Math.Abs(point.X - target.X) <= reach;
+        var right = Math.Abs(point.X - target.Right) <= reach;
+        var top = Math.Abs(point.Y - target.Y) <= reach;
+        var bottom = Math.Abs(point.Y - target.Bottom) <= reach;
         return (left, right, top, bottom) switch
         {
             (true, _, true, _) => IslandCorner.TopLeft,

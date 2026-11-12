@@ -173,7 +173,8 @@ internal sealed class DesktopLayer(
         pass.Draw(context, desktop, target, (float)(viewport.X - monitor.X), (float)(viewport.Y - monitor.Y),
             (float)viewport.Width, (float)viewport.Height, constants, weights);
 
-    private static PhysicalRect Expand(PhysicalRect rect, double by, PhysicalRect within)
+    /// <summary>The frame around <paramref name="rect"/>, clipped to <paramref name="within"/> (also for islands, M19 B1).</summary>
+    internal static PhysicalRect Expand(PhysicalRect rect, double by, PhysicalRect within)
     {
         var x = Math.Max(rect.X - by, within.X);
         var y = Math.Max(rect.Y - by, within.Y);

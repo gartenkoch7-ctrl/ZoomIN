@@ -10,7 +10,7 @@ namespace ZoomIN.App.Islands;
 /// The safety ends of the island edit mode (M19 B1) besides Esc and the idle time: a desktop switch,
 /// an unlock or a display change (the fence reports them, it runs because of the drag filter), a
 /// zoom command that cleared the edit mode's 1×, and a change of the islands from outside (profile
-/// switch, settings page), which the edit mode must not overwrite. Each calls <c>end</c> with a reason.
+/// switch, settings page), which the edit mode must not overwrite.
 /// </summary>
 internal sealed class IslandEditWatch : IDisposable
 {
@@ -18,21 +18,25 @@ internal sealed class IslandEditWatch : IDisposable
     private readonly ZoomModel _zoom;
     private readonly IslandModel _model;
     private readonly IMonitorProvider _monitors;
-    private readonly Func<IslandSet?> _published;
+    private readonly Func<bool> _editing;
     private readonly Action<string> _end;
+    private readonly Action _checkOutside;
     private readonly ILogger _log;
 
-    /// <param name="published">The set the running edit mode last published, or null while it is off.</param>
+    /// <param name="editing">True while the edit mode runs.</param>
+    /// <param name="end">Ends the edit mode with a reason.</param>
+    /// <param name="checkOutside">Ends it if the islands changed from outside (the controller compares under its lock).</param>
     public IslandEditWatch(
-        IPointerFence fence, ZoomModel zoom, IslandModel model, IMonitorProvider monitors, Func<IslandSet?> published, Action<string> end,
-        ILogger log)
+        IPointerFence fence, ZoomModel zoom, IslandModel model, IMonitorProvider monitors, Func<bool> editing, Action<string> end,
+        Action checkOutside, ILogger log)
     {
         _fence = fence;
         _zoom = zoom;
         _model = model;
         _monitors = monitors;
-        _published = published;
+        _editing = editing;
         _end = end;
+        _checkOutside = checkOutside;
         _log = log;
         _fence.Recomputed += OnFenceRecomputed;
         _zoom.Temporary.Changed += OnTemporaryChanged;
@@ -51,14 +55,14 @@ internal sealed class IslandEditWatch : IDisposable
     {
         if (trigger is FenceTrigger.DesktopSwitch or FenceTrigger.SessionUnlock or FenceTrigger.DisplayChange)
         {
-            End(trigger.ToString());
+            Safely(() => _end(trigger.ToString()));
         }
     }
 
     // A zoom command of the user (zoom off, mode, step to 1×) cleared the edit mode's 1×.
     private void OnTemporaryChanged()
     {
-        if (_published() is null)
+        if (!_editing())
         {
             return;
         }
@@ -67,27 +71,27 @@ internal sealed class IslandEditWatch : IDisposable
         {
             if (_zoom.Temporary.LevelFor(TemporaryZoomOwner.IslandEdit, monitor) is null)
             {
-                End("cleared");
+                Safely(() => _end("cleared"));
                 return;
             }
         }
     }
 
-    // Raised for the edit mode's own steps too; only a set it did not publish is a change from outside.
+    // Also raised for the edit mode's own steps; the controller tells them apart under its lock.
     private void OnModelChanged()
     {
-        if (_published() is { } published && !ReferenceEquals(_model.Scene.Set, published))
+        if (_editing())
         {
-            End("changed");
+            Safely(_checkOutside);
         }
     }
 
     // Raised on other threads (fence watcher, zoom command on the UI thread): never let it fail there.
-    private void End(string reason)
+    private void Safely(Action action)
     {
         try
         {
-            _end(reason);
+            action();
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {

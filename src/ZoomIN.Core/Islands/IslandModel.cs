@@ -51,8 +51,37 @@ public sealed class IslandModel
     public void ShowEdit(IslandSet set, IslandEditView? edit, bool save)
     {
         ArgumentNullException.ThrowIfNull(set);
+
         // Visibility stays the user's: the scene shows every island while editing anyway (IslandScene.ShowsOn).
         Publish(scene => scene with { Set = set, Edit = edit }, save);
+    }
+
+    /// <summary>
+    /// A step of the edit mode, but only if the islands are still <paramref name="expected"/> (what
+    /// the edit mode published last): a change from outside (profile switch, settings page) in
+    /// between is never overwritten. Atomic.
+    /// </summary>
+    /// <returns>False if the islands changed from outside; nothing was published.</returns>
+    public bool ShowEdit(IslandSet expected, IslandSet set, IslandEditView? edit, bool save)
+    {
+        ArgumentNullException.ThrowIfNull(set);
+        var current = true;
+        Publish(scene =>
+        {
+            current = ReferenceEquals(scene.Set, expected);
+            return current ? scene with { Set = set, Edit = edit } : scene;
+        }, save);
+        return current;
+    }
+
+    /// <summary>
+    /// Ends the edit mode: its islands <paramref name="edited"/> are kept if the islands are still
+    /// <paramref name="expected"/>, otherwise the change from outside stays. Atomic, saved.
+    /// </summary>
+    public void EndEdit(IslandSet expected, IslandSet edited)
+    {
+        ArgumentNullException.ThrowIfNull(edited);
+        Publish(scene => scene with { Set = ReferenceEquals(scene.Set, expected) ? edited : scene.Set, Edit = null }, save: true);
     }
 
     private bool Change(int id, Func<IslandSet, int, IslandSet> change)

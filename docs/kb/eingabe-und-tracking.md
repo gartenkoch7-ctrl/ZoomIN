@@ -337,7 +337,8 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
     Bewegungen gehen immer an Windows weiter (der Zeiger muss sich bewegen), schnelle Folgen
     werden zur jeweils letzten zusammengefasst. Wurde ein Druck verschluckt, wird auch sein
     Loslassen verschluckt – auch nach dem Ende des Modus; ein Druck von vorher behält sein
-    Loslassen für die Anwendung. Esc und Entf prüft der Hook vor dem Esc der Übersicht (B2).
+    Loslassen für die Anwendung. Esc und Entf prüft der Hook vor dem Esc der Übersicht (B2). Beim Ende
+    noch wartende Eingaben werden verworfen, nicht mehr weitergegeben.
   - Strg+Mausrad zoomt weiter (eigener Hook, der vorher greift) – unsichtbar, denn die 1× gilt.
   - **Zeigerzaun:** Während eines Ziehens hält `IslandDragFence` (Filter `PointerFilterOrder.IslandEdit`
     = 100, erster der Kette) den Zeiger auf dem Monitor der Insel (eine Insel gehört genau einem
@@ -345,7 +346,7 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
     Ziehens alles durch. `FenceOwner.IslandEdit` (gesperrte Bereiche) wird nicht gebraucht.
   - Editor (`IslandEditor`, rein): Rechteck auf freier Fläche aufziehen (< 16 px = Klick) → neue
     Insel mit der Stufe des Monitors (`TargetFor`, sonst die zuletzt genutzte Vollbild-Stufe, sonst
-    2×); Insel ziehen → verschieben; Ecke (±12 px) ziehen → Ausschnitt größer/kleiner bei gleicher
+    2×); Insel ziehen → verschieben; Ecke (±12 px, bei kleinen Bildern ein Viertel der Seite, damit die Mitte noch verschiebt) ziehen → Ausschnitt größer/kleiner bei gleicher
     Stufe, die Gegenecke bleibt; Rad über der Insel (sonst die gewählte) → Stufe in Zoom-Schritten;
     Entf → gewählte bzw. die unter dem Zeiger löschen; Esc → laufendes Ziehen zurücknehmen, sonst
     Ende. Eine fünfte Insel wird mit Ansage abgelehnt.

@@ -85,7 +85,7 @@ internal sealed class IslandLayer : IDisposable
 
             var still = island.Still ? _stills.For(island.Id, island.Source) : null;
             var picture = island.Target;
-            var viewport = Expand(picture, FrameThickness, monitor);
+            var viewport = DesktopLayer.Expand(picture, FrameThickness, monitor);
             var constants = MagnifyConstants.ForIsland(
                 island.Source, monitor, picture, viewport, frame, effects.Matrix, effects.Smoothing, smart,
                 effects.Enhancement.At(island.Level, effects.Smoothing),
@@ -128,12 +128,5 @@ internal sealed class IslandLayer : IDisposable
         {
             _marks.End(context);
         }
-    }
-
-    private static PhysicalRect Expand(PhysicalRect rect, double by, PhysicalRect within)
-    {
-        var x = Math.Max(rect.X - by, within.X);
-        var y = Math.Max(rect.Y - by, within.Y);
-        return new PhysicalRect(x, y, Math.Min(rect.Right + by, within.Right) - x, Math.Min(rect.Bottom + by, within.Bottom) - y);
     }
 }

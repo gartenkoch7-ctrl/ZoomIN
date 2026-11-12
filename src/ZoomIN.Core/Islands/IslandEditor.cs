@@ -114,7 +114,7 @@ public sealed class IslandEditor
         RubberBand = null;
         if (!IslandRules.IsLargeEnough(band))
         {
-            return IslandEditOutcome.None;
+            return IslandEditOutcome.Dragged; // a click: nothing new, but the band must go from the screen
         }
 
         var added = Set.Add(IslandRules.Create(0, drag.MonitorId!, band, drag.Monitor, _startLevel(drag.MonitorId!)));

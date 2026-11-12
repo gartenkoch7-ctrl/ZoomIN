@@ -6,7 +6,7 @@ public enum IslandEditOutcome
     /// <summary>Nothing to do (a click beside every island, the wheel over empty space).</summary>
     None,
 
-    /// <summary>A drag moved on: rubber band, island moved or resized. Shown, not announced.</summary>
+    /// <summary>A drag moved on or a click ended a rubber band: shown, not announced or saved.</summary>
     Dragged,
 
     /// <summary>An island was picked (press on it); the selection is announced.</summary>

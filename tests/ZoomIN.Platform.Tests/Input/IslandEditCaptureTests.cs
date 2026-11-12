@@ -121,11 +121,36 @@ public sealed class IslandEditCaptureTests
         capture.Stop();
     }
 
+    [Fact]
+    public void InputsStillQueued_AtStop_AreDropped()
+    {
+        var capture = new IslandEditCapture();
+        using var gate = new ManualResetEventSlim(false);
+        var handler = new RecordingHandler { Gate = gate };
+        capture.Start(handler);
+
+        capture.OnMouse(IslandEditCapture.LeftDown, 1, 1, 0); // the worker waits in this one
+        Assert.True(SpinWait.SpinUntil(() => handler.Waiting, TimeSpan.FromSeconds(5)));
+        capture.OnKey(IslandEditCapture.DeleteKey, down: true, up: false);
+        capture.OnKey(IslandEditCapture.EscapeKey, down: true, up: false);
+        capture.Stop();
+        gate.Set();
+
+        handler.WaitFor(1);
+        Thread.Sleep(100);
+        Assert.Equal(["press 1,1"], handler.Calls);
+    }
+
     private sealed class RecordingHandler : IIslandEditInputHandler
     {
         private readonly List<string> _calls = [];
 
         public bool FailOnPress { get; init; }
+
+        /// <summary>The press waits for it (to queue more input behind it).</summary>
+        public ManualResetEventSlim? Gate { get; init; }
+
+        public bool Waiting { get; private set; }
 
         public IReadOnlyList<string> Calls
         {
@@ -146,6 +171,12 @@ public sealed class IslandEditCaptureTests
             if (FailOnPress)
             {
                 throw new InvalidOperationException("test");
+            }
+
+            if (Gate is not null)
+            {
+                Waiting = true;
+                Gate.Wait(TimeSpan.FromSeconds(5));
             }
 
             Add($"press {point.X},{point.Y}");

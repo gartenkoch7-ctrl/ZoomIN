@@ -50,7 +50,7 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
         _time = time;
         _log = log;
         _report = new IslandReport(announcer, texts, log);
-        _watch = new IslandEditWatch(fence, _zoom, _model, monitors, () => Volatile.Read(ref _edit)?.Published, End, log);
+        _watch = new IslandEditWatch(fence, _zoom, _model, monitors, () => IsEditing, End, EndIfChangedOutside, log);
     }
 
     public bool IsEditing => Volatile.Read(ref _edit) is not null;
@@ -92,9 +92,8 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
             }
 
             var set = _model.Scene.Set.FitTo(_monitors.BoundsOf);
-            var idle = _time.CreateTimer(_ => EndLogged("idle"), null, IdleLimit, Timeout.InfiniteTimeSpan);
-            session = new IslandEditSession(
-                new IslandEditor(set, _monitors, monitor => IslandRules.StartLevel(_zoom, monitor)), Stopwatch.GetTimestamp(), IslandOperation.StartEdit(set.Count), idle);
+            var editor = new IslandEditor(set, _monitors, monitor => IslandRules.StartLevel(_zoom, monitor));
+            session = new IslandEditSession(editor, IslandOperation.StartEdit(set.Count), _time, IdleLimit, idle => EndLogged("idle", idle));
             lock (_gate)
             {
                 _edit = session;
@@ -125,23 +124,26 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
     }
 
     /// <summary>Ends the edit mode if it runs; the islands are saved with the profile.</summary>
-    public void End(string reason)
+    public void End(string reason) => End(reason, only: null);
+
+    // only: end just this run (its idle timer), never a newer one.
+    private void End(string reason, IslandEditSession? only)
     {
         IslandEditSession? edit;
         lock (_gate)
         {
             edit = _edit;
-            _edit = null;
-            if (edit is null)
+            if (edit is null || (only is not null && !ReferenceEquals(edit, only)))
             {
                 return;
             }
 
+            _edit = null;
+
             // A drag in progress is undone, not saved half way; a change from outside (profile switch,
             // settings page) is kept instead of the edit mode's islands.
             edit.Editor.CancelDrag();
-            var final = ReferenceEquals(_model.Scene.Set, edit.Published) ? edit.Editor.Set : _model.Scene.Set;
-            _model.ShowEdit(final, null, save: true);
+            _model.EndEdit(edit.Published, edit.Editor.Set);
         }
 
         // Clicks go back to applications first, whatever fails afterwards.
@@ -190,7 +192,7 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
     {
         try
         {
-            IslandEditOutcome outcome;
+            string? end = null;
             lock (_gate)
             {
                 if (_edit is not { } edit)
@@ -199,22 +201,34 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
                 }
 
                 var editor = edit.Editor;
-                outcome = step(editor);
-                edit.Touch(IdleLimit);
+                var outcome = step(editor);
+                edit.Touch();
                 _dragFence.Confine(editor.DragBounds);
                 if (outcome is not (IslandEditOutcome.None or IslandEditOutcome.End))
                 {
                     var saved = outcome is IslandEditOutcome.Created or IslandEditOutcome.Changed
                         or IslandEditOutcome.LevelChanged or IslandEditOutcome.Deleted;
+
+                    // Published first: the model's Changed of this very step reaches EndIfChangedOutside on this thread.
+                    var before = edit.Published;
                     edit.Published = editor.Set;
-                    _model.ShowEdit(editor.Set, edit.View(), saved);
-                    _report.Outcome(outcome, editor);
+                    if (_model.ShowEdit(before, editor.Set, edit.View(), saved))
+                    {
+                        _report.Outcome(outcome, editor);
+                    }
+                    else
+                    {
+                        edit.Published = before;
+                        end = "changed";
+                    }
                 }
+
+                end ??= outcome == IslandEditOutcome.End ? "escape" : null;
             }
 
-            if (outcome == IslandEditOutcome.End)
+            if (end is not null)
             {
-                End("escape");
+                End(end);
             }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -223,11 +237,27 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
         }
     }
 
-    private void EndLogged(string reason)
+    // The islands changed (any thread). Under the lock, so a step that is publishing is never taken
+    // for a change from outside; anything else than the edit mode's own islands ends it.
+    private void EndIfChangedOutside()
+    {
+        bool outside;
+        lock (_gate)
+        {
+            outside = _edit is { } edit && !ReferenceEquals(_model.Scene.Set, edit.Published);
+        }
+
+        if (outside)
+        {
+            End("changed");
+        }
+    }
+
+    private void EndLogged(string reason, IslandEditSession? only = null)
     {
         try
         {
-            End(reason);
+            End(reason, only);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
