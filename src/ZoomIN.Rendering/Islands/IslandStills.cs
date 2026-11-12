@@ -32,7 +32,9 @@ internal sealed class IslandStills : IDisposable
     /// Takes missing images from <paramref name="desktop"/> (the monitor's captured desktop) and
     /// frees images of islands that are gone or live.
     /// </summary>
-    public void Update(ID3D11DeviceContext context, ID3D11Texture2D desktop, IslandSet set, string monitorId, PhysicalRect monitor)
+    /// <param name="editing">The edit mode runs: a source that changes with every drag step is not
+    /// taken again each frame (a new texture per size); the island shows live until the drag is over.</param>
+    public void Update(ID3D11DeviceContext context, ID3D11Texture2D desktop, IslandSet set, string monitorId, PhysicalRect monitor, bool editing)
     {
         for (var place = 0; place < _ids.Length; place++)
         {
@@ -57,26 +59,26 @@ internal sealed class IslandStills : IDisposable
                 place = PlaceOf(0);
             }
 
-            // Four islands fill four places; a free one is always there.
-            if (place < 0 || (_ids[place] == island.Id && _sources[place] == island.Source && _frames[place].HasImage))
+            // Four islands fill four places; a free one is always there. A failed capture (format)
+            // counts as taken too, so it is neither retried nor logged every frame.
+            var taken = place >= 0 && _ids[place] == island.Id;
+            if (place < 0 || (taken && _sources[place] == island.Source) || (taken && editing && _frames[place].HasImage))
             {
                 continue;
             }
 
             var region = new PhysicalRect(island.Source.X - monitor.X, island.Source.Y - monitor.Y, island.Source.Width, island.Source.Height);
-            if (_frames[place].Capture(context, desktop, region))
-            {
-                _ids[place] = island.Id;
-                _sources[place] = island.Source;
-            }
+            _frames[place].Capture(context, desktop, region);
+            _ids[place] = island.Id;
+            _sources[place] = island.Source;
         }
     }
 
-    /// <summary>The still image of the island, or null (live, or not taken yet).</summary>
-    public StillFrame? For(int islandId)
+    /// <summary>The still image of the island at <paramref name="source"/>, or null (live, not taken yet, or taken of another source).</summary>
+    public StillFrame? For(int islandId, PhysicalRect source)
     {
         var place = PlaceOf(islandId);
-        return place >= 0 && _frames[place].HasImage ? _frames[place] : null;
+        return place >= 0 && _sources[place] == source && _frames[place].HasImage ? _frames[place] : null;
     }
 
     public void Dispose()

@@ -16,6 +16,7 @@ internal static class TextsGermanIslands
         ["Islands.Full"] = "Höchstens 4 Inseln. Erst eine löschen.",
         ["Islands.Deleted"] = "Insel gelöscht",
         ["Islands.Docked"] = "Inseln lassen sich im angedockten Modus nicht bearbeiten",
+        ["Islands.NoInput"] = "Inseln bearbeiten geht gerade nicht: ZoomIN kann die Mausklicks nicht abfangen",
         ["Islands.Title"] = "Inseln",
         ["Islands.Visible"] = "Inseln anzeigen",
         ["Islands.Visible.Desc"] = "Feste Bildschirmbereiche wie Uhr oder Chat bleiben vergrößert über dem Zoom stehen (Vollbild). Klicks gehen durch die Insel hindurch. Strg+Alt+I",

@@ -38,9 +38,15 @@ public sealed class IslandEditCapture : IIslandEditInput
     private int _heldButtons;
     private bool _escapeHeld;
     private bool _deleteHeld;
+    private volatile bool _hooksInstalled;
 
     /// <summary>True while the edit mode takes the input.</summary>
     public bool IsCapturing => Volatile.Read(ref _session) is not null;
+
+    public bool IsAvailable => _hooksInstalled;
+
+    /// <summary>Set by <see cref="Win32InputActivityHook"/> once its mouse and keyboard hooks are (no longer) installed.</summary>
+    internal void HooksInstalled(bool installed) => _hooksInstalled = installed;
 
     public void Start(IIslandEditInputHandler handler)
     {

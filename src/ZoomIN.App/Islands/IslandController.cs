@@ -17,8 +17,8 @@ namespace ZoomIN.App.Islands;
 /// edit mode, which shows every monitor at 1× (temporary level), takes clicks, wheel, Esc and Del
 /// (<see cref="IIslandEditInput"/>), keeps a drag on its monitor (<see cref="IslandDragFence"/>)
 /// and feeds the <see cref="IslandEditor"/>. It ends with Esc, the shortcut again, 2 minutes
-/// without input, a desktop switch, a display change or a zoom command that clears the 1×.
-/// Input steps run one at a time under a lock; the island model is saved with the profile.
+/// without input or one of the safety ends of <see cref="IslandEditWatch"/>. Input steps run one at
+/// a time under a lock; the islands are saved with the profile.
 /// </summary>
 public sealed class IslandController : IIslandEditInputHandler, IDisposable
 {
@@ -33,6 +33,7 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
     private readonly IPointerFence _fence;
     private readonly TimeProvider _time;
     private readonly IslandReport _report;
+    private readonly IslandEditWatch _watch;
     private readonly ILogger _log;
     private readonly IslandDragFence _dragFence = new();
     private IslandEditSession? _edit;
@@ -49,8 +50,7 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
         _time = time;
         _log = log;
         _report = new IslandReport(announcer, texts, log);
-        _fence.Recomputed += OnFenceRecomputed;
-        _zoom.Temporary.Changed += OnTemporaryChanged;
+        _watch = new IslandEditWatch(fence, _zoom, _model, monitors, () => Volatile.Read(ref _edit)?.Published, End, log);
     }
 
     public bool IsEditing => Volatile.Read(ref _edit) is not null;
@@ -75,11 +75,10 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
             return;
         }
 
-        if (_zoom.Mode == ZoomMode.Docked)
+        if (Refused() is { } reason)
         {
-            // The docked strip has no temporary 1× (it reserves screen space), so the pointer would not be where the islands are.
-            _log.EditRefused("docked");
-            _report.Say("Islands.Docked");
+            _log.EditRefused(reason);
+            _report.Say(reason == "docked" ? "Islands.Docked" : "Islands.NoInput");
             return;
         }
 
@@ -92,10 +91,10 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
                 _zoom.Temporary.Set(TemporaryZoomOwner.IslandEdit, monitor, ZoomLimits.Min);
             }
 
-            var set = Refit(_model.Scene.Set);
+            var set = _model.Scene.Set.FitTo(_monitors.BoundsOf);
             var idle = _time.CreateTimer(_ => EndLogged("idle"), null, IdleLimit, Timeout.InfiniteTimeSpan);
             session = new IslandEditSession(
-                new IslandEditor(set, _monitors, StartLevel), Stopwatch.GetTimestamp(), IslandOperation.StartEdit(set.Count), idle);
+                new IslandEditor(set, _monitors, monitor => IslandRules.StartLevel(_zoom, monitor)), Stopwatch.GetTimestamp(), IslandOperation.StartEdit(set.Count), idle);
             lock (_gate)
             {
                 _edit = session;
@@ -108,7 +107,7 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
         catch
         {
             // Never leave the monitors at 1× or the clicks taken after a failed start.
-            End("failed");
+            EndLogged("failed");
             _zoom.Temporary.ReleaseAll(TemporaryZoomOwner.IslandEdit);
             throw;
         }
@@ -138,7 +137,11 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
                 return;
             }
 
-            _model.ShowEdit(edit.Editor.Set, null, save: true);
+            // A drag in progress is undone, not saved half way; a change from outside (profile switch,
+            // settings page) is kept instead of the edit mode's islands.
+            edit.Editor.CancelDrag();
+            var final = ReferenceEquals(_model.Scene.Set, edit.Published) ? edit.Editor.Set : _model.Scene.Set;
+            _model.ShowEdit(final, null, save: true);
         }
 
         // Clicks go back to applications first, whatever fails afterwards.
@@ -152,7 +155,7 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
         finally
         {
             edit.Dispose();
-            var count = edit.Editor.Set.Count;
+            var count = _model.Scene.Set.Count;
             IslandOperation.StopEdit(edit.Operation, reason, count);
             var seconds = Stopwatch.GetElapsedTime(edit.StartedAt).TotalSeconds;
             _log.EditEnded(reason, count, seconds);
@@ -173,10 +176,14 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
 
     public void Dispose()
     {
-        _fence.Recomputed -= OnFenceRecomputed;
-        _zoom.Temporary.Changed -= OnTemporaryChanged;
+        _watch.Dispose();
         End("exit");
     }
+
+    // Docked has no temporary 1× (the strip reserves screen space), so the pointer would not be where
+    // the islands are; without the hooks the clicks would reach the applications under the islands.
+    private string? Refused() =>
+        _zoom.Mode == ZoomMode.Docked ? "docked" : !_input.IsAvailable ? "no_input" : null;
 
     // One input of the edit mode (capture worker thread). Never throws: the worker goes on.
     private void Step(Func<IslandEditor, IslandEditOutcome> step, string name)
@@ -184,7 +191,6 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
         try
         {
             IslandEditOutcome outcome;
-            IslandEditor editor;
             lock (_gate)
             {
                 if (_edit is not { } edit)
@@ -192,19 +198,16 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
                     return; // input queued before the end
                 }
 
-                editor = edit.Editor;
+                var editor = edit.Editor;
                 outcome = step(editor);
                 edit.Touch(IdleLimit);
                 _dragFence.Confine(editor.DragBounds);
-                if (outcome != IslandEditOutcome.None)
+                if (outcome is not (IslandEditOutcome.None or IslandEditOutcome.End))
                 {
                     var saved = outcome is IslandEditOutcome.Created or IslandEditOutcome.Changed
                         or IslandEditOutcome.LevelChanged or IslandEditOutcome.Deleted;
+                    edit.Published = editor.Set;
                     _model.ShowEdit(editor.Set, edit.View(), saved);
-                }
-
-                if (outcome != IslandEditOutcome.End)
-                {
                     _report.Outcome(outcome, editor);
                 }
             }
@@ -217,56 +220,6 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             _log.EditFailed(ex, name);
-        }
-    }
-
-    // A new island starts at the level the monitor shows when zoomed in (plan decision).
-    private double StartLevel(string monitorId)
-    {
-        var level = _zoom.TargetFor(monitorId);
-        level = level > ZoomLimits.Min ? level : _zoom.LastLevelFor(ZoomMode.Fullscreen, monitorId);
-        return level > ZoomLimits.Min ? level : ZoomLimits.DefaultLevel;
-    }
-
-    // The monitors may have changed since the islands were saved: push them back onto their monitor.
-    private IslandSet Refit(IslandSet set)
-    {
-        var fitted = set;
-        for (var i = 0; i < set.Count; i++)
-        {
-            if (_monitors.BoundsOf(set[i].MonitorId) is { } bounds)
-            {
-                fitted = fitted.Replace(i, IslandRules.Fit(set[i], bounds));
-            }
-        }
-
-        return fitted;
-    }
-
-    // Win+L, UAC, Ctrl+Alt+Del or new monitors: never keep the clicks across them.
-    private void OnFenceRecomputed(object? sender, FenceTrigger trigger)
-    {
-        if (trigger is FenceTrigger.DesktopSwitch or FenceTrigger.SessionUnlock or FenceTrigger.DisplayChange)
-        {
-            EndLogged(trigger.ToString());
-        }
-    }
-
-    // A zoom command of the user (zoom off, mode, step to 1×) cleared the edit mode's 1×.
-    private void OnTemporaryChanged()
-    {
-        if (!IsEditing)
-        {
-            return;
-        }
-
-        foreach (var monitor in _monitors.MonitorIds())
-        {
-            if (_zoom.Temporary.LevelFor(TemporaryZoomOwner.IslandEdit, monitor) is null)
-            {
-                EndLogged("cleared");
-                return;
-            }
         }
     }
 

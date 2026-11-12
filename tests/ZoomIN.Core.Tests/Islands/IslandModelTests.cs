@@ -50,7 +50,8 @@ public sealed class IslandModelTests
 
         Assert.Equal(0, saved);
         Assert.True(model.Scene.Editing);
-        Assert.True(model.Scene.Visible);
+        Assert.False(model.Scene.Visible); // the user's choice stays; editing shows them anyway
+        Assert.True(model.Scene.ShowsOn(IslandMonitors.First, fullscreenZoomed: false));
 
         model.ShowEdit(model.Scene.Set, null, save: true);
         Assert.Equal(1, saved);

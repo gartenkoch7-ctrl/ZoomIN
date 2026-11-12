@@ -66,6 +66,33 @@ public sealed class IslandRulesTests
     }
 
     [Fact]
+    public void Fit_LevelCappedToTheMonitor_NeverThrows_AndStaysInside()
+    {
+        // 147 · (1280 / 147) is one rounding step above 1280: the clamp bounds must not cross.
+        var monitor = new PhysicalRect(0, 0, 1280, 1024);
+        for (var width = 17; width < 1280; width += 1)
+        {
+            var island = IslandRules.Fit(new Island(1, "M", new PhysicalRect(0, 0, width, 20), new PhysicalPoint(50, 50), ZoomLimits.Max), monitor);
+
+            Assert.True(island.Target.Right <= monitor.Right + 0.5, $"width {width}");
+        }
+    }
+
+    [Fact]
+    public void FitTo_FitsKnownMonitors_KeepsOthers_AndIsTheSameSetIfNothingMoved()
+    {
+        var set = IslandSet.Empty
+            .Add(new Island(0, IslandMonitors.First, new PhysicalRect(100, 100, 50, 50), new PhysicalPoint(5000, 100), 2))!
+            .Add(new Island(0, @"\\.\GONE", new PhysicalRect(100, 100, 50, 50), new PhysicalPoint(5000, 100), 2))!;
+
+        var fitted = set.FitTo(new IslandMonitors().BoundsOf);
+
+        Assert.Equal(1820, fitted[0].TargetOrigin.X);
+        Assert.Equal(5000, fitted[1].TargetOrigin.X);
+        Assert.Same(fitted, fitted.FitTo(new IslandMonitors().BoundsOf));
+    }
+
+    [Fact]
     public void Fit_PictureOffTheMonitor_IsPushedBack()
     {
         var island = Fit(new PhysicalRect(100, 100, 100, 50), new PhysicalPoint(1900, -300), 2);

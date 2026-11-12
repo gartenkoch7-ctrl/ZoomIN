@@ -113,7 +113,7 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.pointer.fence` | app, secure | Zeigerzaun neu berechnet und durchgesetzt (ADR-0028; Tags `zoomin.fence.mode`: `off`, `clip`, `hook`; `zoomin.fence.trigger`: `request`, `desktop_switch`, `session_unlock`, `display_change`; `zoomin.fence.forbidden`: Zahl der gesperrten Rechtecke) |
 | `zoomin.pointer.move` | app | Zeiger per Kürzel versetzt (ADR-0028; Tags `zoomin.reason`: `FreezeMonitor`, `NextMonitor`; `zoomin.monitor`; abgelehnt → Status Error) |
 | `zoomin.view.window_drag` | app, secure | Fenster verschieben oder Größe ändern (G1), von der ersten Fensteränderung bis zum Loslassen; nur wenn ein Ziehen etwas bewirken kann (Zoom an, nicht Angedockt, Aktion nicht „unverändert“, ein Schalter an). Tags `zoomin.drag.kind` (`move`, `resize`; `unknown` nur bei Umriss-Ziehen mit unklarer Trefferzone), `zoomin.drag.action` (`lift`, `lower`; `unchanged` nur, wenn die Einstellung zwischen Drücken und Ziehen wechselte), `zoomin.zoom.before` (Stufe des Nutzers), `zoomin.zoom.during` (vorübergehende Stufe; fehlt, wenn sie nichts absenkte), `zoomin.drag.crossed_monitor`, `zoomin.drag.cleared` (Befehl des Nutzers oder neue Monitoranordnung), `zoomin.monitor` (Monitor am Ende). Keine Fenstertitel |
-| `zoomin.islands.edit` | app | Bearbeitungsmodus der Inseln (M19 B1) vom Kürzel bis zum Ende; eigener Wurzel-Ablauf über Threads hinweg. Tags `zoomin.islands.before` (Zahl vorher), am Ende `zoomin.islands.after` (Zahl danach) und `zoomin.islands.end` (`escape`, `shortcut`, `idle`, `DesktopSwitch`, `SessionUnlock`, `DisplayChange`, `cleared`, `failed`, `exit`). Die Dauer ist die des Ablaufs |
+| `zoomin.islands.edit` | app | Bearbeitungsmodus der Inseln (M19 B1) vom Kürzel bis zum Ende; eigener Wurzel-Ablauf über Threads hinweg. Tags `zoomin.islands.before` (Zahl vorher), am Ende `zoomin.islands.after` (Zahl danach) und `zoomin.islands.end` (`escape`, `shortcut`, `idle`, `DesktopSwitch`, `SessionUnlock`, `DisplayChange`, `cleared` (Zoom-Befehl löschte die 1×), `changed` (Inseln von außen geändert), `failed`, `exit`). Die Dauer ist die des Ablaufs |
 | `zoomin.islands.toggle` | app | `Strg+Alt+I` bzw. Schalter „Inseln anzeigen“ (Tags `zoomin.islands.visible`, `zoomin.islands.count`) |
 
 ## Katalog: Messwerte
@@ -213,7 +213,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1740 | Info | Islands shown: {Visible} ({Count} islands) – `Strg+Alt+I` oder Schalter (B1) |
 | 1741 | Info | Island edit mode on ({Count} islands) |
 | 1742 | Info | Island edit mode off: {Reason} ({Count} islands, {Seconds:0.0} s) – Gründe wie `zoomin.islands.end` |
-| 1743 | Info | Island edit mode not started: {Reason} – `docked` |
+| 1743 | Info | Island edit mode not started: {Reason} – `docked`, `no_input` (Aktivitäts-Hook nicht installiert) |
 | 1744 | Info | Island {Index} {Outcome} on {Monitor}: source {Source}, picture {Picture}, level {Level:0.00}, still {Still} – `Created`, `Changed`, `LevelChanged`; nur Rechtecke und Stufe, nie Inhalt |
 | 1745 | Info | New island refused: all {Max} places are taken |
 | 1746 | Info | Island removed ({Count} left) |

@@ -34,8 +34,9 @@ public static class IslandRules
         var origin = island.TargetOrigin;
         var x = double.IsFinite(origin.X) ? origin.X : source.X;
         var y = double.IsFinite(origin.Y) ? origin.Y : source.Y;
-        x = Math.Round(Math.Clamp(x, monitor.X, monitor.Right - (source.Width * level)));
-        y = Math.Round(Math.Clamp(y, monitor.Y, monitor.Bottom - (source.Height * level)));
+        // Max: a level capped to the monitor may give a picture one rounding step wider than it.
+        x = Math.Round(Math.Clamp(x, monitor.X, Math.Max(monitor.X, monitor.Right - (source.Width * level))));
+        y = Math.Round(Math.Clamp(y, monitor.Y, Math.Max(monitor.Y, monitor.Bottom - (source.Height * level))));
         return island with { Source = source, TargetOrigin = new PhysicalPoint(x, y), Level = level };
     }
 
@@ -84,8 +85,37 @@ public static class IslandRules
         return new PhysicalRect(x, y, width, height);
     }
 
+    /// <summary>
+    /// True if source and picture lie on <paramref name="monitor"/> (half a pixel of tolerance:
+    /// <see cref="Fit"/> rounds to whole pixels, a monitor may have a fractional origin). Islands
+    /// that do not are not drawn and cannot be grabbed. Per frame: no allocation.
+    /// </summary>
+    public static bool Fits(Island island, PhysicalRect monitor)
+    {
+        ArgumentNullException.ThrowIfNull(island);
+        var source = island.Source;
+        var picture = island.Target;
+        return monitor.Width > 0 && source.Width > 0 && source.Height > 0
+            && Within(source, monitor) && Within(picture, monitor);
+    }
+
+    /// <summary>
+    /// Level of a new island (plan decision): what the monitor shows when zoomed in – the user's level,
+    /// while zoom is off the last fullscreen level, else <see cref="ZoomLimits.DefaultLevel"/>.
+    /// </summary>
+    public static double StartLevel(ZoomModel zoom, string monitorId)
+    {
+        ArgumentNullException.ThrowIfNull(zoom);
+        var level = zoom.TargetFor(monitorId);
+        level = level > ZoomLimits.Min ? level : zoom.LastLevelFor(Modes.ZoomMode.Fullscreen, monitorId);
+        return level > ZoomLimits.Min ? level : ZoomLimits.DefaultLevel;
+    }
+
     /// <summary>True if a drag from one corner to the other is large enough for an island.</summary>
     public static bool IsLargeEnough(PhysicalRect dragged) => dragged.Width >= MinSize && dragged.Height >= MinSize;
+
+    private static bool Within(PhysicalRect rect, PhysicalRect monitor) =>
+        rect.X >= monitor.X - 0.5 && rect.Right <= monitor.Right + 0.5 && rect.Y >= monitor.Y - 0.5 && rect.Bottom <= monitor.Bottom + 0.5;
 
     private static double Side(double value, double monitor) =>
         double.IsFinite(value) && value > 0 ? Math.Min(Math.Round(value), monitor) : Math.Min(MinSize, monitor);

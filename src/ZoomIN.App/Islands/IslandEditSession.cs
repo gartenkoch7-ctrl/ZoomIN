@@ -13,6 +13,9 @@ internal sealed class IslandEditSession(IslandEditor editor, long startedAt, Act
 
     public Activity? Operation => operation;
 
+    /// <summary>The set this edit mode last gave the model; any other set there came from outside.</summary>
+    public IslandSet Published { get; set; } = editor.Set;
+
     /// <summary>What the render threads draw for the editor's state now.</summary>
     public IslandEditView View() => new(editor.Selected, editor.RubberBand, startedAt);
 

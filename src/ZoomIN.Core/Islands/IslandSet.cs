@@ -57,6 +57,28 @@ public sealed class IslandSet
         return new IslandSet([.. items], items.Count + 1);
     }
 
+    /// <summary>
+    /// Every island fitted to its monitor as it is now (the monitors may have changed since the
+    /// islands were saved); islands of a missing monitor stay as they are. The same set if nothing moved.
+    /// </summary>
+    public IslandSet FitTo(Func<string, PhysicalRect?> boundsOf)
+    {
+        ArgumentNullException.ThrowIfNull(boundsOf);
+        var items = (Island[])_items.Clone();
+        var changed = false;
+        for (var i = 0; i < items.Length; i++)
+        {
+            if (boundsOf(items[i].MonitorId) is { } monitor)
+            {
+                var fitted = IslandRules.Fit(items[i], monitor);
+                changed |= fitted != items[i];
+                items[i] = fitted;
+            }
+        }
+
+        return changed ? new IslandSet(items, NextId) : this;
+    }
+
     /// <summary>Adds an island (it gets <see cref="NextId"/>); null if the set is full.</summary>
     public IslandSet? Add(Island island)
     {

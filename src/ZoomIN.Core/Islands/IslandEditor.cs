@@ -13,9 +13,6 @@ namespace ZoomIN.Core.Islands;
 /// </summary>
 public sealed class IslandEditor
 {
-    /// <summary>How far outside or inside a corner a press still grabs it, in pixels.</summary>
-    public const double HandleReach = 12;
-
     private readonly IMonitorProvider _monitors;
     private readonly Func<string, double> _startLevel;
     private Drag _drag;
@@ -47,21 +44,14 @@ public sealed class IslandEditor
     public IslandEditOutcome Press(PhysicalPoint point)
     {
         _last = point;
-        Escape(cancelOnly: true);
-        var index = Set.HitTest(point, HandleReach);
-        if (index >= 0 && _monitors.BoundsOf(Set[index].MonitorId) is { } bounds)
+        CancelDrag();
+        var index = Grab(point, withCorners: true, out var corner, out var bounds);
+        if (index >= 0)
         {
-            var target = Set[index].Target;
-            var corner = CornerAt(target, point);
-
-            // Near an edge but not at a corner: a press beside the island, not on it.
-            if (corner is not null || target.Contains(point))
-            {
-                Selected = index;
-                _before = Set;
-                _drag = new Drag(corner is null ? DragKind.Move : DragKind.Resize, bounds, point, Set[index].Id, corner ?? default);
-                return IslandEditOutcome.Selected;
-            }
+            Selected = index;
+            _before = Set;
+            _drag = new Drag(corner is null ? DragKind.Move : DragKind.Resize, bounds, point, Set[index].Id, corner ?? default);
+            return IslandEditOutcome.Selected;
         }
 
         var monitorId = _monitors.MonitorAt(point);
@@ -147,9 +137,13 @@ public sealed class IslandEditor
             return IslandEditOutcome.None;
         }
 
-        var index = Set.HitTest(point);
-        index = index >= 0 ? index : Selected;
-        if (index < 0 || _monitors.BoundsOf(Set[index].MonitorId) is not { } monitor)
+        var index = Grab(point, withCorners: false, out _, out var monitor);
+        if (index < 0 && Selected >= 0 && Selected < Set.Count && IslandGrab.IsShown(Set[Selected], _monitors, out monitor))
+        {
+            index = Selected;
+        }
+
+        if (index < 0)
         {
             return IslandEditOutcome.None;
         }
@@ -168,7 +162,7 @@ public sealed class IslandEditor
             return IslandEditOutcome.None;
         }
 
-        var index = Selected >= 0 && Selected < Set.Count ? Selected : Set.HitTest(_last);
+        var index = Selected >= 0 && Selected < Set.Count ? Selected : Grab(_last, withCorners: false, out _, out _);
         if (index < 0)
         {
             return IslandEditOutcome.None;
@@ -180,37 +174,24 @@ public sealed class IslandEditor
     }
 
     /// <summary>Esc: undoes a drag in progress, otherwise ends the edit mode.</summary>
-    public IslandEditOutcome Escape() => Escape(cancelOnly: false);
+    public IslandEditOutcome Escape() => CancelDrag() ? IslandEditOutcome.Cancelled : IslandEditOutcome.End;
 
-    private IslandEditOutcome Escape(bool cancelOnly)
+    /// <summary>Undoes a drag in progress (the edit mode ends in the middle of one); false if none ran.</summary>
+    public bool CancelDrag()
     {
         if (_drag.Kind == DragKind.None)
         {
-            return cancelOnly ? IslandEditOutcome.None : IslandEditOutcome.End;
+            return false;
         }
 
         Set = _before;
         RubberBand = null;
         _drag = default;
-        return IslandEditOutcome.Cancelled;
+        return true;
     }
 
-    // A corner of the picture within reach of the point, or null.
-    private static IslandCorner? CornerAt(PhysicalRect target, PhysicalPoint point)
-    {
-        var left = Math.Abs(point.X - target.X) <= HandleReach;
-        var right = Math.Abs(point.X - target.Right) <= HandleReach;
-        var top = Math.Abs(point.Y - target.Y) <= HandleReach;
-        var bottom = Math.Abs(point.Y - target.Bottom) <= HandleReach;
-        return (left, right, top, bottom) switch
-        {
-            (true, _, true, _) => IslandCorner.TopLeft,
-            (_, true, true, _) => IslandCorner.TopRight,
-            (true, _, _, true) => IslandCorner.BottomLeft,
-            (_, true, _, true) => IslandCorner.BottomRight,
-            _ => null,
-        };
-    }
+    private int Grab(PhysicalPoint point, bool withCorners, out IslandCorner? corner, out PhysicalRect monitor) =>
+        IslandGrab.Find(Set, _monitors, point, withCorners, out corner, out monitor);
 
     private static PhysicalPoint Clamp(PhysicalPoint point, PhysicalRect monitor) =>
         new(Math.Clamp(point.X, monitor.X, monitor.Right), Math.Clamp(point.Y, monitor.Y, monitor.Bottom));

@@ -47,6 +47,13 @@ internal sealed class IslandLayer : IDisposable
         _phase = scene?.Edit is { } edit
             ? (int)(Stopwatch.GetElapsedTime(edit.StartedAt, now).TotalSeconds / IslandEditView.BlinkSeconds) & 1
             : -1;
+
+        // Without the edit mode nothing blinks; the scene's own change already redraws once. Draw
+        // may not run again (overlay-only frames at 1×), so do not wait for it to catch up.
+        if (_phase < 0)
+        {
+            _drawnPhase = -1;
+        }
     }
 
     /// <param name="desktop">The captured desktop of the monitor, for live islands.</param>
@@ -63,7 +70,7 @@ internal sealed class IslandLayer : IDisposable
         }
 
         var set = scene.Set;
-        _stills.Update(context, desktopTexture, set, monitorId, monitor);
+        _stills.Update(context, desktopTexture, set, monitorId, monitor, scene.Editing);
         _time.Collect(context);
         _time.Begin(context);
         var frame = _phase == 1 ? s_blink : FrameColor.Default;
@@ -71,12 +78,12 @@ internal sealed class IslandLayer : IDisposable
         for (var i = 0; i < set.Count; i++)
         {
             var island = set[i];
-            if (!string.Equals(island.MonitorId, monitorId, StringComparison.Ordinal) || !Inside(island, monitor))
+            if (!string.Equals(island.MonitorId, monitorId, StringComparison.Ordinal) || !IslandRules.Fits(island, monitor))
             {
                 continue; // monitor changed since the island was made: hidden until it fits again
             }
 
-            var still = island.Still ? _stills.For(island.Id) : null;
+            var still = island.Still ? _stills.For(island.Id, island.Source) : null;
             var picture = island.Target;
             var viewport = Expand(picture, FrameThickness, monitor);
             var constants = MagnifyConstants.ForIsland(
@@ -121,18 +128,6 @@ internal sealed class IslandLayer : IDisposable
         {
             _marks.End(context);
         }
-    }
-
-    // Half a pixel of tolerance: Fit rounds to whole pixels, the monitor may have a fractional origin.
-    private static bool Inside(Island island, PhysicalRect monitor)
-    {
-        var picture = island.Target;
-        var source = island.Source;
-        return source.Width > 0 && source.Height > 0
-            && source.X >= monitor.X - 0.5 && source.Right <= monitor.Right + 0.5
-            && source.Y >= monitor.Y - 0.5 && source.Bottom <= monitor.Bottom + 0.5
-            && picture.X >= monitor.X - 0.5 && picture.Right <= monitor.Right + 0.5
-            && picture.Y >= monitor.Y - 0.5 && picture.Bottom <= monitor.Bottom + 0.5;
     }
 
     private static PhysicalRect Expand(PhysicalRect rect, double by, PhysicalRect within)

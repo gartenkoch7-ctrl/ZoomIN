@@ -279,9 +279,14 @@ Plan: [b1-inseln.md](../plan/features/b1-inseln.md). Code: `Core/Islands/`, `Ren
   intelligentes Invertieren (Gewichte des Frames), Glättung und Schärfe/Fett (`At(Stufe der Insel)`)
   wirken also wie im Hauptbild. Konstanten werden je Draw hochgeladen (144 B); bei ruhigem Bild wird
   ohnehin nichts gezeichnet (M14).
-- **Standbild je Insel** (`IslandStills`, 4 Plätze à `StillFrame`): einmal kopiert, wenn eine Insel
-  auf „Standbild“ geht oder ihre Quelle sich ändert; frei, wenn sie weg oder wieder live ist. Nach
-  einem Neustart wird neu aufgenommen (das Bild wird nie gespeichert).
+- **Standbild je Insel** (`IslandStills`, 4 Plätze à `StillFrame`): einmal kopiert, sobald die
+  Insel als Standbild **zum ersten Mal gezeichnet** wird (nach dem Umschalten, nach einem Neustart
+  oder Neuaufbau der Pipeline, z. B. Anzeigewechsel – das Bild wird nie gespeichert) und wenn ihre
+  Quelle sich ändert; frei, wenn sie weg oder wieder live ist. Wer bei 1× auf „Standbild“ schaltet,
+  bekommt also das Bild beim nächsten Hineinzoomen. Während des Bearbeitens wird eine sich ändernde
+  Quelle (Ecke ziehen) nicht je Schritt neu kopiert (neue Textur und Log je Frame); die Insel zeigt
+  dann live und wird nach dem Ende neu aufgenommen. Eine fehlgeschlagene Kopie (Format) wird nicht
+  je Frame wiederholt.
   - Die Kopie hält nur den Quellbereich (ganze Pixel). Damit Filter pro Fenster, Gewichte und
     Texelraster weiter in **Desktop-UV** rechnen, bildet `Magnify.hlsl` erst beim Abtasten auf die
     Textur ab: `TexUv(uv) = uv · StillScale + StillOffset` (Konstanten `StillOffset/StillScale`,

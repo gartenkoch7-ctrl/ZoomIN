@@ -7,6 +7,12 @@ namespace ZoomIN.Core.Islands;
 /// </summary>
 public interface IIslandEditInput
 {
+    /// <summary>
+    /// The input can be taken (the low-level hooks are installed). Without it the edit mode must not
+    /// start: the user's clicks would reach the applications under it.
+    /// </summary>
+    bool IsAvailable { get; }
+
     /// <summary>Starts taking the input. Handler calls come one at a time on a background thread, never on the hook thread.</summary>
     void Start(IIslandEditInputHandler handler);
 

@@ -352,8 +352,20 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
   - **Sicherheitsnetz** (*selbst entschieden*): Ende nach 2 min ohne Eingabe, bei Desktopwechsel
     (Win+L, UAC, Strg+Alt+Entf), Entsperren, Anzeigewechsel (über `IPointerFence.Recomputed`, der
     Zaun läuft ja wegen des Filters) und wenn ein Zoom-Befehl die 1× löscht (Zoom aus, Moduswechsel,
-    Schritt auf 1×). Erneutes Kürzel beendet ebenfalls. Am Ende: Eingabe freigeben, Filter weg, 1×
-    freigeben, Inseln speichern.
+    Schritt auf 1×). Erneutes Kürzel beendet ebenfalls. Am Ende: laufendes Ziehen zurücknehmen
+    (nie ein halbes Ziehen speichern), Eingabe freigeben, Filter weg, 1× freigeben, Inseln speichern
+    (`IslandEditWatch`).
+  - Ändert sich die Inselliste von außen (Profilwechsel, Löschen oder Standbild auf der
+    Einstellungsseite), endet der Modus und **behält die Änderung von außen** – er würde sie sonst
+    mit seinem Stand überschreiben.
+  - Ohne installierten Aktivitäts-Hook (`IIslandEditInput.IsAvailable`) startet der Modus nicht
+    (Ansage): die Klicks würden sonst die Programme unter den Inseln treffen. Entfernt Windows den
+    Hook später stillschweigend, merkt ZoomIN das nicht (offen).
+  - Die Sichtbarkeit (`Strg+Alt+I`) bleibt die des Nutzers: Beim Bearbeiten werden auch
+    ausgeblendete Inseln gezeigt, danach sind sie wieder aus.
+  - Inseln, die gerade nicht gezeichnet werden (Monitor fehlt, Bild ragt heraus), lassen sich nicht
+    greifen, löschen oder per Rad ändern. Unter dem Zeiger gewinnt die oberste Insel, deren Bild
+    oder Ecke getroffen ist (die Griffreichweite einer oberen Insel verdeckt keine untere).
 - Bildschirmleser: „Inseln bearbeiten: …“/„… aus“, „Insel 2 von 4, 3-fach“ beim Wählen und nach
   jeder Änderung, „Höchstens 4 Inseln“, „Insel gelöscht“; `Strg+Alt+I` sagt „Inseln an/aus“.
 - Auf dem sicheren Desktop gibt es keine Inseln und keine Kürzel dafür (`SecureSettingsSanitizer`).

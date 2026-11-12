@@ -51,7 +51,8 @@ public sealed class IslandModel
     public void ShowEdit(IslandSet set, IslandEditView? edit, bool save)
     {
         ArgumentNullException.ThrowIfNull(set);
-        Publish(scene => scene with { Set = set, Edit = edit, Visible = scene.Visible || edit is not null }, save);
+        // Visibility stays the user's: the scene shows every island while editing anyway (IslandScene.ShowsOn).
+        Publish(scene => scene with { Set = set, Edit = edit }, save);
     }
 
     private bool Change(int id, Func<IslandSet, int, IslandSet> change)

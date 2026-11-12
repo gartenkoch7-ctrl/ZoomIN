@@ -49,6 +49,7 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
         s_active = this;
         _hooks = new LowLevelHookThread(
             "ZoomIN Activity Hook", (WINDOWS_HOOK_ID.WH_MOUSE_LL, s_mouseProc), (WINDOWS_HOOK_ID.WH_KEYBOARD_LL, s_keyboardProc));
+        _islandEdit.HooksInstalled(_hooks.AllInstalled);
         if (!_hooks.AllInstalled)
         {
             _log.ActivityHooksUnavailable();
@@ -62,6 +63,7 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
             return;
         }
 
+        _islandEdit.HooksInstalled(false);
         _hooks.Dispose();
         s_active = null;
     }
