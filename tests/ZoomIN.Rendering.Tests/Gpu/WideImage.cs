@@ -17,6 +17,9 @@ internal sealed class WideImage : IDisposable
 
     public ID3D11ShaderResourceView View { get; }
 
+    /// <summary>The texture itself, e.g. as the source of a still image (M19).</summary>
+    public ID3D11Texture2D Texture => _texture;
+
     public static WideImage Create(ID3D11Device device, int width, int height)
     {
         var data = new Bgra[width * height];

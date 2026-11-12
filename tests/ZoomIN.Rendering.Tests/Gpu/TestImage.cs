@@ -21,6 +21,9 @@ internal sealed class TestImage : IDisposable
 
     public ID3D11ShaderResourceView View { get; }
 
+    /// <summary>The texture itself, e.g. as the source of a still image (M19).</summary>
+    public ID3D11Texture2D Texture => _texture;
+
     public static TestImage Create(ID3D11Device device, int size) =>
         Create(device, size, (x, y) => x < size / 4 && y < size / 4 ? Green : x < size / 2 ? Red : Blue);
 

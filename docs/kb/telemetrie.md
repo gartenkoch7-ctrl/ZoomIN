@@ -69,9 +69,9 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 ## EventId-Bereiche
 | Bereich | Projekt |
 |---|---|
-| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1500 Maus folgen, 1520 Übersicht, 1540 Fenster-Verschieben, 1600 Schärfe/Fett – reserviert, noch ungenutzt, 1620 eigene Farbschemata, 1640–1659 Markierungen) |
+| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1500 Maus folgen, 1520 Übersicht, 1540 Fenster-Verschieben, 1600 Schärfe/Fett – reserviert, noch ungenutzt, 1620 eigene Farbschemata, 1640–1659 Markierungen, 1740–1759 Inseln) |
 | 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe, 2900 Fenster-Verschieben, 2920 Übersicht, 2940 Zeigerzaun und Zeiger versetzen, 2950–2959 Haltetaste) |
-| 3000–3999 | Rendering (3100 Übersicht, 3200 Schärfe/Fett, 3220 eigene Farbschemata, 3240–3259 Markierungen, 3300 Standbild) |
+| 3000–3999 | Rendering (3100 Übersicht, 3200 Schärfe/Fett, 3220 eigene Farbschemata, 3240–3259 Markierungen, 3300 Standbild, 3320–3339 Inseln – reserviert, noch ungenutzt: der Render-Loop loggt nicht, Standbilder melden 3300/3301) |
 | 4000–4999 | Watchdog |
 | 5000–5999 | Setup |
 | 6000–6999 | Core (noch keine) |
@@ -113,6 +113,8 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.pointer.fence` | app, secure | Zeigerzaun neu berechnet und durchgesetzt (ADR-0028; Tags `zoomin.fence.mode`: `off`, `clip`, `hook`; `zoomin.fence.trigger`: `request`, `desktop_switch`, `session_unlock`, `display_change`; `zoomin.fence.forbidden`: Zahl der gesperrten Rechtecke) |
 | `zoomin.pointer.move` | app | Zeiger per Kürzel versetzt (ADR-0028; Tags `zoomin.reason`: `FreezeMonitor`, `NextMonitor`; `zoomin.monitor`; abgelehnt → Status Error) |
 | `zoomin.view.window_drag` | app, secure | Fenster verschieben oder Größe ändern (G1), von der ersten Fensteränderung bis zum Loslassen; nur wenn ein Ziehen etwas bewirken kann (Zoom an, nicht Angedockt, Aktion nicht „unverändert“, ein Schalter an). Tags `zoomin.drag.kind` (`move`, `resize`; `unknown` nur bei Umriss-Ziehen mit unklarer Trefferzone), `zoomin.drag.action` (`lift`, `lower`; `unchanged` nur, wenn die Einstellung zwischen Drücken und Ziehen wechselte), `zoomin.zoom.before` (Stufe des Nutzers), `zoomin.zoom.during` (vorübergehende Stufe; fehlt, wenn sie nichts absenkte), `zoomin.drag.crossed_monitor`, `zoomin.drag.cleared` (Befehl des Nutzers oder neue Monitoranordnung), `zoomin.monitor` (Monitor am Ende). Keine Fenstertitel |
+| `zoomin.islands.edit` | app | Bearbeitungsmodus der Inseln (M19 B1) vom Kürzel bis zum Ende; eigener Wurzel-Ablauf über Threads hinweg. Tags `zoomin.islands.before` (Zahl vorher), am Ende `zoomin.islands.after` (Zahl danach) und `zoomin.islands.end` (`escape`, `shortcut`, `idle`, `DesktopSwitch`, `SessionUnlock`, `DisplayChange`, `cleared`, `failed`, `exit`). Die Dauer ist die des Ablaufs |
+| `zoomin.islands.toggle` | app | `Strg+Alt+I` bzw. Schalter „Inseln anzeigen“ (Tags `zoomin.islands.visible`, `zoomin.islands.count`) |
 
 ## Katalog: Messwerte
 Nur mit Export-Adresse und Stufe „Ausführlich“/„Benutzerdefiniert + Messwerte“. Im Render-Loop
@@ -130,10 +132,10 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.tracking.chromium_nudges` | Fenster | – | Chromium-Inhaltsfenster nach IAccessible2 gefragt |
 | `zoomin.tracking.read_failures` | Abfragen | `exception.type` | Abfrage von Fokus und Caret mit unerwarteter Ausnahme abgebrochen; Tracking läuft mit Systemcaret weiter (dazu Log 2003, einmal je Ausnahmetyp) |
 | `zoomin.tracking.anchor_switches` | Wechsel | `zoomin.anchor.source` (`mouse`, `focus`, `caret`) | Ansicht folgt jetzt Maus, Fokus oder Caret (Render-Thread, ohne Allokation) |
-| `zoomin.zoom.temporary_levels` | Änderungen | `zoomin.owner` (`overview`, `window_drag`), `zoomin.action` (`set`, `release`, `move`, `cleared`) | Vorübergehende Zoomstufe (M17) gesetzt, freigegeben, auf einen anderen Monitor verschoben oder durch einen Befehl des Nutzers gelöscht. `set` zählt nur neue Stufen (Ersetzen nicht), ein `move` auf eine eigene Stufe zählt zusätzlich ein `release`. Bleibt ein `set` ohne späteres `release` oder `cleared`, gibt ein Besitzer nicht frei (der KI-Debug-Zustand zeigt dann „temporary“ am Monitor). Abläufe und Logs bringen Übersicht (B2) und Fenster-Verschieben (G1) selbst mit |
+| `zoomin.zoom.temporary_levels` | Änderungen | `zoomin.owner` (`overview`, `window_drag`, `island_edit`), `zoomin.action` (`set`, `release`, `move`, `cleared`) | Vorübergehende Zoomstufe (M17) gesetzt, freigegeben, auf einen anderen Monitor verschoben oder durch einen Befehl des Nutzers gelöscht. `set` zählt nur neue Stufen (Ersetzen nicht), ein `move` auf eine eigene Stufe zählt zusätzlich ein `release`. Bleibt ein `set` ohne späteres `release` oder `cleared`, gibt ein Besitzer nicht frei (der KI-Debug-Zustand zeigt dann „temporary“ am Monitor). Abläufe und Logs bringen Übersicht (B2), Fenster-Verschieben (G1) und der Bearbeitungsmodus der Inseln (B1, 1× auf allen Monitoren) selbst mit |
 | `zoomin.tracking.mouse_push` | Frames | `zoomin.mouse.follow` (`center`, `margin`, `fixpoint`) | Frames, in denen eine Mausbewegung die Ansicht verschoben hat (M17 A1); die Rate je Sekunde zeigt, wie unruhig das Bild im jeweiligen Modus ist. Render-Thread, Instrument und Tags beim Start angelegt, ohne Allokation |
 | `zoomin.render.smart_invert_gpu_time` | ms | `zoomin.monitor` | Mittlere Zusatz-GPU-Zeit des intelligenten Invertierens: Umgebungs-Durchgang (Mittel über 120 Läufe) plus Mehrkosten im Magnify-Durchgang (seit M14 je Pipeline gemessen, 32 Frames schlicht gegen intelligent nach 60 Frames Aufwärmen, erneut wenn der ganze Monitor intelligent wird); > 1 ms → Rückfall (Log 3007) |
-| `zoomin.render.gpu_time` | ms | `zoomin.monitor`, `zoomin.pass` (`magnify`) | Mittlere GPU-Zeit eines Durchgangs über 120 Frames (M14); Zeitstempel-Abfragen laufen nur, solange jemand das Instrument abonniert (Diagnose, OTLP). Durchgänge überlappen nicht: kein Gesamt-Frame-Wert, weil verschachtelte Disjoint-Abfragen nicht überall erlaubt sind |
+| `zoomin.render.gpu_time` | ms | `zoomin.monitor`, `zoomin.pass` (`magnify`, `islands`) | Mittlere GPU-Zeit eines Durchgangs über 120 Frames (M14; `islands` seit M19 B1: alle Inseln eines Frames zusammen); Zeitstempel-Abfragen laufen nur, solange jemand das Instrument abonniert (Diagnose, OTLP). Durchgänge überlappen nicht: kein Gesamt-Frame-Wert, weil verschachtelte Disjoint-Abfragen nicht überall erlaubt sind |
 | `zoomin.render.ready_time` | ms | `zoomin.monitor` | Prozessstart bis erste fertige Zoom-Pipeline des Monitors (einmal je Prozess und Monitor, nur in der ersten Minute – später angesteckte Monitore zählen nicht, M14) |
 | `zoomin.render.smart_invert_frames` | Frames | `zoomin.monitor` | Frames, in denen der Umgebungs-Durchgang lief (ADR-0024); seit M14 nur bei neuem Desktop-Bild und bis die Glättung eingeschwungen ist |
 | `zoomin.render.overlay_time` | s | `zoomin.monitor`, `zoomin.state` (`active`, `paused`) | Zeit, in der der Render-Thread arbeitet bzw. schläft – ergibt den Pausenanteil des Filters pro Fenster |
@@ -145,6 +147,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.pointer.fence_blocked` | Bewegungen | – | Mausbewegungen, die der Zaun-Hook verschluckt oder an den Rand geklemmt hat (beobachtbarer Zähler: der Hook zählt nur, ohne Allokation) |
 | `zoomin.pointer.fence_changes` | Änderungen | `zoomin.fence.mode`, `zoomin.fence.trigger` (wie oben, dazu `clip_lost`, `hook_lost`, `dispose`) | Zaun gesetzt, neu gesetzt (z. B. nach Win+L) oder gelöst |
 | `zoomin.render.still_images` | Bilder | – | Gehaltene Standbilder auf der GPU (M19, Baustein „Standbild“): +1 beim Anlegen, −1 beim Freigeben |
+| `zoomin.islands.count` | Inseln | – | Inseln des aktiven Profils (M19 B1): Auf-und-ab-Zähler, ändert sich mit Anlegen, Löschen und Profilwechsel |
 | `zoomin.render.enhance_gpu_ms` | ms | `zoomin.monitor` | Zusatz-GPU-Zeit von Schärfe/Fett im Magnify-Durchgang (M18, D1): nach jeder Wertänderung und nach gezeichneten Frames ohne Schärfe/Fett (unter 1,5×, andere Glättung) erneut, 32 Frames ohne gegen mit nach 60 Frames Aufwärmen (`PassCostProbe`); gemessen wird genau die gezeichnete Ansicht – bei Lupe/angedockt nur deren Fläche, also nicht mit Vollbild-Werten vergleichbar. Nur solange jemand das Instrument abonniert, sonst keine Messzeichnungen. Budget 0,05 ms auf RTX 3060 Ti bei 1080p Vollbild |
 | `zoomin.filters.custom_schemes` | Schemata | – | Anzahl der eigenen Farbschemata (0–4, Gauge; beim Start und bei jeder Änderung, M18) |
 | `zoomin.highlight.caret_frames` | Frames | `zoomin.monitor`, `zoomin.highlight.caret_shape` (`bar`, `wedges`, `frame`, `circle`) | Gezeichnete Frames mit Caret-Markierung je Form (E2): welche Form im Einsatz ist. Zählt gezeichnete, nicht sichtbare Frames – Leerlauf-Frames (M14) fehlen, viel Bewegung zählt mehr. Render-Thread, Tags beim Start angelegt, ohne Allokation (`RenderLayersAllocationTests`) |
@@ -207,6 +210,14 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1640 | Info | Caret marker changed: {Shape}, {Thickness} – Form oder Dicke auf der Seite „Fokus & Textcursor“ geändert (E2) |
 | 1650 | Info | Show condition of {Marker} changed: {Condition} – `crosshair`, `caret`, `focus_frame`; auch beim Profilwechsel (E1) |
 | 1651 | Info | Hold key changed: {Key} (E1) |
+| 1740 | Info | Islands shown: {Visible} ({Count} islands) – `Strg+Alt+I` oder Schalter (B1) |
+| 1741 | Info | Island edit mode on ({Count} islands) |
+| 1742 | Info | Island edit mode off: {Reason} ({Count} islands, {Seconds:0.0} s) – Gründe wie `zoomin.islands.end` |
+| 1743 | Info | Island edit mode not started: {Reason} – `docked` |
+| 1744 | Info | Island {Index} {Outcome} on {Monitor}: source {Source}, picture {Picture}, level {Level:0.00}, still {Still} – `Created`, `Changed`, `LevelChanged`; nur Rechtecke und Stufe, nie Inhalt |
+| 1745 | Info | New island refused: all {Max} places are taken |
+| 1746 | Info | Island removed ({Count} left) |
+| 1747 | Fehler | Island edit step {Step} failed – `press`, `move`, `release`, `wheel`, `Escape`, `Delete`, `report`, `announce`, `end`; der Bearbeitungsmodus läuft weiter bzw. endet sauber |
 | 2001 | Fehler | UI Automation is unavailable; focus tracking is off |
 | 2002 | Info | Caret source in {Process}: {Source} |
 | 2003 | Fehler | Reading focus and caret failed; tracking goes on with the system caret |

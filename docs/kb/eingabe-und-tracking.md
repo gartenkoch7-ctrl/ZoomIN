@@ -319,6 +319,45 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
 - **Offen:** Ausnahmeliste für Spiele und Fernsteuerung (ADR-0028), injizierte Bewegungen
   (`LLMHF_INJECTED`) werden derzeit wie echte behandelt.
 
+## Inseln: Klicks fallen durch, Bearbeiten fängt ab (M19 B1)
+- **Normalbetrieb:** Eine Insel ist reine Anzeige im klickdurchlässigen Overlay. Ein Klick auf sie
+  trifft das Fenster darunter (an der Stelle, wo der Zeiger wirklich ist). ZoomIN fängt dann keine
+  Mauseingabe ab und registriert keinen Filter beim Zeigerzaun.
+- **Bearbeitungsmodus** (`Strg+Alt+Umschalt+I`, Knopf „Bearbeiten starten“; `IslandController`):
+  - Alle Monitore gehen vorübergehend auf **1×** (Besitzer `IslandEdit` der vorübergehenden Stufe,
+    *selbst entschieden*). Dann liegt der echte Zeiger genau dort, wo der Nutzer Inseln und Desktop
+    sieht: Aufziehen (Quelle), Verschieben und Ecken (Bild) rechnen alle in denselben
+    Desktop-Pixeln. Angedockt gibt es keine vorübergehende Stufe → der Modus startet dort nicht
+    (Ansage). In der Lupe geht es (bei 1× wird ohnehin vollflächig gezeichnet), Inseln erscheinen
+    danach aber nur im Vollbild.
+  - Abfangen: `IslandEditCapture` hängt am vorhandenen `WH_MOUSE_LL`/`WH_KEYBOARD_LL` von
+    `Win32InputActivityHook` (kein neuer Hook). Nur solange der Modus läuft, werden Maustasten
+    (links, rechts, Mitte, X), Mausrad, Esc und Entf verschluckt und der Reihe nach auf einem
+    Hintergrund-Worker an den Editor gegeben; der Hook stellt nur in eine Warteschlange.
+    Bewegungen gehen immer an Windows weiter (der Zeiger muss sich bewegen), schnelle Folgen
+    werden zur jeweils letzten zusammengefasst. Wurde ein Druck verschluckt, wird auch sein
+    Loslassen verschluckt – auch nach dem Ende des Modus; ein Druck von vorher behält sein
+    Loslassen für die Anwendung. Esc und Entf prüft der Hook vor dem Esc der Übersicht (B2).
+  - Strg+Mausrad zoomt weiter (eigener Hook, der vorher greift) – unsichtbar, denn die 1× gilt.
+  - **Zeigerzaun:** Während eines Ziehens hält `IslandDragFence` (Filter `PointerFilterOrder.IslandEdit`
+    = 100, erster der Kette) den Zeiger auf dem Monitor der Insel (eine Insel gehört genau einem
+    Monitor). Der Filter ist nur im Bearbeitungsmodus registriert und lässt außerhalb eines
+    Ziehens alles durch. `FenceOwner.IslandEdit` (gesperrte Bereiche) wird nicht gebraucht.
+  - Editor (`IslandEditor`, rein): Rechteck auf freier Fläche aufziehen (< 16 px = Klick) → neue
+    Insel mit der Stufe des Monitors (`TargetFor`, sonst die zuletzt genutzte Vollbild-Stufe, sonst
+    2×); Insel ziehen → verschieben; Ecke (±12 px) ziehen → Ausschnitt größer/kleiner bei gleicher
+    Stufe, die Gegenecke bleibt; Rad über der Insel (sonst die gewählte) → Stufe in Zoom-Schritten;
+    Entf → gewählte bzw. die unter dem Zeiger löschen; Esc → laufendes Ziehen zurücknehmen, sonst
+    Ende. Eine fünfte Insel wird mit Ansage abgelehnt.
+  - **Sicherheitsnetz** (*selbst entschieden*): Ende nach 2 min ohne Eingabe, bei Desktopwechsel
+    (Win+L, UAC, Strg+Alt+Entf), Entsperren, Anzeigewechsel (über `IPointerFence.Recomputed`, der
+    Zaun läuft ja wegen des Filters) und wenn ein Zoom-Befehl die 1× löscht (Zoom aus, Moduswechsel,
+    Schritt auf 1×). Erneutes Kürzel beendet ebenfalls. Am Ende: Eingabe freigeben, Filter weg, 1×
+    freigeben, Inseln speichern.
+- Bildschirmleser: „Inseln bearbeiten: …“/„… aus“, „Insel 2 von 4, 3-fach“ beim Wählen und nach
+  jeder Änderung, „Höchstens 4 Inseln“, „Insel gelöscht“; `Strg+Alt+I` sagt „Inseln an/aus“.
+- Auf dem sicheren Desktop gibt es keine Inseln und keine Kürzel dafür (`SecureSettingsSanitizer`).
+
 ## Übersicht auf Knopfdruck (M17 B2)
 - `Strg+Alt+O` (anpassbar, auf dem sicheren Bildschirm nicht belegt). **Antippen** (< 300 ms):
   Der Monitor unter der Maus gleitet auf 1× (vorübergehende Stufe, Besitzer `Overview`), ein

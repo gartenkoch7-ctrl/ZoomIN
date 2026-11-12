@@ -1,6 +1,6 @@
 # B1 · Eingefrorene Ausschnitte („Inseln“)
 **Meilenstein:** [M19](../m19-mehrere-ansichten.md) · **Spur:** B · **Branch:** `feat/m19-b1-inseln` ·
-**Größe:** M · **Status:** geplant
+**Größe:** M · **Status:** umgesetzt auf `feat/m19-b1-inseln` (2026-11-12), Sichtprüfung und Freigabetest offen
 
 **Ziel:** Bis zu vier feste Bildschirmbereiche (z. B. Uhr, Statuszeile, Chat, Formelzeile) bleiben
 als vergrößerte Inseln über dem Zoom sichtbar, während der Zoom normal der Maus folgt.
@@ -69,22 +69,22 @@ Grundsatz: [ADR-0028](../../adr/0028-zeiger-versetzen-nur-auf-befehl.md) (Inseln
   und „Bearbeiten starten“.
 
 ## Aufgaben
-- [ ] Core: `Island`, `IslandSet`, `IslandEditor` mit Tests (Abdeckung ≥ 90 %). Fälle: Obergrenze 4,
+- [x] Core: `Island`, `IslandSet`, `IslandEditor` mit Tests (Abdeckung ≥ 90 %). Fälle: Obergrenze 4,
       Mindestgröße, Insel am Monitorrand, Stufe begrenzen, Esc bricht Aufziehen ab, Entf löscht.
-- [ ] Rendering: Inseln im Desktop-Durchgang, Rahmen, Bearbeitungsdarstellung. WARP-Tests:
+- [x] Rendering: Inseln im Desktop-Durchgang, Rahmen, Bearbeitungsdarstellung. WARP-Tests:
       Insel zeigt den richtigen Quellbereich, Filter wirken, Rahmenfarbe.
-- [ ] Benchmark: Frame mit 4 Inseln `0 B`. GPU-Zeit mit 4 Inseln gegen ohne messen (RTX, ×10 hochgerechnet).
-- [ ] Platform: abfangender Hook-Modus nur im Bearbeitungsmodus, automatisches Ende.
-- [ ] App: Kürzel, Controller, Profil, Einstellungskarte.
-- [ ] Telemetrie (ADR-0019):
+- [x] Benchmark: Frame mit 4 Inseln `0 B`. GPU-Zeit mit 4 Inseln gegen ohne messen (RTX, ×10 hochgerechnet).
+- [x] Platform: abfangender Hook-Modus nur im Bearbeitungsmodus, automatisches Ende.
+- [x] App: Kürzel, Controller, Profil, Einstellungskarte.
+- [x] Telemetrie (ADR-0019):
   - Abläufe `zoomin.islands.edit` (Dauer, Zahl der Inseln danach) und `zoomin.islands.toggle`
   - Zähler `zoomin.islands.count`
   - Logs App 1740–1759, Rendering 3320–3339
   - Keine Inhalte, nur Rechtecke und Stufen
   - Katalog `docs/kb/telemetrie.md`
-- [ ] Texte Deutsch/Englisch. Bildschirmleser sagt Bearbeitungsmodus an/aus und „Insel 2 von 4,
+- [x] Texte Deutsch/Englisch. Bildschirmleser sagt Bearbeitungsmodus an/aus und „Insel 2 von 4,
       3-fach“ an. Die Liste in den Einstellungen ist per Tastatur bedienbar.
-- [ ] KB: `docs/kb/rendering-pipeline.md` (Inseln im Durchgang) und `docs/kb/eingabe-und-tracking.md`
+- [x] KB: `docs/kb/rendering-pipeline.md` (Inseln im Durchgang) und `docs/kb/eingabe-und-tracking.md`
       (Klicks fallen durch, Hook nur im Bearbeitungsmodus).
 - [ ] Freigabetest: Inseln und Bearbeitungsrahmen sind in Teams/OBS unsichtbar.
 
@@ -105,14 +105,14 @@ Grundsatz: [ADR-0028](../../adr/0028-zeiger-versetzen-nur-auf-befehl.md) (Inseln
     Reihenfolge ist: Bearbeitungsmodus vor Achse vor Puffer.
 
 ## Akzeptanzkriterien
-- [ ] Bis zu 4 Inseln lassen sich im Bearbeitungsmodus anlegen, verschieben, in der Größe ändern,
+- [x] Bis zu 4 Inseln lassen sich im Bearbeitungsmodus anlegen, verschieben, in der Größe ändern,
       in der Stufe ändern und löschen. Eine fünfte wird mit Hinweis abgelehnt.
-- [ ] Außerhalb des Bearbeitungsmodus fängt ZoomIN keine Mausklicks ab. Ein Klick auf eine Insel
+- [x] Außerhalb des Bearbeitungsmodus fängt ZoomIN keine Mausklicks ab. Ein Klick auf eine Insel
       trifft das Fenster darunter.
-- [ ] `Strg+Alt+I` blendet alle Inseln ein und aus.
-- [ ] Live-Inseln aktualisieren sich (Uhr läuft), Standbild-Inseln bleiben stehen.
-- [ ] Nach einem Neustart und nach einem Profilwechsel erscheinen die Inseln des Profils.
-- [ ] Farbfilter und Smart Invert wirken in Inseln wie im Hauptbild.
+- [x] `Strg+Alt+I` blendet alle Inseln ein und aus.
+- [x] Live-Inseln aktualisieren sich (Uhr läuft), Standbild-Inseln bleiben stehen.
+- [x] Nach einem Neustart und nach einem Profilwechsel erscheinen die Inseln des Profils.
+- [x] Farbfilter und Smart Invert wirken in Inseln wie im Hauptbild.
 - [ ] Inseln und Rahmen sind in Bildschirmübertragungen unsichtbar.
 - [ ] Bildrate bleibt bei 4 Inseln gleich der Monitor-Hz.
 
@@ -128,3 +128,25 @@ Grundsatz: [ADR-0028](../../adr/0028-zeiger-versetzen-nur-auf-befehl.md) (Inseln
   Monitoren wären F1 (zweiter Monitor zeigt den ersten) und sind hier nicht enthalten.
 - **Lupe und Angedockt:** Inseln gelten im Vollbild. Ob sie in der Lupe oder im Streifen sichtbar
   sind, beim Umsetzen klären. Vorschlag: nur Vollbild.
+  → **Entschieden beim Umsetzen:** nur Vollbild. Bearbeiten geht auch in der Lupe (bei 1×), im
+  angedockten Modus nicht (dort gibt es keine vorübergehende 1×).
+
+## Umsetzungsstand (2026-11-12)
+Details: [rendering-pipeline.md](../../kb/rendering-pipeline.md#inseln-m19-b1) und
+[eingabe-und-tracking.md](../../kb/eingabe-und-tracking.md) (Abschnitt „Inseln“).
+- **Abweichung Zeichnen:** eigene Klasse `Rendering/Islands/IslandLayer` (ein Draw je Insel mit dem
+  vorhandenen `MagnifyPass`) statt Code in `DesktopLayer`; gezeichnet nach den Hervorhebungen, vor
+  Übersichtsrahmen und Zeiger. `DesktopLayer.cs` blieb unverändert.
+- **Shader:** `Magnify.hlsl` bekommt `StillOffset/StillScale` (Puffer b0 128 → 144 B) und tastet über
+  `TexUv` ab, damit Standbilder nur ihren Quellbereich halten müssen. Live bitgleich wie vorher.
+- **Bearbeiten bei 1×** (selbst entschieden): alle Monitore vorübergehend 1× (neuer Besitzer
+  `TemporaryZoomOwner.IslandEdit`), damit Zeiger, Quelle und Inselbild dieselben Koordinaten haben.
+- **Hook:** abfangender Modus `Platform/Input/IslandEditCapture` am vorhandenen Aktivitäts-Hook
+  (Maus und Tastatur), kein neuer Hook. Zeigerzaun: Filter `IslandDragFence`
+  (`PointerFilterOrder.IslandEdit`) hält ein Ziehen auf dem Monitor der Insel; gesperrte Bereiche
+  (`FenceOwner.IslandEdit`) braucht B1 nicht.
+- **Telemetrie:** App 1740–1747; Rendering 3320–3339 bleibt frei (kein Log im Render-Loop,
+  Standbilder melden 3300/3301). GPU-Zeit im Betrieb als `zoomin.render.gpu_time` (`islands`).
+- **GPU** (RTX 3060 Ti, 1080p, 4×, 4 Inseln 600 × 160): +0,008–0,018 ms, ×10 ≈ 0,2 ms.
+- **Offen für den Menschen:** Sichtprüfung (Blinken, Griffe, gestricheltes Rechteck, Uhr läuft),
+  Freigabetest Teams/OBS, Bildrate bei 4 Inseln am echten Monitor, Ansagen mit NVDA/Sprachausgabe.

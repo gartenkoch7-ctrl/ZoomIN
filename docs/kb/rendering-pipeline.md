@@ -256,6 +256,53 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   GPU-Speicher; Zähler `zoomin.render.still_images`.
 - Gehört wie das Gerät einem Render-Thread. Verdrahtung in `RenderSession`/`DesktopLayer` machen
   die Spuren G2/B1.
+
+## Inseln (M19 B1)
+Plan: [b1-inseln.md](../plan/features/b1-inseln.md). Code: `Core/Islands/`, `Rendering/Islands/`,
+`App/Islands/`, `Platform/Input/IslandEditCapture`.
+- **Was:** bis zu 4 feste Quellbereiche eines Monitors, vergrößert an fester Stelle desselben
+  Monitors über dem Zoom. Ziel = Quelle × Stufe; beim Anlegen wächst das Bild um die Mitte der
+  Quelle und wird an den Rändern auf den Monitor geschoben (Uhr in der Ecke bleibt in der Ecke).
+  `IslandRules.Fit` hält Quelle und Bild im Monitor, Mindestgröße 16 px, Stufe 1×–16× und so klein,
+  dass das Bild passt.
+- **Wann gezeichnet** (`OverlayDemand.Islands`, je Frame lock-frei, 0 B): im Vollbild, solange der
+  Monitor vergrößert ist (> 1,01×), sichtbar (`Strg+Alt+I`) und eine Insel auf ihm liegt. Lupe und
+  Angedockt zeigen keine Inseln (Vorschlag des Plans übernommen). Übersicht und Fenster-Verschieben
+  (vorübergehend 1×) blenden sie damit aus. Im Bearbeitungsmodus zeichnen **alle** Monitore, auch
+  bei 1×; dann ist `FrameRequest.OverlayOnly` falsch, damit die Desktop-Kopie läuft.
+- **Reihenfolge im Frame:** Desktop → Hervorhebungen (Fokus, Caret) → **Inseln** → Übersichtsrahmen
+  → Zeiger. Der Zeiger liegt also immer oben. Alles im vorhandenen Overlay-Fenster
+  (`WDA_EXCLUDEFROMCAPTURE`), kein neues Fenster.
+- **Ein Draw je Insel** mit dem vorhandenen `MagnifyPass` (`MagnifyConstants.ForIsland`): Quelle,
+  Bild und 3-px-Rahmen in der Lupenrahmen-Farbe wie bei der Lupe (`WithFrame`). Farbmatrix, Filter
+  pro Fenster (Puffer b1 gilt weiter, seine Bereiche liegen in Desktop-UV), eigene Farbschemata,
+  intelligentes Invertieren (Gewichte des Frames), Glättung und Schärfe/Fett (`At(Stufe der Insel)`)
+  wirken also wie im Hauptbild. Konstanten werden je Draw hochgeladen (144 B); bei ruhigem Bild wird
+  ohnehin nichts gezeichnet (M14).
+- **Standbild je Insel** (`IslandStills`, 4 Plätze à `StillFrame`): einmal kopiert, wenn eine Insel
+  auf „Standbild“ geht oder ihre Quelle sich ändert; frei, wenn sie weg oder wieder live ist. Nach
+  einem Neustart wird neu aufgenommen (das Bild wird nie gespeichert).
+  - Die Kopie hält nur den Quellbereich (ganze Pixel). Damit Filter pro Fenster, Gewichte und
+    Texelraster weiter in **Desktop-UV** rechnen, bildet `Magnify.hlsl` erst beim Abtasten auf die
+    Textur ab: `TexUv(uv) = uv · StillScale + StillOffset` (Konstanten `StillOffset/StillScale`,
+    Puffer b0 wächst von 128 auf 144 B). Live: Skala 1, Versatz 0 → jede Koordinate bitgleich wie
+    vorher. Auch `SmartWeight.hlsli` und `TextEnhance.hlsli` tasten über `TexUv` ab (WARP-Test:
+    Schärfe/Fett auf Standbild = live, innen).
+  - Grenze: Die Gewichte des intelligenten Invertierens kommen vom Live-Bild. Hat sich der Inhalt
+    seit dem Standbild stark geändert, kann die Invertierung im Standbild an Stellen leicht
+    abweichen.
+- **Bearbeitungsmodus:** Rahmen blinken (Amber/Weiß, alle 0,5 s; `IslandLayer.NeedsRedraw` weckt
+  nur beim Wechsel), Griffe (10 px gefüllt) an den Ecken der gewählten Insel, beim Aufziehen ein
+  gestricheltes Rechteck (weiße Striche auf dunkler Linie, höchstens 64 Striche je Seite) über den
+  Rechteck-Shader des Zeigerdurchgangs.
+- **Monitor geändert:** Insel außerhalb ihres Monitors oder auf einem fehlenden Monitor wird nicht
+  gezeichnet (nie Absturz); beim nächsten Bearbeiten schiebt `Fit` sie zurück in den Monitor.
+- **Kosten:** CPU je Frame 2,5 ns, 0 B (`IslandBenchmarks`); `IslandLayer.Draw` mit 4 Inseln,
+  Standbild und Bearbeitungsmarken 0 B (`IslandRenderPathTests`). GPU (`IslandGpuTimeTests`,
+  `ZOOMIN_GPU_TIMING=1`, 1080p bei 4×, 4 Inseln 600 × 160, RTX 3060 Ti): +0,014 ms schlicht,
+  +0,008 ms mit intelligentem Invertieren, +0,018 ms mit Schärfe/Fett (Hauptbild 0,08–0,10 ms).
+  ×10 Onboard **hochgerechnet** ≈ 0,2 ms. Im Betrieb `zoomin.render.gpu_time` mit `zoomin.pass=islands`.
+
 ## Schärfen und Fett (M18, D1)
 Plan: [d1-schaerfen-fetter.md](../plan/features/d1-schaerfen-fetter.md). Code: `Shaders/TextEnhance.hlsli`,
 `Magnify.hlsl` `PSEnhanced`, `Core/Filters/TextEnhancement.cs`, `Rendering/TextEnhance/`.
