@@ -47,18 +47,22 @@ ist sie aus, eine Sekunde nach dem letzten Tastendruck erscheint sie.
   Auswahl „Anzeigen“. Auf der Seite „Tastenkürzel“: Haltetaste.
 
 ## Aufgaben
-- [ ] Core: `ShowCondition`, `MarkerVisibility`, Snapshot, Mapping
-- [ ] Tests (Core ≥ 90 %): alle vier Bedingungen × drei Markierungen, Grenze bei genau 1 s,
+- [x] Core: `ShowCondition`, `MarkerVisibility`, Snapshot, Mapping. *Umsetzung:* Der Snapshot ist
+      `MarkerActivitySample` (letzte Aktivität, Haltebeginn); der Render-Thread entscheidet selbst
+      (`MarkerAlphas`), sonst bräuchte der Wechsel nach 1 s Ruhe einen Timer-Thread. Der Haltetasten-
+      Hook ist eine eigene Klasse (`Win32HoldKeyHook`), `Win32InputActivityHook` bleibt unverändert.
+- [x] Tests (Core ≥ 90 %): alle vier Bedingungen × drei Markierungen, Grenze bei genau 1 s,
       Haltetaste links/rechts unterschieden, Tippen setzt die Ruhe zurück
-- [ ] Benchmark Snapshot-Lesen und Entscheidung `0 B`
-- [ ] Platform: Haltetaste im LL-Hook, Tests mit Fake-Hook (ADR-0025)
-- [ ] Rendering: Sichtbarkeit und Überblendung in `HighlightLayer` und beim Fadenkreuz;
+- [x] Benchmark Snapshot-Lesen und Entscheidung `0 B`
+- [x] Platform: Haltetaste im LL-Hook, Tests mit Fake-Hook (ADR-0025)
+- [x] Rendering: Sichtbarkeit und Überblendung in `HighlightLayer` und beim Fadenkreuz;
       WARP-Test „unsichtbar“ = keine Pixel
-- [ ] UI: drei Auswahlen und die Haltetaste, Texte DE/EN, Tastatur und Bildschirmleser
-- [ ] Logs App **1650–1659** (Bedingung geändert), Platform **2950–2959** (Haltetaste nicht
-      erkannt/Hook neu gesetzt), Rendering **3250–3259** (nur falls nötig, keine Logs pro Frame)
-- [ ] Messwert `zoomin.highlight.hold_key_presses` (Zähler, ohne Inhalte)
-- [ ] Katalog `telemetrie.md`, KB `eingabe-und-tracking.md` (Anzeige-Bedingungen, Haltetaste)
+- [x] UI: drei Auswahlen und die Haltetaste, Texte DE/EN, Tastatur und Bildschirmleser
+- [x] Logs App **1650–1659** (Bedingung geändert), Platform **2950–2959** (Haltetaste nicht
+      erkannt/Hook neu gesetzt), Rendering **3250–3259** (nur falls nötig, keine Logs pro Frame).
+      *Umsetzung:* App 1650–1651, Platform 2950–2954; Rendering braucht keine Logs.
+- [x] Messwert `zoomin.highlight.hold_key_presses` (Zähler, ohne Inhalte)
+- [x] Katalog `telemetrie.md`, KB `eingabe-und-tracking.md` (Anzeige-Bedingungen, Haltetaste)
 
 ## Parallelisierung
 - **Exklusiv (Spur C):** `HighlightLayer.cs`, Fadenkreuz-Zeichnung, `MarkerVisibility`.

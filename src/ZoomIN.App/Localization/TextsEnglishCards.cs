@@ -128,7 +128,7 @@ internal static class TextsEnglishCards
         ["TrackingMargin.Desc"] = "The view follows when the text cursor gets this close to the edge.",
         ["TrackingGroupMarks"] = "Highlights",
         ["TrackingFocusFrame.Desc"] = "Magenta frame in the magnified view.",
-        ["TrackingCaretMarker.Desc"] = "Clearly visible bar at the typing position.",
+        ["TrackingCaretMarker.Desc"] = "Clearly visible mark at the typing position; shape, colour and thickness below.",
         ["TrackingMouseFollow"] = "Follow the mouse",
         ["TrackingMouseFollow.Desc"] = "Margin: the view only moves when the pointer reaches the edge – the calmest choice. Centre: the pointer stays in the middle of the view. Fixpoint: the pointer is shown where it is on the desktop.",
         ["MouseFollow.Center"] = "Centre",

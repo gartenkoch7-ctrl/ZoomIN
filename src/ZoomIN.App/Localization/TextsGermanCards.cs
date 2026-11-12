@@ -128,7 +128,7 @@ internal static class TextsGermanCards
         ["TrackingMargin.Desc"] = "Die Ansicht folgt, wenn der Textcursor so nah an den Rand kommt.",
         ["TrackingGroupMarks"] = "Markierungen",
         ["TrackingFocusFrame.Desc"] = "Magentafarbener Rahmen in der Vergrößerung.",
-        ["TrackingCaretMarker.Desc"] = "Gut sichtbarer Balken an der Schreibposition.",
+        ["TrackingCaretMarker.Desc"] = "Gut sichtbare Markierung an der Schreibposition; Form, Farbe und Dicke darunter.",
         ["TrackingMouseFollow"] = "Maus folgen",
         ["TrackingMouseFollow.Desc"] = "Randabstand: Das Bild bewegt sich erst, wenn der Zeiger an den Rand kommt – das ist am ruhigsten. Mitte: Der Zeiger bleibt in der Bildmitte. Fixpunkt: Der Zeiger steht dort, wo er auf dem Desktop ist.",
         ["MouseFollow.Center"] = "Mitte",

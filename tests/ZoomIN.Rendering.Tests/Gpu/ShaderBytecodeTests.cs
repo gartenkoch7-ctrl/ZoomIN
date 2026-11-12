@@ -18,7 +18,7 @@ public sealed partial class ShaderBytecodeTests
             .Distinct()
             .ToList();
 
-        Assert.Equal(10, loads.Count);
+        Assert.Equal(11, loads.Count);
         foreach (var (file, entry, profile) in loads)
         {
             var bytecode = ShaderSource.Load(file, entry, profile);

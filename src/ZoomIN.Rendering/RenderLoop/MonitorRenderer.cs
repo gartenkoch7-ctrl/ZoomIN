@@ -177,7 +177,7 @@ internal sealed class MonitorRenderer : IDisposable
             var request = new FrameRequest(mode, _demand.AnchorMode(mode, unzoomed, overview, lowered), animator.Current, _model.Lens, _model.Dock, effects,
                 _effects.LocateRequestedAt, _tracking.Snapshot, _tracking.Options, _effects.PointerHiddenByTyping,
                 windows, windowsFiltered, overview, _model.TargetFor(_deviceName), _models.ViewRequests.PlacementFor(_deviceName),
-                lowered);
+                lowered, _models.Markers.Sample);
             var wasVisible = session.IsVisible;
             _stats.Record(session.RenderFrame(request), !wasVisible && session.IsVisible);
 

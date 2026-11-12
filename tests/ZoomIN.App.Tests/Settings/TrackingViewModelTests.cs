@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using ZoomIN.App.Localization;
 using ZoomIN.App.ViewModels;
 using ZoomIN.Core.Tracking;
 
@@ -11,7 +12,7 @@ public sealed class TrackingViewModelTests
     public void ComboBoxWithoutSelection_ShowsTheStoredModeAgain_AndChangesNothing()
     {
         var tracking = new TrackingModel(TrackingOptions.Default with { MouseFollow = MouseFollowMode.Fixpoint });
-        var vm = new TrackingViewModel(tracking, NullLogger<TrackingViewModel>.Instance);
+        var vm = new TrackingViewModel(tracking, AppTexts.CreateLocalizer(), NullLogger<TrackingViewModel>.Instance);
 
         vm.MouseFollowIndex = -1;
 
@@ -24,7 +25,7 @@ public sealed class TrackingViewModelTests
     public void ComboBoxWithoutSelection_DoesNotWriteOlderPageValuesBack()
     {
         var tracking = new TrackingModel(TrackingOptions.Default);
-        var vm = new TrackingViewModel(tracking, NullLogger<TrackingViewModel>.Instance);
+        var vm = new TrackingViewModel(tracking, AppTexts.CreateLocalizer(), NullLogger<TrackingViewModel>.Instance);
         tracking.ToggleEnabled(); // Strg+Alt+T while the page is open
 
         vm.MouseFollowIndex = -1;
@@ -42,7 +43,7 @@ public sealed class TrackingViewModelTests
     public void ChoosingTheMargin_AppliesIt()
     {
         var tracking = new TrackingModel(TrackingOptions.Default with { MouseFollow = MouseFollowMode.Center });
-        var vm = new TrackingViewModel(tracking, NullLogger<TrackingViewModel>.Instance);
+        var vm = new TrackingViewModel(tracking, AppTexts.CreateLocalizer(), NullLogger<TrackingViewModel>.Instance);
 
         vm.MouseFollowIndex = (int)MouseFollowMode.Margin;
 

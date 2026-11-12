@@ -81,8 +81,14 @@ public sealed class SecureSettingsSanitizerTests
             ColorFilter = (FilterId)99,
             LocatorTriggers = (LocatorTriggers)0xFF,
             MouseFollow = (MouseFollowMode)99,
+            CaretMarkerShape = (CaretMarkerShape)99,
+            CaretMarkerThickness = (CaretMarkerThickness)99,
+            CaretMarkerColor = new string('c', 500),
         });
 
+        Assert.Equal(new AppSettings().CaretMarkerShape, result.CaretMarkerShape);
+        Assert.Equal(new AppSettings().CaretMarkerThickness, result.CaretMarkerThickness);
+        Assert.Equal(new AppSettings().CaretMarkerColor, result.CaretMarkerColor);
         Assert.Equal(MouseFollowMode.Margin, result.MouseFollow);
         Assert.Equal(ZoomMode.Fullscreen, result.LastMode);
         Assert.Equal(new AppSettings().ColorFilter, result.ColorFilter);

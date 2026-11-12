@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Pointer;
+using ZoomIN.Core.Tracking;
 
 namespace ZoomIN.App.ViewModels;
 
@@ -41,6 +42,7 @@ public sealed partial class PointerViewModel : ObservableObject
         CrosshairWidth = p.CrosshairWidth;
         CrosshairOpacity = Math.Round(p.CrosshairOpacity * 100);
         HideWhileTyping = p.HideWhileTyping;
+        CrosshairShowIndex = (int)p.CrosshairShow;
         _ready = true;
     }
 
@@ -118,6 +120,10 @@ public sealed partial class PointerViewModel : ObservableObject
     [ObservableProperty]
     public partial bool HideWhileTyping { get; set; }
 
+    /// <summary>When the crosshair is shown (E1): always, at rest, while moving, while the hold key is held.</summary>
+    [ObservableProperty]
+    public partial int CrosshairShowIndex { get; set; }
+
     /// <summary>"Suchhilfe testen": shows the locator ring at the pointer.</summary>
     public void TestLocator() => _effects.Locate();
 
@@ -174,6 +180,8 @@ public sealed partial class PointerViewModel : ObservableObject
             CrosshairWidth = CrosshairWidth,
             CrosshairOpacity = CrosshairOpacity / 100,
             HideWhileTyping = HideWhileTyping,
+            CrosshairShow = CrosshairShowIndex >= 0 && Enum.IsDefined((ShowCondition)CrosshairShowIndex)
+                ? (ShowCondition)CrosshairShowIndex : Style.CrosshairShow,
         };
     }
 }

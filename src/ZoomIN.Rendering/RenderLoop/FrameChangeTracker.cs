@@ -51,6 +51,8 @@ internal sealed class FrameChangeTracker
     }
 
     // By reference for the snapshots (immutable, a change is a new object), by value for the rest.
+    // Activity is left out: it changes with every mouse move; the highlight fades report their own
+    // changes (MarkerAlphas, E1).
     private static bool SameRequest(in FrameRequest a, in FrameRequest b) =>
         a.Mode == b.Mode
         && a.Zoom == b.Zoom

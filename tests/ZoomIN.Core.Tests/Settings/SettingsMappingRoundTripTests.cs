@@ -46,6 +46,7 @@ public sealed class SettingsMappingRoundTripTests
         CrosshairColor = "#AABBCC",
         CrosshairWidth = 5,
         CrosshairOpacity = 0.5,
+        CrosshairShow = ShowCondition.HoldKey,
         HideCursorWhileTyping = true,
         TrackingEnabled = false,
         TrackFocus = false,
@@ -56,6 +57,11 @@ public sealed class SettingsMappingRoundTripTests
         CaretMarker = false,
         MouseFollow = MouseFollowMode.Fixpoint,
         MouseMargin = 0.35,
+        CaretMarkerShape = CaretMarkerShape.Wedges,
+        CaretMarkerColor = "#00E5FF",
+        CaretMarkerThickness = CaretMarkerThickness.Thick,
+        FocusFrameShow = ShowCondition.Idle,
+        CaretMarkerShow = ShowCondition.Moving,
         LastMode = ZoomMode.Lens,
         PerMonitorZoom = false,
         AnimationMilliseconds = 250,
@@ -80,7 +86,7 @@ public sealed class SettingsMappingRoundTripTests
             "Smoothing", "ProtectPhotos", "TextSharpness", "TextBold", "CursorMaxScale", "CursorUnzoomedScale", "CursorOverrideWindows", "CursorGrowWithZoom",
             "CursorColorMode", "CursorColor", "CursorRim", "CursorRimColor", "CursorRimWidth", "LocatorColor", "LocatorSize",
             "LocatorSeconds", "LocatorTriggers", "CrosshairEnabled", "CrosshairAlways", "CrosshairColor", "CrosshairWidth",
-            "CrosshairOpacity", "HideCursorWhileTyping");
+            "CrosshairOpacity", "CrosshairShow", "HideCursorWhileTyping");
     }
 
     [Fact]
@@ -89,7 +95,8 @@ public sealed class SettingsMappingRoundTripTests
         var back = TrackingMapping.Apply(new AppSettings(), TrackingMapping.Create(s_settings));
 
         AssertSame(s_settings, back, "TrackingEnabled", "TrackFocus", "TrackCaret", "PanMilliseconds", "CaretMargin", "FocusFrame",
-            "CaretMarker", "MouseFollow", "MouseMargin");
+            "CaretMarker", "MouseFollow", "MouseMargin", "CaretMarkerShape", "CaretMarkerColor", "CaretMarkerThickness", "FocusFrameShow",
+            "CaretMarkerShow");
     }
 
     [Fact]

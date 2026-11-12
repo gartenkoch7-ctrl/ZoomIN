@@ -16,7 +16,12 @@ public static class TrackingMapping
         s.FocusFrame,
         s.CaretMarker,
         Enum.IsDefined(s.MouseFollow) ? s.MouseFollow : TrackingOptions.Default.MouseFollow,
-        double.IsFinite(s.MouseMargin) ? Math.Clamp(s.MouseMargin, 0, TrackingOptions.MaxMouseMargin) : TrackingOptions.Default.MouseMargin);
+        double.IsFinite(s.MouseMargin) ? Math.Clamp(s.MouseMargin, 0, TrackingOptions.MaxMouseMargin) : TrackingOptions.Default.MouseMargin)
+    {
+        CaretStyle = CaretMarkerStyle.From(s.CaretMarkerShape, s.CaretMarkerColor, s.CaretMarkerThickness),
+        FocusFrameShow = Enum.IsDefined(s.FocusFrameShow) ? s.FocusFrameShow : ShowCondition.Always,
+        CaretShow = Enum.IsDefined(s.CaretMarkerShow) ? s.CaretMarkerShow : ShowCondition.Always,
+    };
 
     public static AppSettings Apply(AppSettings settings, TrackingModel model)
     {
@@ -33,6 +38,11 @@ public static class TrackingMapping
             CaretMarker = o.CaretMarker,
             MouseFollow = o.MouseFollow,
             MouseMargin = o.MouseMargin,
+            CaretMarkerShape = o.CaretStyle.Shape,
+            CaretMarkerColor = o.CaretStyle.Color.ToHex(),
+            CaretMarkerThickness = o.CaretStyle.Thickness,
+            FocusFrameShow = o.FocusFrameShow,
+            CaretMarkerShow = o.CaretShow,
         };
     }
 }

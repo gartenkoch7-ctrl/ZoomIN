@@ -87,6 +87,16 @@ public static class SecureSettingsSanitizer
             MouseFollow = Defined(s.MouseFollow, d.MouseFollow),
             CenterMouse = null, // schema 1 only; the copy is written as schema 2
             MouseMargin = Number(s.MouseMargin, 0, TrackingOptions.MaxMouseMargin, d.MouseMargin),
+            CaretMarkerShape = Defined(s.CaretMarkerShape, d.CaretMarkerShape),
+            CaretMarkerColor = Color(s.CaretMarkerColor, d.CaretMarkerColor),
+            CaretMarkerThickness = Defined(s.CaretMarkerThickness, d.CaretMarkerThickness),
+
+            // Show conditions (E1) need the input hooks, which see little on the secure desktop:
+            // there every highlight is simply always shown (plan decision).
+            CrosshairShow = ShowCondition.Always,
+            CaretMarkerShow = ShowCondition.Always,
+            FocusFrameShow = ShowCondition.Always,
+            MarkerHoldKey = Defined(s.MarkerHoldKey, d.MarkerHoldKey),
             AnimationMilliseconds = Math.Clamp(s.AnimationMilliseconds, 0, 500),
             ToggleHotkey = Hotkey(s.ToggleHotkey, d.ToggleHotkey),
             ZoomInHotkey = Hotkey(s.ZoomInHotkey, d.ZoomInHotkey),

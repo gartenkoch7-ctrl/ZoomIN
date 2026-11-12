@@ -33,12 +33,14 @@ internal sealed class CursorLayer
 
     /// <summary>Draws crosshair, pointer and locator; returns true while the locator is still animating.</summary>
     /// <param name="hidden">The user is typing and the pointer should disappear.</param>
+    /// <param name="crosshairAlpha">Crosshair opacity from its show condition (E1); 0 = not drawn.</param>
     public bool Draw(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor, in ModeFrame frame,
-        ZoomMode mode, double zoom, PhysicalPoint cursor, DisplayEffects effects, long locateRequestedAt, bool hidden)
+        ZoomMode mode, double zoom, PhysicalPoint cursor, DisplayEffects effects, long locateRequestedAt, bool hidden,
+        double crosshairAlpha)
     {
         try
         {
-            return DrawLayer(context, target, monitor, frame, mode, zoom, cursor, effects.Cursor, locateRequestedAt, hidden);
+            return DrawLayer(context, target, monitor, frame, mode, zoom, cursor, effects.Cursor, locateRequestedAt, hidden, crosshairAlpha);
         }
         finally
         {
@@ -53,7 +55,7 @@ internal sealed class CursorLayer
     public void ShowSystemCursor() => _systemCursor.SetVisible(true);
 
     private bool DrawLayer(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor, in ModeFrame frame,
-        ZoomMode mode, double zoom, PhysicalPoint cursor, PointerStyle style, long locateRequestedAt, bool hidden)
+        ZoomMode mode, double zoom, PhysicalPoint cursor, PointerStyle style, long locateRequestedAt, bool hidden, double crosshairAlpha)
     {
         // The pointer appears where its desktop position is shown. Around the mouse (fixpoint)
         // that is the real position; while the view follows focus/caret it is mapped (M6).
@@ -61,9 +63,9 @@ internal sealed class CursorLayer
         var drawn = style.DrawsPointer(zoom);
         var shown = FrameMapping.Map(frame, cursor);
         var inView = frame.Source.Contains(cursor);
-        if (!hidden && inView && style.CrosshairVisible(zoom))
+        if (!hidden && inView && crosshairAlpha > 0 && style.CrosshairVisible(zoom))
         {
-            DrawCrosshair(context, target, monitor, frame, shown, style);
+            DrawCrosshair(context, target, monitor, frame, shown, style, crosshairAlpha);
         }
 
         if (!hidden && drawn && inView)
@@ -124,11 +126,11 @@ internal sealed class CursorLayer
 
     // Two lines through the pointer across the visible view (lens/strip or the whole monitor).
     private void DrawCrosshair(ID3D11DeviceContext context, ID3D11RenderTargetView target, PhysicalRect monitor,
-        in ModeFrame frame, PhysicalPoint shown, PointerStyle style)
+        in ModeFrame frame, PhysicalPoint shown, PointerStyle style, double alpha)
     {
         var area = frame.HasFrame ? frame.Target : monitor;
         var width = style.CrosshairWidth;
-        var fill = CursorConstants.ForRect(0.5f, 0.5f, FrameColor.From(style.CrosshairColor, style.CrosshairOpacity));
+        var fill = CursorConstants.ForRect(0.5f, 0.5f, FrameColor.From(style.CrosshairColor, style.CrosshairOpacity * alpha));
         _pass.DrawRect(context, target, (float)(area.X - monitor.X), (float)(shown.Y - (width / 2) - monitor.Y),
             (float)area.Width, (float)width, fill);
         _pass.DrawRect(context, target, (float)(shown.X - (width / 2) - monitor.X), (float)(area.Y - monitor.Y),

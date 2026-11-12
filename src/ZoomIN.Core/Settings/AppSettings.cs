@@ -219,6 +219,20 @@ public sealed record AppSettings
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? CenterMouse { get; set; }
 
+    /// <summary>Caret marker look (E2); the factory setting looks like the bar before E2.</summary>
+    public CaretMarkerShape CaretMarkerShape { get; set; } = CaretMarkerStyle.Default.Shape;
+
+    public string CaretMarkerColor { get; set; } = CaretMarkerStyle.Default.Color.ToHex();
+
+    public CaretMarkerThickness CaretMarkerThickness { get; set; } = CaretMarkerStyle.Default.Thickness;
+
+    /// <summary>When crosshair, caret marker and focus frame are shown (E1); factory: always.</summary>
+    public ShowCondition CrosshairShow { get; set; }
+
+    public ShowCondition CaretMarkerShow { get; set; }
+
+    public ShowCondition FocusFrameShow { get; set; }
+
     /// <summary>Glide duration for zoom changes in milliseconds; 0 = instant.</summary>
     public int AnimationMilliseconds { get; set; } = 150;
 
@@ -257,4 +271,7 @@ public sealed record AppSettings
     public HotkeyGesture OverviewHotkey { get; set; } = HotkeyGesture.Overview;
 
     public HotkeyModifiers WheelModifiers { get; set; } = HotkeyModifiers.Control;
+
+    /// <summary>Key that shows highlights set to "only while held" (E1); shared by all profiles.</summary>
+    public MarkerHoldKey MarkerHoldKey { get; set; }
 }

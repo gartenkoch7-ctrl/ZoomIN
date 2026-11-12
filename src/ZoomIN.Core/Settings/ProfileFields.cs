@@ -60,6 +60,12 @@ public static class ProfileFields
         CaretMarker = profile.CaretMarker,
         MouseFollow = profile.MouseFollow,
         MouseMargin = profile.MouseMargin,
+        CaretMarkerShape = profile.CaretMarkerShape,
+        CaretMarkerColor = profile.CaretMarkerColor,
+        CaretMarkerThickness = profile.CaretMarkerThickness,
+        CrosshairShow = profile.CrosshairShow,
+        CaretMarkerShow = profile.CaretMarkerShow,
+        FocusFrameShow = profile.FocusFrameShow,
         AnimationMilliseconds = profile.AnimationMilliseconds,
         WindowDrag = profile.WindowDrag,
     };
