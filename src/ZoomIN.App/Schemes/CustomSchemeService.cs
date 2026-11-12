@@ -167,7 +167,8 @@ public sealed class CustomSchemeService(RenderModels models, SettingsService set
         {
             try
             {
-                if (name == active || profiles.Load(name) is not { } profile)
+                // File names: "standard" and "Standard.json" are the same file on Windows.
+                if (string.Equals(name, active, StringComparison.OrdinalIgnoreCase) || profiles.Load(name) is not { } profile)
                 {
                     continue;
                 }

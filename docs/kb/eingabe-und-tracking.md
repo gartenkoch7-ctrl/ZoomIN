@@ -363,6 +363,19 @@ Globale Kürzel per `RegisterHotKey`, Mausrad per `WH_MOUSE_LL`.
   sie in 100 ms ein, statt kurz voll aufzublitzen.
 - Sicherer Bildschirm: Der Sanitizer setzt alle drei Bedingungen auf „immer“ – dort sehen die
   Hooks zu wenig.
+- Zusammenspiel mit der Übersicht (M18-Integration): Der Aktivitäts-Hook verschluckt während der
+  Übersicht nur Esc. Esc ist nie eine Haltetaste. Ob der Haltetasten-Hook das Esc noch sieht, hängt
+  von der Hook-Reihenfolge ab (zuletzt gesetzter Hook kommt zuerst). Sieht er es, zählt es als
+  „andere Taste“ und beendet ein laufendes Halten – wie jede andere Taste, hingenommen.
+- Übersicht und Markierungen teilen sich den `CursorPass`; `RenderSession` zeichnet erst die
+  Markierungen, dann den Übersichtsrahmen. Überblendung (E1) und Rahmenbewegung (B2) zählen beide als
+  Animation (`OverviewHighlightTests`).
+- Umschalt rechts (Werk) ist auch das Windows-Kürzel für die Anschlagverzögerung (8 s halten). Wer
+  die Haltetaste so lange hält, bekommt die Windows-Abfrage – hingenommen, im Hilfetext erwähnenswert.
+- Seiten „Fokus & Textcursor“ und „Mauszeiger“: Jede Einstellung ändert nur ihr eigenes Feld im
+  Modell (M17 A1, für Caret-Form, -Farbe, -Dicke und alle Bedingungen seit der M18-Integration).
+  Sonst würde ein Profilwechsel oder Strg+Alt+T/K bei offener Seite von älteren Seitenwerten
+  zurückgedreht.
 
 ### Fixpunkt ≠ Bildmitte (Ursache „Fokus landet am Rand“, behoben 2026-11-03)
 Die Geometrie (`ModeGeometry`) vergrößert um einen **Fixpunkt**, und der wird dort gezeigt, wo er
