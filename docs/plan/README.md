@@ -19,7 +19,7 @@ Jeder Meilenstein endet mit etwas, das man **starten und vorführen** kann.
 | M8 | [Release 1.0](m8-release.md) | Getestete, dokumentierte Version zum Download | M | umgesetzt – Repo, Tag, Abschlusstests offen |
 | UI | [Neugestaltung & Mauszeiger](ui-neugestaltung.md) | Windows-11-Kartenstil, Übersicht, eigene Mauszeiger-Seite | M | umgesetzt – Sichttest offen |
 | M9 | [Setup & Updates](m9-setup-und-updates.md) | Barrierefreies Online-Setup mit UIAccess, Kanälen, Versionswahl und Ein-Klick-Updates | L | geplant – **vor** dem ersten Release |
-| M10 | [Sichere Bildschirme](m10-sichere-bildschirme.md) | Zoom auf Anmeldung, Sperre, Strg+Alt+Entf und UAC | L | Design freigegeben – in Arbeit (Spike) |
+| M10 | [Sichere Bildschirme](m10-sichere-bildschirme.md) | Zoom auf Anmeldung, Sperre, Strg+Alt+Entf und UAC | L | Spike teils erledigt; Abschluss + Autostart (ADR-0030) geplant 2026-11-12 – **vor** dem ersten Release |
 | M11 | [Diagnose & Telemetrie](m11-diagnose-und-telemetrie.md) | OpenTelemetry lokal: ein Trace über alle Prozesse, Diagnose-Seite, Diagnosepaket | L | Design freigegeben – **vor** dem ersten Release |
 | M12 | [Farbfilter pro Fenster](m12-filter-pro-fenster.md) | Helle Fenster automatisch invertiert, dunkle bleiben dunkel; Regeln pro App + Fensterart | L | in `develop`, Sichtprüfung offen (per KI-Debug, M16) – **vor** dem ersten Release |
 | M13 | [Intelligentes Invertieren](m13-intelligent-invertieren.md) | Nur helle Flächen invertiert, dunkle Leisten bleiben dunkel, Fotos original – live, ohne Flackern | L | Design freigegeben (ADR-0024), Spike offen – **vor** dem ersten Release |

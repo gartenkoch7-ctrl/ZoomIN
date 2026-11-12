@@ -161,6 +161,51 @@ Fensterposition beim gedrückten Mausknopf ist denkbar, aber teurer.
 - Fokus- und Caret-Verfolgung auf dem eingefrorenen Monitor müssen pausieren.
 - Klicks dorthin sind die eigentliche Schwierigkeit.
 
+## H · Neue Ideen (Recherche 2026-11-12)
+Anlass: Was ist seit der ersten Recherche bei anderen Lupen neu? Nur öffentliche Quellen,
+eigene Worte. Nichts davon ist geplant.
+
+**Was andere 2026 gebracht haben:**
+- **Windows-Lupe (Insider):**
+  - Zoom pro Monitor
+  - „Ansicht sperren“ pro Monitor (`Strg+Win+K`, `Win+Esc` hebt alle auf)
+  - Kontrast-Umschalter in der Leiste
+  - Zoomstufe direkt eintippen (5–400 %)
+
+  Damit schrumpft der Vorsprung von ZoomIN bei Zoom pro Monitor und bei G2. ³⁰ ³¹ ³²
+- **NVDA 2026.2:** eigene Lupe, nur Vollbild.
+  - 1–50×, kurze Übersicht per Kürzel, Graustufen
+  - Den Modus „echte Mitte“ hat NV Access wegen Designfehlern wieder entfernt. Das bestätigt das Risiko bei A2. ³³
+- **ZoomText 2026:**
+  - DirectX 11, .NET 8, schnellerer Start
+  - OCR für gescannte PDFs und Bilder, auch im Live Text View
+  - Fortlaufendes Scrollen im Live Text View
+  - Einstellungen pro App gelten auch in Fernsitzungen (Citrix/RDP)
+  - Start im ausgeschalteten Zustand für gemeinsam genutzte PCs ³⁴ ³⁵
+- **Apple (macOS 26 / 2026):**
+  - Kamera-Lupe am Mac
+  - systemweiter Lesemodus mit eigener Schrift und Farbe, KI-Zusammenfassung
+  - KI-Bildbeschreibungen ³⁶
+- **KI-Werkzeuge für Windows:**
+  - Be My Eyes für Windows (Beta)
+  - NVDA-Add-on „Vision Assistant Pro“
+  - Viewpoint
+
+  Sie beschreiben den Bildschirm oder ein Fenster per Kürzel, mit Rückfragen. ³⁷
+
+| ID | Funktion | Nutzen | Größe | Machbarkeit / Risiko | Quelle |
+|---|---|---|---|---|---|
+| H1 | **Text per OCR lesbar machen**: Bereich oder Zeile unter dem Zeiger erkennen, wo UIA keinen Text liefert (PDF-Scan, Bild, Fernsitzung, Video) | Grundlage für Textleiste (D3), Lesefenster (D4) und Sprachausgabe auch in „stummen“ Apps | M | `Windows.Media.Ocr` arbeitet lokal und offline (Datenschutz gut). Läuft nicht im Render-Loop, sondern auf eigenem Thread aus einer Frame-Kopie (Standbild-Baustein aus M19). Erkannte Texte nie loggen | ZoomText 2026 ³⁴ |
+| H2 | **Insel an ein Fenster heften**: Die Insel folgt einem Fenster (z. B. Live-Untertitel, Chat, Uhr) statt einem festen Rechteck und verschwindet, wenn das Fenster zugeht | B1 bricht heute bei Layout-Änderungen; so bleibt die Insel brauchbar | S–M | Fensterposition per WinEvent (`LOCATIONCHANGE`), Rechteck relativ zum Fenster speichern; Profil speichert Prozessname + Fensterklasse, keinen Titel | eigene Idee nach B1 |
+| H3 | **Ausschnitt beschreiben lassen (KI)**: Kürzel → Beschreibung des vergrößerten Ausschnitts, Rückfragen möglich | Bilder, Diagramme, unbeschriftete Knöpfe verstehen | M | Datenschutz: Bildschirminhalt verlässt sonst den PC. Nur lokal (Windows-KI-APIs auf Copilot+-PCs) oder mit eigenem Schlüssel und klarem Opt-in → **ADR nötig**. Der Ausschnitt ist ohnehin aus Aufnahmen ausgenommen, das Desktop-Bild aber nicht | Be My Eyes, Vision Assistant Pro, Viewpoint ³⁷; Apple ³⁶ |
+| H4 | **Zittern dämpfen**: Kleine, schnelle Zeigerbewegungen bewegen weder Ansicht noch Markierungen (Totzone plus Glättung, einstellbar) | Nutzer mit Tremor; ruhigeres Bild | S | Core-Filter vor dem Anker (wie Randabstand A1); Klickpunkt bleibt der echte Zeiger. Benchmark nötig | Hinweis auf Tremor ³⁸ |
+| H5 | **Start ausgeschaltet** (gemeinsam genutzter PC): ZoomIN startet, aber ohne Zoom und Filter, bis ein Kürzel es einschaltet | Schulen, Büros, Bibliotheken | S | Schalter in den Einstellungen bzw. per Setup-Parameter | ZoomText 2026 ³⁴ |
+| H6 | **Fernsitzung**: ZoomIN in RDP-/Citrix-Sitzungen und gegenüber Fernsteuer-Apps robust; Einstellungen gelten dort mit | Arbeitsplätze mit virtuellem Desktop | M | Desktop Duplication in RDP-Sitzungen prüfen (Spike). Passt zur offenen Ausnahmeliste aus ADR-0028 | ZoomText 2026 ³⁵ |
+| H7 | **Zoomstufe eintippen** (Prozent, z. B. im Tray oder per Kürzel-Dialog) | genaue Lieblingsstufe | S | in B7 aufnehmen | Windows Insider ³² |
+
+**Nicht verfolgen:** Sprachbefehle für die Lupe. Der Windows-Sprachzugriff kann die Kürzel schon
+auslösen.
+
 ## Stimmen von Nutzern (Auswahl)
 - Vollbild-Lupe macht nach Minuten **übel/schwindlig**; Angedockt ohne Kürzel für Größe/Lage;
   Text ohne Glättung zackig → A1, B3. ²³
@@ -204,6 +249,15 @@ Fensterposition beim gedrückten Mausknopf ist denkbar, aber teurer.
 27. Dolphin KB Bildreste: https://kb.yourdolphin.com/knowledge/screen-artifacts-in-supernova-24
 28. ZoomText Legacy-Engine: https://sastltd.zohodesk.eu/portal/en/kb/articles/use-zoomtext-legacy-mag-engine-to-fix-video-issues
 29. AppleVis (nur Suchauszug): https://applevis.com/forum/low-vision-accessibility-apple-products/setting-mac-mini-low-vision
+30. Windows Insider 8. Sept. 2026: https://blogs.windows.com/windows-insider/2026/09/08/announcing-new-builds-for-8-september-2026/
+31. Ansicht sperren (Fachpresse): https://pureinfotech.com/build-26220-9739-windows-11-25h2/ ⚠️ Beta
+32. Insider-Build 28120.3151: https://learn.microsoft.com/en-us/windows-insider/release-notes/experimental-26-h1/preview-build-28120-3151 ⚠️
+33. NVDA 2026.2 Beta (nur Suchauszug): https://www.nvaccess.org/?p=33413
+34. Vispero März-Update 2026: https://training.vispero.com/download-the-march-update-of-jaws-zoomtext-and-fusion-2026/ · Händler-Zusammenfassung: https://nelowvision.com/low-vision-software-updates-for-2025/
+35. Vispero September-Update 2026: https://training.vispero.com/download-the-september-update-of-jaws-zoomtext-and-fusion-2026/
+36. TechCrunch 19.05.2026: https://techcrunch.com/2026/05/19/apple-announces-apple-intelligence-powered-accessibility-feature-updates/
+37. Be My Eyes für Windows: https://bemyeyes.com/no/be-my-eyes-for-windows · AFB Viewpoint: https://afb.org/aw/winter2025/viewpoint-ai-review · AppleVis Vision Assistant Pro (Forum): https://applevis.com/comment/200085
+38. AbilityNet Factsheet: https://abilitynet.org.uk/factsheets/screen-magnification (nur Suchauszug)
 
 **Nicht verifiziert:** ZoomText-Neuerungen 2026 (Seiten gesperrt), AccessWorld-Tests (nicht
 gelesen), Windows-Beta-Funktionen (nur Fachpresse), runde Lupen (in keiner aktuellen Doku gefunden).
