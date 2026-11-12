@@ -34,6 +34,13 @@ public sealed unsafe class Win32MonitorProvider : IMonitorProvider
         return monitors.Exists(m => m.Id.Length == 0) ? [] : [.. monitors.Select(m => m.Bounds)];
     }
 
+    // One enumeration as above, with the ids (frozen monitors, G2).
+    public IReadOnlyList<(string Id, PhysicalRect Bounds)> AllMonitors()
+    {
+        var monitors = Enumerate();
+        return monitors.Exists(m => m.Id.Length == 0) ? [] : monitors;
+    }
+
     private static List<(string Id, PhysicalRect Bounds)> Enumerate()
     {
         var monitors = new List<(string Id, PhysicalRect Bounds)>();

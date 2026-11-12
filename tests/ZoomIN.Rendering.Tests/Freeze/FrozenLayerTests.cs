@@ -35,7 +35,7 @@ public sealed class FrozenLayerTests
 
         var anchor = FrozenLayer.Anchor(frozen, new PhysicalPoint(16, 32));
         Assert.Equal(anchor, FrozenLayer.Anchor(frozen, new PhysicalPoint(60, 60)));
-        Assert.False(rig.Layer.TryCapture(frozen, rig.Gpu.Context, rig.Source));
+        Assert.False(rig.Layer.TryCapture(frozen, rig.Gpu.Context, rig.Source, WindowRegions.Empty));
         Assert.Equal(Red, rig.Draw(anchor));
 
         rig.Fill(Green);
@@ -51,9 +51,9 @@ public sealed class FrozenLayerTests
         rig.Layer.Begin(frozen);
         Assert.False(rig.Layer.HoldsStill(frozen));
 
-        Assert.True(rig.Layer.TryCapture(frozen, rig.Gpu.Context, rig.Source));
+        Assert.True(rig.Layer.TryCapture(frozen, rig.Gpu.Context, rig.Source, WindowRegions.Empty));
         Assert.True(rig.Layer.HoldsStill(frozen));
-        Assert.False(rig.Layer.TryCapture(frozen, rig.Gpu.Context, rig.Source));
+        Assert.False(rig.Layer.TryCapture(frozen, rig.Gpu.Context, rig.Source, WindowRegions.Empty));
         rig.Fill(Green);
 
         Assert.Equal(Red, rig.Draw(new PhysicalPoint(16, 32)));
@@ -65,6 +65,23 @@ public sealed class FrozenLayerTests
         rig.Layer.Begin(null);
         Assert.Same(rig.View, rig.Layer.Desktop(rig.View));
         Assert.Equal(Green, rig.Draw(new PhysicalPoint(16, 32)));
+    }
+
+    [Fact]
+    public void RebuiltPipeline_DoesNotPassANewerDesktopOffAsTheStillImage()
+    {
+        using var rig = new Rig();
+        var frozen = Frozen(still: true);
+        rig.Layer.Begin(frozen);
+        Assert.True(rig.Layer.TryCapture(frozen, rig.Gpu.Context, rig.Source, WindowRegions.Empty));
+
+        using var cursor = new CursorPass(rig.Gpu.Device);
+        using var rebuilt = new FrozenLayer(cursor, new StillFrame(rig.Gpu.Device, NullLogger.Instance), @"\\.\DISPLAY1", NullLogger.Instance);
+        rebuilt.Begin(frozen);
+
+        Assert.False(rebuilt.TryCapture(frozen, rig.Gpu.Context, rig.Source, WindowRegions.Empty));
+        Assert.False(rebuilt.HoldsStill(frozen));
+        Assert.Same(rig.View, rebuilt.Desktop(rig.View));
     }
 
     [Fact]
@@ -92,7 +109,7 @@ public sealed class FrozenLayerTests
             rig.Layer.Begin(frozen);
             if (!rig.Layer.HoldsStill(frozen))
             {
-                rig.Layer.TryCapture(frozen, rig.Gpu.Context, rig.Source);
+                rig.Layer.TryCapture(frozen, rig.Gpu.Context, rig.Source, WindowRegions.Empty);
             }
 
             _ = rig.Layer.Desktop(rig.View);

@@ -11,7 +11,8 @@ namespace ZoomIN.App.Zoom;
 /// <summary>Which shortcut does what: the gesture → action table, registered with Windows (ADR-0008).</summary>
 public sealed class HotkeyBindings(
     SettingsService settings, ProfileService profiles, IHotkeyService hotkeys, ZoomCommands zoom,
-    WindowFilterCommands windowFilter, OverviewController overview, MonitorFreezeController freeze, ILogger<HotkeyBindings> log)
+    WindowFilterCommands windowFilter, OverviewController overview, MonitorFreezeController freeze,
+    MonitorSwitchController monitorSwitch, ILogger<HotkeyBindings> log)
 {
     /// <summary>Hotkeys that could not be registered because another application owns them.</summary>
     public IReadOnlyList<HotkeyGesture> Unavailable { get; private set; } = [];
@@ -64,7 +65,7 @@ public sealed class HotkeyBindings(
         Add(s.WindowFilterHotkey, () => windowFilter.Toggle());
         Add(s.OverviewHotkey, () => overview.Press());
         Add(s.FreezeMonitorHotkey, freeze.ToggleFreeze);
-        Add(s.NextMonitorHotkey, freeze.NextMonitor);
+        Add(s.NextMonitorHotkey, monitorSwitch.NextMonitor);
         Unavailable = unavailable;
     }
 

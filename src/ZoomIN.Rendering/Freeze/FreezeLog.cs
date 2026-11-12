@@ -11,6 +11,6 @@ internal static partial class FreezeLog
     [LoggerMessage(EventId = 3311, Level = LogLevel.Information, Message = "Frozen view on {Monitor} ended")]
     public static partial void FrozenViewEnded(this ILogger logger, string monitor);
 
-    [LoggerMessage(EventId = 3312, Level = LogLevel.Warning, Message = "Still image of frozen monitor {Monitor} not taken; it stays live")]
+    [LoggerMessage(EventId = 3312, Level = LogLevel.Warning, Message = "Still image of frozen monitor {Monitor} not taken or lost with a rebuilt pipeline; it stays live")]
     public static partial void StillNotTaken(this ILogger logger, string monitor);
 }

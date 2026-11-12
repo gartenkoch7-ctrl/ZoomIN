@@ -86,10 +86,14 @@ public sealed class HotkeyBindingsTests
         var overview = new OverviewController(service, zoom, monitors, new FixedCursor(), new FakeOverviewKeys(), new RecordingAnnouncer(),
             AppTexts.CreateLocalizer(), TimeProvider.System, NullLogger<OverviewController>.Instance);
         var fence = new FakeFence();
-        var freeze = new MonitorFreezeController(service, monitors, new FixedCursor(), fence, new FakeMover(new MovableCursor(), fence),
+        var mover = new FakeMover(new MovableCursor(), fence);
+        var monitorSwitch = new MonitorSwitchController(models.Zoom, monitors, new FixedCursor(), mover, new RecordingAnnouncer(),
+            AppTexts.CreateLocalizer(), NullLogger<MonitorSwitchController>.Instance);
+        var freeze = new MonitorFreezeController(service, monitorSwitch, monitors, new FixedCursor(), fence, mover,
             new RecordingAnnouncer(), AppTexts.CreateLocalizer(), NullLogger<MonitorFreezeController>.Instance);
         var bindings = new HotkeyBindings(
-            service, new ProfileService(service, new NoProfiles()), hotkeys, zoom, windowFilter, overview, freeze, NullLogger<HotkeyBindings>.Instance);
+            service, new ProfileService(service, new NoProfiles()), hotkeys, zoom, windowFilter, overview, freeze, monitorSwitch,
+            NullLogger<HotkeyBindings>.Instance);
         return (bindings, hotkeys, models);
     }
 

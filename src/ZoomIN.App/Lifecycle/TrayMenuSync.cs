@@ -21,11 +21,12 @@ public sealed class TrayMenuSync
     private readonly ZoomCommands _zoom;
     private readonly WindowFilterCommands _windowFilter;
     private readonly MonitorFreezeController _freeze;
+    private readonly MonitorSwitchController _switch;
     private readonly ILocalizer _texts;
 
     public TrayMenuSync(
         ITrayIcon tray, SettingsService settings, ProfileService profiles, ZoomCommands zoom,
-        WindowFilterCommands windowFilter, MonitorFreezeController freeze, ILocalizer texts)
+        WindowFilterCommands windowFilter, MonitorFreezeController freeze, MonitorSwitchController monitorSwitch, ILocalizer texts)
     {
         _tray = tray;
         _settings = settings;
@@ -33,6 +34,7 @@ public sealed class TrayMenuSync
         _zoom = zoom;
         _windowFilter = windowFilter;
         _freeze = freeze;
+        _switch = monitorSwitch;
         _texts = texts;
     }
 
@@ -48,6 +50,7 @@ public sealed class TrayMenuSync
 
         // Why Ctrl+Alt+H or Ctrl+Alt+N did nothing, e.g. "the last free monitor cannot be frozen" (G2).
         _freeze.Refused += hint => _tray.Notify(Text.Get("Freeze.Title"), hint);
+        _switch.Refused += hint => _tray.Notify(Text.Get("Freeze.Title"), hint);
     }
 
     /// <summary>Runs a zoom or profile command; the shell handles Open and Exit itself.</summary>

@@ -31,9 +31,14 @@ internal sealed class FreezeRig : IDisposable
         Mover = new FakeMover(Cursor, Fence);
         var texts = AppTexts.CreateLocalizer();
         texts.SetLanguage(AppLanguage.English);
+        Switch = new MonitorSwitchController(
+            Models.Zoom, Monitors, Cursor, Mover, Announcer, texts, NullLogger<MonitorSwitchController>.Instance);
+
+        // Fence events run at once instead of on the thread pool.
         Controller = new MonitorFreezeController(
-            Settings, Monitors, Cursor, Fence, Mover, Announcer, texts, NullLogger<MonitorFreezeController>.Instance);
+            Settings, Switch, Monitors, Cursor, Fence, Mover, Announcer, texts, NullLogger.Instance, work => work());
         Controller.Refused += Hints.Add;
+        Switch.Refused += Hints.Add;
     }
 
     public IMonitorProvider Monitors { get; }
@@ -51,6 +56,8 @@ internal sealed class FreezeRig : IDisposable
     public RenderModels Models { get; }
 
     public SettingsService Settings { get; }
+
+    public MonitorSwitchController Switch { get; }
 
     public MonitorFreezeController Controller { get; }
 

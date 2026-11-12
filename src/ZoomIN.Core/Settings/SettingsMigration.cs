@@ -19,7 +19,7 @@ public static class SettingsMigration
         ArgumentNullException.ThrowIfNull(settings);
         if (settings.SchemaVersion >= 2)
         {
-            return new(settings with { CenterMouse = null }, null);
+            return new(WithoutFreezeClashes(settings with { CenterMouse = null }), null);
         }
 
         var previous = LegacyMouseFollow(settings.CenterMouse);
@@ -31,7 +31,24 @@ public static class SettingsMigration
             CenterMouse = null,
             OverviewHotkey = OverviewHotkeyFor(settings),
         };
-        return new(migrated, previous);
+        return new(WithoutFreezeClashes(migrated), previous);
+    }
+
+    /// <summary>
+    /// The freeze shortcuts (G2, M19) came without a schema change, so a file without them gets their
+    /// defaults: if the user already gave such a gesture to an older action, the new shortcut stays
+    /// unassigned instead of failing as "unavailable" (as with the overview in schema 2). Applied at
+    /// every load; the hotkey editor never stores one gesture twice, so nothing else is affected.
+    /// </summary>
+    public static AppSettings WithoutFreezeClashes(AppSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        HotkeyGesture[] older = [.. OlderHotkeys(settings), settings.OverviewHotkey];
+        var freeze = Unclashed(settings.FreezeMonitorHotkey, older);
+        var next = Unclashed(settings.NextMonitorHotkey, [.. older, freeze]);
+        return freeze == settings.FreezeMonitorHotkey && next == settings.NextMonitorHotkey
+            ? settings
+            : settings with { FreezeMonitorHotkey = freeze, NextMonitorHotkey = next };
     }
 
     /// <summary>What schema 1 did: centred unless switched off (missing = the default, on).</summary>
@@ -40,14 +57,17 @@ public static class SettingsMigration
 
     // The overview shortcut (B2) is new in schema 2: if the user already gave its default to
     // another action, it stays unassigned instead of failing as "unavailable" or taking it over.
-    private static HotkeyGesture OverviewHotkeyFor(AppSettings old)
-    {
-        HotkeyGesture[] taken =
-        [
-            old.ToggleHotkey, old.ZoomInHotkey, old.ZoomOutHotkey, old.FullscreenHotkey, old.LensHotkey, old.DockedHotkey,
-            old.FilterHotkey, old.NextFilterHotkey, old.LocateHotkey, old.CrosshairHotkey, old.TrackingHotkey, old.ProfileHotkey,
-            old.WindowFilterHotkey,
-        ];
-        return taken.Contains(HotkeyGesture.Overview) ? default : old.OverviewHotkey;
-    }
+    private static HotkeyGesture OverviewHotkeyFor(AppSettings old) =>
+        OlderHotkeys(old).Contains(HotkeyGesture.Overview) ? default : old.OverviewHotkey;
+
+    // The shortcuts every version had (M7–M12); a newer one gives way to them.
+    private static HotkeyGesture[] OlderHotkeys(AppSettings s) =>
+    [
+        s.ToggleHotkey, s.ZoomInHotkey, s.ZoomOutHotkey, s.FullscreenHotkey, s.LensHotkey, s.DockedHotkey, s.FilterHotkey,
+        s.NextFilterHotkey, s.LocateHotkey, s.CrosshairHotkey, s.TrackingHotkey, s.ProfileHotkey, s.WindowFilterHotkey,
+    ];
+
+    // Unassigned (VirtualKey 0) never clashes; an assigned gesture another action holds becomes unassigned.
+    private static HotkeyGesture Unclashed(HotkeyGesture gesture, HotkeyGesture[] taken) =>
+        gesture.VirtualKey != 0 && taken.Contains(gesture) ? default : gesture;
 }

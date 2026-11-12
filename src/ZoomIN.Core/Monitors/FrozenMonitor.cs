@@ -22,6 +22,7 @@ public sealed class FrozenMonitor(
 {
     // Boxed so the point is published atomically (two doubles are not); filled once per freeze.
     private StrongBox<PhysicalPoint>? _anchor;
+    private int _stillClaimed;
 
     public string Id { get; } = id ?? throw new ArgumentNullException(nameof(id));
 
@@ -53,6 +54,12 @@ public sealed class FrozenMonitor(
             Interlocked.CompareExchange(ref _anchor, new StrongBox<PhysicalPoint>(anchor), null);
         }
     }
+
+    /// <summary>
+    /// Claims the one still image of this freeze: true only the first time. The image lives on one
+    /// pipeline's GPU device; a pipeline rebuilt while frozen must not take a new one of a later desktop.
+    /// </summary>
+    public bool ClaimStill() => Interlocked.Exchange(ref _stillClaimed, 1) == 0;
 
     /// <summary>The kept anchor; per frame, lock-free, 0 B.</summary>
     public bool TryGetAnchor(out PhysicalPoint anchor)

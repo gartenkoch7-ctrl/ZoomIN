@@ -11,7 +11,7 @@ internal static class TextsGermanFreeze
         ["Freeze.Frozen"] = "Monitor {0} eingefroren",
         ["Freeze.Lifted"] = "Einfrieren aufgehoben",
         ["Freeze.OneMonitor"] = "Einfrieren braucht mindestens zwei Monitore.",
-        ["Freeze.LastFree"] = "Der letzte freie Monitor lässt sich nicht einfrieren.",
+        ["Freeze.Overview"] = "Erst die Übersicht beenden, dann einfrieren.",
         ["Freeze.NoPointer"] = "Der Mauszeiger ist auf keinem Monitor.",
         ["Freeze.MoveRefused"] = "Windows hat das Versetzen des Mauszeigers abgelehnt.",
         ["Freeze.Title"] = "Monitore",

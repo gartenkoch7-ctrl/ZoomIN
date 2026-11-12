@@ -35,4 +35,24 @@ public interface IMonitorProvider
 
         return all;
     }
+
+    /// <summary>
+    /// Ids and bounds of all current monitors, read in one pass where the platform can (frozen
+    /// monitors, G2); empty if they cannot all be read.
+    /// </summary>
+    IReadOnlyList<(string Id, PhysicalRect Bounds)> AllMonitors()
+    {
+        var all = new List<(string Id, PhysicalRect Bounds)>();
+        foreach (var id in MonitorIds())
+        {
+            if (BoundsOf(id) is not { } bounds)
+            {
+                return [];
+            }
+
+            all.Add((id, bounds));
+        }
+
+        return all;
+    }
 }

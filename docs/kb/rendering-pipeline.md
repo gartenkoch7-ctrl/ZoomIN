@@ -234,6 +234,34 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
 - Gehört wie das Gerät einem Render-Thread. Verdrahtung in `RenderSession`/`DesktopLayer` machen
   die Spuren G2/B1.
 
+## Eingefrorener Monitor (M19 G2)
+- `ZoomModel.Frozen` (`MonitorFreeze`) hält einen unveränderlichen `FreezeState`; der Render-Thread
+  liest je Frame `Frozen.For(monitor)` lock-frei, `0 B` (Benchmark `FreezeBenchmarks`).
+- `MonitorRenderer`: eingefroren → Zielstufe ist die Stufe des Augenblicks (`FrozenMonitor.Level`),
+  Modus, Lupe und Dock ebenso; vorübergehende Stufen und die Übersicht wirken nicht. Der Renderer
+  schläft nicht, auch bei 1× nicht (Rahmen).
+- `RenderSession`: der Anker wird nicht weitergeschoben (`AnchorController.Next` läuft nicht), es
+  gilt der Anker des letzten Live-Frames. Er wird im `FrozenMonitor` abgelegt (einmal, atomar), so
+  zeigt eine nach einem Anzeigewechsel neu gebaute Pipeline denselben Ausschnitt. Zeiger,
+  Fokusrahmen und Caret werden dort nicht gezeichnet (`_cursorInside` ist falsch).
+- `Rendering/Freeze/FrozenLayer`: Standbild über den Baustein `StillFrame` – beim ersten Frame des
+  Einfrierens aus `DesktopDuplicator.Texture`, danach liest die Sitzung **keinen** Capture-Frame
+  mehr (`HoldsStill`). Ein neues Einfrieren (neues Objekt) nimmt ein neues Bild, Aufheben gibt die
+  Textur frei. Bei Standbild wird auch bei 1× der Desktop gezeichnet (`FrameRequest.OverlayOnly`),
+  sonst schiene der Live-Desktop durch. Fehlt das Bild, bleibt der Monitor live (Log 3312).
+  Das Standbild lebt im Gerät der Pipeline: Ein Anzeigewechsel hebt Standbild-Einfrieren deshalb
+  auf (Controller). Nach einem Neustart der Pipeline wegen eines Fehlers (ohne Anzeigewechsel) nimmt
+  die neue Sitzung kein neues Bild (`FrozenMonitor.ClaimStill`: nur einmal je Einfrieren), sondern
+  zeigt live (Log 3312) – ein späteres Bild als Standbild auszugeben wäre irreführender.
+  `RenderSession.Hide` gibt ein Standbild sofort frei (ein aufgetauter Monitor bei 1× schläft).
+  Mit dem Standbild bleiben auch die Fensterbereiche des Filters pro Fenster stehen, sonst lägen die
+  Filter auf Fenstern, die im Bild gar nicht mehr dort sind.
+- **Rahmen:** 6 px innen am Monitorrand in der Einstellungsfarbe (Werk: Cyan), gezeichnet mit dem
+  Rechteck-Shader des `CursorPass` wie der Fokusrahmen – nicht im `Magnify.hlsl`, denn dessen
+  Rahmen umgibt nur Lupe/Streifen, und `DesktopLayer`/`Magnify.hlsl` gehören Spur B1.
+  `WDA_EXCLUDEFROMCAPTURE` gilt unverändert fürs Overlay.
+- WARP-Tests `FrozenLayerTests`: Anker bleibt, Live-Inhalt ändert sich, Standbild nicht; `0 B`.
+
 ## Shader-Regeln
 - HLSL-Dateien in `ZoomIN.Rendering/Shaders/`. Seit M14 Schritt 4 übersetzt sie der Build mit
   `tools/ZoomIN.ShaderCompiler` (derselbe d3dcompiler_47 aus Windows über Vortice, `O3`, also

@@ -319,6 +319,49 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
 - **Offen:** Ausnahmeliste für Spiele und Fernsteuerung (ADR-0028), injizierte Bewegungen
   (`LLMHF_INJECTED`) werden derzeit wie echte behandelt.
 
+## Monitor einfrieren und Monitorwechsel (M19 G2)
+- **Kürzel:** `Strg+Alt+H` friert den Monitor unter dem Zeiger ein; ist schon einer eingefroren,
+  hebt dasselbe Kürzel **alle** auf. `Strg+Alt+N` setzt den Zeiger auf den nächsten freien
+  Monitor. Beide anpassbar (Seite „Tastenkürzel“), auf dem sicheren Bildschirm abgeschaltet
+  (`SecureSettingsSanitizer`: ein Zaun dort könnte Anmeldung oder UAC-Abfrage versperren). Die
+  Kürzel kamen ohne Schema-Wechsel: Hat der Nutzer `Strg+Alt+H`/`N` schon einer älteren Aktion
+  gegeben, bleiben sie beim Laden unbelegt (`SettingsMigration.WithoutFreezeClashes`).
+- **Ablauf beim Einfrieren** (`App/Freeze/MonitorFreezeController`): Ziel ist der nächstgelegene
+  freie Monitor (`MonitorCycle.NearestFree`, Abstand zum Monitorrechteck; bei Gleichstand rechts
+  zuerst – `FenceGeometry.Nearest` kennt diese Regel nicht und prüft nur noch, dass der Zielpunkt
+  erlaubt ist). Dort landet der Zeiger auf seiner letzten Position (`PointerMemory` im
+  `MonitorSwitchController`, gemerkt bei jedem Versetzen durch ein Kürzel; manuelle Wechsel merkt
+  es nicht), sonst in der Mitte. Reihenfolge nach ADR-0028: `IPointerMover.MoveTo(…, FreezeMonitor)`
+  → Modell einfrieren → `IPointerFence.Forbid(FrozenMonitors, …)`. Lehnt Windows das Versetzen ab,
+  wird nichts eingefroren. Läuft auf dem Monitor eine Übersicht (B2), wird nicht eingefroren
+  (Hinweis „Erst die Übersicht beenden“): ihr 1×-Bild und ihr Rahmen würden sonst stehen bleiben.
+- **Grenzen:** Mit einem Monitor kein Einfrieren und kein Wechsel, Hinweis per Bildschirmleser und
+  Tray-Meldung. Weil dasselbe Kürzel bei einem eingefrorenen Monitor alles aufhebt, ist höchstens
+  einer eingefroren; der „letzte freie Monitor“ ist damit nur der Fall „ein Monitor“. Nach einem
+  Neustart ist nichts eingefroren (nie gespeichert).
+- **Reihenfolge `Strg+Alt+N`** (`Core/Monitors/MonitorCycle`, rein, `0 B`): nach Monitormitte,
+  zuerst x, bei gleicher Mitte-x (gestapelt) y. Hin und zurück, an den Enden umkehren, Start nach
+  rechts, eingefrorene überspringen. Lage 1 · 3 · 2: 1 → 3 → 2 → 3 → 1. Ist 2 eingefroren, führt
+  der erste Wechsel von 3 nach 1. „Gleiche Spalte“ heißt gleiche Mitte-x; ein schmalerer Laptop
+  unter einem breiten Monitor mit anderer Mitte gilt als eigene Spalte.
+- **Sperre:** Der Zaun hält den Zeiger vom eingefrorenen Monitor fern (keine Fehlklicks), auch
+  beim Fensterziehen – ein Fenster lässt sich nicht auf ihn ziehen (im Hinweistext erwähnt).
+- **Aufheben von selbst:** `IPointerFence.Recomputed` mit `DesktopSwitch` oder `SessionUnlock`
+  (Win+L, UAC, Strg+Alt+Entf) hebt **alle** auf, die beim Ereignis bestanden. `DisplayChange` (`Core/Monitors/FreezeRules`) hebt nur dort auf, wo der Monitor
+  fehlt oder andere Grenzen hat, und bei Standbild (die Pipeline wird neu gebaut, das Bild ginge
+  verloren); bliebe kein freier Monitor oder hat Windows den Zeiger auf einen eingefrorenen Monitor
+  gesetzt (sein eigener wurde abgesteckt), alle. Die Ereignisse kommen auf dem Wächter-Thread des
+  Zauns, der Controller arbeitet sie im Thread-Pool ab: der Zaun kann den Wächter beim Lösen bis zu
+  2 s joinen, und der darf dann nicht auf das Schloss des Controllers warten. Jeder Fehler im
+  Controller hebt alles auf und gibt den Zaun frei (Log 1725).
+- **Wechselwirkungen:** Vorübergehende Stufen (Fenster-Verschieben G1, Übersicht B2) wirken
+  auf einem eingefrorenen Monitor nicht; dessen Stufe, Modus, Lupe und Dock gelten vom Augenblick
+  des Einfrierens. Zoom aus (`Strg+Alt+Z`) oder Moduswechsel ändern ihn nicht – der Rahmen zeigt
+  den Zustand. Ein eingefrorener Angedockt-Streifen verliert seine Reservierung, wenn der Modus
+  wechselt (bewusst hingenommen, selten).
+- **Ansagen:** „Monitor 2 eingefroren“, „Einfrieren aufgehoben“, „Monitor 3“ (Windows-Nummer aus
+  dem Gerätenamen, `MonitorNames.Number`).
+
 ## Übersicht auf Knopfdruck (M17 B2)
 - `Strg+Alt+O` (anpassbar, auf dem sicheren Bildschirm nicht belegt). **Antippen** (< 300 ms):
   Der Monitor unter der Maus gleitet auf 1× (vorübergehende Stufe, Besitzer `Overview`), ein

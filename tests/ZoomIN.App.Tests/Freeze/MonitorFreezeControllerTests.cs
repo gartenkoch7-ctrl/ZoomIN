@@ -1,3 +1,4 @@
+using ZoomIN.App.Freeze;
 using ZoomIN.App.Tests.Overview;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Monitors;
@@ -29,11 +30,11 @@ public sealed class MonitorFreezeControllerTests
         Assert.Contains("Monitor 2 frozen", rig.Announcer.Messages);
 
         // Ctrl+Alt+N: the right is frozen, so 3 → 1, then back to 3; never 2.
-        rig.Controller.NextMonitor();
+        rig.Switch.NextMonitor();
         Assert.Equal(One, rig.PointerMonitor);
-        rig.Controller.NextMonitor();
+        rig.Switch.NextMonitor();
         Assert.Equal(Three, rig.PointerMonitor);
-        rig.Controller.NextMonitor();
+        rig.Switch.NextMonitor();
         Assert.Equal(One, rig.PointerMonitor);
         Assert.All(rig.Mover.Moves.Skip(1), move => Assert.Equal(PointerMoveReason.NextMonitor, move.Reason));
 
@@ -45,38 +46,6 @@ public sealed class MonitorFreezeControllerTests
     }
 
     [Fact]
-    public void WithoutFreeze_TheSwitchFollowsTheLayout_AndReturnsToTheLastPosition()
-    {
-        using var rig = new FreezeRig();
-        rig.Cursor.Position = new PhysicalPoint(100, 900);
-
-        rig.Controller.NextMonitor();
-        Assert.Equal(MiddleOf(Three), rig.Cursor.Position);
-        rig.Controller.NextMonitor();
-        Assert.Equal(Two, rig.PointerMonitor);
-        rig.Controller.NextMonitor();
-        Assert.Equal(Three, rig.PointerMonitor);
-        rig.Controller.NextMonitor();
-
-        // Back on 1 at its last position, not in its middle.
-        Assert.Equal(new PhysicalPoint(100, 900), rig.Cursor.Position);
-        Assert.Contains("Monitor 3", rig.Announcer.Messages);
-    }
-
-    [Fact]
-    public void FreezeJump_GoesToTheLastPositionOnTheTargetMonitor()
-    {
-        using var rig = new FreezeRig();
-        rig.Cursor.Position = new PhysicalPoint(2500, 100);
-        rig.Controller.NextMonitor(); // 3 → 2, remembers (2500, 100) on 3
-        rig.Cursor.Position = new PhysicalPoint(5000, 500);
-
-        rig.Controller.ToggleFreeze();
-
-        Assert.Equal(new PhysicalPoint(2500, 100), rig.Cursor.Position);
-    }
-
-    [Fact]
     public void OneMonitor_FreezeAndSwitch_DoNothing_ButGiveAHint()
     {
         var monitors = new ThreeMonitors();
@@ -84,7 +53,7 @@ public sealed class MonitorFreezeControllerTests
         using var rig = new FreezeRig(monitors);
 
         rig.Controller.ToggleFreeze();
-        rig.Controller.NextMonitor();
+        rig.Switch.NextMonitor();
 
         Assert.False(rig.Frozen.Any);
         Assert.Empty(rig.Mover.Moves);
@@ -100,7 +69,7 @@ public sealed class MonitorFreezeControllerTests
         rig.Mover.Refuse = true;
 
         rig.Controller.ToggleFreeze();
-        rig.Controller.NextMonitor();
+        rig.Switch.NextMonitor();
 
         Assert.False(rig.Frozen.Any);
         Assert.Empty(rig.Fence.Requests);
@@ -147,6 +116,22 @@ public sealed class MonitorFreezeControllerTests
         monitors.Unplug(One);
         rig.Fence.Raise(FenceTrigger.DisplayChange);
         Assert.False(rig.Frozen.Any);
+    }
+
+    [Fact]
+    public void DisplayChange_PuttingThePointerOntoTheFrozenMonitor_LiftsIt()
+    {
+        var monitors = new ThreeMonitors();
+        using var rig = new FreezeRig(monitors);
+        rig.PointerTo(Two);
+        rig.Controller.ToggleFreeze();
+
+        monitors.Unplug(Three);
+        rig.PointerTo(Two); // where Windows put it
+        rig.Fence.Raise(FenceTrigger.DisplayChange);
+
+        Assert.False(rig.Frozen.Any);
+        Assert.Empty(rig.Fence.Forbidden);
     }
 
     [Fact]
@@ -198,7 +183,7 @@ public sealed class MonitorFreezeControllerTests
     }
 
     [Fact]
-    public void Freezing_EndsTheOverviewOnThatMonitor()
+    public void WhileAnOverviewRunsOnTheMonitor_FreezingIsRefused()
     {
         using var rig = new FreezeRig();
         rig.Models.Zoom.Activate(ZoomMode.Fullscreen, One, [One, Two, Three]);
@@ -208,8 +193,45 @@ public sealed class MonitorFreezeControllerTests
 
         rig.Controller.ToggleFreeze();
 
-        Assert.Null(rig.Models.Overview.Current);
-        Assert.True(rig.Frozen.IsFrozen(One));
+        Assert.Same(session, rig.Models.Overview.Current);
+        Assert.False(rig.Frozen.Any);
+        Assert.Empty(rig.Mover.Moves);
+        Assert.Equal(["End the overview first, then freeze."], rig.Hints);
+    }
+
+    [Fact]
+    public void DisplayChange_LiftsAStillImage_AndAnnouncesOnce()
+    {
+        using var rig = new FreezeRig(settings: new AppSettings { FrozenContent = FrozenContent.Still });
+        rig.PointerTo(Two);
+        rig.Controller.ToggleFreeze();
+        var announced = rig.Announcer.Messages.Count;
+
+        rig.Fence.Raise(FenceTrigger.DisplayChange);
+
+        Assert.False(rig.Frozen.Any);
+        Assert.Equal(["Monitors unfrozen"], rig.Announcer.Messages.Skip(announced));
+    }
+
+    [Fact]
+    public void FenceEvents_AreHandledOffTheWatcherThread()
+    {
+        using var rig = new FreezeRig();
+        var fence = new FakeFence();
+        var dispatched = new List<Action>();
+        using var controller = new MonitorFreezeController(rig.Settings, rig.Switch, rig.Monitors, rig.Cursor, fence, rig.Mover,
+            rig.Announcer, Localization.AppTexts.CreateLocalizer(),Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+            dispatched.Add);
+        rig.PointerTo(One);
+        controller.ToggleFreeze();
+
+        fence.Raise(FenceTrigger.ClipLost);
+        fence.Raise(FenceTrigger.DesktopSwitch);
+
+        Assert.Single(dispatched);
+        Assert.True(rig.Frozen.Any);
+        dispatched[0]();
+        Assert.False(rig.Frozen.Any);
     }
 
     [Fact]

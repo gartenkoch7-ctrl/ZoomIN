@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Vortice.Direct3D11;
 using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Viewport;
+using ZoomIN.Core.WindowFilters;
 using ZoomIN.Rendering.Gpu;
 using ZoomIN.Rendering.Still;
 
@@ -25,6 +26,7 @@ internal sealed class FrozenLayer : IDisposable
     private FrozenMonitor? _current;
     private FrozenMonitor? _stillFor;
     private FrozenMonitor? _stillFailedFor;
+    private WindowRegions? _stillWindows;
 
     public FrozenLayer(CursorPass pass, StillFrame still, string monitorId, ILogger log)
     {
@@ -60,6 +62,7 @@ internal sealed class FrozenLayer : IDisposable
         {
             _still.Release();
             _stillFor = null;
+            _stillWindows = null;
         }
     }
 
@@ -82,24 +85,31 @@ internal sealed class FrozenLayer : IDisposable
     public bool HoldsStill(FrozenMonitor? frozen) => frozen is not null && ReferenceEquals(frozen, _stillFor);
 
     /// <summary>Takes the still image of a freeze that wants one, once; true if a new image was taken.</summary>
-    public bool TryCapture(FrozenMonitor? frozen, ID3D11DeviceContext context, ID3D11Texture2D desktop)
+    /// <param name="windows">The window regions now: the filter per window stays with the windows in the image.</param>
+    public bool TryCapture(FrozenMonitor? frozen, ID3D11DeviceContext context, ID3D11Texture2D desktop, WindowRegions windows)
     {
         if (frozen is not { Still: true } || ReferenceEquals(frozen, _stillFor) || ReferenceEquals(frozen, _stillFailedFor))
         {
             return false;
         }
 
-        if (!_still.Capture(context, desktop))
+        // A pipeline rebuilt while frozen (failure, display change) cannot get the old image back and
+        // must not pass a newer desktop off as it: then the monitor stays live, as after a failed copy.
+        if (!frozen.ClaimStill() || !_still.Capture(context, desktop))
         {
-            // Shown live instead; tried again with the next freeze, not every frame.
+            // Tried again with the next freeze, not every frame.
             _stillFailedFor = frozen;
             _log.StillNotTaken(_monitorId);
             return false;
         }
 
         _stillFor = frozen;
+        _stillWindows = windows;
         return true;
     }
+
+    /// <summary>Window regions for the filter per window: those of the still image while it is held.</summary>
+    public WindowRegions Windows(WindowRegions live) => _stillFor is not null && _stillWindows is { } held ? held : live;
 
     /// <summary>The image to magnify: the held still image, or <paramref name="live"/>.</summary>
     public ID3D11ShaderResourceView Desktop(ID3D11ShaderResourceView live) =>

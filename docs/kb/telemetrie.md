@@ -69,9 +69,9 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 ## EventId-Bereiche
 | Bereich | Projekt |
 |---|---|
-| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1500 Maus folgen, 1520 Übersicht, 1540 Fenster-Verschieben) |
+| 1000–1999 | App (1000 Lebenszyklus, 1100 sicherer Bildschirm, 1200 Updates, 1300 Zoom, 1400 KI-Debug, 1500 Maus folgen, 1520 Übersicht, 1540 Fenster-Verschieben, 1720 eingefrorene Monitore und Monitorwechsel) |
 | 2000–2999 | Platform (2000 Automation, 2100 Zeiger, 2200 Eingabe, 2300 sicherer Bildschirm, 2400 Einstellungen, 2500 Shell, 2600 Updates, 2700 Filter pro Fenster, 2800 KI-Debug-Pipe, 2900 Fenster-Verschieben, 2920 Übersicht, 2940 Zeigerzaun und Zeiger versetzen) |
-| 3000–3999 | Rendering (3100 Übersicht, 3300 Standbild) |
+| 3000–3999 | Rendering (3100 Übersicht, 3300 Standbild, 3310 eingefrorene Monitore) |
 | 4000–4999 | Watchdog |
 | 5000–5999 | Setup |
 | 6000–6999 | Core (noch keine) |
@@ -111,6 +111,8 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.agent.command` | app | Ein KI-Debug-Befehl über die Pipe (ADR-0027; Tag `zoomin.agent.tool`: Werkzeugname oder `unknown`; Fehler: Ausnahmetyp bzw. `failed`) |
 | `zoomin.pointer.fence` | app, secure | Zeigerzaun neu berechnet und durchgesetzt (ADR-0028; Tags `zoomin.fence.mode`: `off`, `clip`, `hook`; `zoomin.fence.trigger`: `request`, `desktop_switch`, `session_unlock`, `display_change`; `zoomin.fence.forbidden`: Zahl der gesperrten Rechtecke) |
 | `zoomin.pointer.move` | app | Zeiger per Kürzel versetzt (ADR-0028; Tags `zoomin.reason`: `FreezeMonitor`, `NextMonitor`; `zoomin.monitor`; abgelehnt → Status Error) |
+| `zoomin.view.freeze` | app | Ein Monitor eingefroren (G2), vom Kürzel bis zum Aufheben; eigener Wurzel-Ablauf über Threads hinweg. Tags `zoomin.monitor`, `zoomin.monitor.number` (Windows-Nummer), `zoomin.zoom.level`, `zoomin.mode`, `zoomin.freeze.image` (`live`, `still`), am Ende `zoomin.freeze.end` (`command`, `display_change`, `desktop_switch`, `session_unlock`, `failure`, `exit`) |
+| `zoomin.view.monitor_switch` | app | `Strg+Alt+N` (G2): Tags `zoomin.monitor.from`, `zoomin.monitor.to`, `zoomin.monitor.skipped` (übersprungene eingefrorene Monitore); Versetzen abgelehnt → Status Error. Darunter `zoomin.pointer.move` |
 | `zoomin.view.window_drag` | app, secure | Fenster verschieben oder Größe ändern (G1), von der ersten Fensteränderung bis zum Loslassen; nur wenn ein Ziehen etwas bewirken kann (Zoom an, nicht Angedockt, Aktion nicht „unverändert“, ein Schalter an). Tags `zoomin.drag.kind` (`move`, `resize`; `unknown` nur bei Umriss-Ziehen mit unklarer Trefferzone), `zoomin.drag.action` (`lift`, `lower`; `unchanged` nur, wenn die Einstellung zwischen Drücken und Ziehen wechselte), `zoomin.zoom.before` (Stufe des Nutzers), `zoomin.zoom.during` (vorübergehende Stufe; fehlt, wenn sie nichts absenkte), `zoomin.drag.crossed_monitor`, `zoomin.drag.cleared` (Befehl des Nutzers oder neue Monitoranordnung), `zoomin.monitor` (Monitor am Ende). Keine Fenstertitel |
 
 ## Katalog: Messwerte
@@ -144,6 +146,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.pointer.fence_blocked` | Bewegungen | – | Mausbewegungen, die der Zaun-Hook verschluckt oder an den Rand geklemmt hat (beobachtbarer Zähler: der Hook zählt nur, ohne Allokation) |
 | `zoomin.pointer.fence_changes` | Änderungen | `zoomin.fence.mode`, `zoomin.fence.trigger` (wie oben, dazu `clip_lost`, `hook_lost`, `dispose`) | Zaun gesetzt, neu gesetzt (z. B. nach Win+L) oder gelöst |
 | `zoomin.render.still_images` | Bilder | – | Gehaltene Standbilder auf der GPU (M19, Baustein „Standbild“): +1 beim Anlegen, −1 beim Freigeben |
+| `zoomin.view.frozen_monitors` | Monitore | – | Gerade eingefrorene Monitore (G2): +1 beim Einfrieren, −1 beim Aufheben (Befehl, Desktopwechsel, Anzeigewechsel, Fehler, Beenden) |
 
 ## Katalog: Logmeldungen
 | Id | Stufe | Meldung |
@@ -192,6 +195,12 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1540 | Debug | Window drag ended on {Monitor}: {Kind}, {Action}, zoom {LevelBefore} held at {Level}, crossed monitors {Crossed}, cleared {Cleared} |
 | 1541 | Info | Monitors changed during a window drag; its zoom level was given back |
 | 1542 | Fehler | Handling a window drag failed |
+| 1720 | Info | Monitor {Monitor} frozen at {Level:0.00}x ({Image}); pointer moved to {Target} (G2) |
+| 1721 | Info | Freeze lifted on {Count} monitors ({Reason}) – `command`, `display_change`, `desktop_switch`, `session_unlock`, `exit` |
+| 1722 | Info | Pointer switched from {From} to {To} (skipped {Skipped} frozen) |
+| 1723 | Info | Freezing refused: {Reason} – `one_monitor`, `no_pointer`, `overview` (Übersicht läuft auf dem Monitor), `move_refused` |
+| 1724 | Info | Monitor switch refused: {Reason} – `one_monitor`, `no_free_monitor`, `move_refused` |
+| 1725 | Fehler | Frozen monitors: {Step} failed; every freeze was lifted and the pointer released – `toggle`, `recompute`, `exit`, `release` (der Monitorwechsel hebt nichts auf; seine Fehler meldet der Kürzel-Dienst, Log 2202) |
 | 2001 | Fehler | UI Automation is unavailable; focus tracking is off |
 | 2002 | Info | Caret source in {Process}: {Source} |
 | 2003 | Fehler | Reading focus and caret failed; tracking goes on with the system caret |
@@ -277,6 +286,9 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 3300 | Info | Still image of {Width}x{Height} px held |
 | 3301 | Info | Still image released |
 | 3302 | Warnung | Still image not taken: source format {Format} is not supported |
+| 3310 | Info | Frozen view on {Monitor} ({Image}) – `live` oder `still`, beim Beginn eines Einfrierens (G2) |
+| 3311 | Info | Frozen view on {Monitor} ended |
+| 3312 | Warnung | Still image of frozen monitor {Monitor} not taken or lost with a rebuilt pipeline; it stays live – einmal je Einfrieren und Pipeline |
 | 4001 | Warnung | Cannot watch process {ProcessId}: {Reason} |
 | 4002 | Fehler | ZoomIN ended unexpectedly (exit code 0x{ExitCode:X8}) |
 | 4003 | Warnung | Restarting ZoomIN |

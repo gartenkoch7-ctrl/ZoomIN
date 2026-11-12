@@ -85,6 +85,10 @@ internal sealed class RenderSession : IDisposable
     {
         _overlay.Hide();
         _shown = false;
+
+        // Hidden means not frozen any more (a frozen monitor never sleeps): give a still image back now,
+        // not when the monitor happens to render again.
+        _frozen.Begin(null);
         if (!keepView)
         {
             _overview.Forget();
@@ -137,7 +141,7 @@ internal sealed class RenderSession : IDisposable
                 return FrameOutcome.Presented;
             }
 
-            newImage |= _frozen.TryCapture(frozen, _gpu.Context, _duplicator.Texture);
+            newImage |= _frozen.TryCapture(frozen, _gpu.Context, _duplicator.Texture, request.Windows);
         }
 
         var image = _frozen.Desktop(_duplicator.ShaderResource);
@@ -190,7 +194,7 @@ internal sealed class RenderSession : IDisposable
         else
         {
             weights = _desktop.Draw(_gpu.Context, image, _swapchain.RenderTarget, _swapchain.Width, _swapchain.Height,
-                _monitor.Bounds, frame, request.Effects, request.Windows, request.WindowsFiltered, newImage);
+                _monitor.Bounds, frame, request.Effects, _frozen.Windows(request.Windows), request.WindowsFiltered, newImage);
         }
 
         // Focus frame and caret marker pause on a frozen monitor; the pointer cannot be there.
