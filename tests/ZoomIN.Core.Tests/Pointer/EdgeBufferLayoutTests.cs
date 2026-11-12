@@ -62,6 +62,22 @@ public sealed class EdgeBufferLayoutTests
     }
 
     [Fact]
+    public void WobbleIntoAnEmptyCorner_IsOnePress()
+    {
+        var below = new PhysicalRect(0, 1080, 1920, 1080);
+        _buffer.Configure([Left, Right, below], EdgeBufferLevel.Medium);
+
+        // The larger overshoot flips between right and down: still one push into the corner.
+        for (var ms = 0; ms < 400; ms += 50)
+        {
+            var (dx, dy) = ms % 100 == 0 ? (3, 2) : (2, 3);
+            Assert.Equal(new PhysicalPoint(1919, 1079), Move(ms, 1919, 1079, 1919 + dx, 1079 + dy));
+        }
+
+        Assert.NotEqual(new PhysicalPoint(1919, 1079), Move(400, 1919, 1079, 1922, 1081));
+    }
+
+    [Fact]
     public void UnknownMonitor_IsNeverBlocked()
     {
         // A monitor plugged in while the list was not refreshed yet: the pointer still gets there.

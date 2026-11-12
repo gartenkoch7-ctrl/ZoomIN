@@ -90,6 +90,10 @@ public sealed class EdgeBuffer : IPointerMoveFilter
             return requested;
         }
 
+        // The direction of the push itself: re-aiming a diagonal below must not turn a wobble
+        // between "more right" and "more down" at a corner into two unrelated presses.
+        var dirX = requested.X >= home.Right ? 1 : requested.X < home.X ? -1 : 0;
+        var dirY = requested.Y >= home.Bottom ? 1 : requested.Y < home.Y ? -1 : 0;
         if (IndexOf(setup.Monitors, requested) < 0)
         {
             // Into no monitor: a diagonal past a corner (e.g. right and down along the bottom
@@ -114,8 +118,6 @@ public sealed class EdgeBuffer : IPointerMoveFilter
             }
         }
 
-        var dirX = requested.X >= home.Right ? 1 : requested.X < home.X ? -1 : 0;
-        var dirY = requested.Y >= home.Bottom ? 1 : requested.Y < home.Y ? -1 : 0;
         if (!ContinuesPress(setup, from, timestamp, dirX, dirY))
         {
             _pressSetup = setup;

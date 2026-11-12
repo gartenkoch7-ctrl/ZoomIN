@@ -65,7 +65,8 @@ public sealed partial class PointerConstraintViewModel : ObservableObject
     // Only the changed field, applied to the stored options.
     private void Change(Func<PointerConstraintOptions, PointerConstraintOptions> change)
     {
-        if (_ready)
+        // Unchanged (e.g. the combo box restored after reporting -1): no save, no Changed event.
+        if (_ready && change(Options(_settings)) != Options(_settings))
         {
             _settings.Update(s => s with { PointerConstraint = change(PointerConstraintOptions.Normalize(s.PointerConstraint)) });
         }
