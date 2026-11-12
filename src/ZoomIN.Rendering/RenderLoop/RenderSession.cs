@@ -133,8 +133,9 @@ internal sealed class RenderSession : IDisposable
         {
             newImage = _duplicator.Update();
 
-            // Nothing captured yet: draw nothing and keep the overlay hidden instead of showing black.
-            if (!_duplicator.HasImage)
+            // Nothing captured yet: draw nothing and keep the overlay hidden instead of showing black. Also
+            // while a still image waits for an up-to-date copy (after Win+L): never an old desktop (G2).
+            if (!_duplicator.HasImage || (request.FrozenStill && !_duplicator.IsCurrent))
             {
                 _gpu.Context.ClearRenderTargetView(_swapchain.RenderTarget, s_transparent);
                 Present();
