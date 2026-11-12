@@ -162,9 +162,10 @@ internal sealed class RenderSession : IDisposable
         }
 
         // The anchor is the mouse, or the focus/caret while the user works with the keyboard (M6).
-        // Frozen: the anchor of the moment of freezing; mouse, focus, caret and placements wait.
+        // Frozen: the anchor of the moment of freezing; mouse, focus, caret and placements wait. It is also
+        // where a pipeline rebuilt meanwhile goes on from after the thaw (instead of the monitor's middle).
         var anchor = frozen is not null
-            ? frozen.AnchorOr(_lastAnchor)
+            ? StartAt(frozen.AnchorOr(_lastAnchor))
             : _anchors.Next(new AnchorInput(
                 Stopwatch.GetTimestamp(), hasCursor ? cursor : _lastCursor, _cursorInside, _monitor.Bounds,
                 request.AnchorMode, request.Zoom, request.Lens, request.Dock, request.Tracking, request.TrackingOptions, request.Placement));
@@ -233,6 +234,12 @@ internal sealed class RenderSession : IDisposable
     }
 
     public void Dispose() => _resources.Dispose();
+
+    private PhysicalPoint StartAt(PhysicalPoint anchor)
+    {
+        _anchors.StartAt(anchor);
+        return anchor;
+    }
 
     private void Present()
     {

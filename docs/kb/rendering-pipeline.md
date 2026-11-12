@@ -242,7 +242,8 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   schläft nicht, auch bei 1× nicht (Rahmen).
 - `RenderSession`: der Anker wird nicht weitergeschoben (`AnchorController.Next` läuft nicht), es
   gilt der Anker des letzten Live-Frames. Er wird im `FrozenMonitor` abgelegt (einmal, atomar), so
-  zeigt eine nach einem Anzeigewechsel neu gebaute Pipeline denselben Ausschnitt. Zeiger,
+  zeigt eine nach einem Anzeigewechsel neu gebaute Pipeline denselben Ausschnitt; nach dem Aufheben
+  beginnt ihr `AnchorController` dort (`StartAt`) statt in der Monitormitte. Zeiger,
   Fokusrahmen und Caret werden dort nicht gezeichnet (`_cursorInside` ist falsch).
 - `Rendering/Freeze/FrozenLayer`: Standbild über den Baustein `StillFrame` – beim ersten Frame des
   Einfrierens aus `DesktopDuplicator.Texture`, danach liest die Sitzung **keinen** Capture-Frame

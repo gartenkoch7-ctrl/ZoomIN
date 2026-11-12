@@ -72,7 +72,6 @@ public sealed class MonitorFreezeController : IDisposable
             return;
         }
 
-        _freezing = true;
         try
         {
             FreezeUnderPointer();
@@ -129,6 +128,8 @@ public sealed class MonitorFreezeController : IDisposable
         var point = _switch.LandingPoint(layout, target, [layout.Bounds[index]]);
 
         // ADR-0028: move first, then forbid (ClipCursor would pull the pointer onto the frozen edge).
+        // From here a fence event counts this freeze as made before it (cleared by ToggleFreeze).
+        _freezing = true;
         if (!_mover.MoveTo(point, PointerMoveReason.FreezeMonitor))
         {
             Refuse("move_refused", "Freeze.MoveRefused");
