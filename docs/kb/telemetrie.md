@@ -144,7 +144,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.windowfilter.regions_dropped` | Fenster | – | Fenster über dem Limit von 64 Bereichen, die den Monitorfilter zeigen (je Aktualisierung; dazu Log 2705) |
 | `zoomin.pointer.fence_blocked` | Bewegungen | – | Mausbewegungen, die der Zaun-Hook verschluckt oder an den Rand geklemmt hat (beobachtbarer Zähler: der Hook zählt nur, ohne Allokation) |
 | `zoomin.pointer.fence_changes` | Änderungen | `zoomin.fence.mode`, `zoomin.fence.trigger` (wie oben, dazu `clip_lost`, `hook_lost`, `dispose`) | Zaun gesetzt, neu gesetzt (z. B. nach Win+L) oder gelöst |
-| `zoomin.pointer.buffer_blocked` | Übergänge | – | Monitorwechsel, die der Maus-Puffer (A6) am Rand zurückgehalten hat: einmal je Drücken gegen den Rand, auch wenn der Zeiger danach hinüber darf (beobachtbarer Zähler, der Hook zählt nur, ohne Allokation) |
+| `zoomin.pointer.buffer_blocked` | Drück-Anläufe | – | Maus-Puffer (A6): Beginn eines Drückens gegen einen Monitorrand, das der Puffer zurückhält. Zählt jeden Neubeginn (nach Rückzug, Pause über 250 ms, neuer Richtung) und auch Anläufe, die danach hinüberführen oder auf einen eingefrorenen Monitor zielen; also eine obere Grenze der wirklich verhinderten Wechsel (beobachtbarer Zähler, der Hook zählt nur, ohne Allokation) |
 | `zoomin.pointer.axis_lock` | Nutzungen | `zoomin.axis` (`horizontal`, `vertical`) | Achsensperre (A6): Haltetaste gedrückt und nach 8 px eine Achse gewählt (beobachtbarer Zähler, ohne Allokation im Hook) |
 | `zoomin.render.still_images` | Bilder | – | Gehaltene Standbilder auf der GPU (M19, Baustein „Standbild“): +1 beim Anlegen, −1 beim Freigeben |
 
@@ -274,9 +274,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2960 | Info | Axis lock key watch started for {Key} |
 | 2961 | Info | Axis lock key watch stopped |
 | 2962 | Warnung | Axis lock: installing the keyboard hook failed; the axis lock does not react to its key |
-| 2963 | Debug | Axis lock key release was missed (e.g. another desktop was active); released by the check – zweimal hintereinander nicht gedrückt (Prüfung alle 0,5 s) |
-| 2964 | Fehler | Axis lock key handler failed {Count} times – vom Prüftakt gemeldet, nie aus dem Tastatur-Hook |
-| 3001 | Info | Zoom pipeline ready for {Monitor} |
+| 2963 | Debug | Axis lock key release was missed (e.g. another desktop was active); released by the check – Taste bei der Prüfung nicht gedrückt (Prüfung alle 0,5 s, nur solange sie als gehalten gilt) |
+| 2964 | Fehler | Axis lock key handler failed {Count} times – vom Prüftakt (auch einmal 0,5 s nach dem Loslassen), `Reset` oder `Stop` gemeldet, nie aus dem Tastatur-Hook || 3001 | Info | Zoom pipeline ready for {Monitor} |
 | 3002 | Info | Display changed on {Monitor}: {Reason} |
 | 3003 | Fehler | Zoom pipeline for {Monitor} failed |
 | 3004 | Info | Monitors: {Monitors} |

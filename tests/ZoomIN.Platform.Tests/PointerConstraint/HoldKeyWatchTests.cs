@@ -40,9 +40,9 @@ public sealed class HoldKeyWatchTests : IDisposable
     {
         _watch.Start(AxisLockKey.LeftShift, _changes.Add);
 
-        _watch.OnKey(LeftShift, down: true, up: false);
-        _watch.OnKey(LeftShift, down: true, up: false); // key repeat
-        _watch.OnKey(LeftShift, down: false, up: true);
+        _watch.OnKey(LeftShift, 0x2A, down: true, up: false);
+        _watch.OnKey(LeftShift, 0x2A, down: true, up: false); // key repeat
+        _watch.OnKey(LeftShift, 0x2A, down: false, up: true);
 
         Assert.Equal([true, false], _changes);
     }
@@ -52,21 +52,20 @@ public sealed class HoldKeyWatchTests : IDisposable
     {
         _watch.Start(AxisLockKey.LeftShift, _changes.Add);
 
-        _watch.OnKey(RightShift, down: true, up: false);
+        _watch.OnKey(RightShift, 0x2A, down: true, up: false);
 
         Assert.Empty(_changes);
     }
 
     [Fact]
-    public void MissedRelease_IsCaughtByTwoChecks()
+    public void MissedRelease_IsCaughtByTheCheck()
     {
         _watch.Start(AxisLockKey.LeftShift, _changes.Add);
-        _watch.OnKey(LeftShift, down: true, up: false);
+        _watch.OnKey(LeftShift, 0x2A, down: true, up: false);
 
-        // The key is not physically down (released on the lock screen): once may be a race, twice is not.
+        // The key is not physically down (released on the lock screen).
         _watch.Check();
-        Assert.Equal([true], _changes);
-        _watch.Check();
+
         Assert.Equal([true, false], _changes);
     }
 
@@ -74,7 +73,7 @@ public sealed class HoldKeyWatchTests : IDisposable
     public void HeldKey_SurvivesTheCheck()
     {
         _watch.Start(AxisLockKey.LeftShift, _changes.Add);
-        _watch.OnKey(LeftShift, down: true, up: false);
+        _watch.OnKey(LeftShift, 0x2A, down: true, up: false);
         _down.Add(LeftShift);
 
         _watch.Check();
@@ -88,10 +87,10 @@ public sealed class HoldKeyWatchTests : IDisposable
     public void Stop_ReleasesAHeldKey()
     {
         _watch.Start(AxisLockKey.LeftShift, _changes.Add);
-        _watch.OnKey(LeftShift, down: true, up: false);
+        _watch.OnKey(LeftShift, 0x2A, down: true, up: false);
 
         _watch.Stop();
-        _watch.OnKey(LeftShift, down: true, up: false);
+        _watch.OnKey(LeftShift, 0x2A, down: true, up: false);
 
         Assert.Equal([true, false], _changes);
     }
@@ -100,11 +99,11 @@ public sealed class HoldKeyWatchTests : IDisposable
     public void Restart_ReleasesAndWatchesTheNewKey()
     {
         _watch.Start(AxisLockKey.LeftShift, _changes.Add);
-        _watch.OnKey(LeftShift, down: true, up: false);
+        _watch.OnKey(LeftShift, 0x2A, down: true, up: false);
 
         _watch.Start(AxisLockKey.RightShift, _changes.Add);
-        _watch.OnKey(LeftShift, down: true, up: false);
-        _watch.OnKey(RightShift, down: true, up: false);
+        _watch.OnKey(LeftShift, 0x2A, down: true, up: false);
+        _watch.OnKey(RightShift, 0x2A, down: true, up: false);
 
         Assert.Equal([true, false, true], _changes);
     }
@@ -114,7 +113,7 @@ public sealed class HoldKeyWatchTests : IDisposable
     {
         _watch.Start(AxisLockKey.LeftShift, _ => throw new InvalidOperationException("broken"));
 
-        _watch.OnKey(LeftShift, down: true, up: false);
+        _watch.OnKey(LeftShift, 0x2A, down: true, up: false);
         _watch.Check();
     }
 
@@ -125,7 +124,44 @@ public sealed class HoldKeyWatchTests : IDisposable
         _watch.Start(AxisLockKey.RightAlt, _changes.Add);
 
         Assert.Equal(1, _time.Created);
+        Assert.Equal(Timeout.InfiniteTimeSpan, _time.Period);
+    }
+
+    [Fact]
+    public void CheckTimer_RunsOnlyWhileHeld()
+    {
+        _watch.Start(AxisLockKey.LeftShift, _changes.Add);
+
+        _watch.OnKey(LeftShift, 0x2A, down: true, up: false);
         Assert.Equal(Win32HoldKeyWatch.CheckInterval, _time.Period);
+
+        // Released: one last check (reports failures), no repeat.
+        _watch.OnKey(LeftShift, 0x2A, down: false, up: true);
+        Assert.Equal(Timeout.InfiniteTimeSpan, _time.Period);
+    }
+
+    [Fact]
+    public void AltGrFakeControl_IsNotAHeldControl()
+    {
+        _watch.Start(AxisLockKey.LeftControl, _changes.Add);
+
+        _watch.OnKey(0xA2, Win32HoldKeyWatch.AltGrFakeControlScanCode, down: true, up: false);
+        Assert.Empty(_changes);
+
+        _watch.OnKey(0xA2, 0x1D, down: true, up: false);
+        Assert.Equal([true], _changes);
+    }
+
+    [Fact]
+    public void Reset_ReleasesAndKeepsWatching()
+    {
+        _watch.Start(AxisLockKey.LeftShift, _changes.Add);
+        _watch.OnKey(LeftShift, 0x2A, down: true, up: false);
+
+        _watch.Reset();
+        _watch.OnKey(LeftShift, 0x2A, down: true, up: false); // the next repeat of a key still held
+
+        Assert.Equal([true, false, true], _changes);
     }
 
     [Fact]
@@ -149,12 +185,16 @@ public sealed class HoldKeyWatchTests : IDisposable
         {
             Created++;
             Period = period;
-            return new Stopped();
+            return new Stopped(this);
         }
 
-        private sealed class Stopped : ITimer
+        private sealed class Stopped(StoppedTimers owner) : ITimer
         {
-            public bool Change(TimeSpan dueTime, TimeSpan period) => true;
+            public bool Change(TimeSpan dueTime, TimeSpan period)
+            {
+                owner.Period = period;
+                return true;
+            }
 
             public void Dispose()
             {

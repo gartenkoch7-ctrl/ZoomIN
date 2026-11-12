@@ -164,6 +164,17 @@ public sealed class EdgeBufferTests
     }
 
     [Fact]
+    public void CornerPress_SlidingAlongOneEdge_KeepsPressing()
+    {
+        var tall = new PhysicalRect(1920, 0, 1920, 2160);
+        _buffer.Configure([Left, tall], EdgeBufferLevel.Medium);
+        Move(0, 1919, 1079, 1925, 1085);
+
+        Assert.Equal(new PhysicalPoint(1919, 1075), Move(100, 1919, 1079, 1919, 1075));
+        Assert.True(_buffer.IsPressing);
+    }
+
+    [Fact]
     public void OffsetMonitors_GapIsNoCrossing()
     {
         var lower = new PhysicalRect(1920, 200, 1920, 1080);

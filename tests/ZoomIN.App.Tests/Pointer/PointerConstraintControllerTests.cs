@@ -93,11 +93,28 @@ public sealed class PointerConstraintControllerTests : IDisposable
         _controller.Start();
         Set(new PointerConstraintOptions { AxisLock = true, Buffer = EdgeBufferLevel.Light });
 
+        _keys.Press(true);
+
         _fence.Raise(FenceTrigger.DesktopSwitch);
-        Assert.Equal(2, _keys.Starts);
+        Assert.Equal(1, _keys.Resets);
+        Assert.False(_controller.Axis.IsHeld);
+        Assert.Equal(1, _keys.Starts);
 
         _fence.Raise(FenceTrigger.DisplayChange);
-        Assert.Equal(2, _keys.Starts);
+        Assert.Equal(1, _keys.Resets);
+    }
+
+    [Fact]
+    public void AxisLockOff_ReleasesAHeldKey()
+    {
+        _controller.Start();
+        Set(new PointerConstraintOptions { AxisLock = true });
+        _keys.Press(true);
+        _keys.Silent = true; // a watch that misses the release on Stop
+
+        Set(new PointerConstraintOptions());
+
+        Assert.False(_controller.Axis.IsHeld);
     }
 
     [Fact]
@@ -118,6 +135,18 @@ public sealed class PointerConstraintControllerTests : IDisposable
         Set(new PointerConstraintOptions { AxisLock = true, Buffer = EdgeBufferLevel.Strong });
 
         _controller.Dispose();
+
+        Assert.Empty(_fence.Filters);
+        Assert.Null(_keys.Key);
+    }
+
+    [Fact]
+    public void LateApplyAfterDispose_InstallsNothing()
+    {
+        _controller.Start();
+        _controller.Dispose();
+
+        _controller.Apply(new PointerConstraintOptions { AxisLock = true, Buffer = EdgeBufferLevel.Light });
 
         Assert.Empty(_fence.Filters);
         Assert.Null(_keys.Key);
@@ -167,6 +196,10 @@ public sealed class PointerConstraintControllerTests : IDisposable
 
         public int Starts { get; private set; }
 
+        public int Resets { get; private set; }
+
+        public bool Silent { get; set; }
+
         public void Start(AxisLockKey key, Action<bool> changed)
         {
             Key = key;
@@ -174,9 +207,19 @@ public sealed class PointerConstraintControllerTests : IDisposable
             Starts++;
         }
 
+        public void Reset()
+        {
+            Resets++;
+            _changed?.Invoke(false);
+        }
+
         public void Stop()
         {
-            _changed?.Invoke(false);
+            if (!Silent)
+            {
+                _changed?.Invoke(false);
+            }
+
             Key = null;
         }
 

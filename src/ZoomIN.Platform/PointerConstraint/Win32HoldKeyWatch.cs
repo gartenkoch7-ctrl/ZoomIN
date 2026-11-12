@@ -10,13 +10,18 @@ namespace ZoomIN.Platform.PointerConstraint;
 
 /// <summary>
 /// The held key of the axis lock (A6): a read-only low-level keyboard hook on its own thread, so
-/// left and right keys are told apart and nothing is swallowed. The hook only flips a flag.
-/// A release Windows never delivered (key let go on the lock screen or a UAC prompt) is caught by
-/// a check of the physical key state twice a second: the pointer must never stay locked.
+/// left and right keys are told apart and nothing is swallowed. It runs only while the axis lock is
+/// switched on (the activity hook is shared with other lanes and stays untouched). A release
+/// Windows never delivered (key let go on the lock screen or a UAC prompt) is caught by a check of
+/// the physical key state twice a second while the key counts as held: the pointer must never stay
+/// locked.
 /// </summary>
 public sealed unsafe class Win32HoldKeyWatch : IHoldKeyWatch
 {
     internal static readonly TimeSpan CheckInterval = TimeSpan.FromMilliseconds(500);
+
+    // AltGr sends a fake left Ctrl with this scan code before the right Alt: not a held Ctrl.
+    internal const uint AltGrFakeControlScanCode = 0x21D;
 
     private readonly ILogger _log;
     private readonly TimeProvider _time;
@@ -25,14 +30,16 @@ public sealed unsafe class Win32HoldKeyWatch : IHoldKeyWatch
 
     // Kept in a field so the GC never collects the callback while Windows holds it.
     private readonly HOOKPROC _proc;
+
+    // _gate: starting and stopping (may join the hook thread). _state: the held flag and its
+    // notifications, never held while joining, so the hook and the check cannot interleave a
+    // press with a release and leave the axis lock held.
     private readonly Lock _gate = new();
+    private readonly Lock _state = new();
     private LowLevelHookThread? _thread;
     private ITimer? _timer;
     private Watch? _watch;
-
-    // 1 while the key is held; changed by compare-exchange from the hook and the check timer.
-    private int _held;
-    private int _missedChecks;
+    private bool _held;
     private int _failures;
 
     public Win32HoldKeyWatch(ILogger<Win32HoldKeyWatch> log, TimeProvider time)
@@ -55,94 +62,161 @@ public sealed unsafe class Win32HoldKeyWatch : IHoldKeyWatch
         ArgumentNullException.ThrowIfNull(changed);
         lock (_gate)
         {
-            Release(Volatile.Read(ref _watch));
-            Volatile.Write(ref _watch, new Watch(VirtualKey(key), changed));
-            if (_installHook && _thread is null)
+            // Created outside _state: the hook waits on _state, so nothing slow happens under it.
+            var timer = _timer ?? _time.CreateTimer(_ => Check(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            lock (_state)
             {
-                _thread = new LowLevelHookThread("ZoomIN Axis Lock Key", (WINDOWS_HOOK_ID.WH_KEYBOARD_LL, _proc));
-                if (!_thread.AllInstalled)
-                {
-                    _log.KeyHookUnavailable();
-                }
+                ReleaseHeld();
+                _timer = timer;
+                _watch = new Watch(VirtualKey(key), changed);
             }
 
-            _timer ??= _time.CreateTimer(_ => Check(), null, CheckInterval, CheckInterval);
+            EnsureHook();
             _log.KeyWatchStarted(key);
         }
+    }
+
+    public void Reset()
+    {
+        lock (_gate)
+        {
+            lock (_state)
+            {
+                ReleaseHeld();
+            }
+
+            // A hook Windows refused earlier gets another try (Reset follows a desktop switch).
+            if (Volatile.Read(ref _watch) is not null)
+            {
+                EnsureHook();
+            }
+        }
+
+        ReportFailures();
     }
 
     public void Stop()
     {
         lock (_gate)
         {
-            var watch = Volatile.Read(ref _watch);
-            if (watch is null)
+            ITimer? timer;
+            lock (_state)
             {
-                return;
+                if (_watch is null)
+                {
+                    return;
+                }
+
+                ReleaseHeld();
+                _watch = null;
+                timer = _timer;
+                _timer = null;
             }
 
-            Volatile.Write(ref _watch, null);
+            timer?.Dispose();
             _thread?.Dispose();
             _thread = null;
-            _timer?.Dispose();
-            _timer = null;
-            Release(watch);
             _log.KeyWatchStopped();
         }
+
+        ReportFailures();
     }
 
     public void Dispose() => Stop();
 
     /// <summary>One key event as the hook sees it; internal for tests.</summary>
-    internal void OnKey(int virtualKey, bool down, bool up)
+    internal void OnKey(int virtualKey, uint scanCode, bool down, bool up)
     {
-        if (Volatile.Read(ref _watch) is not { } watch || virtualKey != watch.VirtualKey)
+        if (scanCode == AltGrFakeControlScanCode)
         {
             return;
         }
 
-        // Key repeat sends further "down" events while held; only the first one counts.
-        if (down && Interlocked.CompareExchange(ref _held, 1, 0) == 0)
+        lock (_state)
         {
-            Volatile.Write(ref _missedChecks, 0);
-            Notify(watch, true);
-        }
-        else if (up && Interlocked.CompareExchange(ref _held, 0, 1) == 1)
-        {
-            Notify(watch, false);
+            if (_watch is not { } watch || virtualKey != watch.VirtualKey)
+            {
+                return;
+            }
+
+            // Key repeat sends further "down" events while held; only the first one counts.
+            if (down && !_held)
+            {
+                _held = true;
+                _timer?.Change(CheckInterval, CheckInterval);
+                Notify(watch, true);
+            }
+            else if (up && _held)
+            {
+                ReleaseHeld();
+            }
         }
     }
 
-    /// <summary>The periodic check; internal for tests.</summary>
+    /// <summary>The periodic check while the key counts as held; internal for tests.</summary>
     internal void Check()
+    {
+        ReportFailures();
+        var missed = false;
+        lock (_state)
+        {
+            // The first check runs half a second after the press, long after Windows set the key
+            // state: one "not down" is a release the hook never saw.
+            if (_watch is { } watch && _held && !_isDown(watch.VirtualKey))
+            {
+                ReleaseHeld();
+                missed = true;
+            }
+        }
+
+        if (missed)
+        {
+            _log.ReleaseMissed();
+            ReportFailures();
+        }
+    }
+
+    // Under _gate.
+    private void EnsureHook()
+    {
+        if (!_installHook || _thread is not null)
+        {
+            return;
+        }
+
+        var thread = new LowLevelHookThread("ZoomIN Axis Lock Key", (WINDOWS_HOOK_ID.WH_KEYBOARD_LL, _proc));
+        if (thread.AllInstalled)
+        {
+            _thread = thread;
+            return;
+        }
+
+        // Not kept: the next Start or Reset tries again.
+        thread.Dispose();
+        _log.KeyHookUnavailable();
+    }
+
+    private void ReportFailures()
     {
         if (Interlocked.Exchange(ref _failures, 0) is > 0 and var failures)
         {
             _log.HandlerFailed(failures);
         }
-
-        if (Volatile.Read(ref _watch) is not { } watch || Volatile.Read(ref _held) == 0)
-        {
-            return;
-        }
-
-        if (_isDown(watch.VirtualKey))
-        {
-            Volatile.Write(ref _missedChecks, 0);
-            return;
-        }
-
-        // Twice in a row: right after a press the hook runs before Windows updates the key state.
-        if (Interlocked.Increment(ref _missedChecks) >= 2 && Interlocked.CompareExchange(ref _held, 0, 1) == 1)
-        {
-            Notify(watch, false);
-            _log.ReleaseMissed();
-        }
     }
 
-    private void Release(Watch? watch)
+    // Under _state.
+    private void ReleaseHeld()
     {
-        if (watch is not null && Interlocked.Exchange(ref _held, 0) == 1)
+        if (!_held)
+        {
+            return;
+        }
+
+        _held = false;
+
+        // One more check later, only to report a failed release notification; then it stops.
+        _timer?.Change(CheckInterval, Timeout.InfiniteTimeSpan);
+        if (_watch is { } watch)
         {
             Notify(watch, false);
         }
@@ -156,6 +230,7 @@ public sealed unsafe class Win32HoldKeyWatch : IHoldKeyWatch
             var message = (uint)wParam.Value;
             OnKey(
                 (int)info->vkCode,
+                info->scanCode,
                 message is PInvoke.WM_KEYDOWN or PInvoke.WM_SYSKEYDOWN,
                 message is PInvoke.WM_KEYUP or PInvoke.WM_SYSKEYUP);
         }

@@ -18,8 +18,8 @@ internal static class PointerConstraintMetrics
     private static long s_verticalLocks;
 
     private static readonly ObservableCounter<long> s_bufferCounter = Telemetry.Meter.CreateObservableCounter(
-        "zoomin.pointer.buffer_blocked", static () => Volatile.Read(ref s_bufferBlocked), unit: "{crossing}",
-        description: "Monitor crossings the mouse buffer held back at the edge");
+        "zoomin.pointer.buffer_blocked", static () => Volatile.Read(ref s_bufferBlocked), unit: "{press}",
+        description: "Presses against a monitor edge the mouse buffer held back (each start of a press)");
 
     private static readonly ObservableCounter<long> s_axisCounter = Telemetry.Meter.CreateObservableCounter<long>(
         "zoomin.pointer.axis_lock", static () => AxisMeasurements(), unit: "{lock}",
@@ -29,6 +29,16 @@ internal static class PointerConstraintMetrics
 
     public static long AxisLocks(LockAxis axis) =>
         axis == LockAxis.Vertical ? Volatile.Read(ref s_verticalLocks) : Volatile.Read(ref s_horizontalLocks);
+
+    /// <summary>
+    /// Runs the type initializer off the hook: the filters call it when they are created, so the
+    /// instruments exist from the start and the hook never creates them (allocation, SDK locks).
+    /// </summary>
+    public static void EnsureCreated()
+    {
+        GC.KeepAlive(s_bufferCounter);
+        GC.KeepAlive(s_axisCounter);
+    }
 
     /// <summary>From the mouse hook: no allocation.</summary>
     public static void Blocked() => Interlocked.Increment(ref s_bufferBlocked);
@@ -49,8 +59,6 @@ internal static class PointerConstraintMetrics
     // Read by the SDK on its export, never in the hook; the static fields root the instruments.
     private static IEnumerable<Measurement<long>> AxisMeasurements()
     {
-        GC.KeepAlive(s_bufferCounter);
-        GC.KeepAlive(s_axisCounter);
         return
         [
             new(Volatile.Read(ref s_horizontalLocks), s_horizontal),

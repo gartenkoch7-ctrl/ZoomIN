@@ -31,6 +31,8 @@ public sealed class AxisLock : IPointerMoveFilter
     private PhysicalPoint _anchor;
     private LockAxis _axis;
 
+    public AxisLock() => PointerConstraintMetrics.EnsureCreated();
+
     public int Order => PointerFilterOrder.AxisLock;
 
     public bool IsHeld => _held;
@@ -64,6 +66,14 @@ public sealed class AxisLock : IPointerMoveFilter
             _activePress = press;
             _anchor = current;
             _axis = LockAxis.None;
+        }
+
+        // Off the locked line: something moved the pointer past the hook (a shortcut's
+        // SetCursorPos, another program). Lock from there instead of pulling it back.
+        if ((_axis == LockAxis.Horizontal && Math.Abs(current.Y - _anchor.Y) > 1)
+            || (_axis == LockAxis.Vertical && Math.Abs(current.X - _anchor.X) > 1))
+        {
+            _anchor = current;
         }
 
         if (_axis == LockAxis.None)

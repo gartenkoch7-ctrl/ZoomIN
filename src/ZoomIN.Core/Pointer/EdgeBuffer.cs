@@ -15,11 +15,12 @@ namespace ZoomIN.Core.Pointer;
 /// pressing state is only touched by <see cref="Filter"/>, i.e. by the hook thread. Frozen monitors
 /// are not this filter's business: the fence applies forbidden areas after all filters.
 /// </remarks>
-public sealed class EdgeBuffer(TimeProvider time) : IPointerMoveFilter
+public sealed class EdgeBuffer : IPointerMoveFilter
 {
     /// <summary>Longer without an outward move and the pressing starts over.</summary>
     public static readonly TimeSpan MaxPause = TimeSpan.FromMilliseconds(250);
 
+    private readonly TimeProvider _time;
     private Setup? _setup;
 
     // Hook thread only.
@@ -28,6 +29,12 @@ public sealed class EdgeBuffer(TimeProvider time) : IPointerMoveFilter
     private long _lastPress;
     private int _dirX;
     private int _dirY;
+
+    public EdgeBuffer(TimeProvider time)
+    {
+        _time = time;
+        PointerConstraintMetrics.EnsureCreated();
+    }
 
     public int Order => PointerFilterOrder.MouseBuffer;
 
@@ -107,12 +114,14 @@ public sealed class EdgeBuffer(TimeProvider time) : IPointerMoveFilter
         && timestamp - _lastPress <= setup.MaxPauseTicks
         && ((dirX != 0 && dirX == _dirX) || (dirY != 0 && dirY == _dirY));
 
-    // Moving away from the pressed edge; sliding along it keeps pressing.
-    private bool Retreats(PhysicalRect home, PhysicalPoint requested) =>
-        (_dirX > 0 && requested.X < home.Right - 1)
-        || (_dirX < 0 && requested.X > home.X)
-        || (_dirY > 0 && requested.Y < home.Bottom - 1)
-        || (_dirY < 0 && requested.Y > home.Y);
+    // Moving away from every pressed edge; sliding along one of them keeps pressing (also from a
+    // press that began diagonally at a corner).
+    private bool Retreats(PhysicalRect home, PhysicalPoint requested)
+    {
+        var onX = (_dirX > 0 && requested.X >= home.Right - 1) || (_dirX < 0 && requested.X <= home.X);
+        var onY = (_dirY > 0 && requested.Y >= home.Bottom - 1) || (_dirY < 0 && requested.Y <= home.Y);
+        return !onX && !onY;
+    }
 
     private static int IndexOf(PhysicalRect[] monitors, PhysicalPoint point)
     {
@@ -127,7 +136,7 @@ public sealed class EdgeBuffer(TimeProvider time) : IPointerMoveFilter
         return -1;
     }
 
-    private long Ticks(TimeSpan span) => (long)(span.TotalSeconds * time.TimestampFrequency);
+    private long Ticks(TimeSpan span) => (long)(span.TotalSeconds * _time.TimestampFrequency);
 
     private sealed record Setup(PhysicalRect[] Monitors, long PressTicks, long MaxPauseTicks);
 }

@@ -84,6 +84,17 @@ public sealed class AxisLockTests
         Assert.Equal(LockAxis.Vertical, _lock.Axis);
     }
 
+    [Theory]
+    [InlineData(150, 100, 500, 900, 560, 905, 560, 900)] // horizontal lock, pointer moved to another row
+    [InlineData(100, 150, 500, 900, 505, 960, 500, 960)] // vertical lock, pointer moved to another column
+    public void PointerMovedByOthers_LocksFromThere(double lockX, double lockY, double jumpX, double jumpY, double toX, double toY, double expectX, double expectY)
+    {
+        _lock.SetHeld(true);
+        Move(100, 100, lockX, lockY);
+
+        Assert.Equal(new PhysicalPoint(expectX, expectY), Move(jumpX, jumpY, toX, toY));
+    }
+
     [Fact]
     public void Lock_IsCounted()
     {

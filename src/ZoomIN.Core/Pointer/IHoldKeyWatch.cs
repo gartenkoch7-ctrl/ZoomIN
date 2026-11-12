@@ -13,6 +13,12 @@ public interface IHoldKeyWatch : IDisposable
     /// </summary>
     void Start(AxisLockKey key, Action<bool> changed);
 
+    /// <summary>
+    /// Reports a key still held as released and keeps watching (after a desktop switch Windows
+    /// delivered no key events); a key still held engages again with its next repeat.
+    /// </summary>
+    void Reset();
+
     /// <summary>Stops watching; a key still held is reported as released.</summary>
     void Stop();
 }
