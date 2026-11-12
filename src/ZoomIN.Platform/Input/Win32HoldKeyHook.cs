@@ -106,7 +106,12 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
 
     public void Dispose() => Stop();
 
-    private static bool IsPressed(MarkerHoldKey key) => PInvoke.GetAsyncKeyState((int)HoldKeyCodes.For(key)) < 0;
+    // Alt Gr also sets the left Ctrl in the key state (the hook skips its fake event by scan code), so
+    // with left Ctrl as hold key a held Alt Gr would otherwise count as a missed press.
+    private static bool IsPressed(MarkerHoldKey key) =>
+        IsDown(HoldKeyCodes.For(key)) && !(key == MarkerHoldKey.LeftCtrl && IsDown(VIRTUAL_KEY.VK_RMENU));
+
+    private static bool IsDown(VIRTUAL_KEY key) => PInvoke.GetAsyncKeyState((int)key) < 0;
 
     private static LRESULT KeyboardProc(int code, WPARAM wParam, LPARAM lParam)
     {

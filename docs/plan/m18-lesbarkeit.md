@@ -154,6 +154,12 @@ E2 und E1 laufen in **einer** Spur hintereinander, weil beide diese Dateien änd
     Kürzel- oder UI-Thread. Das dauert Millisekunden.
   - Das Löschen eines Schemas schreibt die gespeicherten Profile auf dem UI-Thread.
 - **Aufräumen:** `DisplayEffects.Recompute` und `ReplaceSlotOf` prüfen „hat Ersetzungen“ doppelt.
+- **Ausschalten ohne Überblendung:** Das gilt für alle Markierungen, nicht nur für das Fadenkreuz.
+  Die Zeichenstellen prüfen weiter „an/aus“, `MarkerAlphas` blendet trotzdem 100 ms aus.
+- **Linke Strg plus rechte Alt:** Bei linker Strg als Haltetaste zählt dieselbe Kombination echt
+  gehalten nicht im Tastenzustand. Grund ist die Alt-Gr-Erkennung.
+- **Kostenmessung D1:** `EnhanceCost` misst nach jedem Überschreiten von 1,5× neu. Das passiert nur,
+  solange jemand die Metrik abonniert.
 - Das Review lief, bis eine Runde keine Codeänderung mehr ergab.
 
 ## Offen für Menschen
