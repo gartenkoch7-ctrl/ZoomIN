@@ -53,4 +53,18 @@ public sealed class HoldKeyCodesTests
     {
         Assert.Equal(VIRTUAL_KEY.VK_RSHIFT, HoldKeyCodes.For((MarkerHoldKey)99));
     }
+
+    [Theory]
+    [InlineData(MarkerHoldKey.RightShift)]
+    [InlineData(MarkerHoldKey.LeftCtrl)]
+    [InlineData(MarkerHoldKey.RightAlt)]
+    public void EscOfTheOverview_IsNeverAHoldKey_OnlyTyping(MarkerHoldKey key)
+    {
+        // M18 integration: the activity hook swallows Esc while the overview runs (M17 B2). The hold
+        // key hook may or may not see it (hook order); either way it is no hold key, at most typing,
+        // which ends a running hold like any other key (accepted in the M18 integration).
+        Assert.NotEqual(VIRTUAL_KEY.VK_ESCAPE, HoldKeyCodes.For(key));
+        Assert.Equal(HoldKeyEvent.Other, HoldKeyCodes.Classify(VIRTUAL_KEY.VK_ESCAPE, 0x01, true, false, key));
+        Assert.Equal(HoldKeyEvent.None, HoldKeyCodes.Classify(VIRTUAL_KEY.VK_ESCAPE, 0x01, false, true, key));
+    }
 }

@@ -23,9 +23,12 @@ internal static class EnhanceRender
         new(new FilterSettings(filter is not null, filter ?? FilterId.Inverted, 1, 0), smoothing, PointerStyle.Default);
 
     /// <param name="smoothing">Pixel draws the exact colours of the image: the range a halo would leave.</param>
-    public static PixelBuffer Render(Func<int, int, Bgra> image, TextEnhancement enhance, FilterId? filter = null, Smoothing smoothing = Smoothing.Text)
+    public static PixelBuffer Render(Func<int, int, Bgra> image, TextEnhancement enhance, FilterId? filter = null, Smoothing smoothing = Smoothing.Text) =>
+        Render(image, enhance, Effects(filter, smoothing));
+
+    /// <param name="effects">Any effects, e.g. with own schemes (M18 integration: C and D1 in one pass).</param>
+    public static PixelBuffer Render(Func<int, int, Bgra> image, TextEnhancement enhance, DisplayEffects effects)
     {
-        var effects = Effects(filter, smoothing);
         using var gpu = GpuDevice.CreateWarp();
         using var texture = TestImage.Create(gpu.Device, Image, image);
         using var target = RenderTarget.Create(gpu.Device, Target);
