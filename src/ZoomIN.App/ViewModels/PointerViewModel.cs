@@ -146,7 +146,8 @@ public sealed partial class PointerViewModel : ObservableObject
         // undone by the page's older crosshair choice (M18 review).
         if (e.PropertyName == nameof(CrosshairShowIndex))
         {
-            _effects.SetCursor(Style with { CrosshairShow = ComboChoice.Or(CrosshairShowIndex, Style.CrosshairShow) });
+            var index = CrosshairShowIndex;
+            _effects.UpdateCursor(s => s with { CrosshairShow = ComboChoice.Or(index, s.CrosshairShow) });
             StyleChanged?.Invoke();
             return;
         }

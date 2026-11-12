@@ -524,7 +524,8 @@ an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten
 - Tastenwiederholung allein reicht nicht (Wiederholung aus bei „Filtertasten“, ein zweiter Modifier
   übernimmt die Wiederholung) und ein Loslassen kann verloren gehen (Win+L, Fenster mit höheren
   Rechten). Darum prüft der Hook während des Haltens alle 400 ms den echten Tastenzustand
-  (`GetAsyncKeyState`): gedrückt = Halten bestätigt, los = Halten beendet. Kommt 1,5 s gar kein
+  (`GetAsyncKeyState`): gedrückt = Halten bestätigt, los = Halten beendet. Ein vom Hook nicht gesehenes Drücken oder Loslassen zählt erst bei zwei Prüfungen in Folge,
+  weil Windows den Tastenzustand erst nach den Hooks setzt. Kommt 1,5 s gar kein
   Signal (Hook entfernt), zählt das Halten nicht mehr; der nächste Druck beginnt neu. Ein Wechsel
   der Haltetaste vergisst ein laufendes Halten. Schlägt das Setzen des Hooks fehl, versucht es die
   nächste Änderung einer Bedingung erneut (nicht jeder Schieberegler-Schritt). Entfernt Windows den

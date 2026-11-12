@@ -118,14 +118,86 @@ E2 und E1 laufen in **einer** Spur hintereinander, weil beide diese Dateien änd
   öffnet Menüs. Der Hook läuft auch bei Zoom aus, solange eine Bedingung „Haltetaste“ ist.
 - **Überblendung:** Sie läuft auf allen Monitoren, auch ohne Caret dort. Das sind einige
   Zusatz-Frames je Wechsel von Ruhe und Bewegung.
-- **Druckmoment:** Zwischen Hook-„Down“ und dem aktualisierten Tastenzustand kann der 400-ms-Timer ein
-  Halten beenden. Das Fenster dafür ist Mikrosekunden groß.
 - **Ältere Muster, nicht M18:** `TrayMenuSync` nutzt die Fassade `Text` statt `ILocalizer`. Kommt mit
   M14 Schritt 6.
 - **Weitere Punkte:** Die Caret-Vorschau rechnet in XAML-Einheiten. Testhilfen stehen in
   `MarkerAlphas` und `EnhanceCost`. `TextEnhancement.WorksWith` wird doppelt geprüft.
-- Das Review fand in jeder Runde noch Punkte, zuletzt nur noch Kompromisse dieser Liste und
-  Aufräumarbeiten. Behoben wurde, was ein echter Fehler war (Runden 1–4).
+- **Duplikate aus den Spuren:**
+  - `TextEnhance.hlsli` kopiert die Catmull-Rom-Abtastung aus `Magnify.hlsl`. Ein Kommentar
+    verlangt, beide gemeinsam zu ändern.
+  - `CustomSchemeService.SameScheme` vergleicht Schemata inhaltlich. Die Record-Gleichheit vergleicht
+    die Ersetzungsliste nur als Referenz.
+- **Ruhe und Bewegung:** Der Zustand zwischen „Halten beendet“ und „Strg tippen“ kann in einem
+  Fenster von Mikrosekunden noch ein Tippen verschlucken (Runde 5 hat den häufigeren Fall behoben).
+- **Aktivität:** Mausrad und Klicks zählen nicht als Aktivität und beenden kein Halten (KB, „Offen“).
+  Strg als Haltetaste plus Strg+Mausrad zeigt die Markierungen deshalb nach 250 ms.
+  „Strg allein“ unterscheidet nicht zwischen links und rechts.
+- **Fadenkreuz:** Wird es aus- oder unter seine Zoomschwelle geschaltet, verschwindet es ohne
+  Überblendung. Die Überblendung zu 0 erzwingt dann noch etwa 100 ms Frames, die nichts zeigen.
+- **Ungenutzte API:** `ReplacementTable.Any` und `EffectsModel.SetEnhancement` haben keinen
+  Aufrufer im Produktivcode.
+- **Haltetaste wird gerade gehalten:** Stoppt der Hook in diesem Moment (Bedingung oder Tracking
+  geändert), zählt das als Ende des Haltens. Ein Strg-Tippen in den 500 ms danach kann verschluckt
+  werden.
+- **Aufräumen:** `CustomSchemes.Hex` und `SecureSettingsSanitizer.Color` reichen nur an
+  `RgbColor.NormalizedHex` weiter.
+- **Offene Einstellungsseite:** Sie zeigt nach einem Profilwechsel per Kürzel weiter die Werte von
+  vorher, auch in der Caret-Vorschau. Das gilt für alle Seiten seit M7. Geändert wird trotzdem nur
+  das jeweilige Feld.
+- **Lesepfade:** `MarkerInput` und die Kürzel-Seite lesen die Haltetaste über
+  `SettingsService.Current`, das alle Modelle abbildet. Das passiert auf UI-Rate, nicht im
+  Render-Loop.
+- **Fensterregeln:** `WindowRuleRow.IndexOf` prüft die Rückfall-Regel über die Listenreihenfolge
+  statt über `CustomSchemes.Resolve`. Der Code-Kommentar begründet das.
+- **Synchrone Arbeit:**
+  - `MarkerInput` startet und stoppt den Hook-Thread synchron im Änderungs-Ereignis, also auf dem
+    Kürzel- oder UI-Thread. Das dauert Millisekunden.
+  - Das Löschen eines Schemas schreibt die gespeicherten Profile auf dem UI-Thread.
+- **Aufräumen:** `DisplayEffects.Recompute` und `ReplaceSlotOf` prüfen „hat Ersetzungen“ doppelt.
+- **Ausschalten ohne Überblendung:** Das gilt für alle Markierungen, nicht nur für das Fadenkreuz.
+  Die Zeichenstellen prüfen weiter „an/aus“, `MarkerAlphas` blendet trotzdem 100 ms aus.
+- **Linke Strg plus rechte Alt:** Bei linker Strg als Haltetaste zählt dieselbe Kombination echt
+  gehalten nicht im Tastenzustand. Grund ist die Alt-Gr-Erkennung.
+- **Kostenmessung D1:** `EnhanceCost` misst nach jedem Überschreiten von 1,5× neu. Das passiert nur,
+  solange jemand die Metrik abonniert.
+- **Haltetaste wechseln:** Ein Wechsel der Haltetaste vergisst ein laufendes Halten. Ein gerade
+  erst beendetes Halten bleibt aber für 500 ms gemerkt.
+- **Ungenutzt:** `WindowFilterModel.SetOptions` wird nur noch von Tests aufgerufen. Mit derselben
+  Instanz tut es jetzt nichts.
+- **Zweiter Tastatur-Hook:** Die Haltetaste hat einen eigenen LL-Hook neben dem Aktivitäts-Hook.
+  Das ist eine Entscheidung der Spur E (KB), damit sich beide getrennt ändern lassen. Er läuft nur,
+  solange eine Bedingung „Haltetaste“ ist.
+- **Alt-Gr-Zeichen:** Sie zählen wie alle Eingaben mit Strg/Alt nicht als Tippen, auch nicht für
+  „in Bewegung“ und „in Ruhe“ (KB, „Offen“).
+- **Doppelte Prüfung:** `CustomSchemeService.Update` prüft vor dem atomaren Schritt, ob das Schema
+  existiert, und der Schritt prüft es noch einmal.
+- **Andere Taste während des Haltens:** Sie beendet das Halten, auch wenn die Markierung schon
+  sichtbar ist (etwa Umschalt+Tab). Das hat Spur E so entschieden, gegen Aufblitzen bei längerem
+  Großschreiben (KB).
+- **Hold-Key-Telemetrie und -Wechsel:**
+  - Eine beim Hook-Start schon gehaltene Taste zählt nicht in `hold_key_presses`.
+  - Die Kürzel-Seite zeigt die Haltetaste vom Öffnen der Seite.
+- **D1-Kostenmessung:** `PassCostProbe` versucht nach jedem Neustart wieder einmal neu. Das kostet
+  nur Zeit, solange jemand die Metrik abonniert.
+- **Rückfall „Invertieren“:** `ColorFilters` und `EffectsModel.NextFilter` setzen ihn selbst um,
+  statt `CustomSchemes.Resolve` zu nutzen.
+- **Ältere Muster, nicht M18:** `FilterViewModel.ApplyChoice` schreibt Ein/Aus und Filter von der
+  Seite zurück (seit M5/M7). Ein Kürzel bei offener Filterseite kann so überschrieben werden.
+- **Von Windows entfernter Hook:** Er wird nicht neu gesetzt. Die Zustandsprüfung übernimmt, nur
+  „andere Taste“ fehlt dann (KB, Log 2954). Neu gesetzt wird er bei der nächsten Änderung einer
+  Bedingung.
+- **Mauszeiger-Seite:** Außer der Anzeige-Bedingung schreiben ihre Regler weiter den ganzen Stil
+  von der Seite zurück (seit M5). Strg+Alt+K bei offener Seite kann so überschrieben werden.
+- **Unbekannte Werte:** Ein unbekannter Auto-Filter wird in `WindowFilterOptions.Normalized` zu
+  „Intelligent invertieren“. `CustomSchemes.Resolve` macht daraus „Invertieren“. So entsteht er
+  nur durch Handbearbeitung.
+- **Log-Kategorien:** `SchemePaletteWatch` und `EnhanceWatch` loggen mit dem Logger von `ZoomEngine`
+  (Kategorie `ZoomEngine`). Die EventIds 3200/3201 und 3220/3221 sind trotzdem eindeutig.
+- **Haltetaste als Zustandsmaschine:** Sie ist über die Review-Runden gewachsen. Vorschlag für
+  später: Der Tastenzustand wird die einzige Quelle für „gehalten“, Tastenereignisse ziehen nur den
+  Start vor oder machen das Halten ungültig.
+- **Farbumwandlung doppelt:** `CustomSchemesPage.BrushOf` wiederholt die Umwandlung aus `ColorChooser`.
+- Das Review lief, bis eine Runde keine Codeänderung mehr ergab.
 
 ## Offen für Menschen
 - Sichtprüfung mit echter GPU:

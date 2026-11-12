@@ -291,7 +291,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2951 | Info | Hold key hook stopped (E1) |
 | 2952 | Fehler | Installing the hold key hook failed; highlights shown only while a key is held stay hidden (E1) |
 | 2953 | Fehler | Hold key handler failed (E1) |
-| 2954 | Warnung | Hold key is down but the hook saw no press; following the key state instead – Hook von Windows entfernt oder Taste schon vor dem Start gehalten; einmal je Hook-Start (E1) |
+| 2954 | Warnung | Hold key is down but the hook saw no press; following the key state instead – Hook von Windows entfernt (eine schon beim Start gehaltene Taste zählt nicht); einmal je Hook-Start (E1) |
 | 2960 | Info | Axis lock key watch started for {Key} |
 | 2961 | Info | Axis lock key watch stopped |
 | 2962 | Warnung | Axis lock: installing the keyboard hook failed; the axis lock does not react to its key |
