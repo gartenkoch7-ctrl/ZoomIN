@@ -67,7 +67,8 @@ public sealed class IslandModel
         Publish(scene => scene.Edit is null ? scene with { Set = _committed.FitTo(boundsOf) } : scene, save: false, () => null);
     }
 
-    public void SetVisible(bool visible) => Publish(scene => scene with { Visible = visible }, save: true, () => null);
+    /// <returns>False if the islands were shown or hidden already (nothing to report).</returns>
+    public bool SetVisible(bool visible) => Publish(scene => scene with { Visible = visible }, save: true, () => null);
 
     /// <summary>Shows hidden islands or hides shown ones in one step (no lost toggle between two threads).</summary>
     /// <returns>Whether they are shown now.</returns>
@@ -143,7 +144,7 @@ public sealed class IslandModel
     private IslandSet Fitted(IslandSet set) => Volatile.Read(ref _boundsOf) is { } boundsOf ? set.FitTo(boundsOf) : set;
 
     // commitAs: what becomes Committed (every caller says it: a drag step must never commit by default), null = keep it.
-    private void Publish(Func<IslandScene, IslandScene> change, bool save, Func<IslandSet?> commitAs)
+    private bool Publish(Func<IslandScene, IslandScene> change, bool save, Func<IslandSet?> commitAs)
     {
         IslandScene before;
         IslandScene after;
@@ -153,7 +154,7 @@ public sealed class IslandModel
             after = change(before);
             if (after == before)
             {
-                return;
+                return false;
             }
 
             Volatile.Write(ref _scene, after);
@@ -172,5 +173,7 @@ public sealed class IslandModel
         {
             Saved?.Invoke();
         }
+
+        return true;
     }
 }

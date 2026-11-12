@@ -63,7 +63,7 @@ public sealed class IslandController : IDisposable
         {
             if (IsEditing)
             {
-                End(endReason);
+                EndLogged(endReason); // never into the shortcut or the button's click handler
             }
             else if (_takeover.Refused() is { } reason)
             {
@@ -83,7 +83,7 @@ public sealed class IslandController : IDisposable
     public void Dispose()
     {
         _watch.Dispose();
-        End("exit");
+        EndLogged("exit");
     }
 
     // Under _lifecycle.

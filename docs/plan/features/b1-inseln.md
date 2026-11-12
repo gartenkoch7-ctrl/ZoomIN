@@ -145,7 +145,7 @@ Details: [rendering-pipeline.md](../../kb/rendering-pipeline.md#inseln-m19-b1) u
   (Maus und Tastatur), kein neuer Hook. Zeigerzaun: Filter `IslandDragFence`
   (`PointerFilterOrder.IslandEdit`) hält ein Ziehen auf dem Monitor der Insel; gesperrte Bereiche
   (`FenceOwner.IslandEdit`) braucht B1 nicht.
-- **Telemetrie:** App 1740–1747; Rendering 3320–3339 bleibt frei (kein Log im Render-Loop,
+- **Telemetrie:** App 1740–1748; Rendering 3320–3339 bleibt frei (kein Log im Render-Loop,
   Standbilder melden 3300/3301). GPU-Zeit im Betrieb als `zoomin.render.gpu_time` (`islands`).
 - **GPU** (RTX 3060 Ti, 1080p, 4×, 4 Inseln 600 × 160): +0,008–0,018 ms, ×10 ≈ 0,2 ms.
 - **Offen für den Menschen:** Sichtprüfung (Blinken, Griffe, gestricheltes Rechteck, Uhr läuft),

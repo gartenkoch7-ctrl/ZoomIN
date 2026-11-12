@@ -15,13 +15,17 @@ internal sealed class IslandKeyGate
     private uint _last;
     private uint _passAt;
 
-    // Set by Start on another thread; cleared only here.
+    private int _seenStart;
+
+    // Set by Start on another thread; cleared only here. The start count tells the hook thread to
+    // forget the pass time of an earlier run (whose release was lost) – it never writes hook fields.
     private volatile bool _pass;
+    private int _starts;
 
     /// <summary>The edit mode starts: a press held now belongs to whoever got it.</summary>
     public void Starting(bool down)
     {
-        _passAt = 0; // a pass of an earlier run whose release was lost must not make this one stale
+        Interlocked.Increment(ref _starts);
         _pass = down;
     }
 
@@ -39,6 +43,12 @@ internal sealed class IslandKeyGate
     /// <returns>True if the event must not reach applications.</returns>
     public bool OnKey(bool down, bool up, uint time, Func<bool> take)
     {
+        if (Volatile.Read(ref _starts) is var starts && starts != _seenStart)
+        {
+            _seenStart = starts;
+            _passAt = 0;
+        }
+
         if (_pass)
         {
             // Unless ZoomIN swallowed that press itself (held): then its release stays swallowed.

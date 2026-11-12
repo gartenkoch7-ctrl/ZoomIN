@@ -18,13 +18,11 @@ public sealed class IslandVisibility(SettingsService settings, IAnnouncer announ
     /// <summary>The switch: exactly the state it shows (a shortcut at the same moment must not invert it).</summary>
     public void Set(bool visible)
     {
-        if (_model.Scene.Visible == visible)
+        // Reported only on a real change: a shortcut at the same moment may have done it already.
+        if (_model.SetVisible(visible))
         {
-            return;
+            Report(visible);
         }
-
-        _model.SetVisible(visible);
-        Report(visible);
     }
 
     private void Report(bool visible)

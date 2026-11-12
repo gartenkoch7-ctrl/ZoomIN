@@ -6,9 +6,9 @@ namespace ZoomIN.Core.Islands;
 /// <summary>
 /// The rules every island follows (M19 B1): at most <see cref="MaxCount"/>, a minimum size, the
 /// level within <see cref="ZoomLimits"/>, source and target inside the island's monitor, whole
-/// pixels. Pure functions; the editor, the settings and a display change all go through
-/// <see cref="Fit"/>, so a broken settings file or a smaller monitor never yields an island that
-/// lies outside its monitor.
+/// pixels. Pure functions; the editor, the start of ZoomIN and profile switches go through
+/// <see cref="Fit"/>, and what is drawn or grabbed is checked with <see cref="Fits"/>, so a broken settings file or a
+/// smaller monitor never yields an island outside its monitor (a display change at run time hides it until then).
 /// </summary>
 public static class IslandRules
 {

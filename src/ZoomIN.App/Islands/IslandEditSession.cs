@@ -117,9 +117,8 @@ internal sealed class IslandEditSession : IDisposable
         report.Outcome(outcome, Editor);
 
         // A new island is meant to be seen: hidden islands (Ctrl+Alt+I) come back on.
-        if (outcome == IslandEditOutcome.Created && !model.Scene.Visible)
+        if (outcome == IslandEditOutcome.Created && model.SetVisible(true))
         {
-            model.SetVisible(true);
             report.ShownAgain(model.Scene.Set.Count);
         }
 
