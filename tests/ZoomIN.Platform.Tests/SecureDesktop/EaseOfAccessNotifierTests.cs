@@ -18,8 +18,8 @@ public sealed class EaseOfAccessNotifierTests : IDisposable
         _root = Registry.CurrentUser.CreateSubKey(_path);
     }
 
-    private EaseOfAccessNotifier Notifier(bool registered) =>
-        new(_root, () => registered, () => _winUCount++, NullLogger.Instance);
+    private EaseOfAccessNotifier Notifier(bool registered, bool secureOn = true, bool byEaseOfAccess = false) =>
+        new(_root, () => registered && secureOn, () => registered, () => _winUCount++, NullLogger.Instance, byEaseOfAccess);
 
     [Fact]
     public void Started_WritesStartingAndSendsWinU()
@@ -46,6 +46,36 @@ public sealed class EaseOfAccessNotifierTests : IDisposable
     {
         // Win+U without a registered AT would only open the Settings app.
         var notifier = Notifier(registered: false);
+        notifier.NotifyStarted();
+        notifier.NotifyExiting();
+
+        Assert.Null(Signal());
+        Assert.Equal(0, _winUCount);
+    }
+
+    [Fact]
+    public void StartedByEaseOfAccess_SignalsOnlyTheExit()
+    {
+        // Windows started ZoomIN from its list and already knows it runs (ADR-0030) …
+        // (the sign-in screen switch may be off: the AT entry stays for the autostart) …
+        var notifier = Notifier(registered: true, secureOn: false, byEaseOfAccess: true);
+        notifier.NotifyStarted();
+
+        Assert.Null(Signal());
+        Assert.Equal(0, _winUCount);
+
+        // … but an AT that ends itself must still tell it.
+        notifier.NotifyExiting();
+
+        Assert.Equal(EaseOfAccessNotifier.Exiting, Signal());
+        Assert.Equal(1, _winUCount);
+    }
+
+    [Fact]
+    public void SecureDesktopsOff_ManualStart_SendsNothing()
+    {
+        // Nothing to announce, so nothing to take back: no Win+U at start or exit.
+        var notifier = Notifier(registered: true, secureOn: false);
         notifier.NotifyStarted();
         notifier.NotifyExiting();
 

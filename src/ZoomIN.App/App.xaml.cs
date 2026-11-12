@@ -64,7 +64,8 @@ public partial class App : Application
             {
                 Program.Instance?.ListenForOpenRequests(shell.OpenSettings);
                 _services.GetRequiredService<AgentDebugHost>().Start();
-                _easeOfAccess = EaseOfAccessNotifier.Create(_log);
+                // Only a start Windows did not make itself needs the Win+U signal (ADR-0030).
+                _easeOfAccess = EaseOfAccessNotifier.Create(_log, Program.Origin);
                 _easeOfAccess.NotifyStarted();
             }
         }

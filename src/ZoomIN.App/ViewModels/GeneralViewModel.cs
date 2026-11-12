@@ -10,6 +10,8 @@ namespace ZoomIN.App.ViewModels;
 /// <summary>
 /// Language, autostart and the sign-in screen (updates have their own page, M9). Every change
 /// applies and saves at once (M7); the sign-in screen switch asks for administrator rights (ADR-0016).
+/// Both switches show the system's state, read anew each time the page opens (a new view model per
+/// navigation): Windows' own Settings can take ZoomIN out of the Ease of Access list (ADR-0030).
 /// </summary>
 public sealed partial class GeneralViewModel : ObservableObject
 {

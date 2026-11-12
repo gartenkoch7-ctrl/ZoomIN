@@ -40,6 +40,7 @@ internal sealed class UninstallFlow(
             return (int)UpdateResult.Failed;
         }
 
+        // Removes this user's Ease of Access list entry and an old Run value alike (AutostartSelector, ADR-0030).
         TryRun(() => autostart.SetEnabled(false));
         TryRun(() => shortcuts.Remove(shortcuts.UserDesktop));
         if (answer == DialogAnswer.No)

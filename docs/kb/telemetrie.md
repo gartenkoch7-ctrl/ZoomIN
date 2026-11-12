@@ -101,6 +101,8 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.update.restart` | app | Neustart nach dem Update; Kind von `zoomin.update.install`, darunter `zoomin.app.start` der neuen Version |
 | `zoomin.setup.launch` | app | Setup herunterladen, prüfen, starten (Ergebnis); das Setup setzt den Trace fort |
 | `zoomin.secure.settings` | secure | Woher die Einstellungen kommen (Tag `zoomin.secure.settings_source`: `user`, `copy`, `default`) |
+| `zoomin.autostart.migrate` | app | Einmaliger Umzug des Autostarts vom Run-Eintrag in die Liste der Erleichterten Bedienung (ADR-0030), nur bei installierter ZoomIN, Kind von `zoomin.app.start`. Tags `zoomin.autostart.from` (`run`, `none`), `zoomin.autostart.postponed` (AT-Eintrag in HKLM fehlt noch, Run-Eintrag bleibt); Fehler: Ausnahmetyp |
+| `zoomin.autostart.leave_job` | app | Die von der Erleichterten Bedienung im Job gestartete Instanz startet ZoomIN außerhalb des Jobs neu und endet (Spike A1, ADR-0030). Tag `zoomin.autostart.left_job`; darunter `zoomin.app.start` der neuen Instanz |
 | `zoomin.settings.load` | app, setup | `settings.json` lesen (Tag `zoomin.settings.result`: `ok`, `missing`, `unreadable` → Error) |
 | `zoomin.settings.save` | app, setup | `settings.json` schreiben (Fehler: Ausnahmetyp) |
 | `zoomin.profile.switch` | app | Profilwechsel (ohne Profilnamen – die vergibt der Nutzer frei) |
@@ -261,6 +263,16 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2312 | Info | Secure desktop: no signed-in user in session {Session} (error {Error}) |
 | 2313 | Info | Secure desktop: no user shell in session {Session} |
 | 2314 | Info | Secure desktop: using the token of the user's shell |
+| 2320 | Info | Autostart moved from the Run key to the Ease of Access list |
+| 2321 | Info | Autostart migration postponed: ZoomIN is not registered with Ease of Access yet |
+| 2322 | Warnung | Autostart migration failed ({Error}) |
+| 2323 | Info | Launch origin: in job {InJob}, job limits 0x{JobLimits:X8}, parent {ParentProcess}, left job {LeftJob}, Ease of Access start {EaseOfAccessStart} (bei jedem Start der Tray-App; Elternprozess nur als Name, `unknown`, wenn er schon beendet ist) |
+| 2324 | Info | Leaving the Ease of Access job: started process {ProcessId} ({Method}) (`breakaway` = `CREATE_BREAKAWAY_FROM_JOB`, `shell` = ShellExecute nach Fehler 740) |
+| 2325 | Warnung | Cannot leave job (job limits 0x{JobLimits:X8}): the tray app ends at the next desktop switch |
+| 2326 | Warnung | Leaving the job failed (error {Error}); staying in the job |
+| 2327 | Warnung | Still in a job after leaving the Ease of Access job (job limits 0x{JobLimits:X8}) |
+| 2328 | Info | Started by Ease of Access: no Win+U signal |
+| 2329 | Info | Autostart switched {State} ({Method}) (`ease_of_access` oder `run`; auch im Setup, Rolle `setup`) |
 | 2401 | Info | Settings backed up to {Folder} |
 | 2402 | Fehler | Settings backup failed |
 | 2403 | Warnung | Profile {File} is unreadable: {Reason} |

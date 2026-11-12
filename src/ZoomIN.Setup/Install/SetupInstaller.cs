@@ -88,7 +88,9 @@ internal sealed class SetupInstaller
     private void ApplyUserChoices(SetupChoices choices)
     {
         var exe = _services.Layout.CurrentExecutable;
-        new RegistryAutostart(RegistryAutostart.RunKey, $"\"{exe}\"").SetEnabled(choices.Autostart);
+
+        // Ease of Access list once the elevated step registered the AT, else the Run key (ADR-0030).
+        AutostartSelector.ForInstall(_services.Layout, _services.Telemetry.Logger<AutostartSelector>()).SetEnabled(choices.Autostart);
         if (choices.DesktopShortcut)
         {
             _services.Shortcuts.Create(_services.Shortcuts.UserDesktop, exe);

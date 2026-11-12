@@ -59,3 +59,16 @@ Bedienung (HKCU `…\Accessibility\Configuration`). Das ist auf dem Testrechner 
 - Windows zeigt ZoomIN in „Einstellungen › Barrierefreiheit“ bei den Hilfsmitteln, die nach der
   Anmeldung starten. Schaltet der Nutzer es dort aus, zeigt die App das beim nächsten Öffnen der
   Seite „Allgemein“ richtig an (der Schalter liest die Liste, keinen eigenen Merker).
+
+## Nachtrag: Spike A1 (offen)
+Stand 2026-11-12: Kandidat 1 ist gebaut und meldet sein Ergebnis selbst ins Log, die Messung mit dem
+Nutzer steht aus. Ablauf und gesuchte Logzeilen:
+[sichere-desktops.md › Spike A1 durchführen](../kb/sichere-desktops.md#spike-a1-durchführen-nutzer-offen).
+- Gebaut: Prüfung auf Job und Elternprozess vor dem Einzelinstanz-Mutex; bei erlaubtem Ausstieg
+  Neustart mit `CREATE_BREAKAWAY_FROM_JOB` und Marker `--left-job`; der Win+U-Trick nur, wenn die
+  Erleichterte Bedienung nicht selbst gestartet hat.
+- Nicht gebaut: der Ausweichweg aus Q9 (geplante Aufgabe). Er kommt nur, wenn der Spike scheitert.
+- Ergänzung zu Folge 1 (Umsetzung): Die Liste wird nur genutzt, wenn HKLM `ATs\ZoomIN` existiert;
+  sonst bleibt der Run-Eintrag, bis ein erhöhter Schritt der neuen Version ihn geschrieben hat
+  (`--apply-update` läuft mit der alten Version).
+- Ergebnis: _offen_ (ja/nein, Job-Limits, Elternprozess, Verhalten bei Win+L, UAC, nach „Beenden“).
