@@ -56,9 +56,18 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
                 return true;
             }
 
-            _handler = handler;
-            _down = false;
-            _missedLogged = false;
+            // Under the state lock, so a timer callback of an earlier session cannot run in between. A
+            // key already held at the start is "down" (not a missed press); the key state check then
+            // starts the hold.
+            lock (_state)
+            {
+                _handler = handler;
+                _downKey = handler.Key;
+                _down = PInvoke.GetAsyncKeyState((int)HoldKeyCodes.For(handler.Key)) < 0;
+                _suspect = false;
+                _missedLogged = false;
+            }
+
             s_active = this;
             _hook = new LowLevelHookThread("ZoomIN Hold Key Hook", (WINDOWS_HOOK_ID.WH_KEYBOARD_LL, s_keyboardProc));
             if (!_hook.AllInstalled)
@@ -125,7 +134,7 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
     }
 
     // Timer thread: refreshes a running hold while the key is really down, ends it otherwise.
-    // Timer thread. The state lock orders it with the hook callback; the lag between a release and
+    // The state lock orders it with the hook callback; the lag between a release and
     // the key state is covered by the second-check rule below.
     private void CheckKeyState()
     {

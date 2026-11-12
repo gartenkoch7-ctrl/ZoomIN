@@ -124,8 +124,14 @@ E2 und E1 laufen in **einer** Spur hintereinander, weil beide diese Dateien änd
   M14 Schritt 6.
 - **Weitere Punkte:** Die Caret-Vorschau rechnet in XAML-Einheiten. Testhilfen stehen in
   `MarkerAlphas` und `EnhanceCost`. `TextEnhancement.WorksWith` wird doppelt geprüft.
-- Das Review fand in jeder Runde noch Punkte, zuletzt nur noch Kompromisse dieser Liste und
-  Aufräumarbeiten. Behoben wurde, was ein echter Fehler war (Runden 1–4).
+- **Duplikate aus den Spuren:**
+  - `TextEnhance.hlsli` kopiert die Catmull-Rom-Abtastung aus `Magnify.hlsl`. Ein Kommentar
+    verlangt, beide gemeinsam zu ändern.
+  - `CustomSchemeService.SameScheme` vergleicht Schemata inhaltlich. Die Record-Gleichheit vergleicht
+    die Ersetzungsliste nur als Referenz.
+- **Ruhe und Bewegung:** Der Zustand zwischen „Halten beendet“ und „Strg tippen“ kann in einem
+  Fenster von Mikrosekunden noch ein Tippen verschlucken (Runde 5 hat den häufigeren Fall behoben).
+- Das Review lief, bis eine Runde keine Codeänderung mehr ergab.
 
 ## Offen für Menschen
 - Sichtprüfung mit echter GPU:
