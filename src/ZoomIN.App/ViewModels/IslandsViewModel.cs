@@ -72,7 +72,7 @@ public sealed partial class IslandsViewModel : ObservableObject
     }
 
     /// <summary>Starts the edit mode (or ends it if it runs).</summary>
-    public void Edit() => _controller.ToggleEdit();
+    public void Edit() => _controller.ToggleEdit("settings");
 
     /// <summary>
     /// Refreshes after every saved change (edit mode, shortcut, profile switch), through

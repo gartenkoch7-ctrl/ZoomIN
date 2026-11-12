@@ -58,6 +58,23 @@ public sealed class IslandEditCaptureEdgeTests
     }
 
     [Fact]
+    public void SwappedButtons_ThePhysicalRightButtonDrags()
+    {
+        var capture = new IslandEditCapture(_ => false, () => true);
+        var handler = new RecordingIslandHandler();
+        capture.Start(handler);
+
+        Assert.True(capture.OnMouse(IslandEditCapture.LeftDown, 1, 1, 0));
+        Assert.True(capture.OnMouse(IslandEditCapture.LeftUp, 1, 1, 0));
+        Assert.True(capture.OnMouse(IslandEditCapture.RightDown, 5, 5, 0));
+        Assert.True(capture.OnMouse(IslandEditCapture.RightUp, 9, 9, 0));
+
+        handler.WaitFor(2);
+        Assert.Equal(["press 5,5", "release 9,9"], handler.Calls);
+        capture.Stop();
+    }
+
+    [Fact]
     public void MoveAfterAPress_ReachesTheHandlerAfterIt()
     {
         var capture = new IslandEditCapture(_ => false);

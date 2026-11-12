@@ -1,5 +1,6 @@
 using Windows.Win32;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
+using Windows.Win32.UI.WindowsAndMessaging;
 using ZoomIN.Core.Islands;
 using ZoomIN.Core.Viewport;
 
@@ -46,16 +47,21 @@ public sealed class IslandEditCapture : IIslandEditInput
     private volatile bool _hooksInstalled;
     private volatile bool _escapePass;
     private volatile bool _deletePass;
+    private readonly Func<bool> _buttonsSwapped;
+    private volatile uint _primaryDown = LeftDown;
+    private volatile uint _primaryUp = LeftUp;
 
     public IslandEditCapture()
-        : this(KeyState.IsDown)
+        : this(KeyState.IsDown, () => PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_SWAPBUTTON) != 0)
     {
     }
 
     /// <param name="isDown">Physical key state by virtual-key code (tests replace it).</param>
-    internal IslandEditCapture(Func<int, bool> isDown)
+    /// <param name="buttonsSwapped">The user swapped the primary and secondary mouse button.</param>
+    internal IslandEditCapture(Func<int, bool> isDown, Func<bool>? buttonsSwapped = null)
     {
         _isDown = isDown;
+        _buttonsSwapped = buttonsSwapped ?? (() => false);
     }
 
     /// <summary>True while the edit mode takes the input.</summary>
@@ -73,6 +79,12 @@ public sealed class IslandEditCapture : IIslandEditInput
         // Esc or Del held at the start belongs to whoever got its press: its repeats and release too.
         _escapePass = _isDown(EscapeKey);
         _deletePass = _isDown(DeleteKey);
+
+        // Low-level hooks report the physical buttons: with swapped buttons (left-handed) the primary
+        // one, that drags, arrives as the right button.
+        var swapped = _buttonsSwapped();
+        _primaryDown = swapped ? RightDown : LeftDown;
+        _primaryUp = swapped ? RightUp : LeftUp;
         Interlocked.Exchange(ref _session, new IslandEditQueue(handler))?.Complete();
     }
 
@@ -111,7 +123,7 @@ public sealed class IslandEditCapture : IIslandEditInput
                 }
 
                 _heldButtons |= ButtonOf(message);
-                if (message == LeftDown)
+                if (message == _primaryDown)
                 {
                     session.Press(point);
                 }
@@ -125,7 +137,7 @@ public sealed class IslandEditCapture : IIslandEditInput
                 }
 
                 _heldButtons &= ~button;
-                if (message == LeftUp)
+                if (message == _primaryUp)
                 {
                     session?.Release(point);
                 }
@@ -150,10 +162,13 @@ public sealed class IslandEditCapture : IIslandEditInput
         if (virtualKey == EscapeKey ? _escapePass : _deletePass)
         {
             // Held when the edit mode started: its repeats and release go on; the press after it is ours.
-            if (up)
+            if (up && virtualKey == EscapeKey)
             {
-                _escapePass &= virtualKey != EscapeKey;
-                _deletePass &= virtualKey != DeleteKey;
+                _escapePass = false; // only this key's flag: Start may set the other one right now
+            }
+            else if (up)
+            {
+                _deletePass = false;
             }
 
             last = time;

@@ -56,13 +56,14 @@ public sealed class IslandController : IDisposable
     public bool IsEditing => Volatile.Read(ref _edit) is not null;
 
     /// <summary>Ctrl+Alt+Shift+I or the settings page: starts the edit mode, or ends it if it runs.</summary>
-    public void ToggleEdit()
+    /// <param name="endReason">Logged when this ends a running edit mode: <c>shortcut</c> or <c>settings</c>.</param>
+    public void ToggleEdit(string endReason = "shortcut")
     {
         lock (_lifecycle)
         {
             if (IsEditing)
             {
-                End("shortcut");
+                End(endReason);
             }
             else if (_takeover.Refused() is { } reason)
             {

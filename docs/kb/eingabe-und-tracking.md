@@ -340,7 +340,8 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
     Loslassen für die Anwendung. Esc und Entf prüft der Hook vor dem Esc der Übersicht (B2). Beim Ende
     noch wartende Eingaben werden verworfen, nicht mehr weitergegeben. Esc/Entf mit Strg, Alt, Umschalt
     oder Win (Task-Manager, Start, Umschalt+Entf) bleiben beim System, ebenso ein Esc/Entf, das beim
-    Start schon gedrückt war (samt Wiederholung und Loslassen). Eine Folge von Bewegungen wird
+    Start schon gedrückt war (samt Wiederholung und Loslassen). Mit vertauschten Maustasten (Linkshänder)
+    zieht die physisch rechte, also die primäre Taste. Eine Folge von Bewegungen wird
     nur bis zur nächsten anderen Eingabe zusammengefasst (Reihenfolge Drücken → Bewegen bleibt).
   - Strg+Mausrad zoomt weiter (eigener Hook, der vorher greift) – unsichtbar, denn die 1× gilt.
   - **Zeigerzaun:** Während eines Ziehens hält `IslandDragFence` (Filter `PointerFilterOrder.IslandEdit`
@@ -371,7 +372,8 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
     veröffentlichten sind); Profilwechsel vergeben neue Inselnummern (Standbilder, Zeilen der
     Einstellungsseite gehören zur Nummer).
   - Ecke ziehen: Die Ecke folgt dem Zeiger ab der Stelle, wo sie gegriffen wurde (kein Sprung um
-    die Griffreichweite), und hält am Monitorrand an; Gegenecke und Stufe bleiben.
+    die Griffreichweite), und hält am Monitorrand an; Gegenecke und Stufe bleiben (in ganzen
+    Quellpixeln; bei Stufen wie 2,5× kann die Gegenkante um einen halben Pixel springen).
   - Verlorenes Loslassen (Win+L mitten im Klick): Der nächste Druck derselben Maustaste gehört wieder
     der Anwendung; ein Esc/Entf-„Wiederholen“ nach mehr als 2,5 s gilt als neuer Druck.
   - Grenze: Klemmt der Zaun-Filter eine Bewegung am Monitorrand, versetzt er den Zeiger mit

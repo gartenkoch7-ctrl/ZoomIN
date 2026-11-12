@@ -78,6 +78,7 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
             // Island edit mode (B1): its clicks and wheel never reach applications.
             if (self.SwallowForIslandEdit(message, info))
             {
+                self._ctrlAlone = false; // Ctrl+click on an island is not "Ctrl alone" either
                 return (LRESULT)1;
             }
 

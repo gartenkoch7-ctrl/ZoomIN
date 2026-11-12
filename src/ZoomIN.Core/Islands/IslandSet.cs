@@ -63,19 +63,17 @@ public sealed class IslandSet
     public IslandSet FitTo(Func<string, PhysicalRect?> boundsOf)
     {
         ArgumentNullException.ThrowIfNull(boundsOf);
-        var items = (Island[])_items.Clone();
-        var changed = false;
-        for (var i = 0; i < items.Length; i++)
+        Island[]? items = null; // copied on the first island that moves: usually nothing does
+        for (var i = 0; i < _items.Length; i++)
         {
-            if (boundsOf(items[i].MonitorId) is { } monitor)
+            if (boundsOf(_items[i].MonitorId) is { } monitor && IslandRules.Fit(_items[i], monitor) is var fitted && fitted != _items[i])
             {
-                var fitted = IslandRules.Fit(items[i], monitor);
-                changed |= fitted != items[i];
+                items ??= (Island[])_items.Clone();
                 items[i] = fitted;
             }
         }
 
-        return changed ? new IslandSet(items, NextId) : this;
+        return items is null ? this : new IslandSet(items, NextId);
     }
 
     /// <summary>The same islands with ids from <paramref name="firstId"/> on (a profile's islands replace others).</summary>

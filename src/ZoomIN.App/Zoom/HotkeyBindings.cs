@@ -65,7 +65,7 @@ public sealed class HotkeyBindings(
         Add(s.WindowFilterHotkey, () => windowFilter.Toggle());
         Add(s.OverviewHotkey, () => overview.Press());
         Add(s.IslandsHotkey, islandVisibility.Toggle);
-        Add(s.IslandEditHotkey, islands.ToggleEdit);
+        Add(s.IslandEditHotkey, () => islands.ToggleEdit());
         Unavailable = unavailable;
     }
 
