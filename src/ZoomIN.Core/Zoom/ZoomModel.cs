@@ -23,6 +23,7 @@ public sealed class ZoomModel
     private double _animationSeconds;
     private int _mode;
     private bool _perMonitor;
+    private FreezeState _seenFrozen = FreezeState.Empty; // under _gate: tells which monitors thawed (G2)
 
     public ZoomModel(ZoomLevels levels, ZoomMode mode, bool perMonitor, double animationSeconds)
     {
@@ -222,8 +223,9 @@ public sealed class ZoomModel
                     Volatile.Write(ref _dockedMonitor, monitorAtMouse);
                 }
 
+                var keep = mode == Mode ? frozen : FreezeState.Empty; // a mode change: a thawed monitor starts at 1× (its level was for the old mode)
                 Volatile.Write(ref _mode, (int)mode);
-                Volatile.Write(ref _targets, FrozenTargets.Keep(frozen,
+                Volatile.Write(ref _targets, FrozenTargets.Keep(keep,
                     ZoomTargetRules.SwitchOn(mode, monitorAtMouse, monitors, id => _levels.Get(mode, id, _perMonitor)), Volatile.Read(ref _targets)));
             }
 
@@ -240,7 +242,10 @@ public sealed class ZoomModel
     {
         lock (_gate)
         {
-            Volatile.Write(ref _targets, ZoomTargetRules.AfterFreezeChange(Volatile.Read(ref _targets), Mode, DockedMonitor, Frozen.IsFrozen));
+            var now = Frozen.State;
+            var thawed = _seenFrozen.Monitors.Where(m => !now.Contains(m.Id)).Select(m => m.Id).ToList();
+            _seenFrozen = now;
+            Volatile.Write(ref _targets, ZoomTargetRules.AfterThaw(Volatile.Read(ref _targets), Mode, DockedMonitor, thawed));
         }
 
         Changed?.Invoke();

@@ -41,7 +41,6 @@ public sealed class ZoomEngine : IZoomOutput
         _log = log;
         _model.Changed += Wake;
         _model.Temporary.Changed += Wake;
-        _model.Frozen.Changed += Wake;
         _effects.Changed += Wake;
         _effects.Signaled += Wake;
         _models.Windows.RegionsChanged += Wake;
@@ -84,7 +83,6 @@ public sealed class ZoomEngine : IZoomOutput
         _watchdog.Dispose();
         _model.Changed -= Wake;
         _model.Temporary.Changed -= Wake;
-        _model.Frozen.Changed -= Wake;
         _effects.Changed -= Wake;
         _effects.Signaled -= Wake;
         _models.Windows.RegionsChanged -= Wake;

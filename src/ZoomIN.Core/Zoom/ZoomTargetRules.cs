@@ -50,14 +50,14 @@ internal static class ZoomTargetRules
             : monitors.ToDictionary(id => id, lastLevel);
 
     /// <summary>
-    /// Targets after a freeze changed (G2). A frozen monitor keeps its target through mode changes;
-    /// once it thaws in Docked mode, only the docked monitor may be zoomed (one strip, one reservation),
-    /// so a thawed other monitor goes back to 1×. Returns <paramref name="targets"/> if nothing changes.
+    /// Targets after monitors thawed (G2). In Docked mode only the docked monitor may be zoomed (one
+    /// strip, one reservation), so a thawed other monitor goes back to 1×; nothing else changes.
+    /// Returns <paramref name="targets"/> if nothing changes.
     /// </summary>
-    public static IReadOnlyDictionary<string, double> AfterFreezeChange(
-        IReadOnlyDictionary<string, double> targets, ZoomMode mode, string dockedMonitor, Func<string, bool> isFrozen) =>
-        mode == ZoomMode.Docked && targets.Keys.Any(id => id != dockedMonitor && !isFrozen(id))
-            ? targets.Where(t => t.Key == dockedMonitor || isFrozen(t.Key)).ToDictionary(t => t.Key, t => t.Value)
+    public static IReadOnlyDictionary<string, double> AfterThaw(
+        IReadOnlyDictionary<string, double> targets, ZoomMode mode, string dockedMonitor, IReadOnlyCollection<string> thawed) =>
+        mode == ZoomMode.Docked && thawed.Any(id => id != dockedMonitor && targets.ContainsKey(id))
+            ? targets.Where(t => t.Key == dockedMonitor || !thawed.Contains(t.Key)).ToDictionary(t => t.Key, t => t.Value)
             : targets;
 
     /// <summary>Target of one monitor; unknown monitors are off (1×). Per frame: 0 B.</summary>

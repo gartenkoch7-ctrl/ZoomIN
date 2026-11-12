@@ -71,12 +71,21 @@ public sealed class FreezeRulesTests
         model.Frozen.Freeze(right);
         Assert.Equal(1, changes);
 
-        model.Activate(ZoomMode.Docked, "L", all); // the strip goes to L; R keeps its frozen target
+        // A profile switch to Docked changes only the mode; the targets stay (R frozen, L zoomed).
+        model.SetMode(ZoomMode.Docked);
         Assert.True(model.TargetFor("R") > 1);
 
+        // Thawed in Docked mode, R is no docked strip: back to 1×; L is left as it was.
         model.Frozen.UnfreezeAll();
         Assert.Equal(1, model.TargetFor("R"));
         Assert.True(model.TargetFor("L") > 1);
+
+        // A mode command while a monitor is frozen: its level was for the old mode, it thaws at 1×.
+        model.Activate(ZoomMode.Fullscreen, "L", all);
+        model.Step(4, "R", all);
+        model.Frozen.Freeze(Frozen("R", s_right, false));
+        model.Activate(ZoomMode.Lens, "L", all);
+        Assert.Equal(1, model.TargetFor("R"));
     }
 
     [Fact]
