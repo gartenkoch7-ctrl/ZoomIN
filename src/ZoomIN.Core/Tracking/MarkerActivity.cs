@@ -79,19 +79,16 @@ public sealed class MarkerActivity : IHoldKeyHandler
         if (since > 0 && _time.GetElapsedTime(since) >= MarkerVisibility.MinHoldTime
             && _time.GetElapsedTime(seen) < MarkerVisibility.HoldTimeout)
         {
-            // Already used up: the coming release must not count again for a separate tap. If the
-            // release came meanwhile (key state timer: the hold no longer runs), its end is used up
-            // instead and cleared, so no Consumed is left behind for a later hold.
-            if (Volatile.Read(ref _holdSince) == 0)
+            // Already used up, in one atomic step like HoldKeyUp: a release after this step finds
+            // Consumed and records no end. An end of this very hold recorded meanwhile (key state
+            // timer; not older than the hold's start) is cleared instead, so no Consumed stays behind.
+            long endedBefore;
+            do
             {
-                Interlocked.Exchange(ref _holdEnded, 0);
+                endedBefore = Volatile.Read(ref _holdEnded);
             }
-            else
-            {
-                // A release after this point takes the Consumed marker in HoldKeyUp and records no end.
-                var endedBefore = Volatile.Read(ref _holdEnded);
-                Interlocked.CompareExchange(ref _holdEnded, Consumed, endedBefore);
-            }
+            while (Interlocked.CompareExchange(
+                ref _holdEnded, endedBefore > 0 && endedBefore >= since ? 0 : Consumed, endedBefore) != endedBefore);
 
             return true;
         }
@@ -126,8 +123,15 @@ public sealed class MarkerActivity : IHoldKeyHandler
         var now = _time.GetTimestamp();
         var since = Interlocked.Exchange(ref _holdSince, 0);
         var held = since > 0 && _time.GetElapsedTime(since, now) >= MarkerVisibility.MinHoldTime;
-        var consumed = Interlocked.Exchange(ref _holdEnded, 0) == Consumed;
-        Volatile.Write(ref _holdEnded, held && !consumed ? now : 0);
+
+        // One atomic step against ConsumeHoldEnd on the other hook's thread: an end already used up
+        // (Consumed) is not recorded again.
+        long ended;
+        do
+        {
+            ended = Volatile.Read(ref _holdEnded);
+        }
+        while (Interlocked.CompareExchange(ref _holdEnded, held && ended != Consumed ? now : 0, ended) != ended);
     }
 
     public void OtherKeyDown()

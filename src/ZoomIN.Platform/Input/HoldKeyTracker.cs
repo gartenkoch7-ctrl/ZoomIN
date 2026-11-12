@@ -1,0 +1,108 @@
+using System.Diagnostics.Metrics;
+using Windows.Win32.UI.Input.KeyboardAndMouse;
+using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Tracking;
+
+namespace ZoomIN.Platform.Input;
+
+/// <summary>
+/// What <see cref="Win32HoldKeyHook"/> knows about the hold key: pressed or not, from key events and
+/// from the real key state (E1). Split out of the hook for the file-size rule (M18). Not thread-safe:
+/// the hook calls it under its state lock only. No allocation per key.
+/// </summary>
+internal sealed class HoldKeyTracker
+{
+    private static readonly Counter<long> s_presses = Telemetry.Meter.CreateCounter<long>(
+        "zoomin.highlight.hold_key_presses", "{press}", "Hold key pressed for the highlights (no key content)");
+
+    private bool _down;
+    private bool _missedLogged;
+    private bool _suspect;
+    private MarkerHoldKey _downKey;
+
+    /// <summary>A new hook session. A key already held at the start is "down", not a missed press.</summary>
+    public void Start(MarkerHoldKey key, bool down)
+    {
+        _downKey = key;
+        _down = down;
+        _suspect = false;
+        _missedLogged = false;
+    }
+
+    /// <summary>The hook goes away: a key held now would otherwise count as held for ever.</summary>
+    public void Stop()
+    {
+        _down = false;
+        _suspect = false;
+    }
+
+    /// <summary>One key event from the hook.</summary>
+    public void OnKey(IHoldKeyHandler handler, VIRTUAL_KEY key, uint scanCode, bool down, bool up)
+    {
+        // A new hold key: the old one's release will not come, so its press no longer blocks counting.
+        var holdKey = handler.Key;
+        _suspect = false; // the hook is alive
+        if (holdKey != _downKey)
+        {
+            (_down, _downKey) = (false, holdKey);
+        }
+
+        switch (HoldKeyCodes.Classify(key, scanCode, down, up, holdKey))
+        {
+            case HoldKeyEvent.Down:
+                // Key repeat sends further "down" events while held; count the press once.
+                if (!_down)
+                {
+                    _down = true;
+                    s_presses.Add(1);
+                }
+
+                handler.HoldKeyDown();
+                break;
+            case HoldKeyEvent.Up:
+                _down = false;
+                handler.HoldKeyUp();
+                break;
+            case HoldKeyEvent.Other:
+                handler.OtherKeyDown();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// The real key state, every 400 ms: refreshes a running hold while the key is really down, ends it
+    /// otherwise. Returns true the first time a press was missed (to be logged outside the lock).
+    /// </summary>
+    public bool OnKeyState(IHoldKeyHandler handler, bool pressed)
+    {
+        var missed = false;
+        if (pressed && !_down)
+        {
+            // Down although the hook saw no press: Windows removed the hook (too slow under load).
+            // Only on the second check in a row – right after a release the key state may still say
+            // "down", since Windows updates it after the hooks returned.
+            if (!_suspect)
+            {
+                _suspect = true;
+                return false;
+            }
+
+            missed = !_missedLogged;
+            _missedLogged = true;
+            _down = true;
+        }
+
+        _suspect = false;
+        if (pressed)
+        {
+            handler.HoldKeyDown();
+        }
+        else if (_down)
+        {
+            _down = false;
+            handler.HoldKeyUp();
+        }
+
+        return missed;
+    }
+}

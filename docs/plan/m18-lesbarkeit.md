@@ -143,6 +143,14 @@ E2 und E1 laufen in **einer** Spur hintereinander, weil beide diese Dateien änd
   werden.
 - **Aufräumen:** `CustomSchemes.Hex` und `SecureSettingsSanitizer.Color` reichen nur an
   `RgbColor.NormalizedHex` weiter.
+- **Offene Einstellungsseite:** Sie zeigt nach einem Profilwechsel per Kürzel weiter die Werte von
+  vorher, auch in der Caret-Vorschau. Das gilt für alle Seiten seit M7. Geändert wird trotzdem nur
+  das jeweilige Feld.
+- **Lesepfade:** `MarkerInput` und die Kürzel-Seite lesen die Haltetaste über
+  `SettingsService.Current`, das alle Modelle abbildet. Das passiert auf UI-Rate, nicht im
+  Render-Loop.
+- **Fensterregeln:** `WindowRuleRow.IndexOf` prüft die Rückfall-Regel über die Listenreihenfolge
+  statt über `CustomSchemes.Resolve`. Der Code-Kommentar begründet das.
 - Das Review lief, bis eine Runde keine Codeänderung mehr ergab.
 
 ## Offen für Menschen
