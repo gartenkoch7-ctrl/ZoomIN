@@ -191,6 +191,11 @@ E2 und E1 laufen in **einer** Spur hintereinander, weil beide diese Dateien änd
 - **Unbekannte Werte:** Ein unbekannter Auto-Filter wird in `WindowFilterOptions.Normalized` zu
   „Intelligent invertieren“. `CustomSchemes.Resolve` macht daraus „Invertieren“. So entsteht er
   nur durch Handbearbeitung.
+- **Log-Kategorien:** `SchemePaletteWatch` und `EnhanceWatch` loggen mit dem Logger von `ZoomEngine`
+  (Kategorie `ZoomEngine`). Die EventIds 3200/3201 und 3220/3221 sind trotzdem eindeutig.
+- **Haltetaste als Zustandsmaschine:** Sie ist über die Review-Runden gewachsen. Vorschlag für
+  später: Der Tastenzustand wird die einzige Quelle für „gehalten“, Tastenereignisse ziehen nur den
+  Start vor oder machen das Halten ungültig.
 - **Farbumwandlung doppelt:** `CustomSchemesPage.BrushOf` wiederholt die Umwandlung aus `ColorChooser`.
 - Das Review lief, bis eine Runde keine Codeänderung mehr ergab.
 
