@@ -270,5 +270,6 @@ Spuren und Subagenten.
 - Fachbegriffe, Datei- und Branchnamen, Zahlen und Befehle **exakt** lassen – Kürze nie auf Kosten
   von Genauigkeit.
 - **Nicht** knapp: Code, Kommentare, Commit-Messages, Doku/KB/ADRs und Pläne folgen weiter
-  Abschnitt 5. Rückfragen und Warnungen (Datenverlust, Adminrechte, Merge) bleiben vollständige,
-  eindeutige Sätze.
+  Abschnitt 5. Warnungen (Datenverlust, Adminrechte, Merge) bleiben vollständige, eindeutige Sätze.
+- **Fragen nie im Caveman-Stil:** Jede Frage an den Nutzer (Rückfrage, Auswahl, Freigabe) samt
+  ihren Antwortoptionen und Erklärungen wird in ganzen, verständlichen Sätzen gestellt.
