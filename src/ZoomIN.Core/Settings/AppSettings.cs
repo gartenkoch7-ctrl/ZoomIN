@@ -246,4 +246,7 @@ public sealed record AppSettings
     public HotkeyGesture OverviewHotkey { get; set; } = HotkeyGesture.Overview;
 
     public HotkeyModifiers WheelModifiers { get; set; } = HotkeyModifiers.Control;
+
+    /// <summary>Mouse buffer and axis lock (A6, M19); global, not in the profile; both off from the factory.</summary>
+    public PointerConstraintOptions PointerConstraint { get; set; } = PointerConstraintOptions.Default;
 }

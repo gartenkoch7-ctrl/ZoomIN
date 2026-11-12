@@ -1,5 +1,6 @@
 using Microsoft.UI.Dispatching;
 using ZoomIN.App.Localization;
+using ZoomIN.App.Pointer;
 using ZoomIN.App.Settings;
 using ZoomIN.App.Updates;
 using ZoomIN.App.Views;
@@ -27,13 +28,16 @@ public sealed class AppShell : IShellActions
     private readonly ILocalizer _texts;
     private readonly PageServices _pages;
     private readonly DispatcherQueue _dispatcher;
+    private readonly PointerConstraintController _pointerConstraint;
     private SettingsWindow? _window;
 
     public AppShell(
         ZoomController controller, SettingsService settings, ITrayIcon tray, TrayMenuSync trayMenu,
-        StartupNotices notices, UpdateService updates, PageServices pages, ILocalizer texts)
+        StartupNotices notices, UpdateService updates, PageServices pages, ILocalizer texts,
+        PointerConstraintController pointerConstraint)
     {
         _controller = controller;
+        _pointerConstraint = pointerConstraint;
         _settings = settings;
         _tray = tray;
         _trayMenu = trayMenu;
@@ -55,6 +59,9 @@ public sealed class AppShell : IShellActions
         using (Telemetry.Source.StartActivity("zoomin.app.start.shell.engine"))
         {
             _controller.Initialize();
+
+            // Mouse buffer and axis lock (A6): tray app only, the secure desktop keeps the plain pointer.
+            _pointerConstraint.Start();
         }
 
         using (Telemetry.Source.StartActivity("zoomin.app.start.shell.tray"))
