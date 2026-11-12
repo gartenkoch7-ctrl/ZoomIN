@@ -62,6 +62,12 @@ public static class ProfileFields
         WindowDrag = profile.WindowDrag,
     };
 
+    /// <summary>
+    /// What a profile file holds: everything but the own colour schemes (M18). Their definitions are
+    /// shared and live in settings.json only, so profile files carry no stale copies.
+    /// </summary>
+    public static AppSettings ForProfileFile(AppSettings settings) => settings with { CustomSchemes = [] };
+
     /// <summary>Profile names are file names: letters, digits, space, dash and underscore only.</summary>
     public static bool IsValidName(string name) =>
         !string.IsNullOrWhiteSpace(name)

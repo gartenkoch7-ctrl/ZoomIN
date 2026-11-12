@@ -131,7 +131,7 @@ public sealed class WindowLayoutTests
                 Window(2, 1000, 0, 900, 1000, s_terminal, WindowBrightness.Dark),
             ],
             WindowFilterOptions.Default);
-        var effects = new DisplayEffects(new FilterSettings(true, ColorFilter.Inverted, 1, 0), Smoothing.Text, PointerStyle.Default);
+        var effects = new DisplayEffects(new FilterSettings(true, FilterId.Inverted, 1, 0), Smoothing.Text, PointerStyle.Default);
         var white = (1f, 1f, 1f);
 
         // The light window gets the inversion once (its own), not its own plus the monitor's.
@@ -146,8 +146,8 @@ public sealed class WindowLayoutTests
     {
         var regions = WindowLayout.Build([Window(1, 0, 0, 900, 1000, s_word, WindowBrightness.Light)], WindowFilterOptions.Default);
         var plain = DisplayEffects.Default;
-        var smartMonitor = new DisplayEffects(new FilterSettings(true, ColorFilter.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default);
-        var yellowMonitor = new DisplayEffects(new FilterSettings(true, ColorFilter.YellowOnBlack, 1, 0), Smoothing.Text, PointerStyle.Default);
+        var smartMonitor = new DisplayEffects(new FilterSettings(true, FilterId.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default);
+        var yellowMonitor = new DisplayEffects(new FilterSettings(true, FilterId.YellowOnBlack, 1, 0), Smoothing.Text, PointerStyle.Default);
 
         Assert.True(regions.ChangesMonitor(s_monitor, plain));
         Assert.False(regions.ChangesMonitor(new PhysicalRect(1920, 0, 1920, 1080), plain));

@@ -47,11 +47,40 @@ public sealed class EffectsModel
     public DisplayEffects CurrentFor(string monitorId) => Volatile.Read(ref _snapshot).For(monitorId);
 
     /// <summary>Strg+Alt+C: filter of the monitor on/off (the shared one if monitors share it).</summary>
-    public void ToggleFilter(string monitorId) => ChangeFilter(monitorId, f => f with { Enabled = !f.Enabled });
+    public void ToggleFilter(string monitorId) => ChangeFilter(monitorId, (_, f) => f with { Enabled = !f.Enabled });
 
-    /// <summary>Strg+Alt+Umschalt+C: next filter on the monitor, and switch it on.</summary>
-    public void NextFilter(string monitorId) => ChangeFilter(monitorId, f => new MonitorFilter(
-        true, ColorFilters.DisplayOrder[(ColorFilters.DisplayIndexOf(f.Filter) + 1) % ColorFilters.DisplayOrder.Count]));
+    /// <summary>Strg+Alt+Umschalt+C: next filter on the monitor, own schemes included, and switch it on.</summary>
+    public void NextFilter(string monitorId) => ChangeFilter(monitorId, (e, f) => new MonitorFilter(
+        true, e.Order[(ColorFilters.IndexIn(e.Order, f.Filter) + 1) % e.Order.Count]));
+
+    /// <summary>
+    /// Changes the own schemes (M18; shared by all profiles, cleaned up by <see cref="DisplayEffects.Schemes"/>)
+    /// from their current state in one step (add, edit), like <see cref="RemoveScheme"/>. Returning
+    /// the list unchanged (e.g. no free place) changes nothing: no new snapshot, no save, no upload.
+    /// </summary>
+    public void UpdateSchemes(Func<IReadOnlyList<CustomScheme>, IReadOnlyList<CustomScheme>> change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        Update(e => change(e.Schemes) is var next && ReferenceEquals(next, e.Schemes) ? e : e with { Schemes = next });
+    }
+
+    /// <summary>Switches the filter on with <paramref name="filter"/> where the monitor takes it from, like the shortcuts.</summary>
+    public void ShowFilter(string monitorId, FilterId filter) => ChangeFilter(monitorId, (_, _) => new MonitorFilter(true, filter));
+
+    /// <summary>
+    /// Deletes an own scheme in one step with everything that chose it falling back
+    /// (<see cref="SchemeRemoval"/>), so a shortcut at the same moment is not lost. Returns how many fell back.
+    /// </summary>
+    public int RemoveScheme(FilterId id)
+    {
+        var fallbacks = 0;
+        Update(e =>
+        {
+            fallbacks = 0;
+            return CustomSchemes.Find(e.Schemes, id) is null ? e : SchemeRemoval.Without(e, id, out fallbacks);
+        });
+        return fallbacks;
+    }
 
     public void SetSmoothing(Smoothing smoothing) => Update(e => e with { Smoothing = smoothing });
 
@@ -72,8 +101,11 @@ public sealed class EffectsModel
     /// <summary>Strg+Alt+K: crosshair on/off.</summary>
     public void ToggleCrosshair() => Update(e => e with { Cursor = e.Cursor with { CrosshairEnabled = !e.Cursor.CrosshairEnabled } });
 
-    /// <summary>Takes over everything at once, e.g. when switching profiles.</summary>
-    public void Replace(DisplayEffects effects) => Update(_ => Normalized(effects));
+    /// <summary>
+    /// Takes over everything at once, e.g. when switching profiles – except the own schemes: they
+    /// are shared by all profiles (M18), whatever copy <paramref name="effects"/> carries.
+    /// </summary>
+    public void Replace(DisplayEffects effects) => Update(e => Normalized(effects) with { Schemes = e.Schemes });
 
     /// <summary>Shows the pointer locator for a moment (hotkey, shake, …).</summary>
     public void Locate()
@@ -111,9 +143,9 @@ public sealed class EffectsModel
 
     // A monitor without an own entry starts from the shared filter and keeps the result as its
     // own entry, like zoom levels (decision: the shared filter stays unchanged).
-    private void ChangeFilter(string monitorId, Func<MonitorFilter, MonitorFilter> change) => Update(e =>
+    private void ChangeFilter(string monitorId, Func<DisplayEffects, MonitorFilter, MonitorFilter> change) => Update(e =>
     {
-        var next = change(e.FilterOf(monitorId));
+        var next = change(e, e.FilterOf(monitorId));
         return e.PerMonitorFilter
             ? WithOwn(e, monitorId, next)
             : e with { Filter = e.Filter with { Enabled = next.Enabled, Filter = next.Filter } };
@@ -128,7 +160,15 @@ public sealed class EffectsModel
         do
         {
             current = Volatile.Read(ref _snapshot);
-            next = EffectsSnapshot.Create(change(current.Shared));
+            var shared = change(current.Shared);
+
+            // A change that returns the same effects is no change: nothing to publish or save.
+            if (ReferenceEquals(shared, current.Shared))
+            {
+                return;
+            }
+
+            next = EffectsSnapshot.Create(shared);
         }
         while (Interlocked.CompareExchange(ref _snapshot, next, current) != current);
 

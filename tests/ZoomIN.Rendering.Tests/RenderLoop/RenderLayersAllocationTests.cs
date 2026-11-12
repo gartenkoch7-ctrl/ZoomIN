@@ -37,7 +37,7 @@ public sealed class RenderLayersAllocationTests
         using var timer = new GpuPassTimer(gpu.Device, @"\\.\DISPLAY1", "magnify");
         using var probe = new SmartCostProbe(gpu.Device);
         var layer = new DesktopLayer(pass, smart, timer, probe);
-        var effects = new DisplayEffects(new FilterSettings(true, ColorFilter.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default);
+        var effects = new DisplayEffects(new FilterSettings(true, FilterId.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default);
         var windows = new WindowRegions([new PhysicalRect(0, 0, 32, 32)], [WindowPalette.Smart]);
         var frame = lens
             ? ModeGeometry.Compute(ZoomMode.Lens, s_monitor, new PhysicalPoint(20, 20), 2, LensSize.Default, DockLayout.Default)

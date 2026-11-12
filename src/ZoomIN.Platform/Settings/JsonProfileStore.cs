@@ -38,7 +38,8 @@ public sealed class JsonProfileStore : IProfileStore
 
         Directory.CreateDirectory(_directory);
         var temp = PathOf(name) + ".tmp";
-        File.WriteAllText(temp, JsonSerializer.Serialize(settings, SettingsJsonContext.Default.AppSettings));
+        // Every profile file, imports included, leaves out the shared own schemes (M18).
+        File.WriteAllText(temp, JsonSerializer.Serialize(ProfileFields.ForProfileFile(settings), SettingsJsonContext.Default.AppSettings));
         File.Move(temp, PathOf(name), overwrite: true);
     }
 

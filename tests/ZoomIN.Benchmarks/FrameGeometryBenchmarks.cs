@@ -20,7 +20,7 @@ public class FrameGeometryBenchmarks
     private readonly WindowRegions _windows = new(
         Enumerable.Range(0, WindowRegions.Max).Select(i => new PhysicalRect(i * 20, i * 10, 600, 400)).ToArray(),
         Enumerable.Range(0, WindowRegions.Max)
-            .Select(i => i == WindowRegions.Max - 1 ? WindowPalette.Smart : WindowPalette.For(ColorFilter.Inverted))
+            .Select(i => i == WindowRegions.Max - 1 ? WindowPalette.Smart : WindowPalette.For(FilterId.Inverted))
             .ToArray());
 
     private int _frame;

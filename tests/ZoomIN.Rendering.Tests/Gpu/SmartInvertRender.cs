@@ -16,7 +16,7 @@ internal static class SmartInvertRender
     public static readonly Bgra Bar = new(32, 32, 32, 255);
     public static readonly PhysicalRect Screen = new(0, 0, Size, Size);
     public static readonly DisplayEffects SmartMonitor =
-        new(new FilterSettings(true, ColorFilter.InvertedSmart, 1, 0), Smoothing.Pixel, PointerStyle.Default);
+        new(new FilterSettings(true, FilterId.InvertedSmart, 1, 0), Smoothing.Pixel, PointerStyle.Default);
 
     public static int Luma(Bgra c) => (int)((0.2126 * c.R) + (0.7152 * c.G) + (0.0722 * c.B));
 

@@ -43,8 +43,8 @@ public sealed class WindowFilterModelTests
     [InlineData(false, true, WindowFilterChoice.None)]
     public void Toggle_TurnsWhatLooksFilteredOff_AndTheRestOn(bool ownFilter, bool monitorFiltered, WindowFilterChoice expected)
     {
-        var palette = ownFilter ? WindowPalette.For(ColorFilter.Inverted) : WindowPalette.Monitor;
-        var options = WindowFilterOptions.Default with { AutoFilter = ColorFilter.BlackOnYellow };
+        var palette = ownFilter ? WindowPalette.For(FilterId.Inverted) : WindowPalette.Monitor;
+        var options = WindowFilterOptions.Default with { AutoFilter = FilterId.BlackOnYellow };
 
         var rule = WindowFilterToggle.Next(s_word, palette, monitorFiltered, options);
 
@@ -52,7 +52,7 @@ public sealed class WindowFilterModelTests
         Assert.Equal(s_word, rule.Kind);
         if (expected == WindowFilterChoice.Filter)
         {
-            Assert.Equal(ColorFilter.BlackOnYellow, rule.Filter);
+            Assert.Equal(FilterId.BlackOnYellow, rule.Filter);
         }
     }
 
@@ -65,5 +65,5 @@ public sealed class WindowFilterModelTests
     }
 
     private static WindowRegions Regions(double width) =>
-        new([new PhysicalRect(0, 0, width, 100)], [WindowPalette.For(ColorFilter.Inverted)]);
+        new([new PhysicalRect(0, 0, width, 100)], [WindowPalette.For(FilterId.Inverted)]);
 }

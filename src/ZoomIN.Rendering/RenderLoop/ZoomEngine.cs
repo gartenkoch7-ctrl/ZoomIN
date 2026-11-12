@@ -5,6 +5,7 @@ using ZoomIN.Core.Filters;
 using ZoomIN.Core.Overview;
 using ZoomIN.Core.Zoom;
 using ZoomIN.Rendering.Capture;
+using ZoomIN.Rendering.Schemes;
 
 namespace ZoomIN.Rendering.RenderLoop;
 
@@ -26,6 +27,7 @@ public sealed class ZoomEngine : IZoomOutput
     private readonly EffectsModel _effects;
     private readonly PointerServices _pointer;
     private readonly ILogger<ZoomEngine> _log;
+    private readonly SchemePaletteWatch _schemes;
     private readonly Lock _gate = new();
     private MonitorRenderer[] _renderers = [];
     private int _rebuildPending;
@@ -39,6 +41,7 @@ public sealed class ZoomEngine : IZoomOutput
         _effects = models.Effects;
         _pointer = pointerServices;
         _log = log;
+        _schemes = new SchemePaletteWatch(_effects, log);
         _model.Changed += Wake;
         _model.Temporary.Changed += Wake;
         _effects.Changed += Wake;
@@ -81,6 +84,7 @@ public sealed class ZoomEngine : IZoomOutput
     public void Dispose()
     {
         _watchdog.Dispose();
+        _schemes.Dispose();
         _model.Changed -= Wake;
         _model.Temporary.Changed -= Wake;
         _effects.Changed -= Wake;

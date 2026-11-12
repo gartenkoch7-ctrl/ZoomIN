@@ -22,7 +22,7 @@ public sealed class ProfileFieldsTests
         {
             Language = AppLanguage.German,
             LastMode = ZoomMode.Lens,
-            ColorFilter = ColorFilter.YellowOnBlack,
+            ColorFilter = FilterId.YellowOnBlack,
             FilterEnabled = true,
             PanMilliseconds = 0,
         };
@@ -30,7 +30,7 @@ public sealed class ProfileFieldsTests
         var result = ProfileFields.ApplyDisplay(current, profile);
 
         Assert.Equal(ZoomMode.Lens, result.LastMode);
-        Assert.Equal(ColorFilter.YellowOnBlack, result.ColorFilter);
+        Assert.Equal(FilterId.YellowOnBlack, result.ColorFilter);
         Assert.True(result.FilterEnabled);
         Assert.Equal(0, result.PanMilliseconds);
         Assert.Equal(AppLanguage.English, result.Language);

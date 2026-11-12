@@ -4,6 +4,7 @@ using ZoomIN.App.AgentDebug;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.App.SecureDesktop;
 using ZoomIN.App.Localization;
+using ZoomIN.App.Schemes;
 using ZoomIN.App.Updates;
 using ZoomIN.App.Views;
 using ZoomIN.Core.AgentDebug;
@@ -67,6 +68,8 @@ internal static class ServiceRegistration
         services.AddSingleton<AppShell>();
         services.AddSingleton<IShellActions>(sp => sp.GetRequiredService<AppShell>());
         services.AddSingleton<PageServices>();
+        services.AddSingleton<CustomSchemeService>();
+        services.AddSingleton<FilterNames>();
 
         // KI-Debug (ADR-0027): tray app only, never on secure desktops.
         services.AddSingleton<IAgentDebugServer, PipeAgentServer>();

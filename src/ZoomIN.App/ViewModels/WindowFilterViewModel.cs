@@ -15,20 +15,26 @@ public sealed partial class WindowFilterViewModel : ObservableObject
 {
     private readonly WindowFilterModel _windows;
     private readonly WindowFilterCommands _commands;
-    private readonly IReadOnlyList<string> _choices = WindowRuleRow.AllChoices();
+    private readonly IReadOnlyList<string> _choices;
     private readonly IReadOnlyList<string> _titleBarChoices = WindowRuleRow.AllTitleBarChoices();
+
+    // Built-in filters and own schemes (M18) as they were when the page opened.
+    private readonly IReadOnlyList<FilterId> _order;
     private List<WindowKind> _addable = [];
     private bool _loading = true;
 
-    public WindowFilterViewModel(WindowFilterModel windows, WindowFilterCommands commands)
+    public WindowFilterViewModel(WindowFilterModel windows, WindowFilterCommands commands, EffectsModel effects, FilterNames names)
     {
         _windows = windows;
         _commands = commands;
         var options = Model.Options;
-        FilterNames = ColorFilters.DisplayOrder.Select(f => Text.Get("Filter." + f)).ToList();
+        var current = effects.Current;
+        _order = current.Order;
+        FilterNames = names.Of(_order, current.Schemes);
+        _choices = WindowRuleRow.AllChoices(FilterNames);
         SensitivityNames = [Text.Get("WinFilter.Low"), Text.Get("WinFilter.Medium"), Text.Get("WinFilter.High"), Text.Get("WinFilter.Custom")];
         Enabled = options.Enabled;
-        AutoFilterIndex = ColorFilters.DisplayIndexOf(options.AutoFilter);
+        AutoFilterIndex = ColorFilters.IndexIn(_order, CustomSchemes.Resolve(options.AutoFilter, current.Schemes));
         SensitivityIndex = (int)options.Sensitivity;
         Percent = options.CustomPercent;
         LoadRules();
@@ -105,7 +111,7 @@ public sealed partial class WindowFilterViewModel : ObservableObject
     {
         if (value >= 0)
         {
-            Change(o => o with { AutoFilter = ColorFilters.DisplayOrder[value] });
+            Change(o => o with { AutoFilter = _order[value] });
         }
     }
 
@@ -128,7 +134,7 @@ public sealed partial class WindowFilterViewModel : ObservableObject
     {
         if (!_loading)
         {
-            Model.SetOptions(change(Model.Options));
+            Model.UpdateOptions(change);
         }
     }
 
@@ -144,7 +150,7 @@ public sealed partial class WindowFilterViewModel : ObservableObject
         Rules.Clear();
         foreach (var rule in Model.Options.Rules)
         {
-            Rules.Add(new WindowRuleRow(rule, _choices, _titleBarChoices, OnRuleChanged));
+            Rules.Add(new WindowRuleRow(rule, _order, _choices, _titleBarChoices, OnRuleChanged));
         }
 
         HasRules = Rules.Count > 0;

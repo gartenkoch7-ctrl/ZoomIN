@@ -76,6 +76,12 @@ public sealed record AppSettings
     /// <summary>Filter per window (ADR-0020): on/off, automatic filter, sensitivity and the user's rules per app + window class.</summary>
     public WindowFilterOptions WindowFilter { get; set; } = WindowFilterOptions.Default;
 
+    /// <summary>
+    /// Own colour schemes (M18, C1–C3), at most 4; the definitions are shared by all profiles, the
+    /// choice (<see cref="ColorFilter"/>, rules) belongs to the profile. None from the factory.
+    /// </summary>
+    public IReadOnlyList<CustomScheme> CustomSchemes { get; set; } = [];
+
     // --- Display (stored per profile, see ProfileFields) ---
 
     /// <summary>
@@ -116,7 +122,7 @@ public sealed record AppSettings
 
     public bool FilterEnabled { get; set; }
 
-    public ColorFilter ColorFilter { get; set; } = FilterSettings.Default.Filter;
+    public FilterId ColorFilter { get; set; } = FilterSettings.Default.Filter;
 
     /// <summary>Each monitor may keep its own filter on/off and kind (decision: default on, like the zoom level).</summary>
     public bool PerMonitorFilter { get; set; } = true;
