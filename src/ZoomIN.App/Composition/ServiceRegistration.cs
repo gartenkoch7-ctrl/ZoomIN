@@ -5,6 +5,7 @@ using ZoomIN.App.Lifecycle;
 using ZoomIN.App.SecureDesktop;
 using ZoomIN.App.Localization;
 using ZoomIN.App.Schemes;
+using ZoomIN.App.Pointer;
 using ZoomIN.App.Updates;
 using ZoomIN.App.Views;
 using ZoomIN.Core.AgentDebug;
@@ -12,11 +13,13 @@ using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Folders;
 using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.Localization;
+using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.AgentDebug;
 using ZoomIN.Platform.Diagnostics;
 using ZoomIN.Platform.Lifecycle;
+using ZoomIN.Platform.PointerConstraint;
 using ZoomIN.Platform.SecureDesktop;
 using ZoomIN.Platform.Settings;
 using ZoomIN.Platform.Shell;
@@ -64,6 +67,10 @@ internal static class ServiceRegistration
         services.AddSingleton<ISecureDesktopSwitch, SecureDesktopSwitch>();
         services.AddSingleton<IWatchdogLauncher, ShellWatchdogLauncher>();
         services.AddSingleton<TrayMenuSync>();
+
+        // Mouse buffer and axis lock (A6): tray app only; the fence itself is part of the engine.
+        services.AddSingleton<IHoldKeyWatch, Win32HoldKeyWatch>();
+        services.AddSingleton<PointerConstraintController>();
         services.AddSingleton<StartupNotices>();
         services.AddSingleton<AppShell>();
         services.AddSingleton<IShellActions>(sp => sp.GetRequiredService<AppShell>());

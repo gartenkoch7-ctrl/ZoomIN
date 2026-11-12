@@ -22,6 +22,9 @@ internal sealed class DesktopDuplicator : IDisposable
     private IDXGIOutputDuplication? _duplication;
     private int _quickReturns;
 
+    // The copy shows the desktop as it is now: a frame was copied since the duplication was (re)made.
+    private bool _current;
+
     public DesktopDuplicator(GpuDevice gpu, MonitorOutput monitor)
     {
         _gpu = gpu;
@@ -50,6 +53,12 @@ internal sealed class DesktopDuplicator : IDisposable
     public bool HasImage { get; private set; }
 
     /// <summary>
+    /// The copy is up to date: copied since the duplication was (re)created, so frames without news
+    /// mean nothing changed. False after ACCESS_LOST (Win+L, UAC) until the next copy (still image, G2).
+    /// </summary>
+    public bool IsCurrent => _current;
+
+    /// <summary>
     /// Pulls a new frame if one is available, without blocking. Recreates the duplication after
     /// ACCESS_LOST (mode change, lock screen, UAC prompt).
     /// </summary>
@@ -72,6 +81,7 @@ internal sealed class DesktopDuplicator : IDisposable
         {
             _duplication.Dispose();
             _duplication = null;
+            _current = false;
             return false;
         }
 
@@ -87,6 +97,7 @@ internal sealed class DesktopDuplicator : IDisposable
                 Marshal.Release(texture);
                 HasImage = true;
                 copied = true;
+                _current = true;
             }
         }
         finally
@@ -138,6 +149,7 @@ internal sealed class DesktopDuplicator : IDisposable
             }
 
             _duplication = _monitor.Output.DuplicateOutput(_gpu.Device);
+            _current = false;
             return true;
         }
         catch (SharpGen.Runtime.SharpGenException)

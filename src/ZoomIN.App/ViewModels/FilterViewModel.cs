@@ -102,8 +102,8 @@ public sealed partial class FilterViewModel : ObservableObject
     // "\\.\DISPLAY2" → "Monitor 2", the number Windows shows under Settings › Display.
     private static string MonitorName(string id)
     {
-        var digits = new string([.. id.Reverse().TakeWhile(char.IsDigit).Reverse()]);
-        return digits.Length > 0 ? Text.Format("FilterMonitor.Name", digits) : id;
+        var number = Core.Monitors.MonitorNames.Number(id);
+        return number > 0 ? Text.Format("FilterMonitor.Name", number) : id;
     }
 
     private void Reload()

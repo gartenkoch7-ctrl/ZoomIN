@@ -40,6 +40,11 @@ public readonly record struct HotkeyGesture(HotkeyModifiers Modifiers, int Virtu
 
     /// <summary>Islands (M19 B1): start the edit mode (drag out, move, resize, wheel, Del, Esc).</summary>
     public static HotkeyGesture EditIslands { get; } = new(CtrlAltShift, 0x49); // Shift+I
+    /// <summary>Freezes the monitor under the pointer, or unfreezes all if one is frozen (G2, M19).</summary>
+    public static HotkeyGesture FreezeMonitor { get; } = new(CtrlAlt, 0x48); // H
+
+    /// <summary>Moves the pointer to the next free monitor along the layout (G2, M19).</summary>
+    public static HotkeyGesture NextMonitor { get; } = new(CtrlAlt, 0x4E); // N
 
     /// <summary>Ends ZoomIN on the secure desktop only (ADR-0016); Shift+Z, because Q types @ with AltGr.</summary>
     public static HotkeyGesture ExitSecureDesktop { get; } = new(CtrlAltShift, 0x5A); // Shift+Z

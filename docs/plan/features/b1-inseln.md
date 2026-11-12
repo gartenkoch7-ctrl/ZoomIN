@@ -148,6 +148,11 @@ Details: [rendering-pipeline.md](../../kb/rendering-pipeline.md#inseln-m19-b1) u
 - **Telemetrie:** App 1740–1748; Rendering 3320–3339 bleibt frei (kein Log im Render-Loop,
   Standbilder melden 3300/3301). GPU-Zeit im Betrieb als `zoomin.render.gpu_time` (`islands`).
 - **GPU** (RTX 3060 Ti, 1080p, 4×, 4 Inseln 600 × 160): +0,008–0,018 ms, ×10 ≈ 0,2 ms.
+- **Zusammenspiel nach dem Merge von M18/A6/G2** (selbst entschieden): Ein eingefrorener Monitor
+  zeigt keine Inseln, auch nicht beim Bearbeiten; er bleibt beim Bearbeiten eingefroren (Stufe,
+  Zaun). Einfrieren während des Bearbeitens lehnt G2 ab (`island_edit`). Filterkette 100 → 200 → 300,
+  danach die gesperrten Bereiche (`IslandEditFilterChainTests`). Eigene Farbschemata und Schärfe/Fett
+  wirken auf Live- und Standbild-Inseln wie im Hauptbild (WARP-Tests).
 - **Offen für den Menschen:** Sichtprüfung (Blinken, Griffe, gestricheltes Rechteck, Uhr läuft),
   Freigabetest Teams/OBS, Bildrate bei 4 Inseln am echten Monitor, Ansagen mit NVDA/Sprachausgabe.
 

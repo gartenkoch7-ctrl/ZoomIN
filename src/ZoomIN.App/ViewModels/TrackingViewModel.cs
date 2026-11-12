@@ -15,7 +15,6 @@ public sealed partial class TrackingViewModel : ObservableObject
     private readonly ILogger _log;
     private readonly ILocalizer _texts;
     private readonly bool _ready;
-    private CaretMarkerStyle _style;
     private bool _restoring;
 
     public TrackingViewModel(TrackingModel tracking, ILocalizer texts, ILogger<TrackingViewModel> log)
@@ -24,7 +23,6 @@ public sealed partial class TrackingViewModel : ObservableObject
         _texts = texts;
         _log = log;
         var o = tracking.Options;
-        _style = o.CaretStyle;
         TrackingEnabled = o.Enabled;
         Focus = o.Focus;
         Caret = o.Caret;
@@ -45,11 +43,11 @@ public sealed partial class TrackingViewModel : ObservableObject
     /// <summary>Raised after the caret marker look changed; the page redraws its preview.</summary>
     public event Action? CaretStyleChanged;
 
-    /// <summary>The caret marker look as chosen on the page.</summary>
-    public CaretMarkerStyle CaretStyle => _style;
+    /// <summary>The caret marker look as the model holds it; the page refreshes its preview only on its own changes.</summary>
+    public CaretMarkerStyle CaretStyle => _tracking.Options.CaretStyle;
 
     /// <summary>What the preview shows, in words, for screen readers.</summary>
-    public string CaretDescription => Describe(_style);
+    public string CaretDescription => Describe(CaretStyle);
 
     [ObservableProperty]
     public partial bool TrackingEnabled { get; set; }
@@ -185,7 +183,7 @@ public sealed partial class TrackingViewModel : ObservableObject
     {
         if (_ready)
         {
-            _tracking.SetOptions(change(_tracking.Options));
+            _tracking.UpdateOptions(change);
         }
     }
 
@@ -196,15 +194,15 @@ public sealed partial class TrackingViewModel : ObservableObject
             return;
         }
 
-        var before = _style;
+        var before = _tracking.Options.CaretStyle;
         ApplyOnly(o => o with { CaretStyle = change(o.CaretStyle) });
-        _style = _tracking.Options.CaretStyle;
-        if (before.Shape != _style.Shape || before.Thickness != _style.Thickness)
+        var after = _tracking.Options.CaretStyle;
+        if (before.Shape != after.Shape || before.Thickness != after.Thickness)
         {
-            _log.CaretStyleChanged(_style.Shape, _style.Thickness);
+            _log.CaretStyleChanged(after.Shape, after.Thickness);
         }
 
-        if (before != _style)
+        if (before != after)
         {
             OnPropertyChanged(nameof(CaretDescription));
             CaretStyleChanged?.Invoke();

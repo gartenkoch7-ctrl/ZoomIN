@@ -24,12 +24,16 @@ public sealed partial class ZoomPage : Page
     /// <summary>Islands (M19 B1).</summary>
     public IslandsViewModel? Islands { get; private set; }
 
+    /// <summary>Frozen monitors (G2).</summary>
+    public FreezeViewModel? Freeze { get; private set; }
+
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         var services = (PageServices)e.Parameter;
         Vm = services.Create<ZoomViewModel>();
         Drag = services.Create<WindowDragViewModel>();
         Islands = services.Create<IslandsViewModel>();
+        Freeze = services.Create<FreezeViewModel>();
         Bindings.Update();
 
         // The edit mode, the shortcuts and profile switches change the islands on other threads.

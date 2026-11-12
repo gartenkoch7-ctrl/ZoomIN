@@ -39,7 +39,7 @@ internal sealed class IslandRig : IDisposable
 
     public FakeIslandInput Input { get; } = new();
 
-    public FakeFence Fence { get; } = new();
+    public IslandFakeFence Fence { get; } = new();
 
     public RecordingAnnouncer Announcer { get; } = new();
 

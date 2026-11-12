@@ -270,6 +270,14 @@ Plan: [b1-inseln.md](../plan/features/b1-inseln.md). Code: `Core/Islands/`, `Ren
   Angedockt zeigen keine Inseln (Vorschlag des Plans übernommen). Übersicht und Fenster-Verschieben
   (vorübergehend 1×) blenden sie damit aus. Im Bearbeitungsmodus zeichnen **alle** Monitore, auch
   bei 1×; dann ist `FrameRequest.OverlayOnly` falsch, damit die Desktop-Kopie läuft.
+- **Eingefrorener Monitor (G2):** zeigt **keine** Inseln, auch nicht im Bearbeitungsmodus
+  (`OverlayDemand.Islands` fragt `Frozen.IsFrozen`). Eingefroren heißt „Ansicht bleibt wie sie war“;
+  eine Live-Insel über dem Standbild widerspräche dem, und der Zeiger kann den Monitor ohnehin nicht
+  erreichen, um dort zu bearbeiten. Die Inseln bleiben gespeichert, ihre Standbilder auch
+  (`KnownIslands` unverändert); nach dem Auftauen erscheinen sie wieder. Die vorübergehende 1× des
+  Bearbeitens übergeht ein eingefrorener Monitor (er behält Stufe, Modus und Zaun); taut er während
+  des Bearbeitens auf, zeigt er 1× und macht beim Bearbeiten mit. Einfrieren während des Bearbeitens
+  lehnt G2 ab (`island_edit`, Hinweis „Erst das Bearbeiten der Inseln beenden …“).
 - **Reihenfolge im Frame:** Desktop → Hervorhebungen (Fokus, Caret) → **Inseln** → Übersichtsrahmen
   → Zeiger. Der Zeiger liegt also immer oben. Alles im vorhandenen Overlay-Fenster
   (`WDA_EXCLUDEFROMCAPTURE`), kein neues Fenster.
@@ -390,6 +398,42 @@ Plan: [d1-schaerfen-fetter.md](../plan/features/d1-schaerfen-fetter.md). Code: `
   nur mit Zuhörer, auf genau der gezeichneten Ansicht (bei Lupe nur deren Fläche).
 - Der Debug-Schnappschuss (`-info.txt`) nennt Glättung, Schärfe, Fett und ob sie bei diesem Zoom wirken.
 
+
+## Eingefrorener Monitor (M19 G2)
+- `ZoomModel.Frozen` (`MonitorFreeze`) hält einen unveränderlichen `FreezeState`; der Render-Thread
+  liest je Frame `Frozen.For(monitor)` lock-frei, `0 B` (Benchmark `FreezeBenchmarks`).
+- `MonitorRenderer`: eingefroren → Zielstufe ist die Stufe des Augenblicks (`FrozenMonitor.Level`),
+  Modus, Lupe und Dock ebenso; vorübergehende Stufen und die Übersicht wirken nicht. Der Renderer
+  schläft nicht, auch bei 1× nicht (Rahmen).
+- `RenderSession`: der Anker wird nicht weitergeschoben (`AnchorController.Next` läuft nicht), es
+  gilt der Anker des letzten Live-Frames. Er wird im `FrozenMonitor` abgelegt (einmal, atomar), so
+  zeigt eine nach einem Anzeigewechsel neu gebaute Pipeline denselben Ausschnitt; nach dem Aufheben
+  beginnt ihr `AnchorController` dort (`StartAt`) statt in der Monitormitte. Zeiger,
+  Fokusrahmen und Caret werden dort nicht gezeichnet (`_cursorInside` ist falsch).
+- `Rendering/Freeze/FrozenLayer`: Standbild über den Baustein `StillFrame` – beim ersten Frame des
+  Einfrierens aus `DesktopDuplicator.Texture`, danach liest die Sitzung **keinen** Capture-Frame
+  mehr (`HoldsStill`). Ein neues Einfrieren (neues Objekt) nimmt ein neues Bild, Aufheben gibt die
+  Textur frei. Bei Standbild wird auch bei 1× der Desktop gezeichnet (`FrameRequest.OverlayOnly`),
+  sonst schiene der Live-Desktop durch. Fehlt das Bild, bleibt der Monitor live (Log 3312).
+  Das Standbild lebt im Gerät der Pipeline: Ein Anzeigewechsel hebt Standbild-Einfrieren deshalb
+  auf (Controller). Nach einem Neustart der Pipeline wegen eines Fehlers (ohne Anzeigewechsel) nimmt
+  die neue Sitzung kein neues Bild (`FrozenMonitor.ClaimStill`: nur einmal je Einfrieren), sondern
+  zeigt live (Log 3312) – ein späteres Bild als Standbild auszugeben wäre irreführender.
+  `RenderSession.Hide` gibt ein Standbild sofort frei (ein aufgetauter Monitor bei 1× schläft).
+  Genommen wird es nur aus einer aktuellen Desktop-Kopie (`DesktopDuplicator.IsCurrent`): nach
+  `ACCESS_LOST` (Win+L, UAC) wartet es auf den nächsten Frame, statt ein altes Bild festzuhalten.
+  Steht der Zeiger doch auf einem eingefrorenen Monitor, zeigt Windows seinen eigenen Zeiger
+  (`FrozenLayer.NeedsSystemPointer`, auch einmal direkt nach dem Sprung). In Lupe und Angedockt
+  friert das Standbild nur den vergrößerten Ausschnitt ein; daneben bleibt der Desktop sichtbar
+  wie immer (gewollt: dort ist ZoomIN durchsichtig). Ein eingefrorener Monitor bei 1× „Live“ läuft im
+  Leerlauf-Takt (eine Prüfung je Bildwechsel), damit der Rahmen stehen bleibt.
+  Mit dem Standbild bleiben auch die Fensterbereiche des Filters pro Fenster stehen, sonst lägen die
+  Filter auf Fenstern, die im Bild gar nicht mehr dort sind.
+- **Rahmen:** 6 px innen am Monitorrand in der Einstellungsfarbe (Werk: Cyan), gezeichnet mit dem
+  Rechteck-Shader des `CursorPass` wie der Fokusrahmen – nicht im `Magnify.hlsl`, denn dessen
+  Rahmen umgibt nur Lupe/Streifen, und `DesktopLayer`/`Magnify.hlsl` gehören Spur B1.
+  `WDA_EXCLUDEFROMCAPTURE` gilt unverändert fürs Overlay.
+- WARP-Tests `FrozenLayerTests`: Anker bleibt, Live-Inhalt ändert sich, Standbild nicht; `0 B`.
 
 ## Shader-Regeln
 - HLSL-Dateien in `ZoomIN.Rendering/Shaders/`. Seit M14 Schritt 4 übersetzt sie der Build mit

@@ -1,10 +1,8 @@
-using System.Diagnostics.Metrics;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
 using Windows.Win32.UI.WindowsAndMessaging;
 using Microsoft.Extensions.Logging;
-using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Tracking;
 
 namespace ZoomIN.Platform.Input;
@@ -13,12 +11,10 @@ namespace ZoomIN.Platform.Input;
 /// Low-level keyboard hook for the hold key of the highlights (E1), on its own thread and only
 /// while some highlight uses it. Separate from <see cref="Win32InputActivityHook"/> so either can
 /// change on its own. Only observes: every key is passed on unchanged; no allocation per key.
+/// What the key events mean is decided by <see cref="HoldKeyTracker"/>.
 /// </summary>
 public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
 {
-    private static readonly Counter<long> s_presses = Telemetry.Meter.CreateCounter<long>(
-        "zoomin.highlight.hold_key_presses", "{press}", "Hold key pressed for the highlights (no key content)");
-
     // The real key state is checked this often while the hook runs: key repeat alone is not enough
     // (repeat off for accessibility, a second modifier takes the repeat over), a release can be
     // missed (Win+L, elevated windows) and Windows may drop a slow hook. Well below
@@ -33,13 +29,14 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
     private readonly TimeProvider _time;
     private readonly Lock _gate = new();
     private readonly Lock _state = new();
+    private readonly HoldKeyTracker _tracker = new();
     private LowLevelHookThread? _hook;
     private IHoldKeyHandler? _handler;
     private ITimer? _keyState;
-    private bool _down;
-    private bool _missedLogged;
-    private bool _suspect;
-    private MarkerHoldKey _downKey;
+
+    // Disposing a timer does not wait for a callback already queued: each start is a new session, and
+    // a check of an earlier one does nothing.
+    private int _session;
 
     public Win32HoldKeyHook(ILogger<Win32HoldKeyHook> log, TimeProvider? time = null)
     {
@@ -56,9 +53,16 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
                 return true;
             }
 
-            _handler = handler;
-            _down = false;
-            _missedLogged = false;
+            // Under the state lock, so a timer callback of an earlier session cannot run in between. A
+            // key already held at the start is "down" (not a missed press); the key state check then
+            // starts the hold.
+            lock (_state)
+            {
+                _handler = handler;
+                _session++;
+                _tracker.Start(handler.Key, IsPressed(handler.Key));
+            }
+
             s_active = this;
             _hook = new LowLevelHookThread("ZoomIN Hold Key Hook", (WINDOWS_HOOK_ID.WH_KEYBOARD_LL, s_keyboardProc));
             if (!_hook.AllInstalled)
@@ -71,7 +75,8 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
                 return false;
             }
 
-            _keyState = _time.CreateTimer(_ => CheckKeyState(), null, KeyStatePeriod, KeyStatePeriod);
+            var session = _session;
+            _keyState = _time.CreateTimer(_ => CheckKeyState(session), null, KeyStatePeriod, KeyStatePeriod);
             _log.HoldKeyHookStarted(handler.Key);
             return true;
         }
@@ -93,11 +98,10 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
             s_active = null;
 
             // A key held while the hook goes away would otherwise count as held for ever. Under the
-            // state lock, so a timer callback still running sees _down = false and does nothing.
+            // state lock, so a timer callback still running sees the key as up and does nothing.
             lock (_state)
             {
-                _down = false;
-                _suspect = false;
+                _tracker.Stop();
                 _handler?.HoldKeyUp();
                 _handler = null; // a timer callback still queued finds nothing to do
             }
@@ -107,6 +111,13 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
     }
 
     public void Dispose() => Stop();
+
+    // Alt Gr also sets the left Ctrl in the key state (the hook skips its fake event by scan code), so
+    // with left Ctrl as hold key a held Alt Gr would otherwise count as a missed press.
+    private static bool IsPressed(MarkerHoldKey key) =>
+        IsDown(HoldKeyCodes.For(key)) && !(key == MarkerHoldKey.LeftCtrl && IsDown(VIRTUAL_KEY.VK_RMENU));
+
+    private static bool IsDown(VIRTUAL_KEY key) => KeyState.IsDown((int)key);
 
     private static LRESULT KeyboardProc(int code, WPARAM wParam, LPARAM lParam)
     {
@@ -124,51 +135,26 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
         return PInvoke.CallNextHookEx(HHOOK.Null, code, wParam, lParam);
     }
 
-    // Timer thread: refreshes a running hold while the key is really down, ends it otherwise.
-    // Timer thread. The state lock orders it with the hook callback; the lag between a release and
-    // the key state is covered by the second-check rule below.
-    private void CheckKeyState()
+    // Timer thread. The state lock orders it with the hook callback.
+    private void CheckKeyState(int session)
     {
         try
         {
+            bool missed;
             lock (_state)
             {
-                if (_handler is not { } handler)
+                if (session != _session || _handler is not { } handler)
                 {
                     return;
                 }
 
-                var pressed = PInvoke.GetAsyncKeyState((int)HoldKeyCodes.For(handler.Key)) < 0;
-                if (pressed && !_down)
-                {
-                    // Down although the hook saw no press: Windows removed the hook (too slow under
-                    // load). Only on the second check in a row – right after a release the key state
-                    // may still say "down", since Windows updates it after the hooks returned.
-                    if (!_suspect)
-                    {
-                        _suspect = true;
-                        return;
-                    }
+                missed = _tracker.OnKeyState(handler, IsPressed(handler.Key));
+            }
 
-                    if (!_missedLogged)
-                    {
-                        _missedLogged = true;
-                        _log.HoldKeyHookMissedPress();
-                    }
-
-                    _down = true;
-                }
-
-                _suspect = false;
-                if (pressed)
-                {
-                    handler.HoldKeyDown();
-                }
-                else if (_down)
-                {
-                    _down = false;
-                    handler.HoldKeyUp();
-                }
+            // Logged after the lock: the hook callback waits on it for every key.
+            if (missed)
+            {
+                _log.HoldKeyHookMissedPress();
             }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -187,7 +173,7 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
             {
                 if (_handler is { } handler)
                 {
-                    OnKeyLocked(handler, key, scanCode, down, up);
+                    _tracker.OnKey(handler, key, scanCode, down, up);
                 }
             }
         }
@@ -195,38 +181,6 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
         {
             // An exception escaping a hook callback would crash the process.
             _log.HoldKeyHandlerFailed(ex);
-        }
-    }
-
-    private void OnKeyLocked(IHoldKeyHandler handler, VIRTUAL_KEY key, uint scanCode, bool down, bool up)
-    {
-        // A new hold key: the old one's release will not come, so its press no longer blocks counting.
-        var holdKey = handler.Key;
-        _suspect = false; // the hook is alive
-        if (holdKey != _downKey)
-        {
-            (_down, _downKey) = (false, holdKey);
-        }
-
-        switch (HoldKeyCodes.Classify(key, scanCode, down, up, holdKey))
-        {
-            case HoldKeyEvent.Down:
-                // Key repeat sends further "down" events while held; count the press once.
-                if (!_down)
-                {
-                    _down = true;
-                    s_presses.Add(1);
-                }
-
-                handler.HoldKeyDown();
-                break;
-            case HoldKeyEvent.Up:
-                _down = false;
-                handler.HoldKeyUp();
-                break;
-            case HoldKeyEvent.Other:
-                handler.OtherKeyDown();
-                break;
         }
     }
 }

@@ -4,6 +4,8 @@ using ZoomIN.Core.Filters;
 using ZoomIN.Core.Islands;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Viewport;
+using ZoomIN.Core.WindowFilters;
+using ZoomIN.Rendering.Gpu;
 using ZoomIN.Rendering.Tests.Gpu;
 using ZoomIN.Rendering.Tests.RenderLoop;
 
@@ -90,6 +92,32 @@ public sealed class IslandRenderPathTests
                 Assert.Equal(live.At(x, y), still.At(x, y));
             }
         }
+    }
+
+    [Fact]
+    public void OwnScheme_ActsOnLiveAndStillIslands_LikeOnTheZoom()
+    {
+        using var rig = new IslandRig();
+        var scheme = new CustomScheme
+        {
+            Id = FilterId.Custom1,
+            Kind = SchemeKind.ReplaceOnly,
+            Replacements = [new ColorReplacement { From = "#FF0000", To = "#FFFF00", Tolerance = 0 }],
+        };
+        var effects = new DisplayEffects(new FilterSettings(true, scheme.Id, 1, 0), Smoothing.Pixel, PointerStyle.Default) { Schemes = [scheme] };
+
+        // The desktop draw fills the window and scheme constants (b1) each frame; the islands reuse them.
+        var constants = default(WindowConstants);
+        WindowConstants.Fill(ref constants, WindowRegions.Empty, IslandRig.Bounds, effects);
+        rig.Pass.UpdateWindows(rig.Gpu.Context, constants);
+        using var red = TestImage.Create(rig.Gpu.Device, IslandRig.Size, (_, _) => TestImage.Red);
+        var yellow = new Bgra(0, 255, 255, 255);
+
+        var live = rig.Draw(IslandRig.Scene(null, IslandRig.At(8, 8)), effects, red);
+        var still = rig.Draw(IslandRig.Scene(null, IslandRig.At(8, 8, still: true)), effects, red);
+
+        Assert.Equal(yellow, live.At(24, 40));
+        Assert.Equal(yellow, still.At(24, 40));
     }
 
     private static Island Island(double sourceX, double sourceY, double x, double y, bool still = false) =>

@@ -1,4 +1,5 @@
 using ZoomIN.Core.Hotkeys;
+using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Tracking;
 
 namespace ZoomIN.Core.Settings;
@@ -45,9 +46,16 @@ public abstract record InputSettings
     public HotkeyGesture IslandsHotkey { get; set; } = HotkeyGesture.ToggleIslands;
 
     public HotkeyGesture IslandEditHotkey { get; set; } = HotkeyGesture.EditIslands;
+    /// <summary>Freeze the monitor under the pointer / unfreeze all, and pointer to the next monitor (G2, M19).</summary>
+    public HotkeyGesture FreezeMonitorHotkey { get; set; } = HotkeyGesture.FreezeMonitor;
+
+    public HotkeyGesture NextMonitorHotkey { get; set; } = HotkeyGesture.NextMonitor;
 
     public HotkeyModifiers WheelModifiers { get; set; } = HotkeyModifiers.Control;
 
     /// <summary>Key that shows highlights set to "only while held" (E1).</summary>
     public MarkerHoldKey MarkerHoldKey { get; set; }
+
+    /// <summary>Mouse buffer and axis lock (A6, M19); global, not in the profile; both off from the factory.</summary>
+    public PointerConstraintOptions PointerConstraint { get; set; } = PointerConstraintOptions.Default;
 }

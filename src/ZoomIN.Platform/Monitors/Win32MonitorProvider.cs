@@ -27,11 +27,12 @@ public sealed unsafe class Win32MonitorProvider : IMonitorProvider
 
     // One enumeration: no race between listing the monitors and reading each one's bounds. If one
     // monitor cannot be read (mid display change), none is reported: a fence must then let go
-    // rather than treat a live monitor as missing.
-    public IReadOnlyList<PhysicalRect> AllBounds()
+    // rather than treat a live monitor as missing. AllBounds (the interface default, for the fence)
+    // projects this list; frozen monitors (G2) use the ids too.
+    public IReadOnlyList<(string Id, PhysicalRect Bounds)> AllMonitors()
     {
         var monitors = Enumerate();
-        return monitors.Exists(m => m.Id.Length == 0) ? [] : [.. monitors.Select(m => m.Bounds)];
+        return monitors.Exists(m => m.Id.Length == 0) ? [] : monitors;
     }
 
     private static List<(string Id, PhysicalRect Bounds)> Enumerate()

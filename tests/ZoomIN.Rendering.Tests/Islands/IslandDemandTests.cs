@@ -2,6 +2,7 @@ using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Islands;
 using ZoomIN.Core.Modes;
+using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Overview;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Settings;
@@ -47,6 +48,24 @@ public sealed class IslandDemandTests
 
         Assert.NotNull(second.Islands(1));
         Assert.True(second.NeededAfterFailure());
+    }
+
+    [Fact]
+    public void FrozenMonitor_DrawsNoIslands_AlsoNotWhileEditing_AndThawedDrawsThemAgain()
+    {
+        var models = Models(ZoomMode.Fullscreen);
+        models.Zoom.Frozen.Freeze(new FrozenMonitor(
+            First, default, 2, ZoomMode.Fullscreen, LensSize.Default, DockLayout.Default, false, default));
+        var first = new OverlayDemand(First, models);
+
+        Assert.Null(first.Islands(2));
+
+        models.Islands.ShowEdit(models.Islands.Scene.Set, models.Islands.Scene.Set, new IslandEditView(-1, null, 0), save: false);
+        Assert.Null(first.Islands(1));
+        Assert.NotNull(new OverlayDemand(Second, models).Islands(1));
+
+        models.Zoom.Frozen.Unfreeze(_ => true, restoreLevel: false);
+        Assert.NotNull(first.Islands(1));
     }
 
     [Fact]

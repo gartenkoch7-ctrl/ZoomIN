@@ -65,16 +65,21 @@ internal sealed class OverlayDemand
 
     /// <summary>
     /// The islands this monitor draws at <paramref name="zoom"/> (M19 B1), or null: in fullscreen
-    /// while zoomed in, and on every monitor while they are edited (also at 1×). Lock-free, 0 B.
+    /// while zoomed in, and on every monitor while they are edited (also at 1×). Never on a frozen
+    /// monitor (G2): it keeps its view as it was, and the pointer cannot reach it to edit. Lock-free, 0 B.
     /// </summary>
     public IslandScene? Islands(double zoom)
     {
         var scene = _models.Islands.Scene;
-        return scene.ShowsOn(_deviceName, _zoom.Mode == ZoomMode.Fullscreen && zoom > ZoomLimits.UnzoomedUpTo) ? scene : null;
+        return !_zoom.Frozen.IsFrozen(_deviceName)
+            && scene.ShowsOn(_deviceName, _zoom.Mode == ZoomMode.Fullscreen && zoom > ZoomLimits.UnzoomedUpTo)
+            ? scene
+            : null;
     }
 
     /// <summary>After a pipeline failure: retry soon if the monitor should show anything, else wait for a change.</summary>
     public bool NeededAfterFailure() =>
         _zoom.EffectiveTargetFor(_deviceName) > ZoomLimits.Min || NeedsOverlayUnzoomed(_effects.CurrentFor(_deviceName))
-        || _models.Windows.Regions.Count > 0 || Overview is not null || _models.Islands.Scene.Editing;
+        || _models.Windows.Regions.Count > 0 || Overview is not null || _zoom.Frozen.IsFrozen(_deviceName)
+        || _models.Islands.Scene.Editing;
 }

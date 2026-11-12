@@ -124,7 +124,15 @@ public static class SecureSettingsSanitizer
             Islands = new IslandOptions { Visible = false },
             IslandsHotkey = default,
             IslandEditHotkey = default,
+
+            // No freezing on the secure desktop: a pointer fence there would make the sign-in or
+            // UAC prompt hard to reach, and the frozen view does not carry over anyway (G2).
+            FreezeMonitorHotkey = default,
+            NextMonitorHotkey = default,
             WheelModifiers = Wheel(s.WheelModifiers, d.WheelModifiers),
+
+            // Not used on the secure desktop (A6 runs in the tray app only); bounded for the copy.
+            PointerConstraint = PointerConstraintOptions.Normalize(s.PointerConstraint),
         };
     }
 

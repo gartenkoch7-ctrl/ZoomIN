@@ -38,7 +38,7 @@ public sealed partial class WindowRuleRow : ObservableObject
 
     public string TitleBarName => Text.Format("WinFilter.TitleBarFor", Kind.Process);
 
-    /// <summary>Automatic, None, then every filter in enum order.</summary>
+    /// <summary>Automatic, None, then every filter in display order with the own schemes last (the order this row was built with).</summary>
     public IReadOnlyList<string> Choices { get; }
 
     /// <summary>One entry per <see cref="WindowTitleBarChoice"/>, in enum order.</summary>

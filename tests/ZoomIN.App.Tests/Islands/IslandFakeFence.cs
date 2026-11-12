@@ -4,7 +4,7 @@ using ZoomIN.Core.Viewport;
 namespace ZoomIN.App.Tests.Islands;
 
 /// <summary>A pointer fence that only records its filters; tests raise <see cref="IPointerFence.Recomputed"/>.</summary>
-internal sealed class FakeFence : IPointerFence
+internal sealed class IslandFakeFence : IPointerFence
 {
     public event EventHandler<FenceTrigger>? Recomputed;
 
