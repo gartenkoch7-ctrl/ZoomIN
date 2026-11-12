@@ -272,12 +272,15 @@ Plan: [b1-inseln.md](../plan/features/b1-inseln.md). Code: `Core/Islands/`, `Ren
   bei 1×; dann ist `FrameRequest.OverlayOnly` falsch, damit die Desktop-Kopie läuft.
 - **Eingefrorener Monitor (G2):** Seine Inseln **bleiben sichtbar und frieren mit ein** (Plan B1,
   Merge-Prüfung). Der Freeze-Controller legt die Inselszene des Augenblicks in `FrozenMonitor.Islands`
-  ab (unveränderlich, ohne Bearbeitungsansicht). `OverlayDemand.Islands(zoom, frozen)` nutzt sie samt
-  Modus des Einfrierens bis zum Auftauen, auch nach einem Neuaufbau der Pipeline. Ausblenden
+  ab (unveränderlich, ohne Bearbeitungsansicht). Je Frame liest `MonitorRenderer` einmal
+  `OverlayDemand.Mode(frozen)` und `OverlayDemand.SceneFor(frozen)` und fragt damit
+  `Islands(zoom, mode, scene)`. Ein eingefrorener Monitor nutzt so Szene und Modus des Einfrierens
+  bis zum Auftauen, auch nach einem Neuaufbau der Pipeline. Log 1720 und der KI-Debug-Bericht nennen
+  die Zahl (`FrozenMonitor.ShownIslands`). Ausblenden
   (`Strg+Alt+I`), Einstellungsseite, Profilwechsel und Bearbeiten ändern ihn also erst danach.
   Standbilder entfernter Inseln gibt `MonitorRenderer` auf jedem Frame und vor jedem Schlaf ohne
-  Inseln frei (`PruneIslands`), ein Monitor mit Inseln beim Zeichnen. Ein eingefrorener Monitor
-  prüft dabei gegen seine eigene, eingefrorene Inselliste. Standbild-Inseln auf ihm kopiert
+  Inseln frei (`PruneIslands`), ein Monitor mit Inseln beim Zeichnen, beide gegen die Liste aus
+  `SceneFor` (eingefroren: die eingefrorene). Standbild-Inseln auf ihm kopiert
   `IslandStills` aus derselben Textur wie das Hauptbild (`FrozenLayer.DesktopTexture`). `IslandLayer.Draw` tastet dasselbe Bild ab wie das
   Hauptbild (`FrozenLayer.Desktop`), mit Standbild also das Standbild. Solange es gehalten wird,
   liest der Monitor keinen neuen Capture-Frame, und Standbild-Inseln passen dazu. Beim Einfrieren

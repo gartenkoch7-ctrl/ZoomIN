@@ -5,8 +5,8 @@ namespace ZoomIN.App.Freeze;
 /// <summary>Log messages of frozen monitors and the monitor switch (event ids 1720–1739, G2). Monitor ids and technical values only.</summary>
 internal static partial class MonitorFreezeLog
 {
-    [LoggerMessage(EventId = 1720, Level = LogLevel.Information, Message = "Monitor {Monitor} frozen at {Level:0.00}x ({Image}); pointer moved to {Target}")]
-    public static partial void MonitorFrozen(this ILogger logger, string monitor, double level, string image, string target);
+    [LoggerMessage(EventId = 1720, Level = LogLevel.Information, Message = "Monitor {Monitor} frozen at {Level:0.00}x ({Image}, {Islands} islands); pointer moved to {Target}")]
+    public static partial void MonitorFrozen(this ILogger logger, string monitor, double level, string image, int islands, string target);
 
     [LoggerMessage(EventId = 1721, Level = LogLevel.Information, Message = "Freeze lifted on {Count} monitors ({Reason})")]
     public static partial void FreezeLifted(this ILogger logger, int count, string reason);

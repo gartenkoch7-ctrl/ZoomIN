@@ -148,8 +148,9 @@ internal sealed class MonitorRenderer : IDisposable
             var windows = _windows.Regions;
             var windowsFiltered = session.FiltersWindows(windows, effects);
             var overview = frozen is null ? _demand.Overview : null;
-            var userMode = _demand.Mode(frozen); // one read per frame
-            var islands = _demand.Islands(animator.Current, userMode, frozen); // a frozen monitor's islands freeze with it (G2)
+            var userMode = _demand.Mode(frozen); // one read each per frame
+            var scene = _demand.SceneFor(frozen); // a frozen monitor's islands freeze with it (G2)
+            var islands = _demand.Islands(animator.Current, userMode, scene);
 
             // Filters work at 1× too (M5 decision); so do the pointer options (larger or coloured
             // pointer, crosshair, hiding while typing); the locator needs a few frames as well.
@@ -167,7 +168,7 @@ internal sealed class MonitorRenderer : IDisposable
                 }
 
                 // Also asleep: still images of islands removed or set live meanwhile are freed (each wake passes here).
-                session.PruneIslands(_models.Islands.Scene.Set);
+                session.PruneIslands(scene?.Set ?? IslandSet.Empty);
 
                 // Not zoomed: sleep without capturing or rendering until the model changes.
                 var sleptAt = Stopwatch.GetTimestamp();
@@ -183,11 +184,10 @@ internal sealed class MonitorRenderer : IDisposable
             var delta = Math.Min(Stopwatch.GetElapsedTime(lastFrame, now).TotalSeconds, 0.1);
             lastFrame = now;
             animator.Advance(delta, _model.AnimationSeconds);
-            islands = _demand.Islands(animator.Current, userMode, frozen); // for the zoom this frame is drawn at
+            islands = _demand.Islands(animator.Current, userMode, scene); // for the zoom this frame is drawn at
             if (islands is null)
             {
-                // The last still island may just have gone; a frozen monitor keeps the stills of its own islands.
-                session.PruneIslands(frozen is null ? _models.Islands.Scene.Set : frozen.Islands?.Set ?? IslandSet.Empty);
+                session.PruneIslands(scene?.Set ?? IslandSet.Empty); // the last still island may just have gone
             }
 
             // Unzoomed: the whole monitor, no lens or strip.

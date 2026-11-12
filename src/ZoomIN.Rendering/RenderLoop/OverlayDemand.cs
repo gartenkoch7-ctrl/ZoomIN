@@ -68,20 +68,22 @@ internal sealed class OverlayDemand
     public ZoomMode Mode(FrozenMonitor? frozen) => frozen?.Mode ?? _zoom.Mode;
 
     /// <summary>
-    /// The islands this monitor draws at <paramref name="zoom"/> (M19 B1), or null: in fullscreen while
-    /// zoomed in, and on every monitor while they are edited (also at 1×). A frozen monitor (G2) shows
-    /// the islands it froze with, in its frozen mode (<see cref="FrozenMonitor.Islands"/>): later changes
-    /// (shortcut, settings page, profile, edit mode) wait for the thaw. Lock-free, 0 B.
+    /// The islands this monitor owns (M19 B1): the live ones, or on a frozen monitor (G2) those it froze
+    /// with (<see cref="FrozenMonitor.Islands"/>, null = none): later changes (shortcut, settings page,
+    /// profile, edit mode) wait for the thaw. Drawing and freeing still images both follow it. 0 B.
+    /// </summary>
+    public IslandScene? SceneFor(FrozenMonitor? frozen) => frozen is null ? _models.Islands.Scene : frozen.Islands;
+
+    /// <summary>
+    /// The islands this monitor draws at <paramref name="zoom"/>, or null: in fullscreen while zoomed
+    /// in, and on every monitor while they are edited (also at 1×). Lock-free, 0 B.
     /// </summary>
     /// <param name="mode">This frame's <see cref="Mode"/>, read once per frame.</param>
-    /// <param name="frozen">This frame's freeze of the monitor, or null.</param>
-    public IslandScene? Islands(double zoom, ZoomMode mode, FrozenMonitor? frozen)
-    {
-        var scene = frozen is null ? _models.Islands.Scene : frozen.Islands;
-        return scene is not null && scene.ShowsOn(_deviceName, mode == ZoomMode.Fullscreen && zoom > ZoomLimits.UnzoomedUpTo)
+    /// <param name="scene">This frame's <see cref="SceneFor"/>, read once per frame.</param>
+    public IslandScene? Islands(double zoom, ZoomMode mode, IslandScene? scene) =>
+        scene is not null && scene.ShowsOn(_deviceName, mode == ZoomMode.Fullscreen && zoom > ZoomLimits.UnzoomedUpTo)
             ? scene
             : null;
-    }
 
     /// <summary>After a pipeline failure: retry soon if the monitor should show anything, else wait for a change.</summary>
     public bool NeededAfterFailure() =>

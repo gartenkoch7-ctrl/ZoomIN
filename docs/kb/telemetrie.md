@@ -216,7 +216,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1640 | Info | Caret marker changed: {Shape}, {Thickness} – Form oder Dicke auf der Seite „Fokus & Textcursor“ geändert (E2) |
 | 1650 | Info | Show condition of {Marker} changed: {Condition} – `crosshair`, `caret`, `focus_frame`; auch beim Profilwechsel (E1) |
 | 1651 | Info | Hold key changed: {Key} (E1) |
-| 1720 | Info | Monitor {Monitor} frozen at {Level:0.00}x ({Image}); pointer moved to {Target} (G2) |
+| 1720 | Info | Monitor {Monitor} frozen at {Level:0.00}x ({Image}, {Islands} islands); pointer moved to {Target} (G2) – `Islands`: Inseln, die mit dem Monitor einfrieren und dort gezeigt werden (B1) |
 | 1721 | Info | Freeze lifted on {Count} monitors ({Reason}) – `command`, `display_change`, `desktop_switch`, `session_unlock`, `move_refused` (der Zeiger kam beim Einfrieren zurück und liess sich nicht wieder versetzen), `shortcut_gone` (Kürzel werden bearbeitet oder `Strg+Alt+H` ist nicht registriert), `pointer_inside` (Zaun versagt, Zeiger auf dem eingefrorenen Monitor), `exit` |
 | 1722 | Info | Pointer switched from {From} to {To} (skipped {Skipped} frozen) |
 | 1723 | Info | Freezing refused: {Reason} – `layout_unavailable` (Anzeigewechsel läuft), `one_monitor`, `no_pointer`, `overview` (Übersicht läuft auf dem Monitor), `docked` (der angedockte Monitor), `island_edit` (Inseln werden bearbeitet, B1), `move_refused` |

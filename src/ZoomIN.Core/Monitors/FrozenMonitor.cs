@@ -54,6 +54,29 @@ public sealed class FrozenMonitor(
     /// <summary>The islands as they were when the monitor froze; later changes wait for the thaw (B1).</summary>
     public IslandScene? Islands { get; } = islands is { Edit: not null } ? islands with { Edit = null } : islands;
 
+    /// <summary>
+    /// How many of <see cref="Islands"/> the monitor shows (logs, KI-Debug): its own that fit, while they
+    /// are visible and it is frozen in fullscreen above 1× – the rules the renderer draws by.
+    /// </summary>
+    public int ShownIslands
+    {
+        get
+        {
+            if (Islands is not { } scene || !scene.ShowsOn(Id, Mode == ZoomMode.Fullscreen && Level > ZoomLimits.UnzoomedUpTo))
+            {
+                return 0;
+            }
+
+            var count = 0;
+            foreach (var island in scene.Set.Items)
+            {
+                count += island.MonitorId == Id && IslandRules.Fits(island, Bounds) ? 1 : 0;
+            }
+
+            return count;
+        }
+    }
+
     /// <summary>The number Windows shows for the monitor (for announcements).</summary>
     public int Number => MonitorNames.Number(Id);
 

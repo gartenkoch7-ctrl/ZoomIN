@@ -206,6 +206,14 @@ Befunde der Reviews, die bewusst nicht als Code umgesetzt sind (Designvorschläg
 - **Inseln eingefrorener Monitore im Render-Loop:** Dass `RenderSession` Inseln aus dem eingefrorenen
   Bild zeichnet, prüft kein Test. `RenderSession` braucht echte Desktop-Duplizierung, getestet sind
   `OverlayDemand` und `IslandLayer`.
-- **Dateigröße nach dem Merge:** `RenderSession.cs` (265) und `MonitorFreezeController.cs` (259) liegen
+- **Freigeben von Standbildern an zwei Stellen:** ohne Inseln in `MonitorRenderer`, mit Inseln in
+  `IslandStills.Update` beim Zeichnen. Ein Frame mit Inseln, der nichts zeichnet, gibt nichts frei.
+  Eine Szenenänderung erzwingt aber immer ein Zeichnen.
+- **Bild und Textur eines eingefrorenen Monitors:** `FrozenLayer.Desktop` und `DesktopTexture`
+  entscheiden je für sich, ob das Standbild gehalten wird, mit derselben Bedingung. Ein gemeinsamer
+  Rückgabewert wäre robuster.
+- **Ganze Szene im Einfrieren:** `FrozenMonitor.Islands` hält auch die Inseln anderer Monitore. Jeder
+  Leser filtert nach Monitor, wie bei der Live-Szene.
+- **Dateigröße nach dem Merge:** `RenderSession.cs` (264) und `MonitorFreezeController.cs` (259) liegen
   über 250, aber unter 300. Sie sind Integrationsdateien mehrerer Spuren. Aufgeteilt wird nach dem
   Merge aller M19-Spuren im Integrationsbranch, damit andere Spuren keine Konflikte bekommen.

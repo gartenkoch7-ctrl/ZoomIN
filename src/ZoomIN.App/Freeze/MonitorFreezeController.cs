@@ -181,8 +181,8 @@ public sealed class MonitorFreezeController : IDisposable
             return;
         }
 
-        var image = monitor.ImageKind;
-        _log.MonitorFrozen(id, monitor.Level, image, layout.Ids[target]);
+        var (image, islands) = (monitor.ImageKind, monitor.ShownIslands);
+        _log.MonitorFrozen(id, monitor.Level, image, islands, layout.Ids[target]);
         _announcer.Announce(_texts.Format("Freeze.Frozen", MonitorNames.Label(id)));
     }
 
