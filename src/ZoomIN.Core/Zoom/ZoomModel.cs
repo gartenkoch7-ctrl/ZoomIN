@@ -23,7 +23,7 @@ public sealed class ZoomModel
     private double _animationSeconds;
     private int _mode;
     private bool _perMonitor;
-    private FreezeState _seenFrozen = FreezeState.Empty; // under _gate: tells which monitors thawed (G2)
+    private readonly ParkedTargets _parked = new(); // under _gate: targets of frozen monitors (G2)
 
     public ZoomModel(ZoomLevels levels, ZoomMode mode, bool perMonitor, double animationSeconds)
     {
@@ -43,12 +43,12 @@ public sealed class ZoomModel
     /// <summary>Temporary levels per monitor (overview, window drag); never saved.</summary>
     public TemporaryZoom Temporary { get; }
 
-    /// <summary>Frozen monitors (G2): own anchor, level and mode, not counted by <see cref="IsOn"/>; never saved.</summary>
+    /// <summary>Frozen monitors (G2): own anchor, level and mode; their targets are parked meanwhile. Never saved.</summary>
     public MonitorFreeze Frozen { get; } = new();
 
     public ZoomMode Mode => (ZoomMode)Volatile.Read(ref _mode);
 
-    public bool IsOn => FrozenTargets.AnyFreeOn(Frozen.State, Volatile.Read(ref _targets)); // a frozen monitor has its own level (G2)
+    public bool IsOn => Volatile.Read(ref _targets).Values.Any(level => level > ZoomLimits.Min);
 
     /// <summary>Monitor showing the docked strip while <see cref="Mode"/> is Docked.</summary>
     public string DockedMonitor => Volatile.Read(ref _dockedMonitor);
@@ -209,11 +209,10 @@ public sealed class ZoomModel
         IReadOnlyList<TemporaryZoomOwner> cleared;
         lock (_gate)
         {
-            var frozen = Frozen.State; // one snapshot: frozen monitors are left out and keep their targets (G2)
-            monitors = FrozenTargets.Free(frozen, monitors);
+            monitors = FrozenTargets.Free(Frozen.State, monitors); // a frozen monitor keeps its level (G2)
             if (offIfOn && ZoomTargetRules.AnyOn(Volatile.Read(ref _targets), monitors))
             {
-                Volatile.Write(ref _targets, FrozenTargets.Keep(frozen, s_allOff, Volatile.Read(ref _targets)));
+                Volatile.Write(ref _targets, s_allOff);
             }
             else
             {
@@ -223,10 +222,8 @@ public sealed class ZoomModel
                     Volatile.Write(ref _dockedMonitor, monitorAtMouse);
                 }
 
-                var keep = mode == Mode ? frozen : FreezeState.Empty; // a mode change: a thawed monitor starts at 1× (its level was for the old mode)
                 Volatile.Write(ref _mode, (int)mode);
-                Volatile.Write(ref _targets, FrozenTargets.Keep(keep,
-                    ZoomTargetRules.SwitchOn(mode, monitorAtMouse, monitors, id => _levels.Get(mode, id, _perMonitor)), Volatile.Read(ref _targets)));
+                Volatile.Write(ref _targets, ZoomTargetRules.SwitchOn(mode, monitorAtMouse, monitors, id => _levels.Get(mode, id, _perMonitor)));
             }
 
             // An explicit on/off or mode command ends every temporary view (see TemporaryZoom),
@@ -237,15 +234,13 @@ public sealed class ZoomModel
         Raise(cleared);
     }
 
-    // A freeze changes IsOn (tray, saving, docked reservation listen to Changed) and may thaw a monitor in Docked mode.
+    // A frozen monitor's target is parked, so commands and IsOn see only the free monitors; it comes
+    // back on thaw (see ParkedTargets). IsOn may change: tray, saving and the docked reservation listen.
     private void OnFrozenChanged()
     {
         lock (_gate)
         {
-            var now = Frozen.State;
-            var thawed = _seenFrozen.Monitors.Where(m => !now.Contains(m.Id)).Select(m => m.Id).ToList();
-            _seenFrozen = now;
-            Volatile.Write(ref _targets, ZoomTargetRules.AfterThaw(Volatile.Read(ref _targets), Mode, DockedMonitor, thawed));
+            Volatile.Write(ref _targets, _parked.Update(Volatile.Read(ref _targets), Frozen.State, Mode, DockedMonitor));
         }
 
         Changed?.Invoke();

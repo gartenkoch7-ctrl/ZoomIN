@@ -358,15 +358,15 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
   `shortcut_gone`): sonst gäbe nichts den Monitor zurück.
 - **Wechselwirkungen:** Vorübergehende Stufen (Fenster-Verschieben G1, Übersicht B2) wirken
   auf einem eingefrorenen Monitor nicht; dessen Stufe, Modus, Lupe und Dock gelten vom Augenblick
-  des Einfrierens. Zoombefehle (`ZoomModel.Toggle/Activate/Step`, `IsOn`) zählen nur die freien
-  Monitore: ein bei 4× eingefrorener Monitor macht „Zoom an“ nicht wahr, und sein Ziel bleibt für
-  das Aufheben erhalten (`FrozenTargets.Free/Keep`, eine Momentaufnahme unter dem Schloss des
-  Modells) – außer bei einem Moduswechsel: seine Stufe galt für den alten Modus, er taut bei 1× auf.
-  Taut er im Modus Angedockt auf und ist nicht der angedockte Monitor, geht er auf 1×
-  (`ZoomTargetRules.AfterThaw`: ein Streifen, eine Reservierung; nur der aufgetaute Monitor).
-  Gespeichert wird „Zoom an“ auch, wenn nur der eingefrorene Monitor vergrößert ist
-  (`ZoomMapping.SavedOn`): der sichere Bildschirm startet dann vergrößert. Einfrieren und Aufheben melden `ZoomModel.Changed`, weil sich
-  `IsOn` ändern kann (Tray, Speichern, Reservierung). Sieht ein Render-Thread den
+  des Einfrierens. Sein Ziel wird im Modell geparkt (`Core/Zoom/ParkedTargets`): Zoombefehle
+  (`Toggle/Activate/Step` über die freien Monitore, `FrozenTargets.Free`) und `IsOn` sehen es nicht,
+  ein bei 4× eingefrorener Monitor macht „Zoom an“ also nicht wahr. Beim Aufheben kommt es zurück,
+  wenn es noch passt: gleicher Modus wie beim Einfrieren, im Modus Angedockt nur für den
+  angedockten Monitor; sonst taut er bei 1× auf. Gespeichert wird „Zoom an“ auch, wenn nur der
+  eingefrorene Monitor vergrößert ist (`ZoomMapping.SavedOn`): der sichere Bildschirm startet dann
+  vergrößert. Einfrieren und Aufheben melden `ZoomModel.Changed`, weil sich `IsOn` ändern kann
+  (Tray, Speichern, Reservierung). Ein eingefrorener Monitor bekommt von `MonitorRenderer` feste
+  Werte für Fokus, Caret, Suchhilfe und Zeiger, damit deren Neuigkeiten ihn nicht neu zeichnen. Sieht ein Render-Thread den
   Zeiger doch auf dem eingefrorenen Monitor (Zaun versagt, z. B. Hook verloren), meldet er das
   (`FrozenMonitor.ReportPointerInside`); steht er dort noch, endet das Einfrieren (Grund
   `pointer_inside`). Zoom aus (`Strg+Alt+Z`) oder Moduswechsel ändern ihn nicht – der Rahmen zeigt

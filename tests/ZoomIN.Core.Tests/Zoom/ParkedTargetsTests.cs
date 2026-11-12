@@ -1,0 +1,69 @@
+using ZoomIN.Core.Modes;
+using ZoomIN.Core.Monitors;
+using ZoomIN.Core.Pointer;
+using ZoomIN.Core.Viewport;
+using ZoomIN.Core.Zoom;
+
+namespace ZoomIN.Core.Tests.Zoom;
+
+/// <summary>Zoom commands while a monitor is frozen (G2): its target is parked and comes back on thaw if it still fits.</summary>
+public sealed class ParkedTargetsTests
+{
+    private static readonly string[] s_all = ["L", "R"];
+
+    [Fact]
+    public void ZoomOnOff_SeesOnlyTheFreeMonitors_AndTheFrozenLevelComesBack()
+    {
+        var model = new ZoomModel(new ZoomLevels(), ZoomMode.Fullscreen, true, 0);
+        model.Step(4, "R", s_all); // only R is zoomed (per monitor)
+        var level = model.TargetFor("R");
+        var changes = 0;
+        model.Changed += () => changes++;
+
+        model.Frozen.Freeze(Frozen("R", level));
+        Assert.Equal(1, changes);
+        Assert.False(model.IsOn);
+        Assert.True(ZoomMapping.SavedOn(model)); // the secure desktop and the next start still zoom
+
+        // Ctrl+Alt+Z on the free monitor switches zoom on there at the first press, then off again.
+        model.Toggle("L", s_all);
+        Assert.True(model.TargetFor("L") > 1);
+        model.Toggle("L", s_all);
+        Assert.False(model.IsOn);
+
+        model.Frozen.UnfreezeAll();
+        Assert.Equal(level, model.TargetFor("R"));
+        Assert.True(model.IsOn);
+    }
+
+    [Fact]
+    public void AModeChangeWhileFrozen_ThawsAt1x()
+    {
+        var model = new ZoomModel(new ZoomLevels(), ZoomMode.Fullscreen, true, 0);
+        model.Step(4, "R", s_all);
+        model.Frozen.Freeze(Frozen("R", model.TargetFor("R")));
+
+        model.SetMode(ZoomMode.Lens); // e.g. a profile switch
+        model.Frozen.UnfreezeAll();
+
+        Assert.Equal(1, model.TargetFor("R"));
+    }
+
+    [Fact]
+    public void InDockedMode_OnlyTheDockedMonitorGetsItsTargetBack()
+    {
+        var model = new ZoomModel(new ZoomLevels(), ZoomMode.Docked, true, 0);
+        model.Activate(ZoomMode.Docked, "R", s_all); // the strip on R
+        Assert.True(model.TargetFor("R") > 1);
+
+        model.Frozen.Freeze(Frozen("L", 1));
+        model.Frozen.Freeze(Frozen("R", model.TargetFor("R")));
+        model.Frozen.UnfreezeAll();
+
+        Assert.True(model.TargetFor("R") > 1);
+        Assert.Equal(1, model.TargetFor("L"));
+    }
+
+    private static FrozenMonitor Frozen(string id, double level) =>
+        new(id, new PhysicalRect(0, 0, 10, 10), level, ZoomMode.Fullscreen, LensSize.Default, DockLayout.Default, false, RgbColor.Cyan);
+}

@@ -180,7 +180,8 @@ internal sealed class MonitorRenderer : IDisposable
             var mode = unzoomed ? ZoomMode.Fullscreen : frozen?.Mode ?? _model.Mode;
             var request = new FrameRequest(mode, _demand.AnchorMode(mode, unzoomed, overview, lowered), animator.Current,
                 frozen?.Lens ?? _model.Lens, frozen?.Dock ?? _model.Dock, effects,
-                _effects.LocateRequestedAt, _tracking.Snapshot, _tracking.Options, _effects.PointerHiddenByTyping,
+                frozen is null ? _effects.LocateRequestedAt : 0, frozen is null ? _tracking.Snapshot : TrackingSnapshot.Empty, _tracking.Options,
+                frozen is null && _effects.PointerHiddenByTyping, // frozen: no locator, marks or pointer, so their news change nothing (G2)
                 windows, windowsFiltered, overview, _model.TargetFor(_deviceName), _models.ViewRequests.PlacementFor(_deviceName),
                 lowered, frozen, frozen is { Still: true, StillUnavailable: false });
             var wasVisible = session.IsVisible;

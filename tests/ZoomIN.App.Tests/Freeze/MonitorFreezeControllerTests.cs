@@ -18,12 +18,13 @@ public sealed class MonitorFreezeControllerTests
         using var rig = new FreezeRig();
         rig.Models.Zoom.Activate(ZoomMode.Fullscreen, Two, [One, Two, Three]);
         rig.PointerTo(Two);
+        var level = rig.Models.Zoom.TargetFor(Two);
 
         rig.Controller.ToggleFreeze();
 
         var frozen = rig.Frozen.For(Two);
         Assert.NotNull(frozen);
-        Assert.Equal(rig.Models.Zoom.TargetFor(Two), frozen.Level);
+        Assert.Equal(level, frozen.Level);
         Assert.Equal(Three, rig.PointerMonitor);
         Assert.Equal(PointerMoveReason.FreezeMonitor, rig.Mover.Moves.Single().Reason);
         Assert.Equal([new PhysicalRect(3840, 0, 1920, 1080)], rig.Fence.Forbidden);

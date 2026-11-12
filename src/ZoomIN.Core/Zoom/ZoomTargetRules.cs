@@ -49,17 +49,6 @@ internal static class ZoomTargetRules
             ? new Dictionary<string, double> { [monitorAtMouse] = lastLevel(monitorAtMouse) }
             : monitors.ToDictionary(id => id, lastLevel);
 
-    /// <summary>
-    /// Targets after monitors thawed (G2). In Docked mode only the docked monitor may be zoomed (one
-    /// strip, one reservation), so a thawed other monitor goes back to 1×; nothing else changes.
-    /// Returns <paramref name="targets"/> if nothing changes.
-    /// </summary>
-    public static IReadOnlyDictionary<string, double> AfterThaw(
-        IReadOnlyDictionary<string, double> targets, ZoomMode mode, string dockedMonitor, IReadOnlyCollection<string> thawed) =>
-        mode == ZoomMode.Docked && thawed.Any(id => id != dockedMonitor && targets.ContainsKey(id))
-            ? targets.Where(t => t.Key == dockedMonitor || !thawed.Contains(t.Key)).ToDictionary(t => t.Key, t => t.Value)
-            : targets;
-
     /// <summary>Target of one monitor; unknown monitors are off (1×). Per frame: 0 B.</summary>
     public static double TargetOf(IReadOnlyDictionary<string, double> targets, string id) =>
         targets.TryGetValue(id, out var level) ? level : ZoomLimits.Min;

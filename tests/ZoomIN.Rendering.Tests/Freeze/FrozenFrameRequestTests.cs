@@ -29,10 +29,10 @@ public sealed class FrozenFrameRequestTests
         var frozen = request with { Frozen = Frozen(still: false) };
         Assert.True(tracker.Compare(false, frozen, frame, false, default, 0, false, false, true).NeedsRedraw);
 
-        // Frozen: a caret moving on another monitor is no reason to draw this one again.
-        tracker.Presented(frozen, frame, false, default, 0);
-        var typed = frozen with { Tracking = new Core.Tracking.TrackingSnapshot(null, 0, new PhysicalRect(1, 1, 1, 9), 5) };
-        Assert.False(tracker.Compare(false, typed, frame, false, default, 0, false, false, true).NeedsRedraw);
+        // A held still image keeps its window regions: new live regions are no reason to draw it again.
+        tracker.Presented(frozen with { FrozenStill = true }, frame, false, default, 0);
+        var moved = frozen with { FrozenStill = true, Windows = new WindowRegions([new PhysicalRect(1, 1, 9, 9)], [WindowPalette.Smart]) };
+        Assert.False(tracker.Compare(false, moved, frame, false, default, 0, false, false, true).NeedsRedraw);
 
         // A still image given up on during the same freeze shows live again: that is a change.
         var still = frozen with { FrozenStill = true };

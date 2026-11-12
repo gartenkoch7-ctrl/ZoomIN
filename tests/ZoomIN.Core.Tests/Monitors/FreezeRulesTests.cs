@@ -40,55 +40,6 @@ public sealed class FreezeRulesTests
     }
 
     [Fact]
-    public void ZoomCommands_IgnoreAFrozenMonitorsLevel()
-    {
-        string[] all = ["L", "R"];
-        var model = new ZoomIN.Core.Zoom.ZoomModel(new ZoomIN.Core.Zoom.ZoomLevels(), ZoomMode.Fullscreen, true, 0);
-        model.Step(4, "R", all); // only R is zoomed (per monitor)
-        model.Frozen.Freeze(Frozen("R", s_right, false));
-        Assert.False(model.IsOn);
-
-        // Ctrl+Alt+Z on the free monitor switches zoom on there at the first press, R's level stays.
-        model.Toggle("L", all);
-        Assert.True(model.TargetFor("L") > 1);
-        Assert.True(model.TargetFor("R") > 1);
-        model.Step(-20, "L", all);
-        Assert.False(model.IsOn);
-
-        // Saved for the secure desktop and the next start: the frozen zoomed monitor counts.
-        Assert.True(ZoomIN.Core.Zoom.ZoomMapping.SavedOn(model));
-    }
-
-    [Fact]
-    public void Freezing_RaisesChanged_AndAThawedMonitorInDockedModeGoesBackTo1x()
-    {
-        string[] all = ["L", "R"];
-        var model = new ZoomIN.Core.Zoom.ZoomModel(new ZoomIN.Core.Zoom.ZoomLevels(), ZoomMode.Fullscreen, false, 0);
-        model.Toggle("L", all); // shared level: both zoomed
-        var changes = 0;
-        model.Changed += () => changes++;
-        var right = Frozen("R", s_right, false);
-        model.Frozen.Freeze(right);
-        Assert.Equal(1, changes);
-
-        // A profile switch to Docked changes only the mode; the targets stay (R frozen, L zoomed).
-        model.SetMode(ZoomMode.Docked);
-        Assert.True(model.TargetFor("R") > 1);
-
-        // Thawed in Docked mode, R is no docked strip: back to 1×; L is left as it was.
-        model.Frozen.UnfreezeAll();
-        Assert.Equal(1, model.TargetFor("R"));
-        Assert.True(model.TargetFor("L") > 1);
-
-        // A mode command while a monitor is frozen: its level was for the old mode, it thaws at 1×.
-        model.Activate(ZoomMode.Fullscreen, "L", all);
-        model.Step(4, "R", all);
-        model.Frozen.Freeze(Frozen("R", s_right, false));
-        model.Activate(ZoomMode.Lens, "L", all);
-        Assert.Equal(1, model.TargetFor("R"));
-    }
-
-    [Fact]
     public void DisplayChange_WithThePointerOnAFreezeMadeAfterTheEvent_EndsItToo()
     {
         var right = Frozen("R", s_right, false);
