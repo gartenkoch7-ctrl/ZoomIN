@@ -22,7 +22,6 @@ namespace ZoomIN.App.Freeze;
 /// </summary>
 public sealed class MonitorFreezeController : IDisposable
 {
-    private readonly Lock _gate = new();
     private readonly SettingsService _settings;
     private readonly MonitorSwitchController _switch;
     private readonly ZoomModel _zoom;
@@ -36,6 +35,7 @@ public sealed class MonitorFreezeController : IDisposable
     private readonly ILocalizer _texts;
     private readonly ILogger _log;
     private readonly FreezeOperations _operations = new();
+    private readonly FreezeGuard _guard;
     private readonly FreezeFenceEvents _events;
     private readonly Action<Action> _dispatch;
     private volatile bool _freezing;
@@ -56,15 +56,16 @@ public sealed class MonitorFreezeController : IDisposable
         (_frozen, _overview) = (_zoom.Frozen, settings.Models.Overview);
         (_monitors, _cursor, _fence, _mover) = (monitors, cursor, fence, mover);
         (_announcer, _texts, _log, _dispatch) = (announcer, texts, log, dispatch);
+        _guard = new FreezeGuard(fence, _frozen, _operations, log);
         _events = new FreezeFenceEvents(fence, _frozen, () => _freezing, dispatch,
-            (trigger, seen, freezing) => Guarded("recompute", () => Recheck(trigger, seen, freezing)));
+            (trigger, seen, freezing) => _guard.Run("recompute", () => Recheck(trigger, seen, freezing)));
     }
 
     /// <summary>Ctrl+Alt+H did nothing; the localised hint for a tray notice.</summary>
     public event Action<string>? Refused;
 
     /// <summary>Ctrl+Alt+H: freezes the monitor under the pointer; if one is frozen already, lifts all.</summary>
-    public void ToggleFreeze() => Guarded("toggle", () =>
+    public void ToggleFreeze() => _guard.Run("toggle", () =>
     {
         if (_frozen.Any)
         {
@@ -86,12 +87,12 @@ public sealed class MonitorFreezeController : IDisposable
     /// Lifts every freeze without a shortcut, e.g. while the shortcuts are being edited or when
     /// Ctrl+Alt+H is no longer registered: otherwise nothing could give the frozen monitor back.
     /// </summary>
-    public void LiftAll(string reason) => Guarded("lift_all", () => Lift(_ => true, reason));
+    public void LiftAll(string reason) => _guard.Run("lift_all", () => Lift(_ => true, reason));
 
     public void Dispose()
     {
         _events.Dispose();
-        Guarded("exit", () => Lift(_ => true, "exit", announce: false));
+        _guard.Run("exit", () => Lift(_ => true, "exit", announce: false));
     }
 
     private void FreezeUnderPointer()
@@ -161,7 +162,7 @@ public sealed class MonitorFreezeController : IDisposable
 
     // A render thread saw the pointer on a frozen monitor (the fence failed, e.g. its hook was lost):
     // checked again here, as it may have been the moment before the second move of a freeze.
-    private void OnPointerInside(FrozenMonitor monitor) => _dispatch(() => Guarded("pointer_inside", () =>
+    private void OnPointerInside(FrozenMonitor monitor) => _dispatch(() => _guard.Run("pointer_inside", () =>
     {
         if (_cursor.TryGetPosition(out var now) && monitor.Bounds.Contains(now))
         {
@@ -181,19 +182,21 @@ public sealed class MonitorFreezeController : IDisposable
 
         var mouse = _cursor.TryGetPosition(out var position) ? position : (PhysicalPoint?)null;
         var lift = FreezeRules.ToLift(trigger, _frozen.State, seen, freezing, monitors, mouse);
-        Lift(lift.Contains, trigger switch
+        var reason = trigger switch
         {
             FenceTrigger.DesktopSwitch => "desktop_switch",
             FenceTrigger.SessionUnlock => "session_unlock",
             _ => "display_change",
-        });
+        };
+
+        // After a display change the monitor is gone or changed: it starts at 1× rather than at its old level.
+        Lift(lift.Contains, reason, restoreLevel: trigger != FenceTrigger.DisplayChange);
     }
 
     // Unfreezes first, then frees the area: the monitor follows the pointer again before it can get there.
-    private void Lift(Func<FrozenMonitor, bool> which, string reason, bool announce = true)
+    private void Lift(Func<FrozenMonitor, bool> which, string reason, bool announce = true, bool restoreLevel = true)
     {
-        // After a display change the monitor is gone or changed: it starts at 1× rather than at its old level.
-        var removed = _frozen.Unfreeze(which, restoreLevel: reason != "display_change");
+        var removed = _frozen.Unfreeze(which, restoreLevel);
         if (removed.Count == 0)
         {
             return;
@@ -214,33 +217,5 @@ public sealed class MonitorFreezeController : IDisposable
         var text = _texts.Get(textKey);
         _announcer.Announce(text);
         Refused?.Invoke(text);
-    }
-
-    // Commands run on the hotkey thread, fence events on the thread pool: an exception must not end
-    // either, and a half-done freeze must not keep the pointer out of a monitor.
-    private void Guarded(string step, Action action)
-    {
-        lock (_gate)
-        {
-            try
-            {
-                action();
-            }
-            catch (Exception ex) when (ex is not OutOfMemoryException)
-            {
-                _log.FreezeFailed(ex, step);
-                try
-                {
-                    _frozen.UnfreezeAll();
-                    _operations.StopAll("failure");
-                    _fence.Forbid(FenceOwner.FrozenMonitors, []);
-                }
-                catch (Exception inner) when (inner is not OutOfMemoryException)
-                {
-                    // The fence releases itself on every failure of its own; nothing more to do here.
-                    _log.FreezeFailed(inner, "release");
-                }
-            }
-        }
     }
 }
