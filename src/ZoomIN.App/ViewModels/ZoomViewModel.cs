@@ -44,7 +44,7 @@ public sealed partial class ZoomViewModel : ObservableObject
     public partial double Bold { get; set; }
 
     /// <summary>The sliders act only with text-optimised smoothing; otherwise they are disabled with a hint.</summary>
-    public bool EnhanceAvailable => TextEnhancement.WorksWith((Smoothing)Math.Max(SmoothingIndex, 0));
+    public bool EnhanceAvailable => TextEnhancement.WorksWith(_effects.Current.Smoothing);
 
     public string SharpnessDescription => EnhanceAvailable ? _texts.Get("ZoomSharpness.Desc") : _texts.Get("ZoomEnhance.NeedsText");
 

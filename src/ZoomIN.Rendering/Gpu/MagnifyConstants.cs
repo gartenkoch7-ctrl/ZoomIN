@@ -28,8 +28,8 @@ internal readonly struct MagnifyConstants
     public readonly uint MonitorSmart;
     public readonly float Sharpness;
     public readonly float BoldPixels;
-    private readonly float _enhancePadding0;
-    private readonly float _enhancePadding1;
+    private readonly uint _enhanceActive;
+    private readonly float _enhancePadding;
 
     private MagnifyConstants(
         PhysicalRect source, PhysicalRect monitor, PhysicalRect target, PhysicalRect viewport,
@@ -53,12 +53,12 @@ internal readonly struct MagnifyConstants
         MonitorSmart = smart ? 1u : 0u;
         Sharpness = (float)enhance.Sharpness;
         BoldPixels = (float)enhance.BoldPixels;
-        _enhancePadding0 = 0;
-        _enhancePadding1 = 0;
+        _enhanceActive = enhance.IsActive ? 1u : 0u;
+        _enhancePadding = 0;
     }
 
-    /// <summary>"Schärfe" or "Fett" is on: <see cref="MagnifyPass"/> binds PSEnhanced instead of PSMain (M18, D1).</summary>
-    public bool Enhanced => Sharpness > 0 || BoldPixels > 0;
+    /// <summary>"Schärfe" or "Fett" is on (<see cref="TextEnhancement.IsActive"/>, HLSL EnhanceActive): <see cref="MagnifyPass"/> binds PSEnhanced instead of PSMain (M18, D1).</summary>
+    public bool Enhanced => _enhanceActive != 0;
 
     /// <summary>Magnifies <paramref name="source"/> onto the whole viewport, without frame or filter.</summary>
     public static MagnifyConstants FromSourceRect(PhysicalRect source, PhysicalRect monitor) =>
@@ -66,7 +66,7 @@ internal readonly struct MagnifyConstants
 
     /// <summary>Magnifies onto the whole viewport with colour matrix and smoothing.</summary>
     /// <param name="smart">The matrix is the inverted part of the smart inversion (ADR-0024).</param>
-    /// <param name="enhance">"Schärfe"/"Fett" as <see cref="TextEnhancement.At"/> resolved them for this zoom.</param>
+    /// <param name="enhance">"Schärfe"/"Fett" as <see cref="TextEnhancement.At(double, Smoothing)"/> resolved them for this zoom.</param>
     public static MagnifyConstants Fullscreen(
         PhysicalRect source, PhysicalRect monitor, in ColorMatrix color, Smoothing smoothing, bool smart = false, TextEnhancement enhance = default) =>
         new(source, monitor, monitor, monitor, default, color, smoothing, smart, enhance);

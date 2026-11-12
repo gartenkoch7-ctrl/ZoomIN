@@ -42,7 +42,9 @@ float3 EnhanceTap(float2 uv) { return Desktop.SampleLevel(LinearSampler, uv, 0).
 // The remap only moves where a transition happens, so the slight overshoot of Catmull-Rom stays as
 // it is today and no new halo appears. Not clamped to the range of the taps: the middle taps are
 // blends of two texels, so that range cut into real Catmull-Rom detail and blurred every edge.
-// Also returns the luma range and mean of the taps and how much the surroundings look like a photo.
+// Kept as a copy of SampleCatmullRom (Magnify.hlsl), not shared: PSMain must stay exactly as it was.
+// Change both together. Also returns the luma range and mean of the taps and how much the
+// surroundings look like a photo.
 float3 SampleSharpBicubic(float2 uv, out float loLuma, out float hiLuma, out float meanLuma, out float photo)
 {
     float2 samplePos = uv * TextureSize;

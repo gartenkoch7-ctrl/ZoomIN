@@ -116,7 +116,7 @@ internal static class TextsGermanCards
         ["ZoomSharpnessTitle"] = "Schärfe",
         ["ZoomSharpness.Desc"] = "Macht Kanten von Schrift steiler, ohne Säume. Wirkt ab 1,5×.",
         ["ZoomBoldTitle"] = "Fett",
-        ["ZoomBold.Desc"] = "Macht dünne Striche breiter, auch invertiert. Wirkt ab 1,5×.",
+        ["ZoomBold.Desc"] = "Macht dünne Striche breiter, auch invertiert. Wirkt ab 1,5×, die volle Breite ab 6×.",
         ["ZoomEnhance.NeedsText"] = "Wirkt nur mit der Glättung „Text-optimiert“.",
 
         ["TrackingFocus.Desc"] = "Beim Wechsel mit Tab springt die Ansicht zum Element.",

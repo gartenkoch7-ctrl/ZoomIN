@@ -53,8 +53,17 @@ internal sealed class PassCostProbe : IDisposable
     /// <summary>Mean extra GPU time of the variant over the base, never negative.</summary>
     public double ExtraMilliseconds => Done ? Math.Max(0, (_variantSum / _variantCount) - (_baseSum / _baseCount)) : 0;
 
-    /// <summary>Measures again, e.g. when the whole monitor turned smart (a dearer case than a few windows).</summary>
+    /// <summary>
+    /// Measures again, e.g. when the whole monitor turned smart (a dearer case than a few windows) or
+    /// the values of "Schärfe"/"Fett" changed; a new measurement may retry once again.
+    /// </summary>
     public void Restart()
+    {
+        _retried = false;
+        Reset();
+    }
+
+    private void Reset()
     {
         _warmup = 0;
         _drawn = 0;
@@ -130,7 +139,7 @@ internal sealed class PassCostProbe : IDisposable
         if (_drawn >= Frames && !Done && ++_waited > CollectFrames && !_retried)
         {
             _retried = true;
-            Restart();
+            Reset();
         }
 
         // Done can already be true when the last probe frame was drawn (EndVariant), so "became done

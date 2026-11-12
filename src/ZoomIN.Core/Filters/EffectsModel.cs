@@ -85,7 +85,13 @@ public sealed class EffectsModel
     public void SetSmoothing(Smoothing smoothing) => Update(e => e with { Smoothing = smoothing });
 
     /// <summary>"Schärfe" and "Fett" (M18, D1), clamped to their ranges.</summary>
-    public void SetEnhancement(TextEnhancement enhancement) => Update(e => e with { Enhancement = enhancement.Normalized() });
+    public void SetEnhancement(TextEnhancement enhancement)
+    {
+        var next = enhancement.Normalized();
+
+        // The same values again (a slider echo, a drag past the end) change nothing: no save, no upload.
+        Update(e => e.Enhancement == next ? e : e with { Enhancement = next });
+    }
 
     /// <summary>Smart inversion: photos and videos stay original (ADR-0024).</summary>
     public void SetProtectPhotos(bool protect) => Update(e => e with { ProtectPhotos = protect });

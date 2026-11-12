@@ -67,18 +67,18 @@ internal sealed class DesktopLayer(
         }
 
         // Only the magnified view is enhanced; the rest of the monitor around a lens shows 1×.
-        var enhance = effects.Enhancement.At(frame.Target.Width / frame.Source.Width, effects.Smoothing);
-        if (enhance.IsActive && enhanceCost.Tick(context, enhance))
+        var enhance = effects.Enhancement.At(frame, effects.Smoothing);
+        var viewport = frame.HasFrame ? Expand(frame.Target, FrameThickness, monitor) : monitor;
+        if (enhanceCost.Tick(context, enhance))
         {
-            ProbeEnhanceCost(context, desktop, target, width, height, monitor, frame.Source, effects, monitorSmart, weights, enhance);
+            ProbeEnhanceCost(context, desktop, target, monitor, viewport, frame, effects, monitorSmart, weights, enhance);
         }
 
         magnifyTime.Collect(context);
         magnifyTime.Begin(context);
         if (!frame.HasFrame)
         {
-            pass.Draw(context, desktop, target, width, height,
-                MagnifyConstants.Fullscreen(frame.Source, monitor, matrix, effects.Smoothing, monitorSmart, enhance), weights);
+            pass.Draw(context, desktop, target, width, height, Magnified(frame, monitor, viewport, effects, monitorSmart, enhance), weights);
             magnifyTime.End(context);
             return weights;
         }
@@ -96,11 +96,7 @@ internal sealed class DesktopLayer(
             context.ClearRenderTargetView(target, s_transparent);
         }
 
-        var viewport = Expand(frame.Target, FrameThickness, monitor);
-        var constants = MagnifyConstants.WithFrame(
-            frame.Source, monitor, frame.Target, viewport, FrameColor.Default, matrix, effects.Smoothing, monitorSmart, enhance);
-        pass.Draw(context, desktop, target, (float)(viewport.X - monitor.X), (float)(viewport.Y - monitor.Y),
-            (float)viewport.Width, (float)viewport.Height, constants, weights);
+        DrawMagnified(context, desktop, target, monitor, viewport, Magnified(frame, monitor, viewport, effects, monitorSmart, enhance), weights);
         magnifyTime.End(context);
         return weights;
     }
@@ -145,24 +141,37 @@ internal sealed class DesktopLayer(
         probe.EndVariant(context);
     }
 
-    // After a change of "Schärfe"/"Fett", while someone listens (EnhanceCost): the magnified source
-    // drawn over the whole target without and with them, each timed; the real draw overwrites it.
+    // After a change of "Schärfe"/"Fett", while someone listens (EnhanceCost): the magnified view
+    // drawn exactly as below, once without and once with them, each timed. Inside the view the real
+    // draw overwrites it; outside a lens it is cleared or drawn over afterwards too.
     private void ProbeEnhanceCost(
-        ID3D11DeviceContext context, ID3D11ShaderResourceView desktop, ID3D11RenderTargetView target, int width, int height,
-        PhysicalRect monitor, PhysicalRect source, DisplayEffects effects, bool monitorSmart, ID3D11ShaderResourceView? weights,
+        ID3D11DeviceContext context, ID3D11ShaderResourceView desktop, ID3D11RenderTargetView target, PhysicalRect monitor,
+        PhysicalRect viewport, in ModeFrame frame, DisplayEffects effects, bool monitorSmart, ID3D11ShaderResourceView? weights,
         TextEnhancement enhance)
     {
         var cost = enhanceCost.Probe;
         cost.BeginBase(context);
-        pass.Draw(context, desktop, target, width, height,
-            MagnifyConstants.Fullscreen(source, monitor, effects.Matrix, effects.Smoothing, monitorSmart), weights);
+        DrawMagnified(context, desktop, target, monitor, viewport, Magnified(frame, monitor, viewport, effects, monitorSmart, TextEnhancement.Off), weights);
         cost.EndBase(context);
 
         cost.BeginVariant(context);
-        pass.Draw(context, desktop, target, width, height,
-            MagnifyConstants.Fullscreen(source, monitor, effects.Matrix, effects.Smoothing, monitorSmart, enhance), weights);
+        DrawMagnified(context, desktop, target, monitor, viewport, Magnified(frame, monitor, viewport, effects, monitorSmart, enhance), weights);
         cost.EndVariant(context);
     }
+
+    // The magnified view: the whole monitor in fullscreen, the target with its frame in lens/docked.
+    private static MagnifyConstants Magnified(
+        in ModeFrame frame, PhysicalRect monitor, PhysicalRect viewport, DisplayEffects effects, bool monitorSmart, TextEnhancement enhance) =>
+        frame.HasFrame
+            ? MagnifyConstants.WithFrame(
+                frame.Source, monitor, frame.Target, viewport, FrameColor.Default, effects.Matrix, effects.Smoothing, monitorSmart, enhance)
+            : MagnifyConstants.Fullscreen(frame.Source, monitor, effects.Matrix, effects.Smoothing, monitorSmart, enhance);
+
+    private void DrawMagnified(
+        ID3D11DeviceContext context, ID3D11ShaderResourceView desktop, ID3D11RenderTargetView target, PhysicalRect monitor,
+        PhysicalRect viewport, in MagnifyConstants constants, ID3D11ShaderResourceView? weights) =>
+        pass.Draw(context, desktop, target, (float)(viewport.X - monitor.X), (float)(viewport.Y - monitor.Y),
+            (float)viewport.Width, (float)viewport.Height, constants, weights);
 
     private static PhysicalRect Expand(PhysicalRect rect, double by, PhysicalRect within)
     {

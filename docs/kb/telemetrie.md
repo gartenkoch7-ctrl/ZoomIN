@@ -136,7 +136,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.windowfilter.update_duration` | ms | – | Fenster auflisten und Bereiche bauen nach einer Fensteränderung |
 | `zoomin.windowfilter.regions` | Bereiche | – | Bereiche, die der Shader nach einer Änderung bekommt (höchstens 64) |
 | `zoomin.windowfilter.regions_dropped` | Fenster | – | Fenster über dem Limit von 64 Bereichen, die den Monitorfilter zeigen (je Aktualisierung; dazu Log 2705) |
-| `zoomin.render.enhance_gpu_ms` | ms | `zoomin.monitor` | Zusatz-GPU-Zeit von Schärfe/Fett im Magnify-Durchgang (M18, D1): nach jeder Wertänderung 32 Frames ohne gegen mit, nach 60 Frames Aufwärmen (`PassCostProbe`); nur solange jemand das Instrument abonniert, sonst keine Messzeichnungen. Budget 0,05 ms auf RTX 3060 Ti |
+| `zoomin.render.enhance_gpu_ms` | ms | `zoomin.monitor` | Zusatz-GPU-Zeit von Schärfe/Fett im Magnify-Durchgang (M18, D1): nach jeder Wertänderung und nach gezeichneten Frames ohne Schärfe/Fett (unter 1,5×, andere Glättung) erneut, 32 Frames ohne gegen mit nach 60 Frames Aufwärmen (`PassCostProbe`); gemessen wird genau die gezeichnete Ansicht – bei Lupe/angedockt nur deren Fläche, also nicht mit Vollbild-Werten vergleichbar. Nur solange jemand das Instrument abonniert, sonst keine Messzeichnungen. Budget 0,05 ms auf RTX 3060 Ti bei 1080p Vollbild |
 | `zoomin.filters.custom_schemes` | Schemata | – | Anzahl der eigenen Farbschemata (0–4, Gauge; beim Start und bei jeder Änderung, M18) |
 
 ## Katalog: Logmeldungen

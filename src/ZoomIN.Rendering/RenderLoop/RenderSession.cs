@@ -204,7 +204,7 @@ internal sealed class RenderSession : IDisposable
             _gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Mode, request.Zoom, _lastCursor,
             request.Effects, request.LocateRequestedAt, request.PointerHidden);
         _snapshots.TakeIfRequested(_gpu.Device, _gpu.Context, request.OverlayOnly ? null : _duplicator.ShaderResource,
-            _swapchain.RenderTarget, weights, _monitor.Bounds, frame.Source, request);
+            _swapchain.RenderTarget, weights, _monitor.Bounds, frame, request);
         Present();
         _changes.Presented(request, frame, _cursorInside, _lastCursor, shape);
 

@@ -37,8 +37,9 @@ internal sealed class EnhanceCost : IDisposable
     public int Reports { get; private set; }
 
     /// <summary>
-    /// One frame with <paramref name="enhance"/> on: takes finished results and returns whether
-    /// this frame should draw the probe pair. New values measure again.
+    /// Every frame, with the values as resolved for this frame (<see cref="TextEnhancement.At(double, Smoothing)"/>):
+    /// takes finished results and returns whether this frame should draw the probe pair. New values
+    /// measure again, also the same values after a drawn frame without them.
     /// </summary>
     public bool Tick(ID3D11DeviceContext context, TextEnhancement enhance)
     {
@@ -49,8 +50,9 @@ internal sealed class EnhanceCost : IDisposable
             s_extra.Record(LastExtraMilliseconds, _monitor);
         }
 
-        if (!s_extra.Enabled)
+        if (!enhance.IsActive || !s_extra.Enabled)
         {
+            _measuring = TextEnhancement.Off;
             return false;
         }
 

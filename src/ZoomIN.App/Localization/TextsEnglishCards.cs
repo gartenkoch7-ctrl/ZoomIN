@@ -116,7 +116,7 @@ internal static class TextsEnglishCards
         ["ZoomSharpnessTitle"] = "Sharpness",
         ["ZoomSharpness.Desc"] = "Makes edges of text steeper, without halos. Works from 1.5×.",
         ["ZoomBoldTitle"] = "Bold",
-        ["ZoomBold.Desc"] = "Makes thin strokes wider, inverted too. Works from 1.5×.",
+        ["ZoomBold.Desc"] = "Makes thin strokes wider, inverted too. Works from 1.5×, full width from 6×.",
         ["ZoomEnhance.NeedsText"] = "Works only with the smoothing \"Text-optimised\".",
 
         ["TrackingFocus.Desc"] = "When moving with Tab, the view jumps to the element.",

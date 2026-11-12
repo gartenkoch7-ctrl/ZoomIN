@@ -262,6 +262,8 @@ Plan: [d1-schaerfen-fetter.md](../plan/features/d1-schaerfen-fetter.md). Code: `
   oder Fett > 0, Glättung „Text-optimiert“ und Zoom ≥ 1,5×. Sonst läuft `PSMain` unverändert
   (0 Zusatzkosten, bitgleich). Die Werte stehen im Konstantenpuffer b0 (`MagnifyConstants`, 128 B).
   Nur der vergrößerte Bereich wird verbessert; die 1×-Fläche um Lupe/angedockten Bereich nicht.
+  Als Zoom zählt die weniger vergrößerte Achse der gezeichneten Ansicht (angedockt können sich die
+  Achsen stark unterscheiden, z. B. 2,3× quer und 1,2× hoch → aus).
 - **Schärfe = Catmull-Rom an umgerechneter Position.** Zwischen zwei Texeln wird die Mitte
   schneller durchlaufen, an den Texelmitten entstehen kleine Plateaus (bei 100 % ein Drittel Texel
   Übergang). Gleiche 9 Abtastungen, kostet nichts. *Abweichung vom Spike:* Der dort genutzte
@@ -303,7 +305,9 @@ Plan: [d1-schaerfen-fetter.md](../plan/features/d1-schaerfen-fetter.md). Code: `
 - **GPU-Zeit** (`EnhanceGpuTimeTests`, `ZOOMIN_GPU_TIMING=1`, 1080p, 3 Läufe, RTX 3060 Ti):
   +0,018–0,030 ms bei 60 %/1 px und 100 %/3 px, 2×/4×/8×, ohne und mit intelligentem Invertieren
   (Magnify aus 0,071–0,090 ms). ×10 Onboard **hochgerechnet** ≈ 0,3 ms ≤ 0,5 ms. Im Betrieb misst
-  `EnhanceCost` dasselbe nach jeder Änderung (`zoomin.render.enhance_gpu_ms`), nur mit Zuhörer.
+  `EnhanceCost` dasselbe nach jeder Änderung und nach einer Pause (`zoomin.render.enhance_gpu_ms`),
+  nur mit Zuhörer, auf genau der gezeichneten Ansicht (bei Lupe nur deren Fläche).
+- Der Debug-Schnappschuss (`-info.txt`) nennt Glättung, Schärfe, Fett und ob sie bei diesem Zoom wirken.
 
 ## Shader-Regeln
 - HLSL-Dateien in `ZoomIN.Rendering/Shaders/`. Seit M14 Schritt 4 übersetzt sie der Build mit

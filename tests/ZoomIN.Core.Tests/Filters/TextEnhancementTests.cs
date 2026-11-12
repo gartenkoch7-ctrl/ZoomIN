@@ -1,7 +1,9 @@
 using ZoomIN.Core.Filters;
+using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Settings;
+using ZoomIN.Core.Viewport;
 
 namespace ZoomIN.Core.Tests.Filters;
 
@@ -61,6 +63,16 @@ public sealed class TextEnhancementTests
         Assert.Equal(applies ? s_on : TextEnhancement.Off, s_on.At(4, smoothing));
     }
 
+    [Theory]
+    [InlineData(1344, 1080, 576, 900, false)] // docked left 0.7 at 1.2×: 2.33× across, only 1.2× down
+    [InlineData(1920, 1080, 960, 540, true)] // fullscreen 2×
+    public void At_Frame_TheLessMagnifiedAxisCounts(double targetWidth, double targetHeight, double sourceWidth, double sourceHeight, bool applies)
+    {
+        var frame = new ModeFrame(new PhysicalRect(0, 0, targetWidth, targetHeight), new PhysicalRect(0, 0, sourceWidth, sourceHeight), false);
+
+        Assert.Equal(applies ? s_on : TextEnhancement.Off, s_on.At(frame, Smoothing.Text));
+    }
+
     [Fact]
     public void At_Off_StaysOff()
     {
@@ -68,7 +80,7 @@ public sealed class TextEnhancementTests
     }
 
     [Fact]
-    public void SetEnhancement_Clamps_ReachesEveryMonitor_AndRaisesChanged()
+    public void SetEnhancement_Clamps_ReachesEveryMonitor_AndRaisesChangedOncePerChange()
     {
         var model = new EffectsModel(DisplayEffects.Default);
         model.SetMonitorFilter("m", new MonitorFilter(true, FilterId.Inverted));
@@ -76,6 +88,7 @@ public sealed class TextEnhancementTests
         model.Changed += () => raised++;
 
         model.SetEnhancement(new TextEnhancement(1.5, 4));
+        model.SetEnhancement(new TextEnhancement(1, 3));
 
         Assert.Equal(new TextEnhancement(1, 3), model.Current.Enhancement);
         Assert.Equal(new TextEnhancement(1, 3), model.CurrentFor("m").Enhancement);
