@@ -30,6 +30,8 @@ public static class ProfileFields
         Contrast = profile.Contrast,
         Brightness = profile.Brightness,
         Smoothing = profile.Smoothing,
+        TextSharpness = profile.TextSharpness,
+        TextBold = profile.TextBold,
         CursorMaxScale = profile.CursorMaxScale,
         CursorUnzoomedScale = profile.CursorUnzoomedScale,
         CursorOverrideWindows = profile.CursorOverrideWindows,

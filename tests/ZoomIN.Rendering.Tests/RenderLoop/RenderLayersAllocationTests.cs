@@ -10,6 +10,7 @@ using ZoomIN.Core.WindowFilters;
 using ZoomIN.Rendering.Gpu;
 using ZoomIN.Rendering.RenderLoop;
 using ZoomIN.Rendering.Tests.Gpu;
+using ZoomIN.Rendering.TextEnhance;
 
 namespace ZoomIN.Rendering.Tests.RenderLoop;
 
@@ -25,9 +26,11 @@ public sealed class RenderLayersAllocationTests
     private static readonly PhysicalRect s_monitor = new(0, 0, Size, Size);
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void DesktopLayer_FullscreenAndLens_DoNotAllocate(bool lens)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void DesktopLayer_FullscreenAndLens_DoNotAllocate(bool lens, bool enhanced)
     {
         using var gpu = GpuDevice.CreateWarp();
         using var image = TestImage.Create(gpu.Device, Size);
@@ -35,9 +38,13 @@ public sealed class RenderLayersAllocationTests
         using var pass = new MagnifyPass(gpu.Device);
         using var smart = SmartInvertLayer.Create(gpu.Device, Size, Size, @"\\.\DISPLAY1", new SmartInvertHealth(), NullLogger.Instance);
         using var timer = new GpuPassTimer(gpu.Device, @"\\.\DISPLAY1", "magnify");
-        using var probe = new SmartCostProbe(gpu.Device);
-        var layer = new DesktopLayer(pass, smart, timer, probe);
-        var effects = new DisplayEffects(new FilterSettings(true, FilterId.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default);
+        using var probe = new PassCostProbe(gpu.Device);
+        using var enhance = new EnhanceCost(gpu.Device, @"\\.\DISPLAY1");
+        var layer = new DesktopLayer(pass, smart, timer, probe, enhance);
+        var effects = new DisplayEffects(new FilterSettings(true, FilterId.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default)
+        {
+            Enhancement = enhanced ? new TextEnhancement(0.6, 1) : TextEnhancement.Off,
+        };
         var windows = new WindowRegions([new PhysicalRect(0, 0, 32, 32)], [WindowPalette.Smart]);
         var frame = lens
             ? ModeGeometry.Compute(ZoomMode.Lens, s_monitor, new PhysicalPoint(20, 20), 2, LensSize.Default, DockLayout.Default)
@@ -48,7 +55,7 @@ public sealed class RenderLayersAllocationTests
         {
             InstrumentPublished = (instrument, l) =>
             {
-                if (instrument.Name == "zoomin.render.gpu_time")
+                if (instrument.Name is "zoomin.render.gpu_time" or "zoomin.render.enhance_gpu_ms")
                 {
                     l.EnableMeasurementEvents(instrument);
                 }

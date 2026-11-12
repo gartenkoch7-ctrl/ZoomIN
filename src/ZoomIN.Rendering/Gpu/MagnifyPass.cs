@@ -11,6 +11,9 @@ internal sealed class MagnifyPass : IDisposable
 {
     private readonly ID3D11VertexShader _vertexShader;
     private readonly ID3D11PixelShader _pixelShader;
+
+    // "Schärfe"/"Fett" (M18, D1): bound per draw only when the constants ask for it.
+    private readonly ID3D11PixelShader _enhancedShader;
     private readonly ID3D11SamplerState _sampler;
     private readonly ID3D11SamplerState _pointSampler;
     private readonly ID3D11Buffer _constants;
@@ -23,6 +26,7 @@ internal sealed class MagnifyPass : IDisposable
     {
         _vertexShader = device.CreateVertexShader(ShaderSource.Load("Magnify.hlsl", "VSMain", "vs_4_0"));
         _pixelShader = device.CreatePixelShader(ShaderSource.Load("Magnify.hlsl", "PSMain", "ps_4_0"));
+        _enhancedShader = device.CreatePixelShader(ShaderSource.Load("Magnify.hlsl", "PSEnhanced", "ps_4_0"));
         _sampler = device.CreateSamplerState(SamplerDescription.LinearClamp);
         _pointSampler = device.CreateSamplerState(SamplerDescription.PointClamp);
         _constants = device.CreateBuffer(new BufferDescription(MagnifyConstants.SizeInBytes, BindFlags.ConstantBuffer, ResourceUsage.Default));
@@ -67,7 +71,7 @@ internal sealed class MagnifyPass : IDisposable
         context.IASetInputLayout(null);
         context.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
         context.VSSetShader(_vertexShader);
-        context.PSSetShader(_pixelShader);
+        context.PSSetShader(constants.Enhanced ? _enhancedShader : _pixelShader);
         context.PSSetShaderResource(0, source);
         if (weights is null)
         {
@@ -91,6 +95,7 @@ internal sealed class MagnifyPass : IDisposable
         _constants.Dispose();
         _pointSampler.Dispose();
         _sampler.Dispose();
+        _enhancedShader.Dispose();
         _pixelShader.Dispose();
         _vertexShader.Dispose();
     }

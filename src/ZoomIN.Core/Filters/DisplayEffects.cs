@@ -77,6 +77,9 @@ public sealed record DisplayEffects
     /// <summary>Smart inversion leaves colourful, detailed surroundings (photos, videos) original.</summary>
     public bool ProtectPhotos { get; init; } = true;
 
+    /// <summary>"Schärfe" and "Fett" (M18, D1); where they apply decides <see cref="TextEnhancement.At(double, Smoothing)"/>.</summary>
+    public TextEnhancement Enhancement { get; init; }
+
     public PointerStyle Cursor { get; init; }
 
     /// <summary>Precomputed, so the render thread never builds matrices.</summary>

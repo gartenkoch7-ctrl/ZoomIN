@@ -141,6 +141,11 @@ public sealed record AppSettings
     /// <summary>Smart inversion leaves photos and videos original (ADR-0024); on from the start.</summary>
     public bool ProtectPhotos { get; set; } = true;
 
+    /// <summary>"Schärfe" 0–1 and "Fett" 0–3 px (M18, D1, see TextEnhancement); off from the factory.</summary>
+    public double TextSharpness { get; set; }
+
+    public double TextBold { get; set; }
+
     // --- Pointer (pointer page); colours are "#RRGGBB" ---
 
     /// <summary>The magnified pointer grows with the zoom up to this factor.</summary>

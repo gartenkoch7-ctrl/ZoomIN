@@ -84,6 +84,20 @@ public sealed class EffectsModel
 
     public void SetSmoothing(Smoothing smoothing) => Update(e => e with { Smoothing = smoothing });
 
+    /// <summary>"Schärfe" and "Fett" (M18, D1), clamped to their ranges.</summary>
+    public void SetEnhancement(TextEnhancement enhancement) => UpdateEnhancement(_ => enhancement);
+
+    /// <summary>
+    /// Changes "Schärfe"/"Fett" from their current values in one step, so a profile switch at the
+    /// same moment is not overwritten with old values. The same values again (a slider echo, a drag
+    /// past the end) change nothing: no save, no upload.
+    /// </summary>
+    public void UpdateEnhancement(Func<TextEnhancement, TextEnhancement> change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        Update(e => change(e.Enhancement).Normalized() is var next && next == e.Enhancement ? e : e with { Enhancement = next });
+    }
+
     /// <summary>Smart inversion: photos and videos stay original (ADR-0024).</summary>
     public void SetProtectPhotos(bool protect) => Update(e => e with { ProtectPhotos = protect });
 
@@ -138,6 +152,7 @@ public sealed class EffectsModel
     {
         Filter = e.Filter.Normalized(),
         Cursor = e.Cursor.Normalized(),
+        Enhancement = e.Enhancement.Normalized(),
         MonitorFilters = e.MonitorFilters ?? new Dictionary<string, MonitorFilter>(),
     };
 
