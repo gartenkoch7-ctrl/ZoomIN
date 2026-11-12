@@ -164,6 +164,13 @@ E2 und E1 laufen in **einer** Spur hintereinander, weil beide diese Dateien änd
   erst beendetes Halten bleibt aber für 500 ms gemerkt.
 - **Ungenutzt:** `WindowFilterModel.SetOptions` wird nur noch von Tests aufgerufen. Mit derselben
   Instanz tut es jetzt nichts.
+- **Zweiter Tastatur-Hook:** Die Haltetaste hat einen eigenen LL-Hook neben dem Aktivitäts-Hook.
+  Das ist eine Entscheidung der Spur E (KB), damit sich beide getrennt ändern lassen. Er läuft nur,
+  solange eine Bedingung „Haltetaste“ ist.
+- **Alt-Gr-Zeichen:** Sie zählen wie alle Eingaben mit Strg/Alt nicht als Tippen, auch nicht für
+  „in Bewegung“ und „in Ruhe“ (KB, „Offen“).
+- **Doppelte Prüfung:** `CustomSchemeService.Update` prüft vor dem atomaren Schritt, ob das Schema
+  existiert, und der Schritt prüft es noch einmal.
 - **Farbumwandlung doppelt:** `CustomSchemesPage.BrushOf` wiederholt die Umwandlung aus `ColorChooser`.
 - Das Review lief, bis eine Runde keine Codeänderung mehr ergab.
 

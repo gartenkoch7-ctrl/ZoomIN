@@ -26,6 +26,11 @@ internal sealed class HoldKeyTracker
     {
         _downKey = key;
         _down = down;
+        if (down)
+        {
+            s_presses.Add(1); // held before the hook started: still a press for the highlights
+        }
+
         (_suspect, _releaseSuspect) = (false, false);
         _missedLogged = false;
     }
@@ -94,6 +99,7 @@ internal sealed class HoldKeyTracker
             missed = !_missedLogged;
             _missedLogged = true;
             _down = true;
+            s_presses.Add(1); // a press all the same, only seen late
         }
 
         _suspect = false;
