@@ -37,10 +37,6 @@ internal static class HoldKeyCodes
 
         // Only a real key counts as typing. Modifiers do not: Alt Gr sends a left Ctrl along with
         // right Alt (also on key repeat), which would otherwise cancel holding right Alt.
-        return down && !IsModifier(key) ? HoldKeyEvent.Other : HoldKeyEvent.None;
+        return down && !ModifierKeys.Is(key) ? HoldKeyEvent.Other : HoldKeyEvent.None;
     }
-
-    private static bool IsModifier(VIRTUAL_KEY key) => key is VIRTUAL_KEY.VK_SHIFT or VIRTUAL_KEY.VK_CONTROL or VIRTUAL_KEY.VK_MENU
-        or VIRTUAL_KEY.VK_LSHIFT or VIRTUAL_KEY.VK_RSHIFT or VIRTUAL_KEY.VK_LCONTROL or VIRTUAL_KEY.VK_RCONTROL
-        or VIRTUAL_KEY.VK_LMENU or VIRTUAL_KEY.VK_RMENU or VIRTUAL_KEY.VK_LWIN or VIRTUAL_KEY.VK_RWIN or VIRTUAL_KEY.VK_CAPITAL;
 }

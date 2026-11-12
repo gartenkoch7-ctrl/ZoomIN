@@ -179,17 +179,16 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
 
     private void OnKey(VIRTUAL_KEY key, uint scanCode, bool down, bool up)
     {
-        if (_handler is not { } handler)
-        {
-            return;
-        }
-
         try
         {
-            // Held only for microseconds; the key state timer is the only other user.
+            // Held only for microseconds; the key state timer and Stop are the other users. The handler
+            // is read under the lock, so a callback racing Stop cannot press again after its release.
             lock (_state)
             {
-                OnKeyLocked(handler, key, scanCode, down, up);
+                if (_handler is { } handler)
+                {
+                    OnKeyLocked(handler, key, scanCode, down, up);
+                }
             }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
