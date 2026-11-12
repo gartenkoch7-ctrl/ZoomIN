@@ -70,7 +70,7 @@ public sealed class HoldKeyFakeEventTests : IDisposable
     [InlineData(0x21Du, false, false, true)]
     [InlineData(0x22Au, false, false, true)]
     [InlineData(0x2Au, true, false, true)]
-    [InlineData(0x36u, true, false, true)]
+    [InlineData(0x36u, true, false, false)] // right Shift may be extended for real
     [InlineData(0x36u, true, true, false)]
     [InlineData(0x2Au, false, false, false)]
     [InlineData(0x1Du, true, false, false)] // right Ctrl is extended for real

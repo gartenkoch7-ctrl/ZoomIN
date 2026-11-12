@@ -87,22 +87,24 @@ public sealed class EdgeBuffer : IPointerMoveFilter
         if (IndexOf(setup.Monitors, requested) < 0)
         {
             // Into no monitor: a diagonal past a corner (e.g. right and down along the bottom
-            // edge) is a push along the one axis that leads onto a neighbour, as Windows would
-            // clip it. Otherwise (a gap of an offset layout) it stays here, as at an outer edge,
-            // and is no pressing: there is nothing to cross to.
-            var alongX = new PhysicalPoint(requested.X, Clamp(home, requested).Y);
-            var alongY = new PhysicalPoint(Clamp(home, requested).X, requested.Y);
-            if (IndexOf(setup.Monitors, alongX) >= 0 && !home.Contains(alongX))
+            // edge) is a push along the axis that leads onto a neighbour, as Windows would clip
+            // it; the axis pushed harder is tried first. Otherwise (a gap of an offset layout,
+            // or a monitor this list does not know yet) Windows decides: never trap the pointer.
+            var clamped = Clamp(home, requested);
+            var alongX = new PhysicalPoint(requested.X, clamped.Y);
+            var alongY = new PhysicalPoint(clamped.X, requested.Y);
+            var xFirst = Math.Abs(requested.X - clamped.X) >= Math.Abs(requested.Y - clamped.Y);
+            if (OnNeighbour(setup, home, xFirst ? alongX : alongY))
             {
-                requested = alongX;
+                requested = xFirst ? alongX : alongY;
             }
-            else if (IndexOf(setup.Monitors, alongY) >= 0 && !home.Contains(alongY))
+            else if (OnNeighbour(setup, home, xFirst ? alongY : alongX))
             {
-                requested = alongY;
+                requested = xFirst ? alongY : alongX;
             }
             else
             {
-                return Clamp(home, requested);
+                return requested;
             }
         }
 
@@ -151,6 +153,9 @@ public sealed class EdgeBuffer : IPointerMoveFilter
             || (_dirY < 0 && requested.Y <= home.Y + RetreatTolerance);
         return !onX && !onY;
     }
+
+    private static bool OnNeighbour(Setup setup, PhysicalRect home, PhysicalPoint point) =>
+        !home.Contains(point) && IndexOf(setup.Monitors, point) >= 0;
 
     private static int IndexOf(PhysicalRect[] monitors, PhysicalPoint point)
     {

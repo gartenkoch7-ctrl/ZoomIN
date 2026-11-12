@@ -335,8 +335,9 @@ an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten
   Monitor wieder, in beide Richtungen.
 - **Ziel auf keinem Monitor:** Schräg über eine Ecke (z. B. an der Taskleiste nach rechts, die
   Hand zieht leicht nach unten) zählt als Drücken entlang der Achse, die auf einen Nachbarn führt,
-  wie Windows es abschneiden würde. Sonst (Lücke versetzter Monitore, z. B. rechts neben einem
-  kürzeren Monitor) wird das Ziel an den eigenen Monitor geklemmt und zählt nicht als Drücken.
+  wie Windows es abschneiden würde; die stärker gedrückte Achse zuerst. Sonst (Lücke versetzter
+  Monitore oder ein Monitor, den die Liste noch nicht kennt) entscheidet Windows: Der Puffer lässt
+  die Bewegung durch, damit er den Zeiger nie einsperrt.
 - **Drücken gehört zu einem Monitor:** Wechselt der Zeiger (z. B. per Kürzel) auf einen anderen
   Monitor, beginnt die Druckzeit dort von vorn.
 - **Monitore beim Anzeigewechsel:** Liefert Windows mitten im Aufzählen keine vollständige Liste,

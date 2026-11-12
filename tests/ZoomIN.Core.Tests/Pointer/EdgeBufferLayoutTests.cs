@@ -49,6 +49,27 @@ public sealed class EdgeBufferLayoutTests
     }
 
     [Fact]
+    public void DiagonalIntoTheEmptyCorner_PressesTowardsTheAxisPushedHarder()
+    {
+        var below = new PhysicalRect(0, 1080, 1920, 1080);
+        _buffer.Configure([Left, Right, below], EdgeBufferLevel.Light);
+
+        // Mostly down with a slight drift right: towards the monitor below, not the one on the right.
+        Assert.Equal(new PhysicalPoint(1919, 1079), Move(0, 1919, 1079, 1920, 1090));
+        Assert.Equal(new PhysicalPoint(1919, 1090), Move(200, 1919, 1079, 1920, 1090));
+    }
+
+    [Fact]
+    public void UnknownMonitor_IsNeverBlocked()
+    {
+        // A monitor plugged in while the list was not refreshed yet: the pointer still gets there.
+        _buffer.Configure([Left, Right], EdgeBufferLevel.Strong);
+
+        Assert.Equal(new PhysicalPoint(1000, 1085), Move(0, 1000, 1079, 1000, 1085));
+        Assert.False(_buffer.IsPressing);
+    }
+
+    [Fact]
     public void PressOnAnotherMonitor_StartsOver()
     {
         var third = new PhysicalRect(3840, 0, 1920, 1080);
@@ -68,7 +89,8 @@ public sealed class EdgeBufferLayoutTests
         var lower = new PhysicalRect(1920, 200, 1920, 1080);
         _buffer.Configure([Left, lower], EdgeBufferLevel.Medium);
 
-        Assert.Equal(new PhysicalPoint(1919, 100), Move(0, 1919, 100, 1925, 100));
+        // Into the gap beside the shorter monitor: Windows keeps the pointer on a monitor itself.
+        Assert.Equal(new PhysicalPoint(1925, 100), Move(0, 1919, 100, 1925, 100));
         Assert.False(_buffer.IsPressing);
 
         Assert.Equal(new PhysicalPoint(1919, 500), Move(10, 1919, 500, 1925, 500));
