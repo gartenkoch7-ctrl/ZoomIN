@@ -58,7 +58,7 @@ public sealed class MonitorFreezeController : IDisposable
         (_announcer, _texts, _log, _dispatch) = (announcer, texts, log, dispatch);
         _guard = new FreezeGuard(fence, _frozen, _operations, log);
         _events = new FreezeFenceEvents(fence, _frozen, () => _freezing, dispatch,
-            (trigger, seen, freezing) => _guard.Run("recompute", () => Recheck(trigger, seen, freezing)));
+            (trigger, seen, freezing) => _guard.Run("recompute", () => Recheck(trigger, seen, freezing), restoreLevelOnFailure: false));
     }
 
     /// <summary>Ctrl+Alt+H did nothing; the localised hint for a tray notice.</summary>
@@ -97,6 +97,9 @@ public sealed class MonitorFreezeController : IDisposable
 
     private void FreezeUnderPointer()
     {
+        // From before the layout is read, a fence event counts this freeze as made before it (its layout
+        // may be outdated); a refusal and ToggleFreeze clear the flag again.
+        _freezing = true;
         var layout = MonitorLayout.Read(_monitors);
         var index = _cursor.TryGetPosition(out var pointer) ? layout.IndexAt(pointer) : -1;
         // Empty: Windows cannot describe a monitor right now (display change under way), try again later.
@@ -129,8 +132,6 @@ public sealed class MonitorFreezeController : IDisposable
         var point = _switch.LandingPoint(layout, target, [layout.Bounds[index]]);
 
         // ADR-0028: move first, then forbid (ClipCursor would pull the pointer onto the frozen edge).
-        // From here a fence event counts this freeze as made before it (cleared by ToggleFreeze).
-        _freezing = true;
         if (!_mover.MoveTo(point, PointerMoveReason.FreezeMonitor))
         {
             Refuse("move_refused", "Freeze.MoveRefused");
@@ -213,6 +214,7 @@ public sealed class MonitorFreezeController : IDisposable
 
     private void Refuse(string reason, string textKey)
     {
+        _freezing = false; // nothing is being frozen any more
         _log.FreezeRefused(reason);
         var text = _texts.Get(textKey);
         _announcer.Announce(text);

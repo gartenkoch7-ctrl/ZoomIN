@@ -13,7 +13,8 @@ internal sealed class FreezeGuard(IPointerFence fence, MonitorFreeze frozen, Fre
 {
     private readonly Lock _gate = new();
 
-    public void Run(string step, Action action)
+    /// <param name="restoreLevelOnFailure">False where a failure may follow a display change: the monitors thaw at 1×.</param>
+    public void Run(string step, Action action, bool restoreLevelOnFailure = true)
     {
         lock (_gate)
         {
@@ -25,7 +26,7 @@ internal sealed class FreezeGuard(IPointerFence fence, MonitorFreeze frozen, Fre
             {
                 log.FreezeFailed(ex, step);
                 Safely(() => fence.Forbid(FenceOwner.FrozenMonitors, []));
-                Safely(() => frozen.UnfreezeAll());
+                Safely(() => frozen.Unfreeze(_ => true, restoreLevelOnFailure));
                 Safely(() => operations.StopAll("failure"));
             }
         }
