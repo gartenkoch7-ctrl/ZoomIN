@@ -5,7 +5,6 @@ using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.PointerFence;
-using ZoomIN.Core.Viewport;
 
 namespace ZoomIN.App.Pointer;
 
@@ -19,20 +18,14 @@ namespace ZoomIN.App.Pointer;
 public sealed class PointerConstraintController : IDisposable
 {
     private readonly IPointerFence _fence;
-    private readonly IMonitorProvider _monitors;
     private readonly IHoldKeyWatch _keys;
     private readonly SettingsService _settings;
     private readonly ILogger _log;
     private readonly EdgeBuffer _buffer;
+    private readonly BufferSetup _bufferSetup;
     private readonly AxisLock _axis = new();
     private readonly Action<bool> _setHeld;
     private readonly Lock _gate = new();
-
-    // Only around the buffer's monitors and level, never around a fence call: the fence's watcher
-    // thread takes it in OnRecomputed while Apply may hold _gate and wait for that thread.
-    private readonly Lock _configure = new();
-    private EdgeBufferLevel _bufferLevel;
-    private IReadOnlyList<PhysicalRect> _lastBounds = [];
     private PointerConstraintOptions? _applied;
     private bool _bufferOn;
     private bool _axisOn;
@@ -44,11 +37,11 @@ public sealed class PointerConstraintController : IDisposable
         ILogger<PointerConstraintController> log)
     {
         _fence = fence;
-        _monitors = monitors;
         _keys = keys;
         _settings = settings;
         _log = log;
         _buffer = new EdgeBuffer(time);
+        _bufferSetup = new BufferSetup(_buffer, monitors);
         _setHeld = _axis.SetHeld;
     }
 
@@ -60,16 +53,17 @@ public sealed class PointerConstraintController : IDisposable
     {
         lock (_gate)
         {
-            if (_started)
+            if (_started || _disposed)
             {
                 return;
             }
 
+            // Under the lock, so a concurrent Dispose always sees and removes them.
             _started = true;
+            _settings.Changed += OnSettingsChanged;
+            _fence.Recomputed += OnRecomputed;
         }
 
-        _settings.Changed += OnSettingsChanged;
-        _fence.Recomputed += OnRecomputed;
         Apply(_settings.Current.PointerConstraint);
     }
 
@@ -108,11 +102,11 @@ public sealed class PointerConstraintController : IDisposable
 
     public void Dispose()
     {
-        _settings.Changed -= OnSettingsChanged;
-        _fence.Recomputed -= OnRecomputed;
         lock (_gate)
         {
-            _disposed = true;
+            Volatile.Write(ref _disposed, true);
+            _settings.Changed -= OnSettingsChanged;
+            _fence.Recomputed -= OnRecomputed;
             TurnOff();
         }
     }
@@ -125,7 +119,7 @@ public sealed class PointerConstraintController : IDisposable
             {
                 _bufferOn = false;
                 _fence.RemoveFilter(_buffer);
-                ConfigureBuffer(EdgeBufferLevel.Off);
+                _bufferSetup.Configure(EdgeBufferLevel.Off);
             }
 
             return 0;
@@ -133,7 +127,7 @@ public sealed class PointerConstraintController : IDisposable
 
         // Registered even with one monitor: only a registered filter keeps the fence watching
         // display changes, which brings the buffer back when a second monitor is plugged in.
-        var monitors = ConfigureBuffer(level);
+        var monitors = _bufferSetup.Configure(level);
         if (!_bufferOn)
         {
             _bufferOn = true;
@@ -143,23 +137,6 @@ public sealed class PointerConstraintController : IDisposable
         return monitors;
     }
 
-    /// <summary>Sets the level and reads the monitors; with <paramref name="level"/> null the current level is refreshed.</summary>
-    private int ConfigureBuffer(EdgeBufferLevel? level)
-    {
-        lock (_configure)
-        {
-            _bufferLevel = level ?? _bufferLevel;
-            if (_bufferLevel != EdgeBufferLevel.Off && _monitors.AllBounds() is { Count: > 0 } bounds)
-            {
-                _lastBounds = bounds;
-            }
-
-            // Empty while Windows is still enumerating after a display change: keep the last known
-            // monitors rather than switching the buffer off until the next change.
-            _buffer.Configure(_lastBounds, _bufferLevel);
-            return _lastBounds.Count;
-        }
-    }
 
     private void ApplyAxisLock(PointerConstraintOptions wanted, PointerConstraintOptions? before)
     {
@@ -208,7 +185,7 @@ public sealed class PointerConstraintController : IDisposable
         }
 
         _axis.SetHeld(false);
-        Try(() => ConfigureBuffer(EdgeBufferLevel.Off));
+        Try(() => _bufferSetup.Configure(EdgeBufferLevel.Off));
     }
 
     private void Try(Action step)
@@ -227,13 +204,19 @@ public sealed class PointerConstraintController : IDisposable
 
     // On the fence's watcher thread: an escaping exception would end ZoomIN. Never takes _gate:
     // Apply holds it while the fence may join this very thread (a removed last filter retires
-    // the watcher). The buffer is refreshed under _configure with the level Apply set last; Reset
+    // the watcher). The buffer is refreshed by BufferSetup with the level Apply set last; Reset
     // is thread-safe and harmless if the axis lock was just switched off.
     private void OnRecomputed(object? sender, FenceTrigger trigger)
     {
         try
         {
-            var monitors = ConfigureBuffer(null);
+            // The event may already have been raised when Dispose unsubscribed.
+            if (Volatile.Read(ref _disposed))
+            {
+                return;
+            }
+
+            var monitors = _bufferSetup.Configure(null);
 
             // Windows did not deliver key events meanwhile: start over; a key still held
             // re-engages with its next repeat.

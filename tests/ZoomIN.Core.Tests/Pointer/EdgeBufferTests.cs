@@ -237,9 +237,21 @@ public sealed class EdgeBufferTests
     {
         _buffer.Configure([Left, Right], EdgeBufferLevel.Medium);
         Move(0, 1919, 10, 1925, 10);
-        _buffer.Configure([Left, Right], EdgeBufferLevel.Medium);
+        Move(200, 1919, 10, 1925, 10);
+        _buffer.Configure([Left, Right], EdgeBufferLevel.Light);
 
         Assert.Equal(new PhysicalPoint(1919, 10), Move(400, 1919, 10, 1925, 10));
+    }
+
+    [Fact]
+    public void SameSetupAgain_KeepsPressing()
+    {
+        _buffer.Configure([Left, Right], EdgeBufferLevel.Medium);
+        Move(0, 1919, 10, 1925, 10);
+        Move(200, 1919, 10, 1925, 10);
+        _buffer.Configure([Left, Right], EdgeBufferLevel.Medium); // refreshed after a desktop switch
+
+        Assert.Equal(new PhysicalPoint(1925, 10), Move(400, 1919, 10, 1925, 10));
     }
 
     [Fact]

@@ -47,10 +47,16 @@ public sealed class EdgeBuffer : IPointerMoveFilter
     {
         ArgumentNullException.ThrowIfNull(monitors);
         var press = PointerConstraintOptions.PressTime(level);
-        Volatile.Write(ref _setup, press <= TimeSpan.Zero || monitors.Count < 2 ? null : new Setup(
-            [.. monitors],
-            Ticks(press),
-            Ticks(MaxPause)));
+        var setup = press <= TimeSpan.Zero || monitors.Count < 2 ? null : new Setup([.. monitors], Ticks(press), Ticks(MaxPause));
+
+        // Unchanged (e.g. refreshed after a desktop switch): keep the old one, a press in progress goes on.
+        var old = Volatile.Read(ref _setup);
+        if (setup is not null && old is not null && old.PressTicks == setup.PressTicks && old.Monitors.AsSpan().SequenceEqual(setup.Monitors))
+        {
+            return;
+        }
+
+        Volatile.Write(ref _setup, setup);
     }
 
     public PhysicalPoint Filter(long timestamp, PhysicalPoint current, PhysicalPoint requested)

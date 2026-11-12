@@ -358,7 +358,10 @@ an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten
   auf eigenem Thread, nur lesend, nichts wird verschluckt. Er unterscheidet links und rechts
   (`VK_LSHIFT`/`VK_RSHIFT`, `VK_LCONTROL`/`VK_RCONTROL`, `VK_LMENU`/`VK_RMENU`; Alt Gr meldet
   `VK_RMENU` plus ein unechtes `VK_LCONTROL` mit Scancode `0x21D`, das ignoriert wird, damit
-  Alt Gr nicht als gehaltenes Strg links zählt). Die Tastenwiederholung beim Halten zählt nur
+  Alt Gr nicht als gehaltenes Strg links zählt). Ebenso ignoriert werden die unechten
+  Umschalt-Ereignisse, die Windows bei eingeschaltetem NumLock um Ziffernblock- und
+  Navigationstasten legt (Scancode mit Bit `0x200` oder erweitertes `0x2A`/`0x36`): Umschalt
+  halten und eine Pfeiltaste des Ziffernblocks drücken löst die Sperre nicht. Die Tastenwiederholung beim Halten zählt nur
   einmal. Der Hook läuft nur, solange die Achsensperre eingeschaltet ist. Ein eigener Hook statt
   des Tastatur-Hooks von `Win32InputActivityHook`, weil dieser mit B1 geteilt ist; nach der
   Integration lässt er sich dort als Beobachter einhängen (wie `OverviewKeyWatch`). Injizierte
