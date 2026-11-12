@@ -34,6 +34,10 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
     private IHoldKeyHandler? _handler;
     private ITimer? _keyState;
 
+    // Disposing a timer does not wait for a callback already queued: each start is a new session, and
+    // a check of an earlier one does nothing.
+    private int _session;
+
     public Win32HoldKeyHook(ILogger<Win32HoldKeyHook> log, TimeProvider? time = null)
     {
         _log = log;
@@ -55,6 +59,7 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
             lock (_state)
             {
                 _handler = handler;
+                _session++;
                 _tracker.Start(handler.Key, IsPressed(handler.Key));
             }
 
@@ -70,7 +75,8 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
                 return false;
             }
 
-            _keyState = _time.CreateTimer(_ => CheckKeyState(), null, KeyStatePeriod, KeyStatePeriod);
+            var session = _session;
+            _keyState = _time.CreateTimer(_ => CheckKeyState(session), null, KeyStatePeriod, KeyStatePeriod);
             _log.HoldKeyHookStarted(handler.Key);
             return true;
         }
@@ -130,14 +136,14 @@ public sealed unsafe class Win32HoldKeyHook : IHoldKeySource
     }
 
     // Timer thread. The state lock orders it with the hook callback.
-    private void CheckKeyState()
+    private void CheckKeyState(int session)
     {
         try
         {
             bool missed;
             lock (_state)
             {
-                if (_handler is not { } handler)
+                if (session != _session || _handler is not { } handler)
                 {
                     return;
                 }

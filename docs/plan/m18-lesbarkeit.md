@@ -171,6 +171,19 @@ E2 und E1 laufen in **einer** Spur hintereinander, weil beide diese Dateien änd
   „in Bewegung“ und „in Ruhe“ (KB, „Offen“).
 - **Doppelte Prüfung:** `CustomSchemeService.Update` prüft vor dem atomaren Schritt, ob das Schema
   existiert, und der Schritt prüft es noch einmal.
+- **Andere Taste während des Haltens:** Sie beendet das Halten, auch wenn die Markierung schon
+  sichtbar ist (etwa Umschalt+Tab). Das hat Spur E so entschieden, gegen Aufblitzen bei längerem
+  Großschreiben (KB).
+- **Hold-Key-Telemetrie und -Wechsel:**
+  - Eine beim Hook-Start schon gehaltene Taste zählt nicht in `hold_key_presses`.
+  - Ein Wechsel der Haltetaste wird im Tracker erst mit dem nächsten Tastenereignis wirksam.
+  - Die Kürzel-Seite zeigt die Haltetaste vom Öffnen der Seite.
+- **D1-Kostenmessung:** `PassCostProbe` versucht nach jedem Neustart wieder einmal neu. Das kostet
+  nur Zeit, solange jemand die Metrik abonniert.
+- **Rückfall „Invertieren“:** `ColorFilters` und `EffectsModel.NextFilter` setzen ihn selbst um,
+  statt `CustomSchemes.Resolve` zu nutzen.
+- **Ältere Muster, nicht M18:** `FilterViewModel.ApplyChoice` schreibt Ein/Aus und Filter von der
+  Seite zurück (seit M5/M7). Ein Kürzel bei offener Filterseite kann so überschrieben werden.
 - **Farbumwandlung doppelt:** `CustomSchemesPage.BrushOf` wiederholt die Umwandlung aus `ColorChooser`.
 - Das Review lief, bis eine Runde keine Codeänderung mehr ergab.
 

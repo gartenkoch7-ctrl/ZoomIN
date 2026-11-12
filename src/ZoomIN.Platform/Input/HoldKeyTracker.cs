@@ -25,11 +25,8 @@ internal sealed class HoldKeyTracker
     public void Start(MarkerHoldKey key, bool down)
     {
         _downKey = key;
+        // Not counted as a press: the hook restarts on every condition change, also while the key is held.
         _down = down;
-        if (down)
-        {
-            s_presses.Add(1); // held before the hook started: still a press for the highlights
-        }
 
         (_suspect, _releaseSuspect) = (false, false);
         _missedLogged = false;
