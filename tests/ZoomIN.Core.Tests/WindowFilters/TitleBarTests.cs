@@ -10,7 +10,7 @@ public sealed class TitleBarTests
     private const int TitleBar = 32;
     private static readonly WindowKind s_settings = new("systemsettings.exe", "Windows.UI.Core.CoreWindow");
     private static readonly WindowKind s_terminal = new("windowsterminal.exe", "CASCADIA_HOSTING_WINDOW_CLASS");
-    private static readonly byte s_inverted = WindowPalette.For(ColorFilter.Inverted);
+    private static readonly byte s_inverted = WindowPalette.For(FilterId.Inverted);
     private static readonly byte s_auto = WindowPalette.For(WindowFilterOptions.Default.AutoFilter);
     private static readonly PhysicalRect s_bounds = new(100, 50, 900, 700);
 

@@ -9,7 +9,7 @@ namespace ZoomIN.Platform.Tests.WindowFilters;
 public sealed class TrackerSnapshotTests
 {
     private static readonly WindowKind s_word = new("winword.exe", "OpusApp");
-    private static readonly byte s_inverted = WindowPalette.For(ColorFilter.Inverted);
+    private static readonly byte s_inverted = WindowPalette.For(FilterId.Inverted);
 
     [Fact]
     public void PopupInFront_StandsForItsOwner()

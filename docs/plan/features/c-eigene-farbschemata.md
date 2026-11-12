@@ -1,5 +1,5 @@
 # C1–C3 · Eigene Farbschemata
-**Meilenstein:** [M18](../m18-lesbarkeit.md) · **Spur:** B · **Branch:** `feat/m18-c-farbschemata` (von `feat/m18-lesbarkeit`) · **Größe:** M · **Status:** geplant
+**Meilenstein:** [M18](../m18-lesbarkeit.md) · **Spur:** B · **Branch:** `feat/m18-c-farbschemata` (von `feat/m18-lesbarkeit`) · **Größe:** M · **Status:** umgesetzt auf `feat/m18-c-farbschemata`, Sichtprüfung offen
 
 **Ziel:** Nutzer legen bis zu 4 eigene, benannte Farbschemata an. Ein Schema besteht aus zwei
 freien Farben, einem Farbton oder einer Korrektur für eine Farbsehschwäche, dazu bis zu
@@ -60,30 +60,30 @@ Der Core-Teil darf schon während M17 beginnen.
 
 ## Aufgaben
 ### 1 · Core
-- [ ] `FilterId` statt `ColorFilter`, JSON-Lesen der alten Namen, Migration der Regeln für
+- [x] `FilterId` statt `ColorFilter`, JSON-Lesen der alten Namen, Migration der Regeln für
       einzelne Fenster
-- [ ] `CustomScheme`, `ColorReplacement`, Matrizen für zwei Farben, Einfärben und die drei
+- [x] `CustomScheme`, `ColorReplacement`, Matrizen für zwei Farben, Einfärben und die drei
       Farbsehschwächen (Herleitung mit Quelle in `docs/kb/`)
-- [ ] `WindowPalette` mit 14 Plätzen, `DisplayOrder` dynamisch, `EffectsModel.Next` über alle
-- [ ] Tests (Core ≥ 90 %): jede Art mit Weiß/Schwarz/Rot, Stärke 0 % = Einheitsmatrix,
+- [x] `WindowPalette` mit 14 Plätzen, `DisplayOrder` dynamisch, `EffectsModel.Next` über alle
+- [x] Tests (Core ≥ 90 %): jede Art mit Weiß/Schwarz/Rot, Stärke 0 % = Einheitsmatrix,
       Migration alter Settings, Durchschalten, Palette-Index stabil
-- [ ] Benchmark: Matrix- und Palettenaufbau `0 B` im Snapshot-Pfad
+- [x] Benchmark: Matrix- und Palettenaufbau `0 B` im Snapshot-Pfad
 
 ### 2 · Rendering
-- [ ] `PALETTE_SIZE` 14, Constant Buffer erweitert
-- [ ] Ersetzungs-Schritt (≤ 3) mit Toleranz und Flag
-- [ ] WARP-Tests: Ersetzung trifft Zielfarbe, Toleranz 0 lässt Nachbarfarben unverändert,
+- [x] `PALETTE_SIZE` 14, Constant Buffer erweitert
+- [x] Ersetzungs-Schritt (≤ 3) mit Toleranz und Flag
+- [x] WARP-Tests: Ersetzung trifft Zielfarbe, Toleranz 0 lässt Nachbarfarben unverändert,
       Zusammenspiel mit Smart Invert und Fensterregeln
-- [ ] GPU-Zeit messen (RTX 3060 Ti, 1080p, ×10 hochgerechnet): Gesamtframe bleibt ≤ 2 ms Onboard
+- [x] GPU-Zeit messen (RTX 3060 Ti, 1080p, ×10 hochgerechnet): Gesamtframe bleibt ≤ 2 ms Onboard
 
 ### 3 · App und Telemetrie
-- [ ] Detailseite „Eigene Schemata“ inkl. Vorschau, Texte DE/EN, vollständig per Tastatur und
+- [x] Detailseite „Eigene Schemata“ inkl. Vorschau, Texte DE/EN, vollständig per Tastatur und
       Bildschirmleser bedienbar
-- [ ] Logs App **1620–1639**: Schema angelegt, geändert, gelöscht, Rückfall einer Regel (nur Art
+- [x] Logs App **1620–1639**: Schema angelegt, geändert, gelöscht, Rückfall einer Regel (nur Art
       und Platz, kein Name)
-- [ ] Logs Rendering **3220–3239**: Palette neu gebaut, Ersetzungs-Schritt aktiv
-- [ ] Ablauf `zoomin.filters.scheme_edit`; Messwert `zoomin.filters.custom_schemes` (Anzahl)
-- [ ] Katalog `docs/kb/telemetrie.md`, KB `rendering-pipeline.md` (neuer Schritt, Palette 14)
+- [x] Logs Rendering **3220–3239**: Palette neu gebaut, Ersetzungs-Schritt aktiv
+- [x] Ablauf `zoomin.filters.scheme_edit`; Messwert `zoomin.filters.custom_schemes` (Anzahl)
+- [x] Katalog `docs/kb/telemetrie.md`, KB `rendering-pipeline.md` (neuer Schritt, Palette 14)
 
 ## Parallelisierung
 - **Exklusiv:** `Core/Filters/*`, `Core/WindowFilters/WindowPalette.cs`, `Magnify.hlsl`,
@@ -98,7 +98,7 @@ Der Core-Teil darf schon während M17 beginnen.
 - [ ] 4 eigene Schemata anlegbar; ein fünftes wird mit Hinweis abgelehnt
 - [ ] Eigene Schemata erscheinen in der Filterliste, beim Durchschalten mit
       `Strg+Alt+Umschalt+C` und in den Regeln für einzelne Fenster, auch nach einem Neustart
-- [ ] Alte `settings.json` (Enum-Namen) wird ohne Verlust gelesen
+- [x] Alte `settings.json` (Enum-Namen) wird ohne Verlust gelesen
 - [ ] „Rot → Gelb“ ersetzt Rot sichtbar, andere Farben bleiben (Toleranz klein)
 - [ ] Bildrate gleich Monitor-Hz, GPU-Budget eingehalten, keine Allokation im Render-Loop
 - [ ] Bei Bildschirmfreigabe unsichtbar wie alle Filter

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ZoomIN.App.Localization;
+using ZoomIN.App.Markers;
 using ZoomIN.App.Overview;
 using ZoomIN.App.Settings;
 using ZoomIN.App.WindowDrag;
@@ -87,6 +88,8 @@ internal static class EngineRegistration
         // The tray app registers the shared localizer itself. The secure instance only needs one to build
         // OverviewController; the overview has no shortcut there (SecureSettingsSanitizer).
         services.TryAddSingleton<ILocalizer>(_ => AppTexts.CreateLocalizer());
+        services.AddSingleton<IHoldKeySource, Win32HoldKeyHook>();
+        services.AddSingleton<MarkerInput>();
         services.AddSingleton<ITrackingSource, UiaTrackingSource>();
         services.AddSingleton<IWindowFilterSource, Win32WindowFilterSource>();
         services.AddSingleton<IWindowDragSource, Win32WindowDragSource>();

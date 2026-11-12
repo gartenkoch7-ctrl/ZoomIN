@@ -24,7 +24,7 @@ public sealed class SmartInvertAllocationTests
         using var pass = new MagnifyPass(gpu.Device);
         using var layer = SmartInvertLayer.Create(gpu.Device, Size, Size, @"\\.\DISPLAY1", new SmartInvertHealth(), NullLogger.Instance);
         var monitor = new PhysicalRect(0, 0, Size, Size);
-        var effects = new DisplayEffects(new FilterSettings(true, ColorFilter.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default);
+        var effects = new DisplayEffects(new FilterSettings(true, FilterId.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default);
         var regions = new WindowRegions([new PhysicalRect(0, 0, 32, 32)], [WindowPalette.Smart]);
         var constants = MagnifyConstants.Fullscreen(monitor, monitor, effects.Matrix, Smoothing.Text, smart: true);
 

@@ -2,7 +2,6 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
-using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Tracking;
@@ -16,14 +15,15 @@ namespace ZoomIN.Core.Settings;
 /// <summary>
 /// Persisted user settings (ADR-0004). M2–M4 keep only what zoom and input need; M7 adds the
 /// rest and the settings UI. Bump <see cref="CurrentSchemaVersion"/> and add a migration on
-/// breaking changes; new optional properties with defaults need no migration.
+/// breaking changes; new optional properties with defaults need no migration. Shortcuts and the
+/// other input settings shared by all profiles are in the base record <see cref="InputSettings"/>.
 /// </summary>
 /// <remarks>
 /// Properties use <c>set</c>, not <c>init</c>: the System.Text.Json source generator assigns
 /// default(T) to missing init-only properties, which would wipe the defaults below when an older
 /// file lacks a newer property (found in M3). Treat instances as immutable and use <c>with</c>.
 /// </remarks>
-public sealed record AppSettings
+public sealed record AppSettings : InputSettings
 {
     /// <summary>2 (M17): mouse follow mode instead of CenterMouse, see <see cref="SettingsMigration"/>.</summary>
     public const int CurrentSchemaVersion = 2;
@@ -76,6 +76,12 @@ public sealed record AppSettings
     /// <summary>Filter per window (ADR-0020): on/off, automatic filter, sensitivity and the user's rules per app + window class.</summary>
     public WindowFilterOptions WindowFilter { get; set; } = WindowFilterOptions.Default;
 
+    /// <summary>
+    /// Own colour schemes (M18, C1–C3), at most 4; the definitions are shared by all profiles, the
+    /// choice (<see cref="ColorFilter"/>, rules) belongs to the profile. None from the factory.
+    /// </summary>
+    public IReadOnlyList<CustomScheme> CustomSchemes { get; set; } = [];
+
     // --- Display (stored per profile, see ProfileFields) ---
 
     /// <summary>
@@ -116,7 +122,7 @@ public sealed record AppSettings
 
     public bool FilterEnabled { get; set; }
 
-    public ColorFilter ColorFilter { get; set; } = FilterSettings.Default.Filter;
+    public FilterId ColorFilter { get; set; } = FilterSettings.Default.Filter;
 
     /// <summary>Each monitor may keep its own filter on/off and kind (decision: default on, like the zoom level).</summary>
     public bool PerMonitorFilter { get; set; } = true;
@@ -134,6 +140,11 @@ public sealed record AppSettings
 
     /// <summary>Smart inversion leaves photos and videos original (ADR-0024); on from the start.</summary>
     public bool ProtectPhotos { get; set; } = true;
+
+    /// <summary>"Schärfe" 0–1 and "Fett" 0–3 px (M18, D1, see TextEnhancement); off from the factory.</summary>
+    public double TextSharpness { get; set; }
+
+    public double TextBold { get; set; }
 
     // --- Pointer (pointer page); colours are "#RRGGBB" ---
 
@@ -208,42 +219,23 @@ public sealed record AppSettings
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? CenterMouse { get; set; }
 
+    /// <summary>Caret marker look (E2); the factory setting looks like the bar before E2.</summary>
+    public CaretMarkerShape CaretMarkerShape { get; set; } = CaretMarkerStyle.Default.Shape;
+
+    public string CaretMarkerColor { get; set; } = CaretMarkerStyle.Default.Color.ToHex();
+
+    public CaretMarkerThickness CaretMarkerThickness { get; set; } = CaretMarkerStyle.Default.Thickness;
+
+    /// <summary>When crosshair, caret marker and focus frame are shown (E1); factory: always.</summary>
+    public ShowCondition CrosshairShow { get; set; }
+
+    public ShowCondition CaretMarkerShow { get; set; }
+
+    public ShowCondition FocusFrameShow { get; set; }
+
     /// <summary>Glide duration for zoom changes in milliseconds; 0 = instant.</summary>
     public int AnimationMilliseconds { get; set; } = 150;
 
     /// <summary>Zoom while moving or resizing windows (G1): lift to 1× by default, for both.</summary>
     public WindowDragOptions WindowDrag { get; set; } = WindowDragOptions.Default;
-
-    // --- Input (shared by all profiles) ---
-    public HotkeyGesture ToggleHotkey { get; set; } = HotkeyGesture.ToggleZoom;
-
-    public HotkeyGesture ZoomInHotkey { get; set; } = HotkeyGesture.ZoomIn;
-
-    public HotkeyGesture ZoomOutHotkey { get; set; } = HotkeyGesture.ZoomOut;
-
-    public HotkeyGesture FullscreenHotkey { get; set; } = HotkeyGesture.Fullscreen;
-
-    public HotkeyGesture LensHotkey { get; set; } = HotkeyGesture.Lens;
-
-    public HotkeyGesture DockedHotkey { get; set; } = HotkeyGesture.Docked;
-
-    public HotkeyGesture FilterHotkey { get; set; } = HotkeyGesture.ToggleFilter;
-
-    public HotkeyGesture NextFilterHotkey { get; set; } = HotkeyGesture.NextFilter;
-
-    public HotkeyGesture LocateHotkey { get; set; } = HotkeyGesture.Locate;
-
-    public HotkeyGesture CrosshairHotkey { get; set; } = HotkeyGesture.ToggleCrosshair;
-
-    public HotkeyGesture TrackingHotkey { get; set; } = HotkeyGesture.ToggleTracking;
-
-    public HotkeyGesture ProfileHotkey { get; set; } = HotkeyGesture.NextProfile;
-
-    /// <summary>Filter for the active window on/off (ADR-0020); unassigned from the start.</summary>
-    public HotkeyGesture WindowFilterHotkey { get; set; }
-
-    /// <summary>Overview at the push of a key (B2, M17).</summary>
-    public HotkeyGesture OverviewHotkey { get; set; } = HotkeyGesture.Overview;
-
-    public HotkeyModifiers WheelModifiers { get; set; } = HotkeyModifiers.Control;
 }

@@ -8,6 +8,7 @@ Thematisch aufgeteilt, damit Agents nur laden, was sie brauchen. Jede Datei blei
 | [glossar.md](glossar.md) | Begriffe aus Vergrößerung, Grafik und Windows |
 | [architektur.md](architektur.md) | Projekte, Schichten, Ordnerstruktur, Datenfluss |
 | [rendering-pipeline.md](rendering-pipeline.md) | Capture → Shader → Swapchain, Frame-Ablauf |
+| [farbschemata.md](farbschemata.md) | Eigene Farbschemata: Datenmodell, Matrizen mit Herleitung, Farbe ersetzen, Rückfall beim Löschen |
 | [capture-ausschluss.md](capture-ausschluss.md) | Warum der Zoom in Teams & Co. unsichtbar ist |
 | [eingabe-und-tracking.md](eingabe-und-tracking.md) | Maus, Fokus, Textcursor, Klick-Mapping, Hotkeys |
 | [performance.md](performance.md) | Budgets, Messung, Regeln für den Hot Path |

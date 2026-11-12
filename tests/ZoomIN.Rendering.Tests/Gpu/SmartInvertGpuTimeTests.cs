@@ -34,7 +34,7 @@ public sealed class SmartInvertGpuTimeTests
         using var pass = new MagnifyPass(gpu.Device);
         using var ambient = new AmbientPass(gpu.Device, Width, Height);
         var monitor = new PhysicalRect(0, 0, Width, Height);
-        var effects = new DisplayEffects(new FilterSettings(true, ColorFilter.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default);
+        var effects = new DisplayEffects(new FilterSettings(true, FilterId.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default);
         var windows = default(WindowConstants);
         WindowConstants.Fill(ref windows, WindowRegions.Empty, monitor, effects);
         pass.UpdateWindows(gpu.Context, windows);

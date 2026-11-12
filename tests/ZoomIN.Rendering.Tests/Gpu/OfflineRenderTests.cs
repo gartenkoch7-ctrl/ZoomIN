@@ -69,7 +69,7 @@ internal sealed class OfflineRenderer : IDisposable
     /// <summary>One frame: weights blended with <paramref name="alpha"/>, then the monitor smart-filtered.</summary>
     public void Draw(ID3D11ShaderResourceView desktop, PhysicalRect monitor, PhysicalRect source, bool protectPhotos, float alpha)
     {
-        var effects = new DisplayEffects(new FilterSettings(true, ColorFilter.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default)
+        var effects = new DisplayEffects(new FilterSettings(true, FilterId.InvertedSmart, 1, 0), Smoothing.Text, PointerStyle.Default)
         {
             ProtectPhotos = protectPhotos,
         };

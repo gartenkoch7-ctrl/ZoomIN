@@ -9,16 +9,21 @@ namespace ZoomIN.App.ViewModels;
 public sealed partial class WindowRuleRow : ObservableObject
 {
     private readonly Action<WindowRuleRow> _changed;
+    private readonly IReadOnlyList<FilterId> _order;
     private readonly bool _loading;
 
-    public WindowRuleRow(WindowFilterRule rule, IReadOnlyList<string> choices, IReadOnlyList<string> titleBarChoices, Action<WindowRuleRow> changed)
+    /// <param name="order">The filters behind <paramref name="choices"/> after "Automatic" and "None".</param>
+    public WindowRuleRow(
+        WindowFilterRule rule, IReadOnlyList<FilterId> order, IReadOnlyList<string> choices, IReadOnlyList<string> titleBarChoices,
+        Action<WindowRuleRow> changed)
     {
         _loading = true;
+        _order = order;
         Kind = rule.Kind;
         Choices = choices;
         TitleBarChoices = titleBarChoices;
         _changed = changed;
-        ChoiceIndex = IndexOf(rule);
+        ChoiceIndex = IndexOf(rule, order);
         TitleBarIndex = (int)rule.TitleBar;
         _loading = false;
     }
@@ -51,17 +56,17 @@ public sealed partial class WindowRuleRow : ObservableObject
         {
             <= 0 => WindowFilterRule.For(Kind, WindowFilterChoice.Automatic),
             1 => WindowFilterRule.For(Kind, WindowFilterChoice.None),
-            _ => WindowFilterRule.For(Kind, WindowFilterChoice.Filter, ColorFilters.DisplayOrder[ChoiceIndex - 2]),
+            _ => WindowFilterRule.For(Kind, WindowFilterChoice.Filter, _order[ChoiceIndex - 2]),
         };
         return rule with { TitleBar = TitleBarIndex > 0 ? (WindowTitleBarChoice)TitleBarIndex : WindowTitleBarChoice.Automatic };
     }
 
-    /// <summary>The choice list as the rows show it.</summary>
-    public static IReadOnlyList<string> AllChoices() =>
+    /// <summary>The choice list as the rows show it: Automatic, None, then <paramref name="filterNames"/> (the order the rows get).</summary>
+    public static IReadOnlyList<string> AllChoices(IReadOnlyList<string> filterNames) =>
     [
         Text.Get("WinFilter.Choice.Automatic"),
         Text.Get("WinFilter.Choice.None"),
-        .. ColorFilters.DisplayOrder.Select(f => Text.Get("Filter." + f)),
+        .. filterNames,
     ];
 
     /// <summary>The title bar choices as the rows show them.</summary>
@@ -88,10 +93,13 @@ public sealed partial class WindowRuleRow : ObservableObject
         }
     }
 
-    private static int IndexOf(WindowFilterRule rule) => rule.Choice switch
+    // The order holds exactly the built-in filters and the existing schemes, so a filter missing from
+    // it is what CustomSchemes.Resolve maps to the fall-back: show what the rule gets (M18). Named
+    // explicitly, so it does not depend on where "Inverted" stands in the list.
+    private static int IndexOf(WindowFilterRule rule, IReadOnlyList<FilterId> order) => rule.Choice switch
     {
         WindowFilterChoice.None => 1,
-        WindowFilterChoice.Filter => 2 + ColorFilters.DisplayIndexOf(rule.Filter),
+        WindowFilterChoice.Filter => 2 + ColorFilters.IndexIn(order, order.Contains(rule.Filter) ? rule.Filter : CustomSchemes.Fallback),
         _ => 0,
     };
 }

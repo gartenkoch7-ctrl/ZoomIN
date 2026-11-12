@@ -12,9 +12,9 @@ public sealed class SetupChoicesTests
     [Fact]
     public void Choices_AreMerged_AndTheFirstRunIsDone()
     {
-        var existing = new AppSettings() with { ColorFilter = ColorFilter.Grayscale, LensWidth = 0.55 };
+        var existing = new AppSettings() with { ColorFilter = FilterId.Grayscale, LensWidth = 0.55 };
         var choices = new SetupChoices(ReleaseChannel.Experimental, Autostart: true, DesktopShortcut: false, CheckForUpdates: true,
-            ZoomLevel: 3, Filter: ColorFilter.InvertedSmart);
+            ZoomLevel: 3, Filter: FilterId.InvertedSmart);
 
         var settings = choices.ApplyTo(existing);
 
@@ -22,7 +22,7 @@ public sealed class SetupChoicesTests
         Assert.True(settings.CheckForUpdates);
         Assert.Equal(3, settings.LastZoomLevel);
         Assert.True(settings.FilterEnabled);
-        Assert.Equal(ColorFilter.InvertedSmart, settings.ColorFilter);
+        Assert.Equal(FilterId.InvertedSmart, settings.ColorFilter);
         Assert.True(settings.FirstRunCompleted);
         Assert.Equal(0.55, settings.LensWidth); // a reinstall keeps everything else
     }
@@ -30,12 +30,12 @@ public sealed class SetupChoicesTests
     [Fact]
     public void NoFilter_TurnsTheFilterOff_ButKeepsTheKind()
     {
-        var existing = new AppSettings() with { FilterEnabled = true, ColorFilter = ColorFilter.Grayscale };
+        var existing = new AppSettings() with { FilterEnabled = true, ColorFilter = FilterId.Grayscale };
 
         var settings = new SetupChoices(ReleaseChannel.Stable, false, false, false, 2, Filter: null).ApplyTo(existing);
 
         Assert.False(settings.FilterEnabled);
-        Assert.Equal(ColorFilter.Grayscale, settings.ColorFilter);
+        Assert.Equal(FilterId.Grayscale, settings.ColorFilter);
     }
 
     [Fact]

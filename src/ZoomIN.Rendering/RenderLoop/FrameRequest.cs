@@ -17,6 +17,7 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// <param name="Placement">Latest "centre the view here" request for this monitor (M17), passed to the anchor.</param>
 /// <param name="ViewHeld">A temporary level (window drag) holds the monitor below the user's level, also while gliding there:
 /// the overview keeps the view from before it.</param>
+/// <param name="Activity">Mouse, typing and hold key for the show conditions of the highlights (E1).</param>
 internal readonly record struct FrameRequest(
     ZoomMode Mode,
     ZoomMode AnchorMode,
@@ -33,7 +34,8 @@ internal readonly record struct FrameRequest(
     OverviewSession? Overview = null,
     double OverviewLevel = 1,
     ViewPlacement Placement = default,
-    bool ViewHeld = false)
+    bool ViewHeld = false,
+    MarkerActivitySample Activity = default)
 {
     /// <summary>Not magnified and no colour filter: only pointer, crosshair or locator are drawn.</summary>
     public bool OverlayOnly => Zoom <= 1.01 && !Effects.Filter.ChangesColors && !WindowsFiltered;

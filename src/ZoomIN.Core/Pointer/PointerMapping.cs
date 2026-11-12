@@ -33,6 +33,7 @@ public static class PointerMapping
             CrosshairWidth = settings.CrosshairWidth,
             CrosshairOpacity = settings.CrosshairOpacity,
             HideWhileTyping = settings.HideCursorWhileTyping,
+            CrosshairShow = Enum.IsDefined(settings.CrosshairShow) ? settings.CrosshairShow : d.CrosshairShow,
         };
     }
 
@@ -61,6 +62,7 @@ public static class PointerMapping
             CrosshairWidth = p.CrosshairWidth,
             CrosshairOpacity = p.CrosshairOpacity,
             HideCursorWhileTyping = p.HideWhileTyping,
+            CrosshairShow = p.CrosshairShow,
         };
     }
 }

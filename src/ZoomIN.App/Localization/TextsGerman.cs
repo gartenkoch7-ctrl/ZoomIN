@@ -69,7 +69,7 @@ internal static class TextsGerman
         ["TrackingPan"] = "Schwenken (ms, 0 = sofort springen)",
         ["TrackingMargin"] = "Randabstand für den Textcursor (%)",
         ["TrackingFocusFrame"] = "Rahmen um das fokussierte Element",
-        ["TrackingCaretMarker"] = "Balken über dem Textcursor",
+        ["TrackingCaretMarker"] = "Textcursor markieren",
 
         ["HotkeysIntro"] = "Alle Kürzel wirken systemweit. Zoomen per Mausrad: Strg+Mausrad (ZoomIN hat Vorrang vor dem Zoom der Programme).",
         ["HotkeyChange"] = "Ändern",

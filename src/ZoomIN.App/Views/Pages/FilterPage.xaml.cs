@@ -26,5 +26,8 @@ public sealed partial class FilterPage : Page
     // Detail page of the filter per window (ADR-0020); "Back" there returns here.
     private void OnWindowFilter(object sender, RoutedEventArgs e) => Frame.Navigate(typeof(WindowFilterPage), _services);
 
+    // Detail page of the own colour schemes (M18); "Back" there returns here.
+    private void OnCustomSchemes(object sender, RoutedEventArgs e) => Frame.Navigate(typeof(CustomSchemesPage), _services);
+
     private void OnReset(object sender, RoutedEventArgs e) => Vm?.Reset();
 }

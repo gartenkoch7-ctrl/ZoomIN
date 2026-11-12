@@ -4,11 +4,11 @@ using ZoomIN.Core.Viewport;
 
 namespace ZoomIN.Rendering.Gpu;
 
-/// <summary>Constant buffer of Magnify.hlsl. 112 bytes, matching the HLSL cbuffer layout.</summary>
+/// <summary>Constant buffer of Magnify.hlsl. 128 bytes, matching the HLSL cbuffer layout.</summary>
 [StructLayout(LayoutKind.Sequential)]
 internal readonly struct MagnifyConstants
 {
-    public const int SizeInBytes = 112;
+    public const int SizeInBytes = 128;
 
     public readonly float SourceOffsetU;
     public readonly float SourceOffsetV;
@@ -26,10 +26,14 @@ internal readonly struct MagnifyConstants
     public readonly float TextureHeight;
     public readonly uint SmoothingMode;
     public readonly uint MonitorSmart;
+    public readonly float Sharpness;
+    public readonly float BoldPixels;
+    private readonly float _enhancePadding0;
+    private readonly float _enhancePadding1;
 
     private MagnifyConstants(
         PhysicalRect source, PhysicalRect monitor, PhysicalRect target, PhysicalRect viewport,
-        FrameColor frame, in ColorMatrix color, Smoothing smoothing, bool smart = false)
+        FrameColor frame, in ColorMatrix color, Smoothing smoothing, bool smart = false, TextEnhancement enhance = default)
     {
         SourceOffsetU = (float)((source.X - monitor.X) / monitor.Width);
         SourceOffsetV = (float)((source.Y - monitor.Y) / monitor.Height);
@@ -47,7 +51,16 @@ internal readonly struct MagnifyConstants
         TextureHeight = (float)monitor.Height;
         SmoothingMode = (uint)smoothing;
         MonitorSmart = smart ? 1u : 0u;
+        // PSEnhanced always samples bicubic: with another smoothing it would switch it silently (risk 3).
+        var applied = TextEnhancement.WorksWith(smoothing) ? enhance : TextEnhancement.Off;
+        Sharpness = (float)applied.Sharpness;
+        BoldPixels = (float)applied.BoldPixels;
+        _enhancePadding0 = 0;
+        _enhancePadding1 = 0;
     }
+
+    /// <summary>"Schärfe" or "Fett" is on: <see cref="MagnifyPass"/> binds PSEnhanced instead of PSMain (M18, D1).</summary>
+    public bool Enhanced => Sharpness > 0 || BoldPixels > 0;
 
     /// <summary>Magnifies <paramref name="source"/> onto the whole viewport, without frame or filter.</summary>
     public static MagnifyConstants FromSourceRect(PhysicalRect source, PhysicalRect monitor) =>
@@ -55,8 +68,10 @@ internal readonly struct MagnifyConstants
 
     /// <summary>Magnifies onto the whole viewport with colour matrix and smoothing.</summary>
     /// <param name="smart">The matrix is the inverted part of the smart inversion (ADR-0024).</param>
-    public static MagnifyConstants Fullscreen(PhysicalRect source, PhysicalRect monitor, in ColorMatrix color, Smoothing smoothing, bool smart = false) =>
-        new(source, monitor, monitor, monitor, default, color, smoothing, smart);
+    /// <param name="enhance">"Schärfe"/"Fett" as <see cref="TextEnhancement.At(double, Smoothing)"/> resolved them for this zoom.</param>
+    public static MagnifyConstants Fullscreen(
+        PhysicalRect source, PhysicalRect monitor, in ColorMatrix color, Smoothing smoothing, bool smart = false, TextEnhancement enhance = default) =>
+        new(source, monitor, monitor, monitor, default, color, smoothing, smart, enhance);
 
     /// <summary>
     /// Magnifies <paramref name="source"/> into <paramref name="target"/>; the rest of
@@ -68,6 +83,6 @@ internal readonly struct MagnifyConstants
 
     public static MagnifyConstants WithFrame(
         PhysicalRect source, PhysicalRect monitor, PhysicalRect target, PhysicalRect viewport,
-        FrameColor frame, in ColorMatrix color, Smoothing smoothing, bool smart = false) =>
-        new(source, monitor, target, viewport, frame, color, smoothing, smart);
+        FrameColor frame, in ColorMatrix color, Smoothing smoothing, bool smart = false, TextEnhancement enhance = default) =>
+        new(source, monitor, target, viewport, frame, color, smoothing, smart, enhance);
 }
