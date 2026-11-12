@@ -254,6 +254,9 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   die neue Sitzung kein neues Bild (`FrozenMonitor.ClaimStill`: nur einmal je Einfrieren), sondern
   zeigt live (Log 3312) – ein späteres Bild als Standbild auszugeben wäre irreführender.
   `RenderSession.Hide` gibt ein Standbild sofort frei (ein aufgetauter Monitor bei 1× schläft).
+  Genommen wird es nur aus einer aktuellen Desktop-Kopie (`DesktopDuplicator.IsCurrent`): nach
+  `ACCESS_LOST` (Win+L, UAC) wartet es auf den nächsten Frame, statt ein altes Bild festzuhalten.
+  Steht der Zeiger doch auf einem eingefrorenen Monitor, zeigt Windows seinen eigenen Zeiger.
   Mit dem Standbild bleiben auch die Fensterbereiche des Filters pro Fenster stehen, sonst lägen die
   Filter auf Fenstern, die im Bild gar nicht mehr dort sind.
 - **Rahmen:** 6 px innen am Monitorrand in der Einstellungsfarbe (Werk: Cyan), gezeichnet mit dem

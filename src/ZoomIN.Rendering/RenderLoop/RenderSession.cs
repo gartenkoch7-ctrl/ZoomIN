@@ -141,24 +141,30 @@ internal sealed class RenderSession : IDisposable
                 return FrameOutcome.Presented;
             }
 
-            newImage |= _frozen.TryCapture(frozen, _gpu.Context, _duplicator.Texture, request.Windows);
+            newImage |= _frozen.TryCapture(frozen, _gpu.Context, _duplicator.Texture, _duplicator.IsCurrent, request.Windows);
         }
 
         var image = _frozen.Desktop(_duplicator.ShaderResource);
 
         // Read the cursor as late as possible: it decides what is shown under the pointer.
-        // A monitor without the mouse keeps its last view (M3 decision); a frozen one never has it.
+        // A monitor without the mouse keeps its last view (M3 decision). A frozen one never draws it;
+        // should the pointer be there anyway, Windows shows its own instead of none.
         var hasCursor = _pointer.Position.TryGetPosition(out var cursor);
-        _cursorInside = hasCursor && frozen is null && _monitor.Bounds.Contains(cursor);
+        var onMonitor = hasCursor && _monitor.Bounds.Contains(cursor);
+        _cursorInside = onMonitor && frozen is null;
         if (_cursorInside)
         {
             _lastCursor = cursor;
+        }
+        else if (onMonitor)
+        {
+            _cursorLayer.ShowSystemCursor();
         }
 
         // The anchor is the mouse, or the focus/caret while the user works with the keyboard (M6).
         // Frozen: the anchor of the moment of freezing; mouse, focus, caret and placements wait.
         var anchor = frozen is not null
-            ? FrozenLayer.Anchor(frozen, _lastAnchor)
+            ? frozen.AnchorOr(_lastAnchor)
             : _anchors.Next(new AnchorInput(
                 Stopwatch.GetTimestamp(), hasCursor ? cursor : _lastCursor, _cursorInside, _monitor.Bounds,
                 request.AnchorMode, request.Zoom, request.Lens, request.Dock, request.Tracking, request.TrackingOptions, request.Placement));
@@ -193,8 +199,11 @@ internal sealed class RenderSession : IDisposable
         }
         else
         {
+            // A still image keeps the window regions it was taken with (and whether they filter here).
+            var windows = _frozen.Windows(request.Windows);
+            var windowsFiltered = ReferenceEquals(windows, request.Windows) ? request.WindowsFiltered : windows.ChangesMonitor(_monitor.Bounds, request.Effects);
             weights = _desktop.Draw(_gpu.Context, image, _swapchain.RenderTarget, _swapchain.Width, _swapchain.Height,
-                _monitor.Bounds, frame, request.Effects, _frozen.Windows(request.Windows), request.WindowsFiltered, newImage);
+                _monitor.Bounds, frame, request.Effects, windows, windowsFiltered, newImage);
         }
 
         // Focus frame and caret marker pause on a frozen monitor; the pointer cannot be there.

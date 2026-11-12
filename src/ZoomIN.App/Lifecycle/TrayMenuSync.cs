@@ -48,7 +48,7 @@ public sealed class TrayMenuSync
         // Short status after the window filter shortcut (ADR-0020); the tray works from any thread.
         _windowFilter.Toggled += rule => _tray.Notify(Text.Get("WinFilter.Title"), WindowFilterStatus(rule));
 
-        // Why Ctrl+Alt+H or Ctrl+Alt+N did nothing, e.g. "the last free monitor cannot be frozen" (G2).
+        // Why Ctrl+Alt+H or Ctrl+Alt+N did nothing, e.g. "freezing needs at least two monitors" (G2).
         _freeze.Refused += hint => _tray.Notify(Text.Get("Freeze.Title"), hint);
         _switch.Refused += hint => _tray.Notify(Text.Get("Freeze.Title"), hint);
     }

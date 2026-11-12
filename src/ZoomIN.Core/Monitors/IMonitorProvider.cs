@@ -20,21 +20,7 @@ public interface IMonitorProvider
     /// Bounds of all current monitors, read in one pass where the platform can (pointer fence, M19);
     /// empty if they cannot all be read.
     /// </summary>
-    IReadOnlyList<PhysicalRect> AllBounds()
-    {
-        var all = new List<PhysicalRect>();
-        foreach (var id in MonitorIds())
-        {
-            if (BoundsOf(id) is not { } bounds)
-            {
-                return [];
-            }
-
-            all.Add(bounds);
-        }
-
-        return all;
-    }
+    IReadOnlyList<PhysicalRect> AllBounds() => [.. AllMonitors().Select(monitor => monitor.Bounds)];
 
     /// <summary>
     /// Ids and bounds of all current monitors, read in one pass where the platform can (frozen

@@ -137,9 +137,12 @@ public sealed class MonitorFreezeController : IDisposable
 
         // A mouse moving on while the shortcut was pressed may have brought the pointer back before the
         // fence stood (the hook lets a pointer inside a forbidden area move freely): same command, move again.
-        if (_cursor.TryGetPosition(out var now) && monitor.Bounds.Contains(now))
+        if (_cursor.TryGetPosition(out var now) && monitor.Bounds.Contains(now) && !_mover.MoveTo(point, PointerMoveReason.FreezeMonitor))
         {
-            _mover.MoveTo(point, PointerMoveReason.FreezeMonitor);
+            // Never leave the pointer on a frozen monitor, whose view neither draws nor follows it.
+            Lift(m => ReferenceEquals(m, monitor), "move_refused");
+            Refuse("move_refused", "Freeze.MoveRefused");
+            return;
         }
 
         var image = FreezeOperation.Image(monitor);
@@ -174,7 +177,14 @@ public sealed class MonitorFreezeController : IDisposable
             return;
         }
 
+        // Mid-change Windows may not describe every monitor yet: decide on the next event, not on
+        // nothing (the fence lets the pointer go meanwhile, as it never traps it).
         var monitors = _monitors.AllMonitors();
+        if (monitors.Count == 0)
+        {
+            return;
+        }
+
         _switch.KeepOnly([.. monitors.Select(m => m.Id)]);
         var kept = FreezeRules.KeptAfterDisplayChange(
             _frozen.State, monitors, _cursor.TryGetPosition(out var pointer) ? pointer : null);

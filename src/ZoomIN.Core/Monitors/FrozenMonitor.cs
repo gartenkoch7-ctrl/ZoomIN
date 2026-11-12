@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Viewport;
@@ -20,8 +19,13 @@ namespace ZoomIN.Core.Monitors;
 public sealed class FrozenMonitor(
     string id, PhysicalRect bounds, double level, ZoomMode mode, LensSize lens, DockLayout dock, bool still, RgbColor frameColor)
 {
-    // Boxed so the point is published atomically (two doubles are not); filled once per freeze.
-    private StrongBox<PhysicalPoint>? _anchor;
+    // The anchor is two doubles (not atomic): written once, then published through the state.
+    private const int Empty = 0;
+    private const int Writing = 1;
+    private const int Kept = 2;
+    private int _anchorState;
+    private double _anchorX;
+    private double _anchorY;
     private int _stillClaimed;
 
     public string Id { get; } = id ?? throw new ArgumentNullException(nameof(id));
@@ -47,11 +51,14 @@ public sealed class FrozenMonitor(
     /// Keeps the view's anchor at the moment of freezing. The first call wins: a render pipeline
     /// rebuilt while frozen (display change) shows the same view again instead of the monitor's middle.
     /// </summary>
+    /// <remarks>Called on a render thread: no allocation.</remarks>
     public void KeepAnchor(PhysicalPoint anchor)
     {
-        if (Volatile.Read(ref _anchor) is null)
+        if (Interlocked.CompareExchange(ref _anchorState, Writing, Empty) == Empty)
         {
-            Interlocked.CompareExchange(ref _anchor, new StrongBox<PhysicalPoint>(anchor), null);
+            _anchorX = anchor.X;
+            _anchorY = anchor.Y;
+            Volatile.Write(ref _anchorState, Kept);
         }
     }
 
@@ -61,11 +68,27 @@ public sealed class FrozenMonitor(
     /// </summary>
     public bool ClaimStill() => Interlocked.Exchange(ref _stillClaimed, 1) == 0;
 
+    /// <summary>
+    /// The anchor of the frozen view: the kept one, or else <paramref name="last"/> (the anchor of the
+    /// last live frame), which is then kept. Per frame on a render thread: lock-free, 0 B.
+    /// </summary>
+    public PhysicalPoint AnchorOr(PhysicalPoint last)
+    {
+        if (TryGetAnchor(out var anchor))
+        {
+            return anchor;
+        }
+
+        KeepAnchor(last);
+        return TryGetAnchor(out anchor) ? anchor : last;
+    }
+
     /// <summary>The kept anchor; per frame, lock-free, 0 B.</summary>
     public bool TryGetAnchor(out PhysicalPoint anchor)
     {
-        var kept = Volatile.Read(ref _anchor);
-        anchor = kept?.Value ?? default;
-        return kept is not null;
+        // The state is written last (release) and read first (acquire): a kept anchor is whole.
+        var kept = Volatile.Read(ref _anchorState) == Kept;
+        anchor = kept ? new PhysicalPoint(_anchorX, _anchorY) : default;
+        return kept;
     }
 }

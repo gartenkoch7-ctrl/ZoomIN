@@ -48,7 +48,15 @@ public sealed class FreezeState
     /// <summary>This state without the monitors <paramref name="remove"/> selects.</summary>
     internal FreezeState Without(Func<FrozenMonitor, bool> remove, out IReadOnlyList<FrozenMonitor> removed)
     {
-        removed = [.. _monitors.Where(remove)];
-        return removed.Count == 0 ? this : _monitors.Length == removed.Count ? Empty : new([.. _monitors.Where(m => !remove(m))]);
+        // One pass: each monitor is asked once, so "removed" and the new state always agree.
+        var gone = new List<FrozenMonitor>();
+        var kept = new List<FrozenMonitor>();
+        foreach (var monitor in _monitors)
+        {
+            (remove(monitor) ? gone : kept).Add(monitor);
+        }
+
+        removed = gone;
+        return gone.Count == 0 ? this : kept.Count == 0 ? Empty : new([.. kept]);
     }
 }

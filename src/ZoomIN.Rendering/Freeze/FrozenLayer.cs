@@ -66,29 +66,15 @@ internal sealed class FrozenLayer : IDisposable
         }
     }
 
-    /// <summary>
-    /// The anchor of the frozen view: the one kept for this freeze, or else <paramref name="last"/>
-    /// (the anchor of the last live frame), which is then kept.
-    /// </summary>
-    public static PhysicalPoint Anchor(FrozenMonitor frozen, PhysicalPoint last)
-    {
-        if (!frozen.TryGetAnchor(out var anchor))
-        {
-            frozen.KeepAnchor(last);
-            frozen.TryGetAnchor(out anchor);
-        }
-
-        return anchor;
-    }
-
     /// <summary>The still image of this freeze is held: the frame reads no new capture frame.</summary>
     public bool HoldsStill(FrozenMonitor? frozen) => frozen is not null && ReferenceEquals(frozen, _stillFor);
 
     /// <summary>Takes the still image of a freeze that wants one, once; true if a new image was taken.</summary>
+    /// <param name="current">The desktop copy shows the desktop as it is now; after Win+L or UAC it waits for the next frame.</param>
     /// <param name="windows">The window regions now: the filter per window stays with the windows in the image.</param>
-    public bool TryCapture(FrozenMonitor? frozen, ID3D11DeviceContext context, ID3D11Texture2D desktop, WindowRegions windows)
+    public bool TryCapture(FrozenMonitor? frozen, ID3D11DeviceContext context, ID3D11Texture2D desktop, bool current, WindowRegions windows)
     {
-        if (frozen is not { Still: true } || ReferenceEquals(frozen, _stillFor) || ReferenceEquals(frozen, _stillFailedFor))
+        if (frozen is not { Still: true } || !current || ReferenceEquals(frozen, _stillFor) || ReferenceEquals(frozen, _stillFailedFor))
         {
             return false;
         }
