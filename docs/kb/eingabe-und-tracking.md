@@ -339,7 +339,8 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
     Loslassen verschluckt – auch nach dem Ende des Modus; ein Druck von vorher behält sein
     Loslassen für die Anwendung. Esc und Entf prüft der Hook vor dem Esc der Übersicht (B2). Beim Ende
     noch wartende Eingaben werden verworfen, nicht mehr weitergegeben. Esc/Entf mit Strg, Alt, Umschalt
-    oder Win (Task-Manager, Start, Umschalt+Entf) bleiben beim System. Eine Folge von Bewegungen wird
+    oder Win (Task-Manager, Start, Umschalt+Entf) bleiben beim System, ebenso ein Esc/Entf, das beim
+    Start schon gedrückt war (samt Wiederholung und Loslassen). Eine Folge von Bewegungen wird
     nur bis zur nächsten anderen Eingabe zusammengefasst (Reihenfolge Drücken → Bewegen bleibt).
   - Strg+Mausrad zoomt weiter (eigener Hook, der vorher greift) – unsichtbar, denn die 1× gilt.
   - **Zeigerzaun:** Während eines Ziehens hält `IslandDragFence` (Filter `PointerFilterOrder.IslandEdit`
@@ -379,7 +380,10 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
   - Start und Ende laufen nacheinander (eigene Sperre), damit ein Ende nie zurückgibt, was ein neuer
     Start gerade übernommen hat (`IslandEditTakeover`: 1×, Eingabe, Ziehfilter). Ein Ende wegen
     Desktop- oder Anzeigewechsel läuft auf dem Thread-Pool, nicht im Wächter-Thread des Zauns: das
-    Zurückgeben des Filters kann diesen Thread beenden. Die Einstellungsseite aktualisiert die Liste
+    Zurückgeben des Filters kann diesen Thread beenden; ebenso das Ende wegen einer Änderung von außen
+    (Sperr-Reihenfolge Start/Ende vor Eingabeschritt). Jede Eingabe gehört zu ihrem Lauf
+    (`IslandEditInputRun`), eine verspätete Eingabe eines beendeten Laufs wirkt nie im nächsten.
+    Die Einstellungsseite aktualisiert die Liste
     auf `IslandModel.Saved` statt mit einem Takt.
   - Die Sichtbarkeit (`Strg+Alt+I`) bleibt die des Nutzers: Beim Bearbeiten werden auch
     ausgeblendete Inseln gezeigt, danach sind sie wieder aus.

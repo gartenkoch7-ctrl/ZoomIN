@@ -13,6 +13,7 @@ internal sealed class IslandEditSession : IDisposable
     private readonly TimeProvider _time;
     private readonly ITimer _idle;
     private readonly TimeSpan _idleLimit;
+    private Core.Viewport.PhysicalRect? _confined;
 
     /// <param name="published">The islands in the model when the run starts (the editor starts with them fitted to the monitors).</param>
     public IslandEditSession(
@@ -52,7 +53,11 @@ internal sealed class IslandEditSession : IDisposable
     {
         var outcome = step(Editor);
         Touch();
-        fence.Confine(Editor.DragBounds);
+        if (Editor.DragBounds != _confined)
+        {
+            _confined = Editor.DragBounds; // only at the start and end of a drag, not per move
+            fence.Confine(_confined);
+        }
         if (outcome == IslandEditOutcome.End)
         {
             return "escape";

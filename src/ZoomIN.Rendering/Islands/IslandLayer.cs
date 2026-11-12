@@ -114,7 +114,8 @@ internal sealed class IslandLayer : IDisposable
         try
         {
             if (edit.Selected >= 0 && edit.Selected < set.Count
-                && string.Equals(set[edit.Selected].MonitorId, monitorId, StringComparison.Ordinal))
+                && string.Equals(set[edit.Selected].MonitorId, monitorId, StringComparison.Ordinal)
+                && IslandRules.Fits(set[edit.Selected], monitor))
             {
                 _marks.DrawHandles(context, target, monitor, set[edit.Selected].Target, color);
             }

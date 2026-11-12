@@ -13,9 +13,6 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// </summary>
 internal sealed class OverlayDemand
 {
-    // As FrameRequest.OverlayOnly: below this the picture counts as 1×.
-    private const double ZoomedAbove = 1.01;
-
     private readonly string _deviceName;
     private readonly RenderModels _models;
     private readonly ZoomModel _zoom;
@@ -73,7 +70,7 @@ internal sealed class OverlayDemand
     public IslandScene? Islands(double zoom)
     {
         var scene = _models.Islands.Scene;
-        return scene.ShowsOn(_deviceName, _zoom.Mode == ZoomMode.Fullscreen && zoom > ZoomedAbove) ? scene : null;
+        return scene.ShowsOn(_deviceName, _zoom.Mode == ZoomMode.Fullscreen && zoom > FrameRequest.UnzoomedUpTo) ? scene : null;
     }
 
     /// <summary>After a pipeline failure: retry soon if the monitor should show anything, else wait for a change.</summary>

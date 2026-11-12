@@ -18,7 +18,7 @@ namespace ZoomIN.App.Islands;
 /// <see cref="IslandEditWatch"/>. Start and end run one at a time (<c>_lifecycle</c>), so an end
 /// never gives back what a new start just took; input steps run one at a time under <c>_gate</c>.
 /// </summary>
-public sealed class IslandController : IIslandEditInputHandler, IDisposable
+public sealed class IslandController : IDisposable
 {
     /// <summary>Safety net (plan decision): the edit mode never keeps the clicks longer without input.</summary>
     public static readonly TimeSpan IdleLimit = TimeSpan.FromMinutes(2);
@@ -79,17 +79,6 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
     /// <summary>Ends the edit mode if it runs; the islands are saved with the profile.</summary>
     public void End(string reason) => End(reason, only: null);
 
-    public void Pressed(PhysicalPoint point) => Step(editor => editor.Press(point), "press");
-
-    public void Moved(PhysicalPoint point) => Step(editor => editor.Move(point), "move");
-
-    public void Released(PhysicalPoint point) => Step(editor => editor.Release(point), "release");
-
-    public void Wheel(double notches, PhysicalPoint point) => Step(editor => editor.Wheel(notches, point), "wheel");
-
-    public void Key(IslandEditKey key) =>
-        Step(editor => key == IslandEditKey.Escape ? editor.Escape() : editor.Delete(), key.ToString());
-
     public void Dispose()
     {
         _watch.Dispose();
@@ -100,6 +89,7 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
     private void Start()
     {
         IslandEditSession? session = null;
+        System.Diagnostics.Activity? operation = null;
         var started = false;
         var notStarted = "failed";
         try
@@ -108,8 +98,9 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
             var current = _model.Scene.Set;
             var set = current.FitTo(_monitors.BoundsOf);
             var editor = new IslandEditor(set, _monitors, monitor => IslandRules.StartLevel(_zoom, monitor));
+            operation = IslandOperation.StartEdit(set.Count);
             session = new IslandEditSession(
-                editor, current, IslandOperation.StartEdit(set.Count), _time, IdleLimit, idle => EndLogged("idle", idle));
+                editor, current, operation, _time, IdleLimit, idle => EndLogged("idle", idle));
             lock (_gate)
             {
                 _edit = session;
@@ -119,7 +110,7 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
 
             if (started)
             {
-                _takeover.TakeInput(this);
+                _takeover.TakeInput(new IslandEditInputRun(this, session));
                 _log.EditStarted(set.Count);
                 _report.Say("Islands.Edit.On");
                 return;
@@ -140,7 +131,7 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
             {
                 // Never leave the monitors at 1× after a start that did not happen.
                 session?.Dispose();
-                IslandOperation.StopEdit(session?.Operation, notStarted, _model.Scene.Set.Count);
+                IslandOperation.StopEdit(operation, notStarted, _model.Scene.Set.Count);
                 _takeover.GiveBack();
             }
         }
@@ -189,22 +180,20 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
         }
     }
 
-    // One input of the edit mode (capture worker thread). Never throws: the worker goes on.
-    private void Step(Func<IslandEditor, IslandEditOutcome> step, string name)
+    /// <summary>One input of <paramref name="run"/> (capture worker thread). Never throws: the worker goes on.</summary>
+    internal void Step(IslandEditSession run, Func<IslandEditor, IslandEditOutcome> step, string name)
     {
         try
         {
             string? end;
-            IslandEditSession run;
             lock (_gate)
             {
-                if (_edit is not { } edit)
+                if (!ReferenceEquals(_edit, run))
                 {
-                    return; // input queued before the end
+                    return; // input of a run that is over (on its way when it ended)
                 }
 
-                run = edit;
-                end = edit.Step(step, _model, _takeover.DragFence, _report);
+                end = run.Step(step, _model, _takeover.DragFence, _report);
             }
 
             if (end is not null)
@@ -218,8 +207,9 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
         }
     }
 
-    // The islands changed (any thread). Under the lock, so a step that is publishing is never taken
-    // for a change from outside; anything else than the edit mode's own islands ends it.
+    // The islands changed (any thread, also a step's own thread holding _gate). Compared under _gate,
+    // so a step that is publishing is never taken for a change from outside. The end runs on the
+    // thread pool: End takes _lifecycle before _gate, and this thread may hold _gate.
     private void EndIfChangedOutside()
     {
         IslandEditSession? outside;
@@ -230,7 +220,7 @@ public sealed class IslandController : IIslandEditInputHandler, IDisposable
 
         if (outside is not null)
         {
-            End("changed", outside);
+            _ = Task.Run(() => EndLogged("changed", outside));
         }
     }
 

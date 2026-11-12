@@ -40,6 +40,9 @@ internal readonly record struct FrameRequest(
     MarkerActivitySample Activity = default,
     IslandScene? Islands = null)
 {
+    /// <summary>Up to this zoom a frame counts as 1× (also for islands, OverlayDemand).</summary>
+    public const double UnzoomedUpTo = 1.01;
+
     /// <summary>Not magnified and no colour filter: only pointer, crosshair or locator are drawn.</summary>
-    public bool OverlayOnly => Zoom <= 1.01 && !Effects.Filter.ChangesColors && !WindowsFiltered && Islands is null;
+    public bool OverlayOnly => Zoom <= UnzoomedUpTo && !Effects.Filter.ChangesColors && !WindowsFiltered && Islands is null;
 }

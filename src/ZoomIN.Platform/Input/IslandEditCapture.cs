@@ -44,6 +44,8 @@ public sealed class IslandEditCapture : IIslandEditInput
     private uint _escapeAt;
     private uint _deleteAt;
     private volatile bool _hooksInstalled;
+    private volatile bool _escapePass;
+    private volatile bool _deletePass;
 
     public IslandEditCapture()
         : this(KeyState.IsDown)
@@ -67,6 +69,10 @@ public sealed class IslandEditCapture : IIslandEditInput
     public void Start(IIslandEditInputHandler handler)
     {
         ArgumentNullException.ThrowIfNull(handler);
+
+        // Esc or Del held at the start belongs to whoever got its press: its repeats and release too.
+        _escapePass = _isDown(EscapeKey);
+        _deletePass = _isDown(DeleteKey);
         Interlocked.Exchange(ref _session, new IslandEditQueue(handler))?.Complete();
     }
 
@@ -141,6 +147,18 @@ public sealed class IslandEditCapture : IIslandEditInput
 
         ref var held = ref virtualKey == EscapeKey ? ref _escapeHeld : ref _deleteHeld;
         ref var last = ref virtualKey == EscapeKey ? ref _escapeAt : ref _deleteAt;
+        if (virtualKey == EscapeKey ? _escapePass : _deletePass)
+        {
+            // Held when the edit mode started: its repeats and release go on; the press after it is ours.
+            if (up)
+            {
+                _escapePass &= virtualKey != EscapeKey;
+                _deletePass &= virtualKey != DeleteKey;
+            }
+
+            last = time;
+            return false;
+        }
 
         // Key repeat starts within 1 s (2 s with FilterKeys): a "repeat" later than that is a new
         // press whose release before it was never seen (secure desktop, hook timeout).

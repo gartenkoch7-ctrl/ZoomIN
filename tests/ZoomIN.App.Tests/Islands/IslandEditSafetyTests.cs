@@ -37,7 +37,7 @@ public sealed class IslandEditSafetyTests
 
         rig.Settings.ApplyDisplay(new AppSettings { Islands = new IslandOptions { Items = [s_profileIsland] } });
 
-        Assert.False(rig.Controller.IsEditing);
+        Assert.True(SpinWait.SpinUntil(() => !rig.Controller.IsEditing && !rig.Input.Capturing, TimeSpan.FromSeconds(5)));
         Assert.Equal(new PhysicalRect(10, 10, 40, 20), Assert.Single(rig.Islands.Scene.Set.Items).Source);
         Assert.Equal(10, Assert.Single(rig.Settings.Current.Islands.Items).SourceX);
     }
@@ -54,7 +54,7 @@ public sealed class IslandEditSafetyTests
         rig.Islands.Remove(rig.Islands.Scene.Set[0].Id);
         handler.Moved(new PhysicalPoint(300, 300));
 
-        Assert.False(rig.Controller.IsEditing);
+        Assert.True(SpinWait.SpinUntil(() => !rig.Controller.IsEditing && !rig.Input.Capturing, TimeSpan.FromSeconds(5)));
         Assert.Equal(0, rig.Islands.Scene.Set.Count);
     }
 
