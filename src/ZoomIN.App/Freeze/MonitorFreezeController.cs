@@ -88,7 +88,11 @@ public sealed class MonitorFreezeController : IDisposable
     /// Ctrl+Alt+H is no longer registered: otherwise nothing could give the frozen monitor back. Runs
     /// on the thread pool: releasing the fence may wait for its watcher, not on the settings window.
     /// </summary>
-    public void LiftAll(string reason) => _dispatch(() => _guard.Run("lift_all", () => Lift(_ => true, reason)));
+    public void LiftAll(string reason)
+    {
+        var seen = _frozen.State; // only what is frozen now, not a freeze made before the queued work runs
+        _dispatch(() => _guard.Run("lift_all", () => Lift(seen.Monitors.Contains, reason)));
+    }
 
     public void Dispose()
     {
@@ -151,7 +155,7 @@ public sealed class MonitorFreezeController : IDisposable
         // (it starts with the first area): the monitor has other bounds now, so this freeze ends.
         if (_monitors.BoundsOf(id) != monitor.Bounds)
         {
-            Lift(m => ReferenceEquals(m, monitor), "display_change", announce: false, restoreLevel: false);
+            Lift(m => ReferenceEquals(m, monitor), "display_change", announce: false); // nothing was frozen: keep its level
             Refuse("layout_unavailable", "Freeze.LayoutUnavailable");
             return;
         }
