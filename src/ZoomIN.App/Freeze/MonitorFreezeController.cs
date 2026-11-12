@@ -1,9 +1,7 @@
 using Microsoft.Extensions.Logging;
 using ZoomIN.App.Settings;
 using ZoomIN.Core.Localization;
-using ZoomIN.Core.Modes;
 using ZoomIN.Core.Monitors;
-using ZoomIN.Core.Overview;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.PointerFence;
 using ZoomIN.Core.Shell;
@@ -26,7 +24,6 @@ public sealed class MonitorFreezeController : IDisposable
     private readonly MonitorSwitchController _switch;
     private readonly ZoomModel _zoom;
     private readonly MonitorFreeze _frozen;
-    private readonly OverviewModel _overview;
     private readonly IMonitorProvider _monitors;
     private readonly ICursorSource _cursor;
     private readonly IPointerFence _fence;
@@ -36,6 +33,8 @@ public sealed class MonitorFreezeController : IDisposable
     private readonly ILogger _log;
     private readonly FreezeOperations _operations = new();
     private readonly FreezeGuard _guard;
+    private readonly FreezeLifter _lifter;
+    private readonly FreezeRefusals _refusals;
     private readonly FreezeFenceEvents _events;
     private readonly Action<Action> _dispatch;
     private volatile bool _freezing;
@@ -53,10 +52,12 @@ public sealed class MonitorFreezeController : IDisposable
         IPointerMover mover, IAnnouncer announcer, ILocalizer texts, ILogger log, Action<Action> dispatch)
     {
         (_settings, _switch, _zoom) = (settings, monitorSwitch, settings.Models.Zoom);
-        (_frozen, _overview) = (_zoom.Frozen, settings.Models.Overview);
+        _frozen = _zoom.Frozen;
         (_monitors, _cursor, _fence, _mover) = (monitors, cursor, fence, mover);
         (_announcer, _texts, _log, _dispatch) = (announcer, texts, log, dispatch);
         _guard = new FreezeGuard(fence, _frozen, _operations, log);
+        _lifter = new FreezeLifter(_frozen, fence, _operations, announcer, texts, log);
+        _refusals = new FreezeRefusals(_zoom, settings.Models.Overview, settings.Models.Islands);
         _events = new FreezeFenceEvents(fence, _frozen, () => _freezing, dispatch,
             (trigger, seen, freezing) => _guard.Run("recompute", () => Recheck(trigger, seen, freezing), restoreLevelOnFailure: false));
     }
@@ -69,7 +70,7 @@ public sealed class MonitorFreezeController : IDisposable
     {
         if (_frozen.Any)
         {
-            Lift(_ => true, "command");
+            _lifter.Lift(_ => true, "command");
             return;
         }
 
@@ -93,13 +94,13 @@ public sealed class MonitorFreezeController : IDisposable
         // What is frozen or being frozen (a press under way) now, not a freeze made after this call.
         var freezing = _freezing;
         var seen = _frozen.State;
-        _dispatch(() => _guard.Run("lift_all", () => Lift(m => freezing || seen.Monitors.Contains(m), reason)));
+        _dispatch(() => _guard.Run("lift_all", () => _lifter.Lift(m => freezing || seen.Monitors.Contains(m), reason)));
     }
 
     public void Dispose()
     {
         _events.Dispose();
-        _guard.Run("exit", () => Lift(_ => true, "exit", announce: false));
+        _guard.Run("exit", () => _lifter.Lift(_ => true, "exit", announce: false));
     }
 
     private void FreezeUnderPointer()
@@ -119,23 +120,11 @@ public sealed class MonitorFreezeController : IDisposable
             return;
         }
 
-        // The island edit mode (B1) confines a drag to the monitor it began on: frozen, the pointer would
-        // be held between the drag's edge and the forbidden area. The user ends editing first.
-        if (_settings.Models.Islands.Scene.Editing)
-        {
-            Refuse("island_edit", "Freeze.IslandEdit");
-            return;
-        }
-
-        // The overview shows 1× for a moment; frozen, its frame would stay and the view before it
-        // would be lost. The user ends it first (tap again or Esc).
+        // Another view holds the monitor (island edit, docked strip, overview, temporary level): see FreezeRefusals.
         var id = layout.Ids[index];
-        // The docked strip reserves screen space and takes every zoom command (ZoomModel.Step): frozen,
-        // the reservation would follow the live mode and zooming elsewhere would go nowhere.
-        var docked = _zoom.Mode == ZoomMode.Docked && _zoom.IsOn && _zoom.DockedMonitor == id;
-        if (docked || (_overview.Current is { } session && session.MonitorId == id))
+        if (_refusals.For(id) is { } refusal)
         {
-            Refuse(docked ? "docked" : "overview", docked ? "Freeze.Docked" : "Freeze.Overview");
+            Refuse(refusal.Reason, refusal.Text);
             return;
         }
 
@@ -166,7 +155,7 @@ public sealed class MonitorFreezeController : IDisposable
         // (it starts with the first area): the monitor has other bounds now, so this freeze ends.
         if (_monitors.BoundsOf(id) != monitor.Bounds)
         {
-            Lift(m => ReferenceEquals(m, monitor), "display_change", announce: false); // nothing was frozen: keep its level
+            _lifter.Lift(m => ReferenceEquals(m, monitor), "display_change", announce: false); // nothing was frozen: keep its level
             Refuse("layout_unavailable", "Freeze.LayoutUnavailable");
             return;
         }
@@ -176,7 +165,7 @@ public sealed class MonitorFreezeController : IDisposable
         if (_cursor.TryGetPosition(out var now) && monitor.Bounds.Contains(now) && !_mover.MoveTo(point, PointerMoveReason.FreezeMonitor))
         {
             // Never leave the pointer on a frozen monitor, whose view neither draws nor follows it.
-            Lift(m => ReferenceEquals(m, monitor), "move_refused", announce: false);
+            _lifter.Lift(m => ReferenceEquals(m, monitor), "move_refused", announce: false);
             Refuse("move_refused", "Freeze.MoveRefused");
             return;
         }
@@ -192,7 +181,7 @@ public sealed class MonitorFreezeController : IDisposable
     {
         if (_cursor.TryGetPosition(out var now) && monitor.Bounds.Contains(now))
         {
-            Lift(m => ReferenceEquals(m, monitor), "pointer_inside");
+            _lifter.Lift(m => ReferenceEquals(m, monitor), "pointer_inside");
         }
     }));
 
@@ -216,36 +205,7 @@ public sealed class MonitorFreezeController : IDisposable
         };
 
         // After a display change the monitor is gone or changed: it starts at 1× rather than at its old level.
-        Lift(lift.Contains, reason, restoreLevel: trigger != FenceTrigger.DisplayChange);
-    }
-
-    // Unfreezes first, then frees the area: the monitor follows the pointer again before it can get there.
-    private void Lift(Func<FrozenMonitor, bool> which, string reason, bool announce = true, bool restoreLevel = true)
-    {
-        IReadOnlyList<FrozenMonitor> removed;
-        try
-        {
-            removed = _frozen.Unfreeze(which, restoreLevel);
-        }
-        catch
-        {
-            // A listener of the thaw failed (e.g. saving the settings): the area is free again all the same.
-            _fence.Forbid(FenceOwner.FrozenMonitors, _frozen.State.Areas());
-            throw;
-        }
-
-        if (removed.Count == 0)
-        {
-            return;
-        }
-
-        _fence.Forbid(FenceOwner.FrozenMonitors, _frozen.State.Areas());
-        _operations.Stop(removed, reason);
-        _log.FreezeLifted(removed.Count, reason);
-        if (announce)
-        {
-            _announcer.Announce(_texts.Get("Freeze.Lifted"));
-        }
+        _lifter.Lift(lift.Contains, reason, restoreLevel: trigger != FenceTrigger.DisplayChange);
     }
 
     private void Refuse(string reason, string textKey)

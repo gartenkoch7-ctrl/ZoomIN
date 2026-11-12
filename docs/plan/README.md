@@ -27,7 +27,7 @@ Jeder Meilenstein endet mit etwas, das man **starten und vorführen** kann.
 | M16 | [KI-Debug (MCP-Server)](m16-ki-debug.md) | Ein KI-Agent liest Zustand, macht Debug-Schnappschüsse und löst Kurzbefehle aus – ohne Klicks | M | umgesetzt – in `develop` gemergt (2026-11-11, ADR-0027); wirkt in der installierten Version erst mit einem neuen Build |
 | M17 | [Ruhige Ansicht & Orientierung](m17-ruhige-ansicht.md) | Bild bewegt sich erst am Randabstand, Übersicht per Strg+Alt+O, Zoom geht beim Fenster-Ziehen auf 1× | M | geplant (Grilling 2026-11-11) – **nach** `v1.0.0`, Release 1.1 |
 | M18 | [Lesbarkeit](m18-lesbarkeit.md) | Schärfen/Fetter (falls Spike besteht), eigene Farbschemata, Caret-Formen, Anzeige-Bedingungen | M–L | geplant – Release 1.2 |
-| M19 | [Mehrere Ansichten](m19-mehrere-ansichten.md) | Monitor einfrieren + Monitorwechsel, Inseln, Maus-Puffer/Achsensperre (ADR-0028) | M–L | geplant – Release 1.3 |
+| M19 | [Mehrere Ansichten](m19-mehrere-ansichten.md) | Monitor einfrieren + Monitorwechsel, Inseln, Maus-Puffer/Achsensperre (ADR-0028) | M–L | umgesetzt auf `feat/m19-mehrere-ansichten`, Sichtprüfung und Merge offen – Release 1.3 |
 
 Größen: **S** ≈ wenige Tage · **M** ≈ 1–2 Wochen · **L** ≈ 2–4 Wochen (eine Person, Teilzeit-Schätzung, grob).
 

@@ -58,6 +58,29 @@ public sealed class IslandEditCaptureTests
         capture.Stop();
     }
 
+    // M19 integration: the hold keys of the axis lock (A6) and of the highlights (M18) are watched by their
+    // own reading hooks; the edit mode never swallows them, so neither press nor release goes missing.
+    [Theory]
+    [InlineData(0x10)]
+    [InlineData(0x11)]
+    [InlineData(0x12)]
+    [InlineData(0xA0)]
+    [InlineData(0xA1)]
+    [InlineData(0xA2)]
+    [InlineData(0xA3)]
+    [InlineData(0xA4)]
+    [InlineData(0xA5)]
+    public void HoldKeys_AlwaysPass_WhileEditing(int key)
+    {
+        var capture = new IslandEditCapture(_ => false);
+        capture.Start(new RecordingIslandHandler());
+
+        Assert.False(capture.OnKey(key, down: true, up: false, 1000));
+        Assert.False(capture.OnKey(key, down: true, up: false, 1030));
+        Assert.False(capture.OnKey(key, down: false, up: true, 1060));
+        capture.Stop();
+    }
+
     [Fact]
     public void ReleaseAfterTheEnd_OfAPressTakenBefore_IsStillTaken()
     {

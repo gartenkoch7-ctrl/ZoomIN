@@ -14,6 +14,8 @@ internal static class TextsEnglishFreeze
         ["Freeze.Overview"] = "End the overview first, then freeze.",
         ["Freeze.IslandEdit"] = "Finish editing the islands first, then freeze.",
         ["Freeze.Docked"] = "The docked monitor cannot be frozen.",
+        ["Freeze.WindowDrag"] = "Finish moving or resizing the window first, then freeze.",
+        ["Freeze.Temporary"] = "The monitor shows a temporary view right now. Try again in a moment.",
         ["Freeze.NoPointer"] = "The pointer is not on any monitor.",
         ["Freeze.LayoutUnavailable"] = "The monitors are changing right now. Please try again in a moment.",
         ["Freeze.MoveRefused"] = "Windows refused to move the pointer.",

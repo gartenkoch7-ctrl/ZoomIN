@@ -222,3 +222,4 @@ Befunde der Reviews, die bewusst nicht als Code umgesetzt sind (Designvorschläg
 - **Dateigröße nach dem Merge:** `RenderSession.cs` (264) und `MonitorFreezeController.cs` (259) liegen
   über 250, aber unter 300. Sie sind Integrationsdateien mehrerer Spuren. Aufgeteilt wird nach dem
   Merge aller M19-Spuren im Integrationsbranch, damit andere Spuren keine Konflikte bekommen.
+  → Erledigt in der Integration (`SessionPointer`, `FreezeLifter`, `FreezeRefusals`; jetzt 236 bzw. 219 Zeilen).

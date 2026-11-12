@@ -6,7 +6,6 @@ using ZoomIN.Core.Filters;
 using ZoomIN.Core.Islands;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Tracking;
-using ZoomIN.Core.Viewport;
 using ZoomIN.Core.WindowFilters;
 using ZoomIN.Rendering.Capture;
 using ZoomIN.Rendering.Freeze;
@@ -39,13 +38,10 @@ internal sealed class RenderSession : IDisposable
     private readonly IslandLayer _islands;
     private readonly FrozenLayer _frozen;
     private readonly SnapshotTaker _snapshots;
-    private readonly AnchorController _anchors = new();
+    private readonly SessionPointer _cursor;
     private readonly FrameChangeTracker _changes = new();
     private readonly MarkerAlphas _alphas = new();
     private readonly int _displayGeneration;
-    private PhysicalPoint _lastCursor;
-    private PhysicalPoint _lastAnchor;
-    private bool _cursorInside;
     private bool _shown;
     private bool _holdsFrameSlot;
 
@@ -70,8 +66,7 @@ internal sealed class RenderSession : IDisposable
         _desktop = _resources.Desktop;
         _islands = _resources.Islands;
         _frozen = _resources.Frozen;
-        _lastCursor = new PhysicalPoint(_monitor.Bounds.X + (_monitor.Width / 2), _monitor.Bounds.Y + (_monitor.Height / 2));
-        _lastAnchor = _lastCursor;
+        _cursor = new SessionPointer(pointer, _monitor, _cursorLayer, _frozen);
     }
 
     /// <summary>The overlay is on screen.</summary>
@@ -98,7 +93,7 @@ internal sealed class RenderSession : IDisposable
         {
             _overview.Forget();
         }
-        if (_cursorInside)
+        if (_cursor.Inside)
         {
             _cursorLayer.ShowSystemCursor();
         }
@@ -152,33 +147,10 @@ internal sealed class RenderSession : IDisposable
 
         var image = _frozen.Desktop(_duplicator.ShaderResource);
 
-        // Read the cursor as late as possible: it decides what is shown under the pointer.
-        // A monitor without the mouse keeps its last view (M3 decision); a frozen one never draws it.
-        var hasCursor = _pointer.Position.TryGetPosition(out var cursor);
-        var onMonitor = hasCursor && _monitor.Bounds.Contains(cursor);
-        var showSystemPointer = _frozen.NeedsSystemPointer(_cursorInside, onMonitor);
-        _cursorInside = onMonitor && frozen is null;
-        if (_cursorInside)
-        {
-            _lastCursor = cursor;
-        }
-        else if (showSystemPointer)
-        {
-            _cursorLayer.ShowSystemCursor();
-        }
-
-        // The anchor is the mouse, or the focus/caret while the user works with the keyboard (M6).
-        // Frozen: the anchor of the moment of freezing; mouse, focus, caret and placements wait. It is also
-        // where a pipeline rebuilt meanwhile goes on from after the thaw (instead of the monitor's middle).
-        var anchor = frozen is not null
-            ? _anchors.StartAt(frozen.AnchorOr(_lastAnchor))
-            : _anchors.Next(new AnchorInput(
-                Stopwatch.GetTimestamp(), hasCursor ? cursor : _lastCursor, _cursorInside, _monitor.Bounds,
-                request.AnchorMode, request.Zoom, request.Lens, request.Dock, request.Tracking, request.TrackingOptions, request.Placement));
-        _lastAnchor = anchor;
-
+        // The cursor is read as late as possible; the anchor is the mouse, focus or caret (M6), frozen: fixed (G2).
+        var anchor = _cursor.Track(request);
         var frame = ModeGeometry.Compute(request.Mode, _monitor.Bounds, anchor, request.Zoom, request.Lens, request.Dock);
-        _overview.Update(frame, request.Overview, _monitor.Bounds, hasCursor ? cursor : _lastCursor, request.OverviewLevel, request.Lens, request.Dock,
+        _overview.Update(frame, request.Overview, _monitor.Bounds, _cursor.Seen, request.OverviewLevel, request.Lens, request.Dock,
             request.TrackingOptions.MouseFollow, request.ViewHeld);
         var shape = _pointer.Shapes.TryGetCurrent(out var handle) ? handle : 0;
         // The desktop layer (and its smoothing) only runs while the desktop is drawn.
@@ -188,13 +160,13 @@ internal sealed class RenderSession : IDisposable
             Stopwatch.GetTimestamp(), Stopwatch.Frequency);
         _islands.Update(request.Islands, Stopwatch.GetTimestamp());
         var animating = LocatorActive || fading || (!request.OverlayOnly && _desktop.SmartSettling) || _overview.NeedsRedraw || _islands.NeedsRedraw;
-        var changes = _changes.Compare(newImage, request, frame, _cursorInside, _lastCursor, shape,
+        var changes = _changes.Compare(newImage, request, frame, _cursor.Inside, _cursor.LastCursor, shape,
             animating, _snapshots.IsRequested, _shown);
         if (!changes.NeedsRedraw)
         {
             // All render threads share the one system pointer; another monitor may have switched
             // it meanwhile. Asking again costs nothing when it is already right (lock-free check).
-            if (_cursorInside)
+            if (_cursor.Inside)
             {
                 _cursorLayer.KeepSystemCursor();
             }
@@ -233,13 +205,13 @@ internal sealed class RenderSession : IDisposable
 
         _overview.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame);
         _frozen.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frozen);
-        LocatorActive = _cursorInside && _cursorLayer.Draw(
-            _gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Mode, request.Zoom, _lastCursor,
+        LocatorActive = _cursor.Inside && _cursorLayer.Draw(
+            _gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Mode, request.Zoom, _cursor.LastCursor,
             request.Effects, request.LocateRequestedAt, request.PointerHidden, _alphas.Crosshair);
         _snapshots.TakeIfRequested(_gpu.Device, _gpu.Context, request.OverlayOnly ? null : image,
             _swapchain.RenderTarget, weights, _monitor.Bounds, frame, request);
         Present();
-        _changes.Presented(request, frame, _cursorInside, _lastCursor, shape);
+        _changes.Presented(request, frame, _cursor.Inside, _cursor.LastCursor, shape);
 
         // Show the window only after the first frame so it never flashes empty.
         if (!_shown)

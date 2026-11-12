@@ -14,6 +14,8 @@ internal static class TextsGermanFreeze
         ["Freeze.Overview"] = "Erst die Übersicht beenden, dann einfrieren.",
         ["Freeze.IslandEdit"] = "Erst das Bearbeiten der Inseln beenden, dann einfrieren.",
         ["Freeze.Docked"] = "Der angedockte Monitor lässt sich nicht einfrieren.",
+        ["Freeze.WindowDrag"] = "Erst das Verschieben oder die Größenänderung des Fensters beenden, dann einfrieren.",
+        ["Freeze.Temporary"] = "Der Monitor zeigt gerade eine vorübergehende Ansicht. Gleich noch einmal versuchen.",
         ["Freeze.NoPointer"] = "Der Mauszeiger ist auf keinem Monitor.",
         ["Freeze.LayoutUnavailable"] = "Die Monitore ändern sich gerade. Bitte gleich noch einmal versuchen.",
         ["Freeze.MoveRefused"] = "Windows hat das Versetzen des Mauszeigers abgelehnt.",

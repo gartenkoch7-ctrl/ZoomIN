@@ -97,6 +97,24 @@ public sealed class ParkedTargetsTests
         Assert.Equal(level, seen);
     }
 
+    [Fact]
+    public void AWindowDragLevel_SetWhileFrozen_HoldsTheMonitorAfterTheThawUntilReleased()
+    {
+        // M19 integration: a window drag (M17 G1) may set its level on a frozen monitor (MonitorRenderer draws
+        // the frozen level meanwhile, frozen?.Level first); after the thaw the drag still holds it.
+        var model = new ZoomModel(new ZoomLevels(), ZoomMode.Fullscreen, true, 0);
+        model.Step(4, "R", s_all);
+        var level = model.TargetFor("R");
+        model.Frozen.Freeze(Frozen("R", level));
+
+        model.Temporary.Set(TemporaryZoomOwner.WindowDrag, "R", ZoomLimits.Min);
+
+        model.Frozen.UnfreezeAll();
+        Assert.Equal(ZoomLimits.Min, model.EffectiveTargetFor("R")); // thawed during the drag: the drag's level
+        model.Temporary.Release(TemporaryZoomOwner.WindowDrag, "R");
+        Assert.Equal(level, model.EffectiveTargetFor("R"));
+    }
+
     private static FrozenMonitor Frozen(string id, double level, ZoomMode mode = ZoomMode.Fullscreen) =>
         new(id, new PhysicalRect(0, 0, 10, 10), level, mode, LensSize.Default, DockLayout.Default, false, RgbColor.Cyan);
 }

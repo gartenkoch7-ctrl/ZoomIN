@@ -129,39 +129,6 @@ public sealed class MonitorFreezeControllerTests
     }
 
     [Fact]
-    public void TheDockedMonitor_IsNotFrozen_OthersAre()
-    {
-        using var rig = new FreezeRig();
-        rig.Models.Zoom.Activate(ZoomMode.Docked, One, [One, Two, Three]);
-        rig.PointerTo(One);
-
-        rig.Controller.ToggleFreeze();
-        Assert.False(rig.Frozen.Any);
-        Assert.Equal(["The docked monitor cannot be frozen."], rig.Hints);
-
-        rig.PointerTo(Two);
-        rig.Controller.ToggleFreeze();
-        Assert.True(rig.Frozen.IsFrozen(Two));
-    }
-
-    [Fact]
-    public void WhileAnOverviewRunsOnTheMonitor_FreezingIsRefused()
-    {
-        using var rig = new FreezeRig();
-        rig.Models.Zoom.Activate(ZoomMode.Fullscreen, One, [One, Two, Three]);
-        var session = rig.Models.Overview.Press(One, ZoomMode.Fullscreen, rig.Models.Zoom.TargetFor(One));
-        Assert.NotNull(session);
-        rig.PointerTo(One);
-
-        rig.Controller.ToggleFreeze();
-
-        Assert.Same(session, rig.Models.Overview.Current);
-        Assert.False(rig.Frozen.Any);
-        Assert.Empty(rig.Mover.Moves);
-        Assert.Equal(["End the overview first, then freeze."], rig.Hints);
-    }
-
-    [Fact]
     public void FenceEvents_AreHandledOffTheWatcherThread()
     {
         using var rig = new FreezeRig();

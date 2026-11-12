@@ -316,6 +316,27 @@ Bausteine für G2 (eingefrorene Monitore), A6 (Puffer, Achsensperre) und B1 (Bea
 - **Tests** greifen nie den echten Zeiger an: Logik gegen ein gefälschtes `IFenceNative`; der
   echte Clip-Test setzt nur den ganzen virtuellen Bildschirm und löst in `finally`, der echte
   Hook lässt alles durch.
+- **Loslassen von selbst ohne Meldung** (Integration M19): `Recomputed` kommt nur nach Desktopwechsel,
+  Entsperren und Anzeigewechsel. Lässt der Zaun selbst los (Prüftakt scheitert, neuer Hook verweigert,
+  `Forbid` scheitert), meldet er das nicht: Kein Besitzer könnte etwas tun, der Prüftakt versucht den
+  Hook erneut (Log 2943). Ein eingefrorener Monitor ist dann bis dahin erreichbar; kommt der Zeiger
+  hin, sieht der Render-Thread ihn und G2 hebt das Einfrieren auf (`pointer_inside`). Puffer,
+  Achsensperre und Zieh-Zaun der Inseln fallen bis zum neuen Hook still aus (sie sperren dann auch
+  nichts). Fällt der Zaun nur von Hook auf Clip zurück (ein Rechteck erlaubt), gilt dasselbe für die
+  Filter.
+- **Drei Tastatur-Hooks** (Integration M19): Haltetaste der Markierungen (M18, `Win32HoldKeyHook`),
+  Haltetaste der Achsensperre (A6, `Win32HoldKeyWatch`) und der Aktivitäts-Hook (Suchhilfe, Übersicht B2,
+  Inseln B1). Nur der Aktivitäts-Hook verschluckt Tasten, und nur Esc und Entf (Inseln vor Übersicht);
+  Umschalt, Strg und Alt (links/rechts) – die möglichen Haltetasten – laufen immer durch
+  (belegt durch Review: B1 prüft nur Esc und Entf; `IslandEditCaptureTests.HoldKeys_AlwaysPass_WhileEditing` hält das fest). Bei den Tastatur-Hooks
+  spielt die Reihenfolge damit keine Rolle: keine Taste wird doppelt verschluckt, kein Loslassen einer
+  Haltetaste geht verloren. Umgekehrt nimmt der Bearbeitungsmodus der Inseln Esc, Entf und Mausrad mit
+  gehaltenem Umschalt, Strg oder Alt nicht an – also auch nicht, solange die Achsentaste gehalten ist.
+- **Zwei Maus-Hooks** (Integration M19): Zaun-Hook und Aktivitäts-Hook. Ändert der Zaun-Hook einen Zug,
+  verschluckt er ihn und setzt den Zeiger per `SetCursorPos`, das kein Low-Level-Hook sieht. Ruft
+  Windows den Zaun-Hook zuerst auf (der zuletzt installierte kommt zuerst, der Zaun installiert bei
+  `HookLost` neu), sehen Suchhilfe, Ausblenden beim Tippen, Markierungen (E1) und das Ziehen einer Insel
+  solche Züge nicht; unveränderte Züge kommen an (offen, Abhilfe: geänderte Züge weiterreichen).
 - **Offen:** Ausnahmeliste für Spiele und Fernsteuerung (ADR-0028), injizierte Bewegungen
   (`LLMHF_INJECTED`) werden derzeit wie echte behandelt.
 
@@ -515,8 +536,10 @@ an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten
   hebt dasselbe Kürzel **alle** auf. `Strg+Alt+N` setzt den Zeiger auf den nächsten freien
   Monitor. Beide anpassbar (Seite „Tastenkürzel“), auf dem sicheren Bildschirm abgeschaltet
   (`SecureSettingsSanitizer`: ein Zaun dort könnte Anmeldung oder UAC-Abfrage versperren). Die
-  Kürzel kamen ohne Schema-Wechsel: Hat der Nutzer `Strg+Alt+H`/`N` schon einer älteren Aktion
-  gegeben, bleiben die Werkskürzel beim Laden unbelegt (`SettingsMigration.WithoutFreezeClashes`); selbst aufgenommene Kürzel bleiben unangetastet.
+  Kürzel kamen ohne Schema-Wechsel, ebenso die Inselkürzel (B1, `Strg+Alt+I`, `Strg+Alt+Umschalt+I`):
+  Hat der Nutzer eines davon schon einer älteren Aktion gegeben, bleibt das Werkskürzel beim Laden
+  unbelegt (`SettingsMigration.WithoutNewHotkeyClashes`). Selbst aufgenommene Kürzel bleiben
+  unangetastet und gehen auch einem Werkskürzel eines anderen M19-Kürzels vor (Integration M19).
 - **Ablauf beim Einfrieren** (`App/Freeze/MonitorFreezeController`): Ziel ist der nächstgelegene
   freie Monitor (`MonitorCycle.NearestFree`, Abstand zum Monitorrechteck; bei Gleichstand rechts
   zuerst – `FenceGeometry.Nearest` kennt diese Regel nicht und prüft nur noch, dass der Zielpunkt
@@ -526,6 +549,11 @@ an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten
   → Modell einfrieren → `IPointerFence.Forbid(FrozenMonitors, …)`. Lehnt Windows das Versetzen ab,
   wird nichts eingefroren. Läuft auf dem Monitor eine Übersicht (B2), wird nicht eingefroren
   (Hinweis „Erst die Übersicht beenden“): ihr 1×-Bild und ihr Rahmen würden sonst stehen bleiben.
+  Ebenso während eines Fenster-Verschiebens oder einer Größenänderung mit eigener Stufe (G1; Hinweis „Erst das
+  Verschieben oder die Größenänderung des Fensters beenden“): Der Sprung des Zeigers nähme das Fenster mit.
+  Senkt eine andere vorübergehende Stufe den Monitor (etwa eine gerade endende Übersicht), Hinweis „Der
+  Monitor zeigt gerade eine vorübergehende Ansicht“; das Bild spränge sonst auf die Stufe des Nutzers
+  (`FreezeRefusals`, Integration M19).
 - **Grenzen:** Mit einem Monitor kein Einfrieren und kein Wechsel, Hinweis per Bildschirmleser und
   Tray-Meldung. Weil dasselbe Kürzel bei einem eingefrorenen Monitor alles aufhebt, ist höchstens
   einer eingefroren; der „letzte freie Monitor“ ist damit nur der Fall „ein Monitor“. Nach einem

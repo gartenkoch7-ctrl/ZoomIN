@@ -101,8 +101,9 @@ Monitoren steht noch aus (Integration).
 - [x] Puffer aus: Verhalten wie Windows (kein Filter angemeldet, kein Hook; `Factory_RegistersNothing`).
 - [x] Puffer an: Der Zeiger bleibt am Rand stehen und kommt erst nach der Druckzeit der Stufe hinüber
       (`EdgeBufferTests`).
-- [ ] Ein eingefrorener Monitor (nach dem Merge mit G2) bleibt unabhängig vom Puffer gesperrt
-      (durch die Zaun-Reihenfolge gegeben, Filter vor gesperrten Bereichen; nach dem Merge prüfen).
+- [x] Ein eingefrorener Monitor (nach dem Merge mit G2) bleibt unabhängig vom Puffer gesperrt
+      (durch die Zaun-Reihenfolge gegeben, Filter vor gesperrten Bereichen; in der Integration belegt:
+      `FrozenMonitorChainTests`).
 - [x] Achsensperre: Mit gehaltener Taste bewegt sich der Zeiger nur auf einer Achse, beim Loslassen
       ist er sofort frei (`AxisLockTests`, `HoldKeyWatchTests`).
 - [ ] Nach Win+L, UAC und Abstecken eines Monitors ist der Zeiger nie eingesperrt (Logik getestet:
