@@ -1,5 +1,5 @@
 # G1 · Zoom beim Fenster-Verschieben
-**Meilenstein:** [M17](../m17-ruhige-ansicht.md) · **Spur:** C · **Branch:** `feat/m17-g1-fenster-verschieben` · **Größe:** S–M · **Status:** geplant
+**Meilenstein:** [M17](../m17-ruhige-ansicht.md) · **Spur:** C · **Branch:** `feat/m17-g1-fenster-verschieben` · **Größe:** S–M · **Status:** umgesetzt (Sichtprüfung offen)
 
 **Ziel:** Solange ein Fenster verschoben oder in der Größe geändert wird, geht der Zoom auf dem
 Monitor, auf dem das Fenster gerade ist, vorübergehend auf 1×. Man sieht so sofort, wohin das
@@ -47,25 +47,45 @@ Bewertung: [feature-priorisierung.md](../../kb/feature-priorisierung.md)
     absenken), zwei Schalter.
   - Verdrahtung Quelle → `WindowDragPolicy` → `ZoomModel`.
 
+### Ergebnis Mini-Spike und Umsetzung (2026-11-11)
+Details: [eingabe-und-tracking.md](../../kb/eingabe-und-tracking.md#fenster-verschieben-erkennen-g1-mini-spike-2026-11-11).
+- **Art:** beides, in dieser Reihenfolge – Trefferzone am Zeiger beim Start, bei unklarer Zone
+  (Alt+Leertaste → Größe, Apps, die selbst ziehen, Fenster mit Adminrechten) die erste
+  Rechteckänderung. Jede allein irrt in einem Fall (maximiertes Fenster bzw. Tastatur-Größe).
+- **Abweichung:** Der Zoom reagiert erst bei der **ersten Fensteränderung**, nicht beim
+  Tastendruck. Ein einfacher Klick auf eine Titelleiste löst dieselben Ereignisse aus und würde
+  sonst den Zoom flackern lassen. Folge: Die Art ist beim Start bekannt (außer beim Umriss-Ziehen
+  mit unklarer Trefferzone, siehe KB).
+- **Abweichung Lupe:** kein `hidden` im Snapshot (Rendering unverändert). Die Lupe bekommt die
+  Stufe 1× (auch bei „absenken“), gleitet aus und blendet sich bei 1× wie gewohnt aus.
+- **Abweichung Mapping:** `WindowDragMapping` (eigene Datei) statt `ZoomMapping`, weil die
+  Optionen nicht im `ZoomModel` liegen (`ZoomModel.cs` gehört Schritt 0).
+- Core: `WindowDragPolicy`, `WindowDragKinds`, `WindowDragZoom` (Zustand, Verdrahtung mit
+  `ZoomModel.Temporary`, beachtet Löschen durch Nutzerbefehle und Monitorwechsel), `WindowDragOptions`.
+  Platform: `Win32WindowDragSource` (eigener Thread), `WindowDragWatcher`, `DragHitTest`.
+  App: `WindowDragSync` (Monitor unter dem Zeiger, Ablauf), `WindowDragViewModel`, Karte auf
+  „Zoom & Modi“.
+
 ## Aufgaben
 ### 1 · Mini-Spike (1 Tag)
-- [ ] Verschieben vs. Größe sicher erkennen (Trefferzone vs. erste Rechteckänderung), auch bei
+- [x] Verschieben vs. Größe sicher erkennen (Trefferzone vs. erste Rechteckänderung), auch bei
       Verschieben per Tastatur (Alt+Leertaste → Verschieben)
 - [ ] App-Matrix: Explorer, Edge/Chrome (Fenster und Tab herausziehen), Teams, Office, Terminal,
       VS Code, Einstellungen-App (UWP). Ergebnis in `docs/kb/eingabe-und-tracking.md`
+      *(Erwartung dort eingetragen; Sichtprüfung braucht einen Menschen, Agents bedienen keine Nutzer-Apps)*
 ### 2 · Core
-- [ ] `WindowDragPolicy` + Tests: alle drei Aktionen, Absenken nur wenn höher, Monitorwechsel beim
+- [x] `WindowDragPolicy` + Tests: alle drei Aktionen, Absenken nur wenn höher, Monitorwechsel beim
       Ziehen, Ende ohne Start, doppelter Start, Lupe/Angedockt, Zoom aus
-- [ ] Abdeckung ≥ 90 %
+- [x] Abdeckung ≥ 90 % (`WindowDrag*` in Core: 100 % Zeilen, `WindowDragZoom` 97 % Zweige)
 ### 3 · Platform (EventIds 2900–2919)
-- [ ] `WindowDragSource` (Start/Ende/Art), Log 2900 Start (Prozessname, Fensterklasse, Art),
+- [x] `WindowDragSource` (Start/Ende/Art), Log 2900 Start (Prozessname, Fensterklasse, Art),
       2901 Ende, 2902 Art unklar
 ### 4 · App (EventIds 1540–1559)
-- [ ] Settings-Felder, `ProfileFields`, `ZoomMapping`; Karte auf „Zoom & Modi“, Texte DE/EN,
+- [x] Settings-Felder, `ProfileFields`, `ZoomMapping`; Karte auf „Zoom & Modi“, Texte DE/EN,
       Bildschirmleser
-- [ ] Ablauf `zoomin.view.window_drag` (Start bis Rückkehr; Tags Art, Aktion, Stufe vorher/nachher,
+- [x] Ablauf `zoomin.view.window_drag` (Start bis Rückkehr; Tags Art, Aktion, Stufe vorher/nachher,
       Monitorwechsel ja/nein); keine Titel
-- [ ] Katalog `telemetrie.md`
+- [x] Katalog `telemetrie.md`
 
 ## Parallelisierung
 - **Exklusiv:** `WindowDragPolicy`, `WindowDragSource`, Karte auf „Zoom & Modi“.
@@ -80,7 +100,7 @@ Bewertung: [feature-priorisierung.md](../../kb/feature-priorisierung.md)
 - [ ] Ziehen an der Titelleiste: 1× während des Ziehens, danach zurück an der Mausposition (KI-Debug)
 - [ ] Größe ändern am Rand: gleiches Verhalten, abschaltbar
 - [ ] Ziehen über zwei Monitore: nur der aktuelle Monitor ist auf 1×
-- [ ] Gespeicherte Stufe unverändert nach dem Ziehen
+- [x] Gespeicherte Stufe unverändert nach dem Ziehen (Tests `WindowDragMappingTests`, `WindowDragZoomTests`)
 - [ ] App-Matrix dokumentiert; Apps ohne Meldung sind als bekannte Einschränkung benannt
 - [ ] Overlay weiterhin aus Aufnahmen ausgeschlossen
 

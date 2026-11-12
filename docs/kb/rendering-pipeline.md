@@ -28,6 +28,9 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
   Monitors, eigene Duplication, eigenes Overlay, eigene Swapchain.
 - Monitor-ID = Gerätename `\\.\DISPLAYn` (DXGI `OutputDescription.DeviceName` = GDI `szDevice`).
 - Anzeigeänderung → `DisplayChangedException` → `ZoomEngine` baut nach 500 ms alle Renderer neu.
+  Während des Neuaufbaus können andere Threads (Zoom-Befehle, Fenster-Ziehen G1, Übersicht B2)
+  noch die alte Rendererliste wecken: `RenderWakeup` macht `Wake` und `Sleep` nach `Dispose`
+  wirkungslos statt `ObjectDisposedException` (gefunden in M17, Test `RenderWakeupTests`).
 - Monitore ohne Maus behalten ihren letzten Ausschnitt.
 - Farbfilter pro Monitor: Jeder Renderer liest `EffectsModel.CurrentFor(Gerätename)`. Für
   Monitore mit eigenem Filter liegt beim Ändern der Einstellungen schon eine fertige

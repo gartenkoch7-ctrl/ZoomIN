@@ -68,14 +68,19 @@ Spur D: D1-Spike (sofort, eigener Branch von develop) ─────┴─► n
 B und C nach Schritt 0 (≈ 1–2 Tage) gleichzeitig.
 
 ## Aufgaben (Integration)
-- [ ] Integrationsbranch anlegen, Schritt 0 umsetzen, Review-Schleife (§9), Commit, Push
+- [x] Integrationsbranch anlegen, Schritt 0 umsetzen, Review-Schleife (§9), Commit, Push
+      (`ZoomModel.Temporary` / `TemporaryZoom`, siehe [architektur.md](../kb/architektur.md#vorübergehende-zoomstufe-m17-temporaryzoom))
 - [ ] Spuren A, D sofort starten; B, C nach Schritt 0 (Subagenten mit Worktree oder eigene Sitzungen)
-- [ ] Spuren der Reihe nach mergen (A → B → C), nach jedem Merge `dotnet build` + `dotnet test`
-- [ ] Gesamt-Review des ganzen Meilensteins (§9) bis ohne Befunde
-- [ ] Wechselwirkungen prüfen:
-  - Übersicht während eines Fenster-Ziehens
-  - Randabstand nach der Rückkehr aus der Übersicht
-  - Migration zusammen mit Profilen
+- [x] Spuren der Reihe nach mergen (tatsächlich A → C → B), nach jedem Merge `dotnet build` + `dotnet test`
+- [x] Gesamt-Review des ganzen Meilensteins (§9) bis ohne Befunde hoher Schwere (2026-11-12, sieben Runden;
+      angenommene Kompromisse siehe unten „Integration: angenommene Kompromisse“)
+- [x] Wechselwirkungen prüfen (Tests; Sichtprüfung offen):
+  - Übersicht während eines Fenster-Ziehens: `OverviewWindowDragTests` (beide Besitzer, Reihenfolge
+    der Freigabe, Zoom aus, zwei Threads ohne Verklemmung), `OverviewLayerTests` (Ausschnitt davor)
+  - Randabstand nach der Rückkehr aus der Übersicht: `ViewPlacementTests`, `OverlayDemandTests`
+    (1× ist kein Moduswechsel für den Anker)
+  - Migration zusammen mit Profilen: `JsonProfileStoreTests`, `SettingsMigrationTests` (Kürzel-Konflikt)
+  - Renderer-Neuaufbau: `Wake` auf entsorgte Renderer (`RenderWakeupTests`)
 - [ ] Sichtprüfung per KI-Debug-Schnappschuss (M16), danach Nutzer
 - [ ] Spike-Ergebnis D1 in M18 übernehmen (bestanden → Spur A in M18, sonst streichen)
 - [ ] Release-Notes 1.1, Status hier und in der Roadmap
@@ -85,9 +90,36 @@ B und C nach Schritt 0 (≈ 1–2 Tage) gleichzeitig.
 - [ ] Akzeptanzkriterien aller drei Feature-Pläne erfüllt
 - [ ] Bestehende Installation: einmal auf Randabstand umgestellt, Hinweis erscheint genau einmal
 - [ ] Kein Feature ändert gespeicherte Zoomstufen ungewollt (vorübergehende Stufe wird nie gespeichert)
-- [ ] Render-Loop-Benchmarks weiter `0 B`, Bildrate = Monitor-Hz
+- [ ] Render-Loop-Benchmarks weiter `0 B` (erfüllt, 2026-11-12), Bildrate = Monitor-Hz (Sichtprüfung offen)
 - [ ] Alle Overlays weiter aus Aufnahmen ausgenommen (Freigabetest Teams/Browser)
 
 ## Offene Fragen / Risiken
 - Apps mit eigener Ziehlogik (Browser-Tabs) melden kein Verschieben → App-Matrix in G1.
 - Migrationsmerker in den Einstellungen nötig (heute keine Versionsnummer in `settings.json`).
+
+## Integration: angenommene Kompromisse (Gesamt-Review 2026-11-12)
+Bewusst nicht geändert; bei Bedarf in einem späteren Meilenstein aufgreifen.
+- **Esc im Randabstand:** Esc kehrt zum Ausschnitt davor zurück; liegt der Zeiger außerhalb, holt
+  der Randabstand ihn danach ins Bild (gewollt, `ViewPlacementTests`). → Produktfrage an den Nutzer.
+- **Platzierung während „Anheben“ (G1, 1×):** „Hineinzoomen am Rahmen“ während eines Fenster-Ziehens
+  wird für 1× platziert und verpufft; nach dem Ziehen gleitet der Zoom um den Zeiger. Bei „Senken“
+  wird für die gesenkte Stufe platziert, der Rahmen zeigt aber die Nutzerstufe.
+- **Platzierungs-Halt:** Zoomt der Nutzer direkt nach Esc weg, bevor der Zoom sich der Platzierung
+  genähert hat, hält der Anker bis zu 0,25 s; sehr lange Zoom-Animationen (> 0,25 s Restfall) beenden
+  den Halt früh. Ursache an der Wurzel: Platzierung vor der Freigabe der 1× (`OverviewController.Finish`).
+- **`ViewCenterRequests`** hält nur die letzte Anfrage für alle Monitore (zwei Übersichtsenden auf
+  verschiedenen Monitoren innerhalb eines Frames sind praktisch ausgeschlossen).
+- **Randabstand-Hinweis:** Der Merker wird beim Einreihen gelöscht, nicht erst nach der Anzeige.
+- **Esc-Durchlass:** In den ersten 100 ms einer Übersicht kann ein Esc noch an die Anwendung gehen,
+  wenn beim Start ein Esc-Loslassen im Hook steckte. Belongs() zählt das Loslassen jeder L/R-Variante
+  eines Modifizierers.
+- **Kürzel:** Der Kürzel-Editor prüft keine Doppelbelegung innerhalb von ZoomIN (vorher schon);
+  die Migration lässt nur das neue Übersicht-Kürzel bei Konflikt frei. Seitentexte nennen die
+  Standardkürzel fest (bestehendes Muster).
+- **Code-Qualität:** `AppSettings.cs` (249 Zeilen, flacher JSON-Vertrag – Aufteilen ändert das
+  Dateiformat), `AnchorController`/`ZoomModel`/`WindowDragZoom`/`TemporaryZoom`/`WindowDragWatcher`/
+  `OverviewKeyWatch` (234–242 Zeilen) als nächste Teilungskandidaten; doppelte Hilfen (Rechteck-Mitte,
+  Modifizierer, Ceiling-Minimum in `OverviewFrameSource.ZoomAfter`, Ceiling-Lesereihenfolge in
+  `OverlayDemand.EffectiveTarget`), handgeschriebene Warteschlange in `OverviewKeySignals`,
+  Lock-Design der Übersicht (serielle Ausführung wäre einfacher), `TrackingViewModel` wendet bei
+  den alten Feldern (vor M17) weiter alle Seitenwerte an.

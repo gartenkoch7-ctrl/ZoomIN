@@ -5,8 +5,9 @@ namespace ZoomIN.Core.Zoom;
 /// <summary>
 /// What the user wants: current mode, target zoom per monitor (1 = not zoomed) and last levels
 /// per mode and monitor (M3/M4 decisions). Commands come from hotkey, mouse-hook and UI threads;
-/// render threads read <see cref="Mode"/>, <see cref="TargetFor"/>, <see cref="Lens"/> and
-/// <see cref="Dock"/> lock-free from immutable snapshots.
+/// render threads read <see cref="Mode"/>, <see cref="EffectiveTargetFor"/>, <see cref="Lens"/> and
+/// <see cref="Dock"/> lock-free from immutable snapshots. <see cref="Temporary"/> holds levels
+/// that features apply for a while without changing what the user chose (M17).
 /// </summary>
 public sealed class ZoomModel
 {
@@ -30,10 +31,14 @@ public sealed class ZoomModel
         _animationSeconds = Math.Max(0, animationSeconds);
         _lens = LensSize.Default;
         _dock = DockLayout.Default;
+        Temporary = new TemporaryZoom(_gate, () => Mode == ZoomMode.Docked);
     }
 
     /// <summary>Raised after every change, on the thread that caused it. Handlers must be fast.</summary>
     public event Action? Changed;
+
+    /// <summary>Temporary levels per monitor (overview, window drag); never saved.</summary>
+    public TemporaryZoom Temporary { get; }
 
     public ZoomMode Mode => (ZoomMode)Volatile.Read(ref _mode);
 
@@ -82,8 +87,15 @@ public sealed class ZoomModel
     /// <summary>Selects the mode used by Strg+Alt+Z without switching zoom on.</summary>
     public void SetMode(ZoomMode mode)
     {
-        Volatile.Write(ref _mode, (int)mode);
-        Changed?.Invoke();
+        IReadOnlyList<TemporaryZoomOwner> cleared;
+        lock (_gate)
+        {
+            var changed = mode != Mode;
+            Volatile.Write(ref _mode, (int)mode);
+            cleared = changed ? Temporary.ClearLocked() : []; // a mode change ends temporary views
+        }
+
+        Raise(cleared);
     }
 
     /// <summary>Takes over all last levels, e.g. when switching profiles.</summary>
@@ -97,9 +109,23 @@ public sealed class ZoomModel
         Changed?.Invoke();
     }
 
-    /// <summary>Target for one monitor; 1 when unknown or off. Called per frame, does not allocate.</summary>
-    public double TargetFor(string monitorId) =>
-        Volatile.Read(ref _targets).TryGetValue(monitorId, out var level) ? level : ZoomLimits.Min;
+    /// <summary>
+    /// The user's target for one monitor; 1 when unknown or off. Ignores temporary levels, so
+    /// settings, status texts and <see cref="IsOn"/> keep showing what the user chose.
+    /// </summary>
+    public double TargetFor(string monitorId) => ZoomTargetRules.TargetOf(Volatile.Read(ref _targets), monitorId);
+
+    /// <summary>
+    /// What the monitor shows: the user's target, lowered by a temporary level if one is active
+    /// (never in Docked mode, see <see cref="TemporaryZoom"/>). Per frame: lock-free, 0 B.
+    /// </summary>
+    public double EffectiveTargetFor(string monitorId)
+    {
+        // Ceiling first: commands publish the new targets before they clear ceilings, so a cleared
+        // ceiling read here guarantees the new target below (never the old target uncapped).
+        var ceiling = Temporary.CeilingFor(monitorId);
+        return Math.Min(TargetFor(monitorId), ceiling);
+    }
 
     public double LastLevelFor(ZoomMode mode, string monitorId)
     {
@@ -135,27 +161,24 @@ public sealed class ZoomModel
     /// </summary>
     public void Step(double notches, string monitorAtMouse, IReadOnlyCollection<string> monitors)
     {
+        IReadOnlyList<TemporaryZoomOwner> cleared;
         lock (_gate)
         {
             var mode = Mode;
             var docked = mode == ZoomMode.Docked;
-            var id = docked && AnyOn(monitors) ? DockedMonitor : monitorAtMouse;
-            var current = TargetFor(id);
-            var next = ZoomLimits.Step(current, notches);
-            if (next == current)
+            var targets = Volatile.Read(ref _targets);
+            var id = docked && ZoomTargetRules.AnyOn(targets, monitors) ? DockedMonitor : monitorAtMouse;
+            if (ZoomTargetRules.PlanStep(targets, id, notches, monitors, docked, _perMonitor) is not { } step)
             {
                 return;
             }
 
-            // Treat values within rounding distance of 1× as off.
-            next = next < ZoomLimits.Min + 1e-6 ? ZoomLimits.Min : next;
-            var targets = new Dictionary<string, double>(Volatile.Read(ref _targets));
-            foreach (var monitor in docked || _perMonitor ? [id] : monitors)
+            // Off is not a level to remember: the next switch-on restores the last one.
+            if (step.Level > ZoomLimits.Min)
             {
-                targets[monitor] = next;
-                if (next > ZoomLimits.Min)
+                foreach (var monitor in step.Stepped)
                 {
-                    _levels.Set(mode, monitor, next, _perMonitor);
+                    _levels.Set(mode, monitor, step.Level, _perMonitor);
                 }
             }
 
@@ -164,43 +187,47 @@ public sealed class ZoomModel
                 Volatile.Write(ref _dockedMonitor, id);
             }
 
-            Volatile.Write(ref _targets, targets);
+            Volatile.Write(ref _targets, step.Targets);
+
+            // Switching a monitor on or off is an explicit command: it ends temporary views there.
+            // Cleared after the new targets, so a frame never sees the old target uncapped.
+            cleared = step.Switched.Count > 0 ? Temporary.ClearLocked(step.Switched) : [];
         }
 
-        Changed?.Invoke();
+        Raise(cleared);
     }
 
     private void Switch(ZoomMode mode, string monitorAtMouse, IReadOnlyCollection<string> monitors, bool offIfOn)
     {
+        IReadOnlyList<TemporaryZoomOwner> cleared;
         lock (_gate)
         {
-            if (offIfOn && AnyOn(monitors))
+            if (offIfOn && ZoomTargetRules.AnyOn(Volatile.Read(ref _targets), monitors))
             {
                 Volatile.Write(ref _targets, s_allOff);
             }
             else
             {
+                // Docked: only the monitor under the mouse gets the strip (M4 decision).
+                if (mode == ZoomMode.Docked)
+                {
+                    Volatile.Write(ref _dockedMonitor, monitorAtMouse);
+                }
+
                 Volatile.Write(ref _mode, (int)mode);
-                Volatile.Write(ref _targets, TargetsFor(mode, monitorAtMouse, monitors));
+                Volatile.Write(ref _targets, ZoomTargetRules.SwitchOn(mode, monitorAtMouse, monitors, id => _levels.Get(mode, id, _perMonitor)));
             }
+
+            // An explicit on/off or mode command ends every temporary view (see TemporaryZoom),
+            // after the new targets so a frame never sees the old target uncapped.
+            cleared = Temporary.ClearLocked();
         }
 
-        Changed?.Invoke();
+        Raise(cleared);
     }
 
-    private Dictionary<string, double> TargetsFor(ZoomMode mode, string monitorAtMouse, IReadOnlyCollection<string> monitors)
-    {
-        if (mode != ZoomMode.Docked)
-        {
-            return monitors.ToDictionary(id => id, id => _levels.Get(mode, id, _perMonitor));
-        }
-
-        // Docked: only the monitor under the mouse gets the strip (M4 decision).
-        Volatile.Write(ref _dockedMonitor, monitorAtMouse);
-        return new Dictionary<string, double> { [monitorAtMouse] = _levels.Get(mode, monitorAtMouse, _perMonitor) };
-    }
-
-    private bool AnyOn(IReadOnlyCollection<string> monitors) => monitors.Any(id => TargetFor(id) > ZoomLimits.Min);
+    // Outside the lock: handlers may read the model.
+    private void Raise(IReadOnlyList<TemporaryZoomOwner> temporaryCleared) => Temporary.AnnounceCommand(Changed, temporaryCleared);
 
     private void Set<T>(ref T field, T value)
         where T : class

@@ -51,14 +51,15 @@ public sealed class AllocationTests
     public void ZoomModel_Reads_DoNotAllocate()
     {
         var model = new ZoomModel(new ZoomLevels(), ZoomMode.Lens, true, 0.15);
-        string[] monitors = [@"\\.\DISPLAY1"];
+        string[] monitors = [@"\\.\DISPLAY1", @"\\.\DISPLAY2"];
         model.Toggle(monitors[0], monitors);
-        var sum = Read(model, monitors[0]); // warm-up / JIT
+        model.Temporary.Set(TemporaryZoomOwner.Overview, monitors[0], 1.5); // DISPLAY2 reads without one
+        var sum = Read(model, monitors[0]) + Read(model, monitors[1]); // warm-up / JIT
 
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var i = 0; i < Frames; i++)
         {
-            sum += Read(model, monitors[0]);
+            sum += Read(model, monitors[i % 2]);
         }
 
         Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
@@ -136,5 +137,5 @@ public sealed class AllocationTests
 
     // Everything a render thread reads from the model per frame.
     private static double Read(ZoomModel model, string monitor) =>
-        model.TargetFor(monitor) + model.AnimationSeconds + (int)model.Mode + model.Lens.WidthFraction + model.Dock.Fraction;
+        model.EffectiveTargetFor(monitor) + model.AnimationSeconds + (int)model.Mode + model.Lens.WidthFraction + model.Dock.Fraction;
 }

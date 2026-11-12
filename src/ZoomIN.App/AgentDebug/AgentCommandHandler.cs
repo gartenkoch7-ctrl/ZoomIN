@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
+using ZoomIN.App.Overview;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.AgentDebug;
 using ZoomIN.Core.Diagnostics;
@@ -15,7 +16,7 @@ namespace ZoomIN.App.AgentDebug;
 /// </summary>
 public sealed class AgentCommandHandler(
     AgentStateReport state, AgentSnapshot snapshot, ZoomCommands zoom, WindowFilterCommands windowFilter,
-    EffectsModel effects, TrackingModel tracking, ILogger<AgentCommandHandler> log)
+    EffectsModel effects, TrackingModel tracking, OverviewDebug overview, ILogger<AgentCommandHandler> log)
 {
     public async Task<AgentResponse> HandleAsync(AgentRequest request, CancellationToken cancellationToken)
     {
@@ -85,6 +86,8 @@ public sealed class AgentCommandHandler(
             case AgentShortcut.NextFilter: zoom.NextFilter(); break;
             case AgentShortcut.ToggleCrosshair: effects.ToggleCrosshair(); break;
             case AgentShortcut.ToggleTracking: tracking.ToggleEnabled(); break;
+            case AgentShortcut.Overview: return overview.Tap();
+            case AgentShortcut.OverviewEscape: return overview.Escape();
             case AgentShortcut.ToggleWindowFilter:
                 return windowFilter.Toggle() is { } rule
                     ? $"Filter per window: {rule.Process} / {rule.WindowClass} -> {rule.Choice} {(rule.Choice == Core.WindowFilters.WindowFilterChoice.Filter ? rule.Filter : string.Empty)}".TrimEnd()

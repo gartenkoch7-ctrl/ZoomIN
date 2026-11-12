@@ -56,8 +56,10 @@ public static class ProfileFields
         CaretMargin = profile.CaretMargin,
         FocusFrame = profile.FocusFrame,
         CaretMarker = profile.CaretMarker,
-        CenterMouse = profile.CenterMouse,
+        MouseFollow = profile.MouseFollow,
+        MouseMargin = profile.MouseMargin,
         AnimationMilliseconds = profile.AnimationMilliseconds,
+        WindowDrag = profile.WindowDrag,
     };
 
     /// <summary>Profile names are file names: letters, digits, space, dash and underscore only.</summary>

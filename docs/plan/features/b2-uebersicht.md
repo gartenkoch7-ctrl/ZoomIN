@@ -1,5 +1,5 @@
 # B2 · Übersicht auf Knopfdruck
-**Meilenstein:** [M17](../m17-ruhige-ansicht.md) · **Spur:** B · **Branch:** `feat/m17-b2-uebersicht` · **Größe:** S–M · **Status:** geplant
+**Meilenstein:** [M17](../m17-ruhige-ansicht.md) · **Spur:** B · **Branch:** `feat/m17-b2-uebersicht` · **Größe:** S–M · **Status:** umgesetzt im Branch (mit A1 verdrahtet), Sichtprüfung offen
 
 **Ziel:** Bei hoher Stufe schnell sehen, wo man ist. Ein Kürzel schaltet den Monitor vorübergehend
 auf 1×. Ein Rahmen zeigt den bisherigen Ausschnitt und folgt der Maus. Danach zoomt man dort hinein,
@@ -48,22 +48,22 @@ gemergt (Anker für das Hineinzoomen).
 
 ## Aufgaben
 ### Core
-- [ ] `OverviewModel` + Tests: Antippen/erneut, Halten/Loslassen, Esc, Monitorwechsel während
+- [x] `OverviewModel` + Tests: Antippen/erneut, Halten/Loslassen, Esc, Monitorwechsel während
       Übersicht, Lupe, Zoom vorher aus (Kürzel ohne Wirkung), Grenze 300 ms
-- [ ] Rahmen- und Ankerrechnung mit Tests (Rahmenmitte landet in Bildmitte, Monitorrand)
-- [ ] Abdeckung ≥ 90 %
+- [x] Rahmen- und Ankerrechnung mit Tests (Rahmenmitte landet in Bildmitte, Monitorrand)
+- [x] Abdeckung ≥ 90 % (neue Core-Typen 100 % Zeilen)
 ### Platform (EventIds 2920–2939)
-- [ ] Loslassen-Signal im LL-Hook, Esc nur bei aktivem Flag verschlucken; Log 2920 Esc verschluckt
+- [x] Loslassen-Signal im LL-Hook, Esc nur bei aktivem Flag verschlucken; Log 2920 Esc verschluckt
       (nur Zähler, keine Tasten des Nutzers)
 ### Rendering (EventIds 3100–3119)
-- [ ] Rahmen im Highlight-Durchgang, WARP-Test (Rahmen an richtiger Stelle, Rest transparent)
-- [ ] Benchmark Frame mit Rahmen `0 B`
+- [x] Rahmen im Highlight-Durchgang (eigene `OverviewLayer` auf demselben `CursorPass`), WARP-Test (Rahmen an richtiger Stelle, Rest transparent)
+- [x] Benchmark Frame mit Rahmen `0 B`
 ### App (EventIds 1520–1539)
-- [ ] Kürzel-Bindung, Seite „Tastenkürzel“, Texte DE/EN, Bildschirmleser-Ansage „Übersicht an/aus“
-- [ ] Ablauf `zoomin.view.overview` (Start bis Hineinzoomen/Abbruch; Tags Art = tippen/halten,
+- [x] Kürzel-Bindung, Seite „Tastenkürzel“, Texte DE/EN, Bildschirmleser-Ansage „Übersicht an/aus“
+- [x] Ablauf `zoomin.view.overview` (Start bis Hineinzoomen/Abbruch; Tags Art = tippen/halten,
       Ende = hineinzoomen/esc, Stufe vorher)
-- [ ] Katalog `telemetrie.md`, KB `eingabe-und-tracking.md` (Abschnitt Übersicht)
-- [ ] KI-Debug: Übersicht als auslösbarer Kurzbefehl im Werkzeugkatalog (für Sichtprüfungen)
+- [x] Katalog `telemetrie.md`, KB `eingabe-und-tracking.md` (Abschnitt Übersicht)
+- [x] KI-Debug: Übersicht als auslösbarer Kurzbefehl im Werkzeugkatalog (für Sichtprüfungen)
 
 ## Parallelisierung
 - **Exklusiv:** `OverviewModel`, Rahmen-Teil im `HighlightLayer`, Loslassen-Signal im
@@ -76,7 +76,7 @@ gemergt (Anker für das Hineinzoomen).
 
 ## Akzeptanzkriterien
 - [ ] Antippen, Halten und Esc verhalten sich wie oben (Sichtprüfung per KI-Debug-Schnappschuss)
-- [ ] Nach dem Hineinzoomen ist die gespeicherte Stufe unverändert
+- [x] Nach dem Hineinzoomen ist die gespeicherte Stufe unverändert (Test)
 - [ ] Esc außerhalb der Übersicht erreicht weiter die Anwendung
 - [ ] Rahmen ist nicht in Bildschirmaufnahmen sichtbar
 - [ ] Benchmark `0 B`, Bildrate unverändert
@@ -86,3 +86,13 @@ gemergt (Anker für das Hineinzoomen).
   bleibt deshalb der Hauptweg.
 - LL-Hook und UIAccess auf sicheren Bildschirmen: Die Übersicht ist dort zunächst nicht vorgesehen
   (M10 prüfen).
+- **Offen nach der Umsetzung:** Hineinzoomen am Rahmen und Esc zur alten Stelle laufen über A1s
+  `ViewPlacement` (siehe
+  [architektur.md](../../kb/architektur.md#ansicht-auf-einen-punkt-zentrieren-m17-viewcenterrequests))
+  und wirken nur im Modus „Randabstand“ (Standard); in „Mitte“/„Fixpunkt“ zeigt der Rahmen, was
+  die Maus dort bekommt. Ob NVDA/Sprachausgabe die Ansage aus dem verborgenen Fenster vorlesen,
+  ist ungeprüft (NVDA filtert evtl. Hintergrundfenster).
+- **Zu entscheiden:** `Strg+Alt+O` ist auf manchen Layouts AltGr+O (z. B. Polnisch „ó“) und wird
+  dann vom Kürzel verschluckt; bestehende eigene Belegungen von `Strg+Alt+O` kollidieren nach dem
+  Update (Zeile zeigt „belegt“, Kürzel ist optional und per Entf löschbar). Texte nennen das Kürzel
+  fest wie die übrigen Startseiten-Texte.

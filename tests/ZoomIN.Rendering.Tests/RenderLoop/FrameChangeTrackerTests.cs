@@ -15,7 +15,7 @@ public sealed class FrameChangeTrackerTests
     private static readonly PhysicalPoint s_cursor = new(500, 400);
     private static readonly ModeFrame s_frame = new(s_monitor, new PhysicalRect(250, 200, 960, 540), false);
     private static readonly FrameRequest s_request = new(
-        ZoomMode.Fullscreen, 2, LensSize.Default, DockLayout.Default, DisplayEffects.Default, 0, TrackingSnapshot.Empty,
+        ZoomMode.Fullscreen, ZoomMode.Fullscreen, 2, LensSize.Default, DockLayout.Default, DisplayEffects.Default, 0, TrackingSnapshot.Empty,
         TrackingOptions.Default, false, WindowRegions.Empty, false);
 
     [Fact]

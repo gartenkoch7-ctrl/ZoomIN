@@ -29,8 +29,8 @@ internal static class AnchorGeometry
                 visible.Y + (visible.Height / 2) + Push(caret.Y, caret.Bottom, inner.Y, inner.Bottom))
             : Center(caret);
 
-    // Smallest shift that brings [start, end] into [low, high]; centred if it does not fit.
-    private static double Push(double start, double end, double low, double high)
+    /// <summary>Smallest shift that brings [start, end] into [low, high]; centred if it does not fit.</summary>
+    public static double Push(double start, double end, double low, double high)
     {
         if (end - start > high - low)
         {

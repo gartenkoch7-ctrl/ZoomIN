@@ -11,4 +11,7 @@ public enum TrayCommand
     Docked,
     NextProfile,
     Exit,
+
+    /// <summary>Click on a notice that points to the "Focus &amp; text cursor" page (M17 A1).</summary>
+    OpenTracking,
 }

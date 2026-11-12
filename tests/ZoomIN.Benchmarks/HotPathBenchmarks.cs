@@ -16,12 +16,16 @@ public class HotPathBenchmarks
     private readonly PhysicalRect _monitor = new(0, 0, 3840, 2160);
     private readonly ZoomAnimator _animator = new();
     private readonly ZoomModel _model = new(new ZoomLevels(), Core.Modes.ZoomMode.Fullscreen, true, 0.15);
+    private readonly ZoomModel _temporaryModel = new(new ZoomLevels(), Core.Modes.ZoomMode.Fullscreen, true, 0.15);
     private readonly EffectsModel _effects = new(DisplayEffects.Default with
     {
         MonitorFilters = new Dictionary<string, MonitorFilter> { [@"\\.\DISPLAY1"] = new(true, ColorFilter.YellowOnBlack) },
     });
 
+    private static readonly TrackingOptions s_centerMouse = TrackingOptions.Default with { MouseFollow = MouseFollowMode.Center };
+
     private readonly AnchorController _anchors = new();
+    private readonly AnchorController _marginAnchors = new();
 
     // Worst case of the filter per window: the full shader limit, none on the monitor asked about.
     private readonly WindowRegions _windows = new(
@@ -53,7 +57,19 @@ public class HotPathBenchmarks
     }
 
     [Benchmark]
-    public double ModelRead() => _model.TargetFor(@"\\.\DISPLAY1") + _model.AnimationSeconds;
+    public double ModelRead() => _model.EffectiveTargetFor(@"\\.\DISPLAY1") + _model.AnimationSeconds;
+
+    /// <summary>Per-frame target while a temporary level (overview, window drag) is active (M17).</summary>
+    [Benchmark]
+    public double ModelReadTemporary() => _temporaryModel.EffectiveTargetFor(@"\\.\DISPLAY1") + _temporaryModel.AnimationSeconds;
+
+    [GlobalSetup]
+    public void Setup()
+    {
+        string[] monitors = [@"\\.\DISPLAY1", @"\\.\DISPLAY2"];
+        _temporaryModel.Toggle(monitors[0], monitors);
+        _temporaryModel.Temporary.Set(TemporaryZoomOwner.Overview, monitors[0], 1);
+    }
 
     /// <summary>Pointer image placement per frame (mirrored at the bottom/right edge).</summary>
     [Benchmark]
@@ -85,7 +101,19 @@ public class HotPathBenchmarks
         var now = _frame * (Stopwatch.Frequency / 144);
         return _anchors.Next(new AnchorInput(
             now, new PhysicalPoint(_frame % 3840, _frame % 2160), true, _monitor, ZoomMode.Fullscreen, 4, LensSize.Default,
-            DockLayout.Default, TrackingSnapshot.Empty, TrackingOptions.Default)).X;
+            DockLayout.Default, TrackingSnapshot.Empty, s_centerMouse)).X;
+    }
+
+    /// <summary>Anchor per frame while the mouse moves with the margin (M17 A1): mostly pushing, sometimes still.</summary>
+    [Benchmark]
+    public double AnchorMargin()
+    {
+        _frame++;
+        var now = _frame * (Stopwatch.Frequency / 144);
+        var x = _frame % 7680;
+        return _marginAnchors.Next(new AnchorInput(
+            now, new PhysicalPoint(x < 3840 ? x : 7679 - x, (_frame / 3) % 2160), true, _monitor, ZoomMode.Fullscreen, 4,
+            LensSize.Default, DockLayout.Default, TrackingSnapshot.Empty, TrackingOptions.Default)).X;
     }
 
     /// <summary>Per-monitor filter lookup done by every render thread each frame.</summary>
