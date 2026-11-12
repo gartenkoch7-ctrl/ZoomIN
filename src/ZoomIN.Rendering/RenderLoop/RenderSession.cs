@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Vortice.Direct3D11;
 using Vortice.Mathematics;
 using ZoomIN.Core.Filters;
+using ZoomIN.Core.Islands;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Viewport;
@@ -217,6 +218,9 @@ internal sealed class RenderSession : IDisposable
 
         return FrameOutcome.Presented;
     }
+
+    /// <summary>Frees still images of islands that are gone or live (also while nothing is drawn). 0 B.</summary>
+    public void PruneIslands(IslandSet set) => _islands.Prune(set, _monitor.DeviceName);
 
     public void Dispose() => _resources.Dispose();
 

@@ -39,6 +39,9 @@ internal sealed class IslandEditTakeover(ZoomModel zoom, IMonitorProvider monito
     /// </summary>
     public string? Refused() => zoom.Mode == ZoomMode.Docked ? "docked" : !input.IsAvailable ? "no_input" : null;
 
+    /// <summary>True while every monitor of <see cref="ShowOneTimes"/> still has the 1× (no zoom command cleared it).</summary>
+    public bool HoldsOneTimes() => Monitors.All(monitor => zoom.Temporary.LevelFor(TemporaryZoomOwner.IslandEdit, monitor) is not null);
+
     /// <summary>The input and the drag filter, once the edit mode runs.</summary>
     public void TakeInput(IIslandEditInputHandler handler)
     {

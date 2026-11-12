@@ -158,6 +158,9 @@ internal sealed class MonitorRenderer : IDisposable
                     SetStatus(ZoomStatus.Idle with { IsCaptureExcluded = true });
                 }
 
+                // Also asleep: still images of islands removed or set live meanwhile are freed (each wake passes here).
+                session.PruneIslands(_models.Islands.Scene.Set);
+
                 // Not zoomed: sleep without capturing or rendering until the model changes.
                 var sleptAt = Stopwatch.GetTimestamp();
                 _metrics.Active(Stopwatch.GetElapsedTime(_stats.WokeAt, sleptAt).TotalSeconds);

@@ -136,6 +136,14 @@ public sealed class IslandModel
             var index = _committed.IndexOf(id);
             changed = index >= 0;
             saved = changed ? change(_committed, index) : null;
+
+            // Nothing new (e.g. live set to live): no save, no log, no end of a running edit mode.
+            if (saved is not null && saved.Items.SequenceEqual(_committed.Items))
+            {
+                saved = null;
+                changed = false;
+            }
+
             return saved is not null ? scene with { Set = Fitted(saved), Edit = null } : scene;
         }, save: true, () => saved);
         return changed;

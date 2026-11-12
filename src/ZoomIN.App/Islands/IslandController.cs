@@ -110,6 +110,11 @@ public sealed class IslandController : IDisposable
                 _takeover.TakeInput(new IslandEditInputRun(this, session));
                 _log.EditStarted(session.Editor.Set.Count);
                 _report.Say("Islands.Edit.On");
+                if (!_takeover.HoldsOneTimes())
+                {
+                    End("cleared"); // a zoom command cleared the 1× before the run could see it
+                }
+
                 return;
             }
 
@@ -124,6 +129,7 @@ public sealed class IslandController : IDisposable
             if (started)
             {
                 End("failed");
+                _report.Say("Islands.NoStart");
             }
         }
         finally
