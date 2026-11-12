@@ -10,8 +10,9 @@ namespace ZoomIN.Platform.Input;
 
 /// <summary>
 /// Low-level mouse and keyboard hooks on their own thread, for the locator triggers and for
-/// hiding the pointer while typing. Only observes: every event is passed on unchanged, and the
-/// callbacks only forward and return (Windows removes slow hooks).
+/// hiding the pointer while typing. Only observes: every event is passed on unchanged (except Esc
+/// while the overview runs, see <see cref="OverviewKeyWatch"/>), and the callbacks only forward
+/// and return (Windows removes slow hooks).
 /// </summary>
 public sealed unsafe class Win32InputActivityHook : IInputActivitySource
 {
@@ -21,15 +22,17 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
     private static readonly HOOKPROC s_keyboardProc = KeyboardProc;
 
     private readonly ILogger _log;
+    private readonly OverviewKeyWatch _overviewKeys;
     private LowLevelHookThread? _hooks;
     private IInputActivityHandler? _handler;
 
     // Ctrl went down with nothing else pressed; a release now counts as "Ctrl alone".
     private bool _ctrlAlone;
 
-    public Win32InputActivityHook(ILogger<Win32InputActivityHook> log)
+    public Win32InputActivityHook(ILogger<Win32InputActivityHook> log, OverviewKeyWatch overviewKeys)
     {
         _log = log;
+        _overviewKeys = overviewKeys;
     }
 
     public void Start(IInputActivityHandler handler)
@@ -88,6 +91,15 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
             var message = (uint)wParam.Value;
             var down = message is PInvoke.WM_KEYDOWN or PInvoke.WM_SYSKEYDOWN;
             var up = message is PInvoke.WM_KEYUP or PInvoke.WM_SYSKEYUP;
+
+            // The only key this hook ever swallows: Esc while the overview runs (B2).
+            if (self.SwallowForOverview((int)info->vkCode, down, up, info->time))
+            {
+                // Ctrl+Esc is not "Ctrl alone", even though OnKey never sees the Esc.
+                self._ctrlAlone = false;
+                return (LRESULT)1;
+            }
+
             self.OnKey((VIRTUAL_KEY)info->vkCode, down, up);
         }
 
@@ -133,7 +145,7 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
 
     private static bool WindowsDown() => IsDown(VIRTUAL_KEY.VK_LWIN) || IsDown(VIRTUAL_KEY.VK_RWIN);
 
-    private static bool IsDown(VIRTUAL_KEY key) => PInvoke.GetAsyncKeyState((int)key) < 0;
+    private static bool IsDown(VIRTUAL_KEY key) => KeyState.IsDown((int)key);
 
     // Called for every mouse move: no closures, no allocations.
     private void OnMove(int x, int y)
@@ -145,6 +157,20 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             _log.ActivityHandlerFailed(ex);
+        }
+    }
+
+    private bool SwallowForOverview(int key, bool down, bool up, uint time)
+    {
+        try
+        {
+            return _overviewKeys.OnKey(key, down, up, time);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // An exception escaping a hook callback would crash the process.
+            _log.OverviewKeyHandlerFailed(ex);
+            return false;
         }
     }
 

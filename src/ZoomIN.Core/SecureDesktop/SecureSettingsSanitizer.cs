@@ -99,6 +99,9 @@ public static class SecureSettingsSanitizer
             // Filter per window off on the secure desktop (ADR-0020): no window tracking there.
             WindowFilter = new WindowFilterOptions { Enabled = false },
             WindowFilterHotkey = default,
+
+            // Overview not on the secure desktop for now (B2 plan: low-level hook and UIAccess there unchecked).
+            OverviewHotkey = default,
             WheelModifiers = Wheel(s.WheelModifiers, d.WheelModifiers),
         };
     }

@@ -3,7 +3,7 @@ using ZoomIN.Core.Hotkeys;
 
 namespace ZoomIN.Platform.Input;
 
-/// <summary>Log messages of hotkeys and input hooks (event ids 2200–2299); never per key or mouse move.</summary>
+/// <summary>Log messages of hotkeys and input hooks (event ids 2200–2299, overview 2920–2921); never per key or mouse move.</summary>
 internal static partial class InputLog
 {
     [LoggerMessage(EventId = 2201, Level = LogLevel.Warning, Message = "Hotkey {Gesture} is already in use by another application")]
@@ -23,4 +23,11 @@ internal static partial class InputLog
 
     [LoggerMessage(EventId = 2206, Level = LogLevel.Error, Message = "Wheel zoom handler failed")]
     public static partial void WheelHandlerFailed(this ILogger logger, Exception exception);
+
+    // M17 lane B2 (overview) uses 2920–2939: 2920–2921 here, 2922 in ShellLog.
+    [LoggerMessage(EventId = 2920, Level = LogLevel.Information, Message = "Overview: Esc swallowed {Count} times")]
+    public static partial void OverviewEscapesSwallowed(this ILogger logger, int count);
+
+    [LoggerMessage(EventId = 2921, Level = LogLevel.Error, Message = "Overview key handler failed")]
+    public static partial void OverviewKeyHandlerFailed(this ILogger logger, Exception exception);
 }

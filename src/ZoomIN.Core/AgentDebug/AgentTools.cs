@@ -45,7 +45,8 @@ public static class AgentTools
             "Triggers one of ZoomIN's shortcuts, with the same effect as the hotkey (also when no hotkey is assigned). "
             + "Zoom and filter changes act on the monitor under the mouse; toggle_window_filter acts on the foreground "
             + "window and is remembered for its app + window class. Zoom changes animate: wait about half a second "
-            + "before a snapshot.",
+            + "before a snapshot. overview acts like tapping Ctrl+Alt+O (1× with a frame; again: zoom in at the frame), "
+            + "overview_escape like Esc during the overview.",
             [new(ShortcutParameter, "string", "The shortcut.", AgentShortcuts.Names, Required: true)]),
     ];
 }

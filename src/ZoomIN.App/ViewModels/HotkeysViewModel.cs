@@ -102,6 +102,7 @@ public sealed partial class HotkeysViewModel : ObservableObject
             Rows.Add(new HotkeyRow(binding, Text.Get(binding.TextKey))
             {
                 Gesture = HotkeyFormat.Describe(gesture),
+                Hint = binding.HintKey is { } hint ? Text.Get(hint) : string.Empty,
                 Warning = unavailable.Contains(gesture) ? Text.Get("HotkeyUnavailable") : string.Empty,
             });
         }

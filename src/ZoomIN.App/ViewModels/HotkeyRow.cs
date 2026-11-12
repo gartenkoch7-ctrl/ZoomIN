@@ -19,6 +19,13 @@ public sealed partial class HotkeyRow : ObservableObject
     [ObservableProperty]
     public partial string Gesture { get; set; } = string.Empty;
 
+    /// <summary>Explains what the shortcut does where its name is not enough (e.g. the overview).</summary>
+    public string Hint { get; init; } = string.Empty;
+
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Description))]
     public partial string Warning { get; set; } = string.Empty;
+
+    /// <summary>Shown under the name: the warning if there is one, otherwise the hint.</summary>
+    public string Description => Warning.Length > 0 ? Warning : Hint;
 }

@@ -242,5 +242,8 @@ public sealed record AppSettings
     /// <summary>Filter for the active window on/off (ADR-0020); unassigned from the start.</summary>
     public HotkeyGesture WindowFilterHotkey { get; set; }
 
+    /// <summary>Overview at the push of a key (B2, M17).</summary>
+    public HotkeyGesture OverviewHotkey { get; set; } = HotkeyGesture.Overview;
+
     public HotkeyModifiers WheelModifiers { get; set; } = HotkeyModifiers.Control;
 }

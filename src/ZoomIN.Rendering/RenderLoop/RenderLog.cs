@@ -25,4 +25,8 @@ internal static partial class RenderLog
 
     [LoggerMessage(EventId = 3007, Level = LogLevel.Warning, Message = "Smart inversion on {Monitor} falls back to keep hue: {Reason} ({Milliseconds} ms)")]
     public static partial void SmartInvertFallback(this ILogger logger, string monitor, string reason, double milliseconds);
+
+    // M17 lane B2 (overview) uses 3100–3119.
+    [LoggerMessage(EventId = 3100, Level = LogLevel.Error, Message = "Ending the overview on {Monitor} before rebuilding the zoom pipeline failed")]
+    public static partial void OverviewCancelFailed(this ILogger logger, Exception exception, string monitor);
 }

@@ -8,11 +8,11 @@ internal static class AppTexts
 {
     private static readonly IReadOnlyDictionary<string, string> s_german = Merge(
         TextsGerman.All, TextsGermanCards.All, TextsGermanUpdates.All, TextsGermanDiagnostics.All, TextsGermanWindowFilter.All,
-        TextsGermanWindowDrag.All);
+        TextsGermanOverview.All, TextsGermanWindowDrag.All);
 
     private static readonly IReadOnlyDictionary<string, string> s_english = Merge(
         TextsEnglish.All, TextsEnglishCards.All, TextsEnglishUpdates.All, TextsEnglishDiagnostics.All, TextsEnglishWindowFilter.All,
-        TextsEnglishWindowDrag.All);
+        TextsEnglishOverview.All, TextsEnglishWindowDrag.All);
 
     /// <summary>A new localizer in English; "System" follows the Windows display language.</summary>
     public static Localizer CreateLocalizer() =>

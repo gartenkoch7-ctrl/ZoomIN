@@ -34,6 +34,7 @@ internal sealed class RenderSession : IDisposable
     private readonly CompositionSwapchain _swapchain;
     private readonly CursorLayer _cursorLayer;
     private readonly HighlightLayer _highlights;
+    private readonly OverviewLayer _overview;
     private readonly DesktopLayer _desktop;
     private readonly SnapshotTaker _snapshots;
     private readonly AnchorController _anchors = new();
@@ -80,6 +81,7 @@ internal sealed class RenderSession : IDisposable
                 var cursorPass = Own(new CursorPass(_gpu.Device));
                 _cursorLayer = new CursorLayer(cursorPass, pointer.Shapes, pointer.SystemCursor);
                 _highlights = new HighlightLayer(cursorPass);
+                _overview = new OverviewLayer(cursorPass);
                 var smart = Own(SmartInvertLayer.Create(_gpu.Device, _monitor.Width, _monitor.Height, deviceName, health, log));
                 _desktop = new DesktopLayer(
                     pass, smart, Own(new GpuPassTimer(_gpu.Device, deviceName, "magnify")), Own(new SmartCostProbe(_gpu.Device)));
@@ -107,6 +109,7 @@ internal sealed class RenderSession : IDisposable
     {
         _overlay.Hide();
         _shown = false;
+        _overview.Forget();
         if (_cursorInside)
         {
             _cursorLayer.ShowSystemCursor();
@@ -165,12 +168,15 @@ internal sealed class RenderSession : IDisposable
         // The anchor is the mouse, or the focus/caret while the user works with the keyboard (M6).
         var anchor = _anchors.Next(new AnchorInput(
             Stopwatch.GetTimestamp(), hasCursor ? cursor : _lastCursor, _cursorInside, _monitor.Bounds,
-            request.Mode, request.Zoom, request.Lens, request.Dock, request.Tracking, request.TrackingOptions));
+            request.Mode, request.Zoom, request.Lens, request.Dock, request.Tracking, request.TrackingOptions, request.Placement));
 
         var frame = ModeGeometry.Compute(request.Mode, _monitor.Bounds, anchor, request.Zoom, request.Lens, request.Dock);
+        _overview.Update(frame, request.Overview, _monitor.Bounds, hasCursor ? cursor : _lastCursor, request.OverviewLevel, request.Lens, request.Dock,
+            request.TrackingOptions.MouseFollow);
         var shape = _pointer.Shapes.TryGetCurrent(out var handle) ? handle : 0;
         // The desktop layer (and its smoothing) only runs while the desktop is drawn.
-        var animating = LocatorActive || (!request.OverlayOnly && _desktop.SmartSettling);
+        // The overview frame also counts: it follows the mouse even while that is on another monitor.
+        var animating = LocatorActive || (!request.OverlayOnly && _desktop.SmartSettling) || _overview.NeedsRedraw;
         var changes = _changes.Compare(newImage, request, frame, _cursorInside, _lastCursor, shape,
             animating, _snapshots.IsRequested, _shown);
         if (!changes.NeedsRedraw)
@@ -198,6 +204,7 @@ internal sealed class RenderSession : IDisposable
         }
 
         _highlights.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Tracking, request.TrackingOptions);
+        _overview.Draw(_gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame);
         LocatorActive = _cursorInside && _cursorLayer.Draw(
             _gpu.Context, _swapchain.RenderTarget, _monitor.Bounds, frame, request.Mode, request.Zoom, _lastCursor,
             request.Effects, request.LocateRequestedAt, request.PointerHidden);

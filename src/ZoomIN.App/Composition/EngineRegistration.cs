@@ -1,14 +1,20 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using ZoomIN.App.Localization;
+using ZoomIN.App.Overview;
 using ZoomIN.App.Settings;
 using ZoomIN.App.WindowDrag;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
+using ZoomIN.Core.Localization;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Monitors;
+using ZoomIN.Core.Overview;
 using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Settings;
+using ZoomIN.Core.Shell;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.WindowDrag;
 using ZoomIN.Core.WindowFilters;
@@ -48,7 +54,12 @@ internal static class EngineRegistration
             sp.GetRequiredService<TrackingModel>(),
             sp.GetRequiredService<WindowFilterModel>(),
             sp.GetRequiredService<DebugSnapshots>(),
-            sp.GetRequiredService<SmartInvertHealth>()));
+            sp.GetRequiredService<SmartInvertHealth>(),
+            sp.GetRequiredService<OverviewModel>(),
+            sp.GetRequiredService<ViewCenterRequests>()));
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton(sp => new OverviewModel(sp.GetRequiredService<TimeProvider>()));
+        services.AddSingleton<ViewCenterRequests>();
         services.AddSingleton<DebugSnapshots>();
         services.AddSingleton<SmartInvertHealth>();
         services.AddSingleton<SettingsService>();
@@ -67,6 +78,13 @@ internal static class EngineRegistration
         services.AddSingleton<IHotkeyService, Win32HotkeyService>();
         services.AddSingleton<IMouseWheelHook, Win32WheelHook>();
         services.AddSingleton<IInputActivitySource, Win32InputActivityHook>();
+        services.AddSingleton<OverviewKeyWatch>();
+        services.AddSingleton<IOverviewKeys>(sp => sp.GetRequiredService<OverviewKeyWatch>());
+        services.AddSingleton<IAnnouncer, UiaAnnouncer>();
+
+        // The tray app registers the shared localizer itself. The secure instance only needs one to build
+        // OverviewController; the overview has no shortcut there (SecureSettingsSanitizer).
+        services.TryAddSingleton<ILocalizer>(_ => AppTexts.CreateLocalizer());
         services.AddSingleton<ITrackingSource, UiaTrackingSource>();
         services.AddSingleton<IWindowFilterSource, Win32WindowFilterSource>();
         services.AddSingleton<IWindowDragSource, Win32WindowDragSource>();
@@ -79,6 +97,8 @@ internal static class EngineRegistration
         services.AddSingleton<HotkeyBindings>();
         services.AddSingleton<InputSources>();
         services.AddSingleton<DockedStripSync>();
+        services.AddSingleton<OverviewController>();
+        services.AddSingleton<OverviewDebug>();
         services.AddSingleton<WindowDragSync>();
         services.AddSingleton<ZoomController>();
         return services;

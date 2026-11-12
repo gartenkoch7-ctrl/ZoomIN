@@ -32,6 +32,9 @@ public readonly record struct HotkeyGesture(HotkeyModifiers Modifiers, int Virtu
 
     public static HotkeyGesture NextProfile { get; } = new(CtrlAlt, 0x50); // P
 
+    /// <summary>Overview (B2): tap = 1× with a frame, tap again = zoom in there; hold = while held.</summary>
+    public static HotkeyGesture Overview { get; } = new(CtrlAlt, 0x4F); // O
+
     /// <summary>Ends ZoomIN on the secure desktop only (ADR-0016); Shift+Z, because Q types @ with AltGr.</summary>
     public static HotkeyGesture ExitSecureDesktop { get; } = new(CtrlAltShift, 0x5A); // Shift+Z
 
