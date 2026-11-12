@@ -18,7 +18,8 @@ public sealed partial class FreezeViewModel : ObservableObject
     {
         _settings = settings;
         var current = settings.Current;
-        ContentIndex = (int)current.FrozenContent;
+        // A hand-edited file may hold any number: the combo box has two entries.
+        ContentIndex = Enum.IsDefined(current.FrozenContent) ? (int)current.FrozenContent : (int)FrozenContent.Live;
         FrameColor = RgbColor.ParseOrDefault(current.FrozenFrameColor, RgbColor.Cyan).ToHex();
         _ready = true;
     }

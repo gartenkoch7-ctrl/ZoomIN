@@ -63,5 +63,6 @@ internal sealed class FrameChangeTracker
         && a.PointerHidden == b.PointerHidden
         && ReferenceEquals(a.Windows, b.Windows)
         && a.WindowsFiltered == b.WindowsFiltered
-        && ReferenceEquals(a.Frozen, b.Frozen);
+        && ReferenceEquals(a.Frozen, b.Frozen)
+        && a.OverlayOnly == b.OverlayOnly; // a still image given up on (same freeze) shows live again
 }

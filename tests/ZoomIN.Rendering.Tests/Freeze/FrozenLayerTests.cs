@@ -87,6 +87,27 @@ public sealed class FrozenLayerTests
     }
 
     [Fact]
+    public void SystemPointer_IsShownOnceAfterTheFreezeMovedItAway_AndWhileItIsOnTheFrozenMonitor()
+    {
+        using var rig = new Rig();
+        var frozen = Frozen(still: false);
+
+        // The jump comes first (frame still live), the freeze is seen a frame later.
+        Assert.False(rig.Layer.NeedsSystemPointer(wasInside: true, onMonitor: false));
+        rig.Layer.Begin(frozen);
+        Assert.True(rig.Layer.NeedsSystemPointer(wasInside: false, onMonitor: false));
+        Assert.False(rig.Layer.NeedsSystemPointer(wasInside: false, onMonitor: false));
+        Assert.True(rig.Layer.NeedsSystemPointer(wasInside: false, onMonitor: true));
+
+        // Live again: a pointer that only left and came back is nothing to show.
+        rig.Layer.Begin(null);
+        Assert.False(rig.Layer.NeedsSystemPointer(wasInside: true, onMonitor: false));
+        Assert.False(rig.Layer.NeedsSystemPointer(wasInside: false, onMonitor: true));
+        rig.Layer.Begin(frozen);
+        Assert.False(rig.Layer.NeedsSystemPointer(wasInside: false, onMonitor: false));
+    }
+
+    [Fact]
     public void Border_IsDrawnInTheFrameColour_OnlyAtTheEdge()
     {
         using var rig = new Rig();

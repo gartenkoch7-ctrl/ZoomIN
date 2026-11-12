@@ -27,6 +27,7 @@ internal sealed class FrozenLayer : IDisposable
     private FrozenMonitor? _stillFor;
     private FrozenMonitor? _stillFailedFor;
     private WindowRegions? _stillWindows;
+    private bool _pointerLeft;
 
     public FrozenLayer(CursorPass pass, StillFrame still, string monitorId, ILogger log)
     {
@@ -64,6 +65,28 @@ internal sealed class FrozenLayer : IDisposable
             _stillFor = null;
             _stillWindows = null;
         }
+    }
+
+    /// <summary>
+    /// Whether this frame must show the Windows pointer: always while the pointer is on the frozen
+    /// monitor (nothing draws it there), and once when the monitor is frozen after the pointer left it.
+    /// This monitor may have hidden the system pointer, and the one the pointer jumped to may sleep at
+    /// 1× and never show it. Remembered across frames, because the jump comes before the freeze is published.
+    /// </summary>
+    /// <param name="wasInside">The pointer was drawn on this monitor in the frame before.</param>
+    /// <param name="onMonitor">The pointer is on this monitor now.</param>
+    public bool NeedsSystemPointer(bool wasInside, bool onMonitor)
+    {
+        _pointerLeft |= wasInside && !onMonitor;
+        if (_current is null)
+        {
+            _pointerLeft &= !onMonitor;
+            return false;
+        }
+
+        var show = onMonitor || _pointerLeft;
+        _pointerLeft = false;
+        return show;
     }
 
     /// <summary>The still image of this freeze is held: the frame reads no new capture frame.</summary>

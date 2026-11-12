@@ -42,7 +42,6 @@ internal sealed class RenderSession : IDisposable
     private PhysicalPoint _lastCursor;
     private PhysicalPoint _lastAnchor;
     private bool _cursorInside;
-    private bool _pointerLeft;
     private bool _shown;
     private bool _holdsFrameSlot;
 
@@ -148,24 +147,18 @@ internal sealed class RenderSession : IDisposable
         var image = _frozen.Desktop(_duplicator.ShaderResource);
 
         // Read the cursor as late as possible: it decides what is shown under the pointer.
-        // A monitor without the mouse keeps its last view (M3 decision). A frozen one never draws it;
-        // should the pointer be there anyway, Windows shows its own instead of none.
+        // A monitor without the mouse keeps its last view (M3 decision); a frozen one never draws it.
         var hasCursor = _pointer.Position.TryGetPosition(out var cursor);
-        // Also once when this monitor is frozen after the pointer left it: it may have hidden the system
-        // pointer, and the monitor the pointer jumped to may sleep at 1× and never show it again. The
-        // flag stays set until then, because the jump comes before the freeze is published.
         var onMonitor = hasCursor && _monitor.Bounds.Contains(cursor);
-        _pointerLeft |= _cursorInside && !onMonitor;
+        var showSystemPointer = _frozen.NeedsSystemPointer(_cursorInside, onMonitor);
         _cursorInside = onMonitor && frozen is null;
         if (_cursorInside)
         {
             _lastCursor = cursor;
-            _pointerLeft = false;
         }
-        else if (onMonitor || (_pointerLeft && frozen is not null))
+        else if (showSystemPointer)
         {
             _cursorLayer.ShowSystemCursor();
-            _pointerLeft = false;
         }
 
         // The anchor is the mouse, or the focus/caret while the user works with the keyboard (M6).
@@ -208,7 +201,7 @@ internal sealed class RenderSession : IDisposable
         {
             // A still image keeps the window regions it was taken with (and whether they filter here).
             var windows = _frozen.Windows(request.Windows);
-            var windowsFiltered = ReferenceEquals(windows, request.Windows) ? request.WindowsFiltered : windows.ChangesMonitor(_monitor.Bounds, request.Effects);
+            var windowsFiltered = ReferenceEquals(windows, request.Windows) ? request.WindowsFiltered : FiltersWindows(windows, request.Effects);
             weights = _desktop.Draw(_gpu.Context, image, _swapchain.RenderTarget, _swapchain.Width, _swapchain.Height,
                 _monitor.Bounds, frame, request.Effects, windows, windowsFiltered, newImage);
         }
