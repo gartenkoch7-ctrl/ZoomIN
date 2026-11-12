@@ -285,6 +285,13 @@ Plan: [d1-schaerfen-fetter.md](../plan/features/d1-schaerfen-fetter.md). Code: `
   - **Reichweite höchstens ½ Texel** (`BOLD_MAX_TEXELS`): Weiter sprangen die 4 Abtastungen über
     den Rand eines 1-Texel-Strichs, und neben einer helleren Lücke erschien eine Geisterkopie
     (gesehen bei 2× mit 3 px). Bei 2× wirkt Fett also höchstens 1 px, bei 4× 2 px, ab 6× voll.
+  - Vor dem Skalieren wird der Catmull-Rom-Wert auf 0–1 begrenzt: Ein Überschwinger über Weiß
+    (zwischen zwei weißen Texeln 1,125) teilte sonst durch `1 − 1,125` und machte helle Schrift
+    auf dunklem Grund fleckig schwarz (WARP-Test `Bold_WhiteStrokeOnBlack…`).
+  - **Grenze:** Ist ein Strich so breit wie die halbe Umgebung (2 Texel bei 4 × 4), ist hell und
+    dunkel gleich vertreten; dann gewinnt „dunkel“. Dunkle Schrift wird dort richtig breiter, helle
+    Schrift auf dunklem Grund an diesen Stellen etwas schmaler. Gilt nur für native dunkle
+    Oberflächen; mit Invertier-Filter ist die Quelle hell und alles stimmt.
 - **Risiko 1, ClearType-Säume** *(selbst entschieden, Vorgabe Nutzer)*: Nur die Leuchtdichte des
   dunkelsten/hellsten Werts wird übernommen; der Pixel wird zu Schwarz bzw. Weiß hin skaliert und
   behält seinen Farbton, die Sättigung kann nur sinken. Test: Fett erzeugt keine zusätzlichen
@@ -302,7 +309,7 @@ Plan: [d1-schaerfen-fetter.md](../plan/features/d1-schaerfen-fetter.md). Code: `
 - **Sichtbare Eigenheiten** (WARP-Bögen mit echter 9-pt-ClearType-Schrift): Schärfe 100 % zeigt die
   Texel des Quellbilds deutlicher, auch ClearType-Farbpixel als kleine farbige Flecken (wie
   „Pixel“, nur kleiner). Fett 3 px bei 4× füllt kleine Punzen (e, a). Bewertung durch den Nutzer offen.
-- **GPU-Zeit** (`EnhanceGpuTimeTests`, `ZOOMIN_GPU_TIMING=1`, 1080p, 3 Läufe, RTX 3060 Ti):
+- **GPU-Zeit** (`EnhanceGpuTimeTests`, `ZOOMIN_GPU_TIMING=1`, 1080p, 5 Läufe, RTX 3060 Ti):
   +0,018–0,030 ms bei 60 %/1 px und 100 %/3 px, 2×/4×/8×, ohne und mit intelligentem Invertieren
   (Magnify aus 0,071–0,090 ms). ×10 Onboard **hochgerechnet** ≈ 0,3 ms ≤ 0,5 ms. Im Betrieb misst
   `EnhanceCost` dasselbe nach jeder Änderung und nach einer Pause (`zoomin.render.enhance_gpu_ms`),

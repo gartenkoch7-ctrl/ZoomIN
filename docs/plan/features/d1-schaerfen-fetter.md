@@ -73,7 +73,7 @@ ist **durchgefallen** (Budget, Nähte). Code: Branch `spike/d1-schaerfen-fetter`
 ## Ergebnis der Umsetzung (2026-11-12)
 | Kriterium | Ergebnis |
 |---|---|
-| Zusatz-GPU 1080p, RTX 3060 Ti, 2×/4×/8×, 60 %/1 px und 100 %/3 px, ohne/mit Smart Invert (3 Läufe) | **0,018–0,030 ms** ✔ (≤ 0,05) |
+| Zusatz-GPU 1080p, RTX 3060 Ti, 2×/4×/8×, 60 %/1 px und 100 %/3 px, ohne/mit Smart Invert (5 Läufe) | **0,018–0,030 ms** ✔ (≤ 0,05) |
 | ×10 Onboard (**hochgerechnet**) | ≈ 0,3 ms ✔ (≤ 0,5) |
 | Aus: Zusatzkosten | keine (`PSMain`, bitgleich, Test) |
 | WARP-Tests | Kante steiler, Strich breiter (1 px und 3 px), kein Halo ohne Filter/invertiert/intelligent invertiert, ClearType nicht farbiger, Fotos unverändert, aus = wie vorher |

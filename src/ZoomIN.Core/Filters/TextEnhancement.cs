@@ -42,7 +42,7 @@ public readonly record struct TextEnhancement(double Sharpness, double BoldPixel
 
     /// <summary>What the shader gets at <paramref name="zoom"/>: these values or <see cref="Off"/>. Per frame, no allocation.</summary>
     public TextEnhancement At(double zoom, Smoothing smoothing) =>
-        IsActive && WorksWith(smoothing) && zoom >= MinZoom - ZoomTolerance ? this : Off;
+        IsActive && WorksWith(smoothing) && double.IsFinite(zoom) && zoom >= MinZoom - ZoomTolerance ? this : Off;
 
     /// <summary>
     /// What the shader gets for the drawn view of <paramref name="frame"/>. The axis magnified less

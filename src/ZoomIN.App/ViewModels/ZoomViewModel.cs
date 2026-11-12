@@ -115,8 +115,8 @@ public sealed partial class ZoomViewModel : ObservableObject
         }
     }
 
-    // Only the moved slider is taken over: the other value stays as the model has it (a profile
-    // switch while the page is open must not get the page's old value back).
+    // Only the moved slider is taken over, in one step with the model: the other value stays as the
+    // model has it (a profile switch while the page is open must not get the page's old value back).
     partial void OnSharpnessChanged(double value) => ApplyEnhancement(e => e with { Sharpness = value / 100 });
 
     partial void OnBoldChanged(double value) => ApplyEnhancement(e => e with { BoldPixels = value });
@@ -125,7 +125,7 @@ public sealed partial class ZoomViewModel : ObservableObject
     {
         if (_ready)
         {
-            _effects.SetEnhancement(change(_effects.Current.Enhancement));
+            _effects.UpdateEnhancement(change);
         }
     }
 

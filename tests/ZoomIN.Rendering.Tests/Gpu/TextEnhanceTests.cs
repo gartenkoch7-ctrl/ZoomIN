@@ -71,6 +71,29 @@ public sealed class TextEnhanceTests
             $"range {on} with sharpness, {off} without, ink to paper {exact}");
     }
 
+    [Fact]
+    public void Bold_WhiteStrokeOnBlack_GetsWider_WithoutDarkSpecks()
+    {
+        // A one-texel white stroke gets wider. Two white texels: Catmull-Rom overshoots past white
+        // between them (1.125), which the light side of bold once turned black.
+        static Bgra Line(int x, int y) => x == 32 ? s_white : s_black;
+        static Bgra Bar(int x, int y) => x is 32 or 33 ? s_white : s_black;
+
+        var line = Row(Render(Line, TextEnhancement.Off), 128).Count(l => l > 128);
+        var wider = Row(Render(Line, new TextEnhancement(0, 2)), 128).Count(l => l > 128);
+        var off = Row(Render(Bar, TextEnhancement.Off), 128);
+        var bold = Row(Render(Bar, new TextEnhancement(0, 2)), 128);
+
+        Assert.True(wider >= line + 3, $"white stroke {wider} px wide with bold, {line} px without");
+
+        // Between the two white texel centres, where the overshoot is. (At the centres themselves the
+        // 4 × 4 texel surroundings are half white, half black: which side bold takes there is open.)
+        for (var x = TargetOf(32) + 1; x < TargetOf(33); x++)
+        {
+            Assert.True(bold[x] >= off[x] - 1, $"pixel {x} turned darker with bold: {bold[x]} instead of {off[x]}");
+        }
+    }
+
     [Theory]
     [InlineData(FilterId.Inverted)]
     [InlineData(FilterId.InvertedSmart)]
@@ -134,6 +157,9 @@ public sealed class TextEnhanceTests
         Assert.False(resolved.Enhanced);
         Assert.Equal(Pixels(plain), Pixels(resolved));
     }
+
+    // Target x of the centre of source texel x.
+    private static int TargetOf(int x) => (int)((x + 0.5 - Source.X) * Zoom);
 
     // Output pixels of row 128 between 10 % and 90 % of the way from black to white.
     private static int Transition(PixelBuffer pixels) => Row(pixels, 128).Count(l => l is > 25 and < 230);

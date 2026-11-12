@@ -50,6 +50,7 @@ public sealed class TextEnhancementTests
     [InlineData(1.4999999999, true)]
     [InlineData(1.5, true)]
     [InlineData(8, true)]
+    [InlineData(double.PositiveInfinity, false)] // a degenerate frame (zero-sized source)
     public void At_AppliesFromOnePointFiveTimes(double zoom, bool applies)
     {
         Assert.Equal(applies ? s_on : TextEnhancement.Off, s_on.At(zoom, Smoothing.Text));

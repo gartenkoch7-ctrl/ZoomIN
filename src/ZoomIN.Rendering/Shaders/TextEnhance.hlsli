@@ -103,13 +103,17 @@ float3 EnhanceText(float2 uv, float2 px)
 {
     float loLuma, hiLuma, meanLuma, photo;
     float3 c = SampleSharpBicubic(uv, loLuma, hiLuma, meanLuma, photo);
-    if (BoldPx <= 0)
+    // Off, or a photo (risk 2): the cross taps would only be thrown away below.
+    if (BoldPx <= 0 || photo >= 1)
     {
         return c;
     }
 
     // "Fett": a minimum or maximum filter on luma over a cross BoldPx output pixels wide.
     float2 reach = min(px * BoldPx, BOLD_MAX_TEXELS / TextureSize);
+    // Catmull-Rom may overshoot past white or black at an edge; the scaling below needs 0..1 (an
+    // overshoot of 1.02 divided by 1 - 1.02 and turned the pixel black). The output clips it anyway.
+    c = saturate(c);
     float own = Luma(c);
     float darkLuma = own;
     float lightLuma = own;
