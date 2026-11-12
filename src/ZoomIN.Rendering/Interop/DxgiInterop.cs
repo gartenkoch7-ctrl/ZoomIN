@@ -20,7 +20,9 @@ internal static unsafe class DxgiInterop
     // FindClosestMatchingMode 9, WaitForVBlank 10 (also in IDXGIOutput1 and later).
     private const int WaitForVBlankSlot = 10;
 
-    // IUnknown (0–2), ID3D11DeviceChild (3–6), ID3D11DeviceContext methods from 7; CopyResource is 47.
+    // IUnknown (0–2), ID3D11DeviceChild (3–6), ID3D11DeviceContext methods from 7;
+    // CopySubresourceRegion is 46, CopyResource 47.
+    private const int CopySubresourceRegionSlot = 46;
     private const int CopyResourceSlot = 47;
 
     /// <summary>IID of ID3D11Resource.</summary>
@@ -57,7 +59,27 @@ internal static unsafe class DxgiInterop
         fn(context, destination, source);
     }
 
+    /// <summary>Copies the source pixels [left, right) × [top, bottom) to (0, 0) of the destination (subresource 0 of both).</summary>
+    public static void CopySubresourceRegion(nint context, nint destination, nint source, uint left, uint top, uint right, uint bottom)
+    {
+        var box = new Box { Left = left, Top = top, Front = 0, Right = right, Bottom = bottom, Back = 1 };
+        var fn = (delegate* unmanaged[Stdcall]<nint, nint, uint, uint, uint, uint, nint, uint, Box*, void>)VTable(context)[CopySubresourceRegionSlot];
+        fn(context, destination, 0, 0, 0, 0, source, 0, &box);
+    }
+
     private static void** VTable(nint comObject) => *(void***)comObject;
+
+    /// <summary>Native layout of D3D11_BOX.</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Box
+    {
+        public uint Left;
+        public uint Top;
+        public uint Front;
+        public uint Right;
+        public uint Bottom;
+        public uint Back;
+    }
 
     /// <summary>Native layout of DXGI_OUTDUPL_FRAME_INFO.</summary>
     [StructLayout(LayoutKind.Sequential)]

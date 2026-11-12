@@ -15,3 +15,6 @@ MagShowSystemCursor
 // Crashes/AppBarCleanup
 SHAppBarMessage
 APPBARDATA
+
+// Crashes/PointerClipCleanup
+ClipCursor

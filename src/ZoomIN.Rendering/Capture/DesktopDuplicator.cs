@@ -40,6 +40,9 @@ internal sealed class DesktopDuplicator : IDisposable
     /// <summary>Latest desktop image. Keeps the previous image while nothing changes.</summary>
     public ID3D11ShaderResourceView ShaderResource { get; }
 
+    /// <summary>The texture behind <see cref="ShaderResource"/>: the source of a still image (M19, StillFrame).</summary>
+    public ID3D11Texture2D Texture => _copy;
+
     /// <summary>
     /// False until the first desktop image was copied. Until then the copy is empty and would be
     /// shown as a black screen, e.g. right after a start on the secure desktop (ADR-0016).

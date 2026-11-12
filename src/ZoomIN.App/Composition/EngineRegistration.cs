@@ -7,6 +7,7 @@ using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Pointer;
+using ZoomIN.Core.PointerFence;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.WindowFilters;
@@ -15,6 +16,7 @@ using ZoomIN.Platform.Automation;
 using ZoomIN.Platform.Cursor;
 using ZoomIN.Platform.Input;
 using ZoomIN.Platform.Monitors;
+using ZoomIN.Platform.PointerFence;
 using ZoomIN.Platform.Shell;
 using ZoomIN.Platform.WindowFilters;
 using ZoomIN.Rendering.RenderLoop;
@@ -64,6 +66,10 @@ internal static class EngineRegistration
         services.AddSingleton<IInputActivitySource, Win32InputActivityHook>();
         services.AddSingleton<ITrackingSource, UiaTrackingSource>();
         services.AddSingleton<IWindowFilterSource, Win32WindowFilterSource>();
+
+        // Pointer fence and moves on command (ADR-0028, M19): idle until a lane forbids an area or adds a filter.
+        services.AddSingleton<IPointerFence, Win32PointerFence>();
+        services.AddSingleton<IPointerMover, Win32PointerMover>();
 
         // Rendering
         services.AddSingleton<IZoomOutput, ZoomEngine>();
