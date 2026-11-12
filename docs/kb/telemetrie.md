@@ -198,8 +198,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1720 | Info | Monitor {Monitor} frozen at {Level:0.00}x ({Image}); pointer moved to {Target} (G2) |
 | 1721 | Info | Freeze lifted on {Count} monitors ({Reason}) – `command`, `display_change`, `desktop_switch`, `session_unlock`, `move_refused` (der Zeiger kam beim Einfrieren zurück und liess sich nicht wieder versetzen), `shortcut_gone` (Kürzel werden bearbeitet oder `Strg+Alt+H` ist nicht registriert), `exit` |
 | 1722 | Info | Pointer switched from {From} to {To} (skipped {Skipped} frozen) |
-| 1723 | Info | Freezing refused: {Reason} – `one_monitor`, `no_pointer`, `overview` (Übersicht läuft auf dem Monitor), `move_refused` |
-| 1724 | Info | Monitor switch refused: {Reason} – `one_monitor`, `no_free_monitor`, `move_refused` |
+| 1723 | Info | Freezing refused: {Reason} – `layout_unavailable` (Anzeigewechsel läuft), `one_monitor`, `no_pointer`, `overview` (Übersicht läuft auf dem Monitor), `move_refused` |
+| 1724 | Info | Monitor switch refused: {Reason} – `layout_unavailable`, `one_monitor`, `no_free_monitor`, `move_refused` |
 | 1725 | Fehler | Frozen monitors: {Step} failed; every freeze was lifted and the pointer released – `toggle`, `recompute`, `lift_all`, `exit`, `release` (der Monitorwechsel hebt nichts auf; seine Fehler meldet der Kürzel-Dienst, Log 2202) |
 | 2001 | Fehler | UI Automation is unavailable; focus tracking is off |
 | 2002 | Info | Caret source in {Process}: {Source} |

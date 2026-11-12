@@ -74,7 +74,8 @@ public sealed class MonitorSwitchController(
         var layout = MonitorLayout.Read(monitors);
         if (layout.Count < 2)
         {
-            Refuse("one_monitor", "Switch.OneMonitor");
+            // Empty: Windows cannot describe a monitor right now (display change under way).
+            Refuse(layout.Count == 0 ? "layout_unavailable" : "one_monitor", layout.Count == 0 ? "Freeze.LayoutUnavailable" : "Switch.OneMonitor");
             return;
         }
 

@@ -13,6 +13,7 @@ internal static class TextsGermanFreeze
         ["Freeze.OneMonitor"] = "Einfrieren braucht mindestens zwei Monitore.",
         ["Freeze.Overview"] = "Erst die Übersicht beenden, dann einfrieren.",
         ["Freeze.NoPointer"] = "Der Mauszeiger ist auf keinem Monitor.",
+        ["Freeze.LayoutUnavailable"] = "Die Monitore ändern sich gerade. Bitte gleich noch einmal versuchen.",
         ["Freeze.MoveRefused"] = "Windows hat das Versetzen des Mauszeigers abgelehnt.",
         ["Freeze.Title"] = "Monitore",
         ["Switch.Done"] = "Monitor {0}",

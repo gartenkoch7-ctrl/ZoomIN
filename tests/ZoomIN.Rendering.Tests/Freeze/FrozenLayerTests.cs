@@ -165,7 +165,13 @@ public sealed class FrozenLayerTests
         var frame = ModeGeometry.Compute(ZoomMode.Fullscreen, s_monitor, default, 1, LensSize.Default, DockLayout.Default);
         tracker.Presented(request, frame, false, default, 0);
         Assert.False(tracker.Compare(false, request, frame, false, default, 0, false, false, true).NeedsRedraw);
-        Assert.True(tracker.Compare(false, request with { Frozen = Frozen(still: false) }, frame, false, default, 0, false, false, true).NeedsRedraw);
+        var frozen = request with { Frozen = Frozen(still: false) };
+        Assert.True(tracker.Compare(false, frozen, frame, false, default, 0, false, false, true).NeedsRedraw);
+
+        // Frozen: a caret moving on another monitor is no reason to draw this one again.
+        tracker.Presented(frozen, frame, false, default, 0);
+        var typed = frozen with { Tracking = new Core.Tracking.TrackingSnapshot(null, 0, new PhysicalRect(1, 1, 1, 9), 5) };
+        Assert.False(tracker.Compare(false, typed, frame, false, default, 0, false, false, true).NeedsRedraw);
     }
 
     private static FrozenMonitor Frozen(bool still) =>

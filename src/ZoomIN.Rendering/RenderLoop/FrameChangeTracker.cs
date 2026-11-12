@@ -51,16 +51,18 @@ internal sealed class FrameChangeTracker
     }
 
     // By reference for the snapshots (immutable, a change is a new object), by value for the rest.
+    // A frozen monitor (G2, same freeze) uses no focus, caret, locator or pointer: their news change nothing there.
     private static bool SameRequest(in FrameRequest a, in FrameRequest b) =>
         a.Mode == b.Mode
         && a.Zoom == b.Zoom
         && a.Lens == b.Lens
         && a.Dock == b.Dock
         && ReferenceEquals(a.Effects, b.Effects)
-        && a.LocateRequestedAt == b.LocateRequestedAt
-        && ReferenceEquals(a.Tracking, b.Tracking)
-        && ReferenceEquals(a.TrackingOptions, b.TrackingOptions)
-        && a.PointerHidden == b.PointerHidden
+        && ((a.Frozen is not null && ReferenceEquals(a.Frozen, b.Frozen))
+            || (a.LocateRequestedAt == b.LocateRequestedAt
+                && ReferenceEquals(a.Tracking, b.Tracking)
+                && ReferenceEquals(a.TrackingOptions, b.TrackingOptions)
+                && a.PointerHidden == b.PointerHidden))
         && ReferenceEquals(a.Windows, b.Windows)
         && a.WindowsFiltered == b.WindowsFiltered
         && ReferenceEquals(a.Frozen, b.Frozen)

@@ -97,9 +97,13 @@ public sealed class MonitorFreezeController : IDisposable
     {
         var layout = MonitorLayout.Read(_monitors);
         var index = _cursor.TryGetPosition(out var pointer) ? layout.IndexAt(pointer) : -1;
+        // Empty: Windows cannot describe a monitor right now (display change under way), try again later.
+        var (reason, text) = layout.Count == 0 ? ("layout_unavailable", "Freeze.LayoutUnavailable")
+            : layout.Count < 2 ? ("one_monitor", "Freeze.OneMonitor")
+            : ("no_pointer", "Freeze.NoPointer");
         if (layout.Count < 2 || index < 0)
         {
-            Refuse(layout.Count < 2 ? "one_monitor" : "no_pointer", layout.Count < 2 ? "Freeze.OneMonitor" : "Freeze.NoPointer");
+            Refuse(reason, text);
             return;
         }
 

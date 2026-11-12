@@ -13,6 +13,7 @@ internal static class TextsEnglishFreeze
         ["Freeze.OneMonitor"] = "Freezing needs at least two monitors.",
         ["Freeze.Overview"] = "End the overview first, then freeze.",
         ["Freeze.NoPointer"] = "The pointer is not on any monitor.",
+        ["Freeze.LayoutUnavailable"] = "The monitors are changing right now. Please try again in a moment.",
         ["Freeze.MoveRefused"] = "Windows refused to move the pointer.",
         ["Freeze.Title"] = "Monitors",
         ["Switch.Done"] = "Monitor {0}",
