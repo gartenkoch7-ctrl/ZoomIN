@@ -19,6 +19,9 @@ internal static partial class ShellLog
     [LoggerMessage(EventId = 2504, Level = LogLevel.Error, Message = "Tray command {Command} failed")]
     public static partial void TrayCommandFailed(this ILogger logger, Exception exception, TrayCommand command);
 
+    [LoggerMessage(EventId = 2505, Level = LogLevel.Error, Message = "Handling the shown tray icon failed")]
+    public static partial void TrayShownFailed(this ILogger logger, Exception exception);
+
     [LoggerMessage(EventId = 2922, Level = LogLevel.Warning, Message = "Screen reader announcement unavailable: {Reason}")]
     public static partial void AnnouncerUnavailable(this ILogger logger, string reason);
 }

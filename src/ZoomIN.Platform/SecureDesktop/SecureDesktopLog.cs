@@ -46,4 +46,10 @@ internal static partial class SecureDesktopLog
 
     [LoggerMessage(EventId = 2314, Level = LogLevel.Information, Message = "Secure desktop: using the token of the user's shell")]
     public static partial void UsingShellToken(this ILogger logger);
+
+    [LoggerMessage(EventId = 2315, Level = LogLevel.Debug, Message = "Ease of Access start signal deferred until the tray icon is shown")]
+    public static partial void WaitingForShell(this ILogger logger);
+
+    [LoggerMessage(EventId = 2316, Level = LogLevel.Warning, Message = "No tray icon after {Seconds} s: Ease of Access start signal sent anyway")]
+    public static partial void ShellNotSeen(this ILogger logger, double seconds);
 }

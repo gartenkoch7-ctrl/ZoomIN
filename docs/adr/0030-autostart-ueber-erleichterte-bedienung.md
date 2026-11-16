@@ -108,5 +108,9 @@ Nutzer steht aus. Ablauf und gesuchte Logzeilen:
   Anmeldung startet die Aufgabe genau eine Instanz (Ergebnis 0), der Umzug aus der Liste lief;
   Win+L vergrößert, die Tray-App überlebt. Das erste Tray-Symbol scheitert, solange die Taskleiste
   fehlt (Log 2503), und kommt mit `TaskbarCreated`.
+- Befund danach (Nutzer): Nach dem Autostart blieben Sperre und Strg+Alt+Entf unvergrößert, nach
+  einem Start aus dem Startmenü nicht. Ursache: Win+U ist ein Kürzel von Explorer; die Aufgabe
+  startet ZoomIN vor der Taskleiste, das Start-Signal verpufft. Behoben: `EaseOfAccessNotifier`
+  sendet es erst, wenn das Tray-Symbol in der Taskleiste ist (`ITrayIcon.Shown`), plus 2 s (Log 2315).
 - Offen: Bei der Deinstallation bleibt die Aufgabe **anderer** Benutzerkonten stehen; deren
   Anmeldung meldet dann eine fehlende Datei. Aufräumen im erhöhten Schritt kommt später.

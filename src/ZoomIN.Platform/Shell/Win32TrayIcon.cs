@@ -46,6 +46,11 @@ public sealed unsafe class Win32TrayIcon : ITrayIcon
 
     public event Action<TrayCommand>? Command;
 
+    public event Action? Shown;
+
+    // Written on the tray thread only; read from others.
+    public bool IsShown => Volatile.Read(ref _added);
+
     public void Show(TrayMenu menu)
     {
         Volatile.Write(ref _menu, menu);
@@ -125,11 +130,30 @@ public sealed unsafe class Win32TrayIcon : ITrayIcon
     {
         var data = Data(NOTIFY_ICON_DATA_FLAGS.NIF_ICON | NOTIFY_ICON_DATA_FLAGS.NIF_TIP | NOTIFY_ICON_DATA_FLAGS.NIF_MESSAGE);
         data.szTip = Volatile.Read(ref _menu).Tooltip;
-        _added = PInvoke.Shell_NotifyIcon(_added ? NOTIFY_ICON_MESSAGE.NIM_MODIFY : NOTIFY_ICON_MESSAGE.NIM_ADD, data) || _added;
+        var was = _added;
+
+        // NIM_ADD may time out under sign-in load although Explorer took the icon; then every later
+        // add fails as a duplicate. A successful modify proves the icon is there.
+        var done = PInvoke.Shell_NotifyIcon(was ? NOTIFY_ICON_MESSAGE.NIM_MODIFY : NOTIFY_ICON_MESSAGE.NIM_ADD, data)
+            || (!was && PInvoke.Shell_NotifyIcon(NOTIFY_ICON_MESSAGE.NIM_MODIFY, data));
+        Volatile.Write(ref _added, done || was);
         if (!_added)
         {
             _log.TrayIconFailed();
             return;
+        }
+
+        if (!was)
+        {
+            // Runs inside the window procedure: an exception must not escape into native code.
+            try
+            {
+                Shown?.Invoke();
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                _log.TrayShownFailed(ex);
+            }
         }
 
         ShowNotices();

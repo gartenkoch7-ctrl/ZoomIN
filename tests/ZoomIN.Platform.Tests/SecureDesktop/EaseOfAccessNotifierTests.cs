@@ -19,7 +19,7 @@ public sealed class EaseOfAccessNotifierTests : IDisposable
     }
 
     private EaseOfAccessNotifier Notifier(bool registered, bool secureOn = true, bool byEaseOfAccess = false) =>
-        new(_root, () => registered && secureOn, () => registered, () => _winUCount++, NullLogger.Instance, byEaseOfAccess);
+        new(_root, () => registered && secureOn, () => registered, () => { _winUCount++; return true; }, NullLogger.Instance, byEaseOfAccess);
 
     [Fact]
     public void Started_WritesStartingAndSendsWinU()
@@ -68,6 +68,17 @@ public sealed class EaseOfAccessNotifierTests : IDisposable
         notifier.NotifyExiting();
 
         Assert.Equal(EaseOfAccessNotifier.Exiting, Signal());
+        Assert.Equal(1, _winUCount);
+    }
+
+    [Fact]
+    public void SendInputBlocked_CountsAsNotAnnounced_NoExitSignal()
+    {
+        var notifier = new EaseOfAccessNotifier(_root, () => true, () => true, () => ++_winUCount < 0, NullLogger.Instance, false);
+
+        notifier.NotifyStarted();
+        notifier.NotifyExiting();
+
         Assert.Equal(1, _winUCount);
     }
 

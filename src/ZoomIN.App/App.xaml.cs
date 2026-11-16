@@ -7,6 +7,7 @@ using ZoomIN.App.Composition;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.App.Settings;
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.Settings;
 using ZoomIN.Platform.SecureDesktop;
 
@@ -66,7 +67,8 @@ public partial class App : Application
                 _services.GetRequiredService<AgentDebugHost>().Start();
                 // Only a start Windows did not make itself needs the Win+U signal (ADR-0030).
                 _easeOfAccess = EaseOfAccessNotifier.Create(_log, Program.Origin);
-                _easeOfAccess.NotifyStarted();
+                _easeOfAccess.NotifyStartedWhenShellRuns(
+                    _services.GetRequiredService<ITrayIcon>(), TimeSpan.FromSeconds(2), _services.GetRequiredService<TimeProvider>());
             }
         }
 

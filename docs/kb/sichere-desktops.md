@@ -159,6 +159,8 @@ Umgesetzt (Stand 2026-11-12, Branch `feat/m10-a-autostart`):
   Vermutung (ungeprüft): Über ShellExecute erzeugt der AppInfo-Dienst den Prozess mit uns als
   Elternteil, er landet dann im selben Job (Log 2327). Ob `CreateProcess` aus einer Instanz mit
   UIAccess klappt, zeigt 2324 `breakaway`.
+- Win+U ist ein Kürzel von Explorer: vor der Taskleiste gesendet, verpufft es (Autostart-Aufgabe,
+  2026-11-16). Darum wartet das Start-Signal auf das Tray-Symbol (`ITrayIcon.Shown`) plus 2 s (Log 2315).
 - `EaseOfAccessNotifier` (Win+U-Trick): Das **Start**-Signal kommt, wenn **nicht** die
   Erleichterte Bedienung gestartet hat (Aufgabe, Startmenü, Run-Eintrag, nach Update); sonst Log
   2328. Das **Ende**-Signal (Tray › Beenden) kommt immer: Laut Doku muss ein von der Erleichterten

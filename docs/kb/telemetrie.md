@@ -288,6 +288,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2312 | Info | Secure desktop: no signed-in user in session {Session} (error {Error}) |
 | 2313 | Info | Secure desktop: no user shell in session {Session} |
 | 2314 | Info | Secure desktop: using the token of the user's shell |
+| 2315 | Debug | Ease of Access start signal deferred until the tray icon is shown (Win+U erst, wenn das Tray-Symbol drin ist, plus 2 s – auch beim normalen Start, weil das Symbol asynchron kommt; Q9-Nachtest) |
+| 2316 | Warnung | No tray icon after {Seconds} s: Ease of Access start signal sent anyway (kein Explorer/andere Shell; Grenze 60 s) |
 | 2320 | Info | Autostart moved from {From} to the scheduled task (`run` oder `ease_of_access`; Q9) |
 | 2321 | – | entfallen mit Q9 (die Aufgabe braucht keinen AT-Eintrag) |
 | 2322 | Warnung | Autostart migration failed ({Error}) |
@@ -312,6 +314,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2502 | Info | Docked strip released |
 | 2503 | Warnung | Adding the tray icon failed |
 | 2504 | Fehler | Tray command {Command} failed |
+| 2505 | Fehler | Handling the shown tray icon failed (Abonnent von `ITrayIcon.Shown` warf in der Fensterprozedur) |
 | 2601 | Info | Install step for {Version}: {Result} |
 | 2602 | Fehler | Starting the install step failed |
 | 2603 | Info | Release list skipped: {Reason} |
