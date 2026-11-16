@@ -39,11 +39,17 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
 - [x] Win+L und Strg+Alt+Entf starten ZoomIN (Log dev.108, 12:53), UAC ebenso
 - [x] Sicherer Modus startet mit dem gespeicherten `ZoomOn` (dev.109; vorher immer aus)
 - [x] Sichtprüfung dev.109: Sperre und Strg+Alt+Entf vergrößert (Nutzer, Log 12:57)
-- [ ] Startzeit: erstes Bild nach ~1,4 s (UAC, Sperre, Strg+Alt+Entf, dev.109) – Ziel ≤ 1 s
-- [ ] Desktop Duplication auf dem sicheren Desktop: liefert Bilder? `WDA_EXCLUDEFROMCAPTURE` wirkt?
-- [ ] Z-Reihenfolge: liegt das Overlay über LogonUI, Sperrbildschirm und UAC-Dialog? Braucht es
-      UIAccess bzw. eine Signatur, auch ohne SignPath?
+- [x] Startzeit: erstes Bild nach ~1,4 s (UAC, Sperre, Strg+Alt+Entf, dev.109) – Ziel ≤ 1 s
+      (dev.279.m10, 2026-11-16: UAC 508 ms bis zum ersten vergrößerten Bild)
+- [x] Desktop Duplication auf dem sicheren Desktop: liefert Bilder? `WDA_EXCLUDEFROMCAPTURE` wirkt?
+      (dev.279.m10: Bilder ja, Ausschluss gesetzt – Prüf-Log 1154)
+- [x] Z-Reihenfolge: liegt das Overlay über LogonUI, Sperrbildschirm und UAC-Dialog? Braucht es
+      UIAccess bzw. eine Signatur, auch ohne SignPath? (dev.279.m10: oben an der Monitormitte, Log 1152)
 - [ ] Mauszeiger (`MagShowSystemCursor`), RegisterHotKey, LL-Hooks, UI Automation dort
+      (dev.279.m10: UIA liefert den Caret in LogonUI; RegisterHotKey gilt pro Sitzung → 16 Kürzel
+      blockiert, behoben in dev.280.m10 – Nachtest offen)
+- [ ] Farbfilter auf Sperre/Anmeldung/UAC, wenn nur der Filter pro Fenster an ist: Automatik-Filter
+      wird Monitorfilter (Entscheidung 2026-11-16, `SecureWindowFilterFallback`) – Nachtest offen
 - [ ] Ergebnis in `docs/kb/sichere-desktops.md`; bei Fehlschlag → Plan B mit Rücksprache
 
 ### 2 · Engine ohne WinUI

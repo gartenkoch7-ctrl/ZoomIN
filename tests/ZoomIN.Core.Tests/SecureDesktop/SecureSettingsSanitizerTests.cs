@@ -84,6 +84,9 @@ public sealed class SecureSettingsSanitizerTests
             CaretMarkerShape = (CaretMarkerShape)99,
             CaretMarkerThickness = (CaretMarkerThickness)99,
             CaretMarkerColor = new string('c', 500),
+
+            // Off, so its automatic filter does not replace the monitor filter (SecureWindowFilterFallback).
+            WindowFilter = WindowFilterOptions.Default with { Enabled = false },
         });
 
         Assert.Equal(new AppSettings().CaretMarkerShape, result.CaretMarkerShape);

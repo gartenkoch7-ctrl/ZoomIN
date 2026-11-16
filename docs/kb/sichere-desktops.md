@@ -271,6 +271,32 @@ Anmeldung (`TaskSchedulerAutostart`, noch nicht gebaut), Win+U-Trick bleibt.
   - Grenze: Bei Erhöhung mit einem **anderen** Admin-Konto (Over-the-shoulder) ist der Diagnoseordner
     des erhöhten Kontos ein anderer → Ziel abgelehnt, Vermerk „copying them failed“.
 
+## Testlauf dev.279.m10 (2026-11-16, Nutzer, SYSTEM-Log)
+- Win+L, Strg+Alt+Entf und UAC starten die sichere Instanz auf `Winlogon`, im Job, Wächter im Job.
+  Prüf-Logs: Overlay oben an der Monitormitte, Ausschluss aus Aufnahmen gesetzt. Desktop
+  Duplication liefert dort Bilder.
+- Startzeit (UAC, Zoom an): Pipeline 486 ms, erstes vergrößertes Bild **508 ms** nach dem
+  Prozessstart (Ziel ≤ 1 s erfüllt; vorher ~1,4 s).
+- **Tastenkürzel gelten pro Sitzung, nicht pro Desktop:** 16 von 18 Kürzeln meldete die sichere
+  Instanz als belegt (Log 2201/1160), weil die Tray-App auf `Default` sie hält. Nur Beenden- und
+  Schnappschuss-Kürzel (gibt es nur im sicheren Modus) kamen durch.
+  → Behoben: `Win32HotkeyService` hört auf `EVENT_SYSTEM_DESKTOPSWITCH`. Hat ein anderer Desktop die
+  Eingabe (`OpenInputDesktop` scheitert für normale Benutzer an `Winlogon` mit „Zugriff verweigert“
+  oder liefert einen anderen Namen; jeder andere Fehler heißt „unbekannt“, nichts ändert sich), gibt
+  die Tray-App alle Kürzel frei und holt sie bei der Rückkehr zurück (Log 2208). Solange sie
+  freigegeben hat, prüft ein Zeitgeber alle 250 ms erneut – ein verpasstes Ereignis kostet so nie die
+  Kürzel. Ein abgelehntes Kürzel versucht jede Instanz 5 s lang alle 250 ms erneut (Log 2207), so
+  gewinnt die sichere Instanz das Rennen gegen die Freigabe. Eigene Kürzel der Tray-App, die nach der
+  Rückkehr noch belegt sind (sichere Instanz hängt nach), gibt sie nie auf (nach 5 s einmal Log 2201).
+- **Farbfilter fehlte:** Der Nutzer arbeitet nur mit dem Filter pro Fenster („Invertiert,
+  intelligent“), der Monitorfilter ist aus. Der Filter pro Fenster läuft auf dem sicheren Desktop
+  nicht (ADR-0020). Entscheidung 2026-11-16 (Nutzer): Dort wird sein Automatik-Filter zum
+  Monitorfilter, überall wo kein Monitorfilter eingeschaltet ist (`SecureWindowFilterFallback`).
+  Eingeschaltete Monitorfilter bleiben. „Intelligent“ lässt das dunkle Sperrbild in Ruhe.
+- Zoom startete bei Sperre und Strg+Alt+Entf zweimal „aus“: Die Tray-App hatte 5 s vorher „Zoom aus“
+  gespeichert und nach der Rückkehr wieder „an“. Ursache nicht belegt (Ein-/Ausschalten wird nicht
+  geloggt); der Nutzer meldet den Zoom danach als in Ordnung.
+
 ## Offen (Spike mit ZoomIN selbst)
 Plan zum Abschluss (Autostart, Kern-Modus, Prüf-Logs, Startzeit): [M10 „Abschluss“](../plan/m10-sichere-bildschirme.md#abschluss-grilling-2026-11-12), [ADR-0030](../adr/0030-autostart-ueber-erleichterte-bedienung.md).
 
@@ -278,9 +304,7 @@ Plan zum Abschluss (Autostart, Kern-Modus, Prüf-Logs, Startzeit): [M10 „Absch
   Benutzereinstellungen. Sichtprüfung dev.109 (12:57, Nutzer): Strg+Alt+Entf und Sperre
   vergrößert, erstes Bild nach 1402–1423 ms.
 - ~1 s zwischen Pipeline bereit und erstem vergrößerten Bild.
-- Gelten Tastenkürzel (`RegisterHotKey`) pro Desktop? Sonst würde die Tray-App auf `Default` die
-  Kürzel der sicheren Instanz blockieren.
-- Startet ATBroker den Wächter mit im Job, und wird er beim Wechsel mit beendet?
-- Liegt ein Topmost-Fenster über LogonUI, Sperrbildschirm und UAC-Dialog?
-- Wirkt `SetWindowDisplayAffinity` dort? Desktop Duplication (Runde 2, mit ZoomIN selbst).
-- Wie lange dauert der Start?
+- ~~Gelten Tastenkürzel pro Desktop?~~ Nein, pro Sitzung – siehe Testlauf dev.279.m10.
+- ~~Wächter im Job?~~ Ja (Prüf-Log 1158). Ob er beim Wechsel mit beendet wird, steht noch aus.
+- ~~Topmost über LogonUI/Sperre/UAC, Affinität, Desktop Duplication, Startzeit?~~ Ja / ja / ja /
+  508 ms – siehe Testlauf dev.279.m10.

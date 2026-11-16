@@ -272,6 +272,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2204 | Fehler | Input activity handler failed |
 | 2205 | Fehler | Installing the mouse wheel hook failed; Ctrl+wheel zoom is unavailable |
 | 2206 | Fehler | Wheel zoom handler failed |
+| 2207 | Info | Hotkey {Gesture} registered after {Attempts} retries (ein abgelehntes Kürzel wird 5 s lang alle 250 ms erneut versucht, M10) |
+| 2208 | Info | Hotkeys {Action} for another desktop: {Count} – `released` (Sperre/Strg+Alt+Entf/UAC hat die Eingabe), `taken back` (zurück auf dem eigenen Desktop), M10 |
 | 2301 | Info | Ease of Access notified ({Signal}) |
 | 2302 | Warnung | Ease of Access not notified ({Error}) |
 | 2303 | Info | Secure desktop support {State} |
