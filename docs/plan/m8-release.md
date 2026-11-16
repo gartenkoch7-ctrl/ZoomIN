@@ -52,6 +52,17 @@ funktioniert.
 - [ ] Sichttests M4–M7, Narrator-Durchgang
 - [ ] `v1.0.0-rc1` getaggt und veröffentlicht → nach den Tests `v1.0.0`
 
+## Vorbereitet für 1.0.0 (2026-11-17)
+- `VERSION` = `1.0.0`; Repo `gartenkoch7-ctrl/ZoomIN` ist öffentlich (Release-Feed ohne Anmeldung).
+- `README.md` auf den Stand von 1.0 gebracht (Funktionen bis M19, Setup/ZIP, Kürzel, Datenschutz,
+  CI-Badge ohne Platzhalter).
+- Release-Notes: `docs/release-notes/v1.0.0-rc1.md` und `v1.0.0.md` (Tabelle getestet/ungetestet).
+  **Vor dem Tag `v1.0.0`** die Tabelle mit den Ergebnissen der Release-Tests oben aktualisieren.
+- M17–M19 (geplant als 1.1–1.3) sind schon in `develop` und damit Teil von 1.0; in den Release-Notes
+  als „wenig getestet“ markiert.
+- Offen vor dem Tag: SignPath (ohne Signatur veröffentlicht `release.yml` nichts), Merge
+  `develop` → `main` (nur mit Freigabe), Release-Tests oben.
+
 ## So wird veröffentlicht (Stand 2026-11-17, Setup aus M9)
 Voraussetzung: SignPath ist eingerichtet (Secret und Variablen im Repo, siehe oben). Ohne
 `SIGNPATH_API_TOKEN` laufen Build und Tests, veröffentlicht wird nichts.
