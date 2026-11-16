@@ -58,8 +58,8 @@ antwortet. Auf „Diagnose“ → „Diagnosepaket erstellen“ → ZIP mit Logs
       451–483 ms ohne – kein Nachteil; `zoomin.app.start` 309–312 ms; Watchdog bekommt
       `--traceparent` mit der Trace-Id des App-Starts; 118 Logzeilen ohne Fehler und ohne
       Benutzernamen; alte Tageslogs wie vorgesehen aufgeräumt
-- [ ] Sicherer Bildschirm (`zoomin.secure.start` auf Sperre/UAC) – braucht Test am Anmeldebildschirm
-- [ ] Einstellungsänderung zur Laufzeit an den Host weitergeben (kommt mit der Diagnose-Seite, Schritt 3)
+- [x] Sicherer Bildschirm (`zoomin.secure.start` auf Sperre/UAC) – belegt 2026-11-16 im SYSTEM-Trace (39× `zoomin.secure.start` mit Teilschritten)
+- [x] Einstellungsänderung zur Laufzeit an den Host weitergeben (`SettingsService.Changed` → `TelemetryHost.Apply`; Test `ErrorsOnly_DropsWarnings_KeepsErrors_WithoutRestart`)
 
 ### 2 · Abläufe und Metriken je Bereich (je ein eigener Commit)
 - [x] **Start, Monitore, Pipeline:** `zoomin.render.pipeline_start`/`rebuild`; Messwerte je Monitor
@@ -75,7 +75,7 @@ antwortet. Auf „Diagnose“ → „Diagnosepaket erstellen“ → ZIP mit Logs
       Einstellungen laden/speichern, Profilwechsel (ohne Profilnamen). Der Desktopwechsel ist ein
       Neustart des sicheren Modus und damit `zoomin.secure.start`
 - [x] Katalog `docs/kb/telemetrie.md` je Bereich ergänzt
-- [ ] Sichttest: einmal „Ausführlich“ + lokaler Collector (Aspire Dashboard) und Update-Trace ansehen
+- [x] Sichttest: einmal „Ausführlich“ + lokaler Collector (Aspire Dashboard) und Update-Trace ansehen (2026-11-17 vom Nutzer freigegeben, nicht einzeln geprüft)
 
 ### 3 · Diagnose-Seite und Diagnosepaket
 - [x] Abschnitt „Diagnose“ unter „Allgemein“ (`DiagnosticsViewModel`): Stufe, bei „Benutzerdefiniert“
@@ -92,19 +92,19 @@ antwortet. Auf „Diagnose“ → „Diagnosepaket erstellen“ → ZIP mit Logs
 - [x] Sichttest 2026-11-05 (Entwicklungsversion): Karten, Umschalten, Warnhinweis, Zurücksetzen,
       Paket. Explorer konnte den Paketordner in der Testumgebung nicht öffnen (abgeschottete
       Umgebung des Agents, Systemordner gingen) – auf einem normalen Start erneut prüfen
-- [ ] Mit Bildschirmleser (NVDA) einmal komplett durchgehen
+- [x] Mit Bildschirmleser (NVDA) einmal komplett durchgehen (2026-11-17 vom Nutzer freigegeben, nicht einzeln geprüft)
 
 ## Akzeptanzkriterien
-- [ ] Ohne eingetragene Adresse verlässt kein Byte den PC (Netzwerkmitschnitt beim Start/Update)
-- [ ] Ein Update erscheint im Aspire Dashboard als **ein** Trace über alle beteiligten Prozesse
-- [ ] Stufe „Nur Fehler“ schreibt keine Warnung/Info; Fehler erscheinen in jeder Stufe
-- [ ] Stufe wechselt ohne Neustart; Erhöhung fällt nach 7 Tagen auf Normal / 1 Tag zurück (Test)
-- [ ] Aufbewahrung und 20-MB-Grenze greifen, auch im SYSTEM-Profil
-- [ ] Render-Loop-Benchmark mit Listener: `0 B`
-- [ ] Startzeit ≤ +20 ms; sicherer Bildschirm ohne messbare Verschlechterung
-- [ ] Keine Fenstertitel, Texte oder Nutzerpfade in einem Diagnosepaket nach einem Tag Nutzung
-      (Stichprobe + Datenschutz-Test)
-- [ ] Architekturtests grün; Katalog vollständig
+- [x] Ohne eingetragene Adresse verlässt kein Byte den PC (Netzwerkmitschnitt beim Start/Update) – Stichprobe 2026-11-17: keine Verbindung von ZoomIN, Adresse leer; Mitschnitt (2026-11-17 vom Nutzer freigegeben, nicht einzeln geprüft)
+- [x] Ein Update erscheint im Aspire Dashboard als **ein** Trace über alle beteiligten Prozesse (2026-11-17 vom Nutzer freigegeben, nicht einzeln geprüft)
+- [x] Stufe „Nur Fehler“ schreibt keine Warnung/Info; Fehler erscheinen in jeder Stufe (`TelemetryHostTests`, `TelemetryOptionsTests`)
+- [x] Stufe wechselt ohne Neustart; Erhöhung fällt nach 7 Tagen auf Normal / 1 Tag zurück (Test: `Raised_FallsBackAfterSevenDays`, `…WithoutRestart`)
+- [x] Aufbewahrung und 20-MB-Grenze greifen, auch im SYSTEM-Profil (`CleanUp_DeletesHoursOlderThanTheRetention`, neu `TelemetryFilesTests`; SYSTEM-Profil nutzt dieselbe Klasse)
+- [x] Render-Loop-Benchmark mit Listener: `0 B` (`RenderMetricsTests`, `RenderLayersAllocationTests`)
+- [x] Startzeit ≤ +20 ms; sicherer Bildschirm ohne messbare Verschlechterung (gemessen 2026-11-05; sicherer Bildschirm 2026-11-16: erstes Bild 511–551 ms)
+- [x] Keine Fenstertitel, Texte oder Nutzerpfade in einem Diagnosepaket nach einem Tag Nutzung
+      (Stichprobe + Datenschutz-Test) – Stichprobe 2026-11-17: Logs vom 16./17.11. ohne Benutzernamen und Pfade; Test `UserContent_IsRejected`
+- [x] Architekturtests grün; Katalog vollständig (`TelemetryConventionTests`, 1907 Tests grün, 10 übersprungen)
 
 ## Offene Fragen / Risiken
 - Umfang: fasst fast jede Datei an; Schritt 2 strikt pro Bereich committen.
