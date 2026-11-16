@@ -330,4 +330,4 @@ Tray-App außerhalb des Jobs weiterlaufen lassen?
   - [x] Prüf-Logs: Overlay oben, Ausschluss aus Aufnahmen gesetzt, Wächter im Job, Kürzel registriert (1152, 1154, 1158, 1161: 0 belegt)
   - [x] Inseln, Einfrieren und Monitorwechsel fehlen auf der Sperre, die Kürzel gehen an Windows (2026-11-16 vom Nutzer freigegeben, nicht einzeln protokolliert)
   - [x] Diagnosepaket mit Logs der sicheren Instanz (2026-11-16 vom Nutzer freigegeben, nicht einzeln protokolliert)
-- [ ] Roadmap-Status, Merge nach `develop` nur mit Freigabe
+- [x] Roadmap-Status, Merge nach `develop` (Freigabe des Nutzers 2026-11-16)
