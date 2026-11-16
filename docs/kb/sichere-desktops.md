@@ -297,6 +297,15 @@ Anmeldung (`TaskSchedulerAutostart`, noch nicht gebaut), Win+U-Trick bleibt.
   gespeichert und nach der Rückkehr wieder „an“. Ursache nicht belegt (Ein-/Ausschalten wird nicht
   geloggt); der Nutzer meldet den Zoom danach als in Ordnung.
 
+## Nachtest dev.280.m10 (2026-11-16, Nutzer, SYSTEM-Log)
+- UAC zweimal (22:29): Tray-App gibt 20 Kürzel frei (Log 2208 „released“), die sichere Instanz
+  meldet **0 Kürzel belegt** (Prüf-Log 1161), nach der Rückkehr holt die Tray-App alle 20 nach 3 s
+  zurück (2208 „taken back“). Kein 2201 auf dem sicheren Desktop.
+- Kopie der Einstellungen der sicheren Instanz: `FilterEnabled = true`, Monitorfilter
+  `InvertedSmart` aus dem Automatik-Filter – Fallback greift.
+- Erstes vergrößertes Bild nach 535–548 ms.
+- Sichtprüfung (Nutzer): Zoom, Farbfilter und Kürzel auf den sicheren Bildschirmen „sauber“.
+
 ## Offen (Spike mit ZoomIN selbst)
 Plan zum Abschluss (Autostart, Kern-Modus, Prüf-Logs, Startzeit): [M10 „Abschluss“](../plan/m10-sichere-bildschirme.md#abschluss-grilling-2026-11-12), [ADR-0030](../adr/0030-autostart-ueber-erleichterte-bedienung.md).
 

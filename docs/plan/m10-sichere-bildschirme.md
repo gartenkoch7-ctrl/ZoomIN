@@ -45,12 +45,12 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
       (dev.279.m10: Bilder ja, Ausschluss gesetzt – Prüf-Log 1154)
 - [x] Z-Reihenfolge: liegt das Overlay über LogonUI, Sperrbildschirm und UAC-Dialog? Braucht es
       UIAccess bzw. eine Signatur, auch ohne SignPath? (dev.279.m10: oben an der Monitormitte, Log 1152)
-- [ ] Mauszeiger (`MagShowSystemCursor`), RegisterHotKey, LL-Hooks, UI Automation dort
+- [x] Mauszeiger (`MagShowSystemCursor`), RegisterHotKey, LL-Hooks, UI Automation dort
       (dev.279.m10: UIA liefert den Caret in LogonUI; RegisterHotKey gilt pro Sitzung → 16 Kürzel
-      blockiert, behoben in dev.280.m10 – Nachtest offen)
-- [ ] Farbfilter auf Sperre/Anmeldung/UAC, wenn nur der Filter pro Fenster an ist: Automatik-Filter
-      wird Monitorfilter (Entscheidung 2026-11-16, `SecureWindowFilterFallback`) – Nachtest offen
-- [ ] Ergebnis in `docs/kb/sichere-desktops.md`; bei Fehlschlag → Plan B mit Rücksprache
+      blockiert, behoben in dev.280.m10 – Nachtest 2026-11-16: 0 Kürzel belegt, Log 2208)
+- [x] Farbfilter auf Sperre/Anmeldung/UAC, wenn nur der Filter pro Fenster an ist: Automatik-Filter
+      wird Monitorfilter (Entscheidung 2026-11-16, `SecureWindowFilterFallback`) – Nachtest ok
+- [x] Ergebnis in `docs/kb/sichere-desktops.md`; bei Fehlschlag → Plan B mit Rücksprache
 
 ### 2 · Engine ohne WinUI
 - [x] Engine-Zusammenstellung WinUI-frei: `EngineRegistration.AddEngine` (geteilt von Tray-App und
@@ -113,12 +113,12 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
 
 ### 6 · Test auf dem echten PC (Nutzer, Checkliste)
 - [ ] Neustart → Anmeldebildschirm vergrößert (Einstellungen der Kopie)
-- [ ] Win+L → Sperre vergrößert, gleicher Zustand wie vorher, ≤ 1 s; nach Entsperren läuft die App weiter
-- [ ] Strg+Alt+Entf → Menü und „Kennwort ändern“ vergrößert, Tippen ins Kennwortfeld mit Caret-Tracking
-- [ ] UAC-Abfrage vergrößert
+- [x] Win+L → Sperre vergrößert, gleicher Zustand wie vorher, ≤ 1 s; nach Entsperren läuft die App weiter
+- [x] Strg+Alt+Entf → Menü und „Kennwort ändern“ vergrößert, Tippen ins Kennwortfeld mit Caret-Tracking
+- [x] UAC-Abfrage vergrößert (dev.280.m10, erstes Bild 535–548 ms)
 - [ ] Alle Modi, Filter pro Monitor, Mauszeiger-Optionen, Tastenkürzel, Profilwechsel
 - [ ] Zweiter Monitor; Beenden-Kürzel; Schalter aus → nichts startet mehr
-- [ ] Unsichtbar bei Übertragung bleibt gewahrt (Overlay-Fenster mit `WDA_EXCLUDEFROMCAPTURE`)
+- [x] Unsichtbar bei Übertragung bleibt gewahrt (Overlay-Fenster mit `WDA_EXCLUDEFROMCAPTURE`, Log 1154)
 
 ## Akzeptanzkriterien
 - Alle Punkte aus Abschnitt 6 bestanden, Startzeit ≤ 1 s in den Logs.
