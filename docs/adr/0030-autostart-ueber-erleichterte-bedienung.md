@@ -104,5 +104,9 @@ Nutzer steht aus. Ablauf und gesuchte Logzeilen:
 - Einmalig nach dem Update von einem Spike-Build: Startet die Liste ZoomIN noch über einen schon
   beendeten Broker, verlässt diese Instanz den Job nicht mehr und endet beim nächsten Win+L. Die
   Migration entfernt den Listeneintrag beim selben Start, ab der nächsten Anmeldung gilt die Aufgabe.
+- Nachtest 2026-11-16 (dev.281.m10, Nutzer): Abmelden ohne Neustart durch den Wächter; nach der
+  Anmeldung startet die Aufgabe genau eine Instanz (Ergebnis 0), der Umzug aus der Liste lief;
+  Win+L vergrößert, die Tray-App überlebt. Das erste Tray-Symbol scheitert, solange die Taskleiste
+  fehlt (Log 2503), und kommt mit `TaskbarCreated`.
 - Offen: Bei der Deinstallation bleibt die Aufgabe **anderer** Benutzerkonten stehen; deren
   Anmeldung meldet dann eine fehlende Datei. Aufräumen im erhöhten Schritt kommt später.
