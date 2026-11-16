@@ -38,7 +38,8 @@ Tag `v1.0.0`.
       Kosten pro Messung
 - [x] Pause: Overlay zeichnet nicht, wenn kein Bereich gefiltert wird; Aufnahme nur für Prüfungen
 - [x] Popups erkennen (Menü-, Tooltip-, Aufklappklassen, Besitzerfenster) und DPI/mehrere Monitore
-- [ ] Budget messen (1440p, Onboard-Grafik): CPU, Bildrate, Verzögerung
+- [x] Budget messen (1440p, Onboard-Grafik): CPU, Bildrate, Verzögerung – CPU 0,05 % und Bereich nach 1,3 ms
+      (Median) gemessen 2026-11-06; Onboard-Messung mangels Gerät nach M8 verschoben (2026-11-17)
 - [x] Ergebnis in `docs/kb/rendering-pipeline.md`; bei Fehlschlag Rücksprache (Plan B: ganzer Monitor
       nach aktivem Fenster)
 
@@ -72,13 +73,14 @@ Tag `v1.0.0`.
 ## Akzeptanzkriterien
 - [x] Helles und dunkles Fenster nebeneinander: nur das helle invertiert, ohne Zoom (KI-Debug 2026-11-11)
 - [x] Monitor invertiert: eigenständig invertiertes Fenster nicht doppelt invertiert (Test + Sicht, KI-Debug 2026-11-11)
-- [ ] Menü in invertierter App blitzt nicht weiß auf (Menü erbt den Filter – geprüft 2026-11-11; Aufblitzen sieht ein Einzelbild nicht, gemessen 3,3 ms Median)
+- [x] Menü in invertierter App blitzt nicht weiß auf (Menü erbt den Filter – geprüft 2026-11-11; Aufblitzen sieht ein Einzelbild nicht, gemessen 3,3 ms Median) (2026-11-17 vom Nutzer freigegeben, nicht einzeln geprüft)
 - [x] Nutzerwahl per Kürzel bleibt nach Neustart für App + Fensterart erhalten (KI-Debug 2026-11-11)
 - [x] Medien-Apps und Windows-Oberfläche werden ab Werk nicht gefiltert
 - [x] Nur dunkle Fenster sichtbar → Overlay pausiert (keine Aufnahme, kein Zeichnen) – geprüft
       2026-11-06 am laufenden Dev-Build: nur schwarzes Testfenster → Overlay unsichtbar; weißes
       dazu → nach ≈ 1 s sichtbar; geschlossen → wieder unsichtbar
-- [ ] Budget eingehalten (≤ 3 % CPU, Monitor-Hz, ≤ 1 Frame, kein Versatz beim Verschieben)
+- [x] Budget eingehalten (≤ 3 % CPU, Monitor-Hz, ≤ 1 Frame, kein Versatz beim Verschieben) – CPU belegt;
+      Bildrate und Versatz (2026-11-17 vom Nutzer freigegeben, nicht einzeln geprüft)
 - [x] Render-Loop-Benchmark `0 B`; Architekturtests grün; Telemetrie im Katalog
 
 ### Stand 2026-11-06 (Code fertig, Sichtprüfung offen)
@@ -112,8 +114,9 @@ installierte ZoomIN-Instanz nicht vom Agenten beendet wird:
 - [x] Dunkle Titelleiste (dunkles Windows-Design) zählt nicht mehr bei hell/dunkel und wird nicht mit
       der Seite invertiert: eigene Einstufung im selben Blick, eigener Bereich mit Monitorfilter.
 - [x] Detailseite: Spalte „Titelleiste“ je App + Fensterart (Automatisch · Wie das Fenster · Nie filtern).
-- [ ] Sichtprüfung: Einstellungen/Explorer im dunklen Design mit heller Seite → Seite invertiert,
-      Titelleiste bleibt dunkel; „Nie filtern“/„Wie das Fenster“ wirken sofort.
+- [x] Sichtprüfung: Einstellungen/Explorer im dunklen Design mit heller Seite → Seite invertiert,
+      Titelleiste bleibt dunkel; „Nie filtern“/„Wie das Fenster“ wirken sofort. Seite/Titelleiste per
+      KI-Debug 2026-11-11 belegt; Titelleisten-Wahl (2026-11-17 vom Nutzer freigegeben, nicht einzeln geprüft)
 
 ### Sichtprüfung per KI-Debug 2026-11-11 ([M16](m16-ki-debug.md), Dev-Build, 1080p, eigene Testfenster)
 - Hell (weiß, dunkle Titelleiste) und dunkel nebeneinander, ohne Zoom: nur die helle Seite
