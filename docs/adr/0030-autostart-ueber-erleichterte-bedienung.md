@@ -112,5 +112,7 @@ Nutzer steht aus. Ablauf und gesuchte Logzeilen:
   einem Start aus dem Startmenü nicht. Ursache: Win+U ist ein Kürzel von Explorer; die Aufgabe
   startet ZoomIN vor der Taskleiste, das Start-Signal verpufft. Behoben: `EaseOfAccessNotifier`
   sendet es erst, wenn das Tray-Symbol in der Taskleiste ist (`ITrayIcon.Shown`), plus 2 s (Log 2315).
+  Nachtest dev.282.m10 (Nutzer, 2026-11-16): Aufgabe 23:47:49, Signal 23:47:53 (2315 → 2301), danach
+  sichere Instanz mit erstem Bild nach 524 ms; Win+L, Strg+Alt+Entf und Abmelden laut Nutzer sauber.
 - Offen: Bei der Deinstallation bleibt die Aufgabe **anderer** Benutzerkonten stehen; deren
   Anmeldung meldet dann eine fehlende Datei. Aufräumen im erhöhten Schritt kommt später.

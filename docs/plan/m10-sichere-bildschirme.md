@@ -314,7 +314,9 @@ Tray-App außerhalb des Jobs weiterlaufen lassen?
 - [x] Spike A1, Ergebnis als Nachtrag in ADR-0030 (2026-11-16: gescheitert – neu gestartete
   Instanz bleibt im Job, Tray-App endet beim ersten Bildschirmwechsel)
 - [x] Ausweichweg Q9 (`TaskSchedulerAutostart`, geplante Aufgabe bei der Anmeldung): gebaut 2026-11-16,
-  Nachtest 2026-11-16 (dev.281.m10) bestanden: Aufgabe startet eine Instanz, Win+L vergrößert, Tray überlebt
+  Nachtest 2026-11-16 (dev.281.m10): Aufgabe startet eine Instanz, Tray überlebt; Sperre aber
+  unvergrößert (Win+U vor der Taskleiste verpufft) → behoben in dev.282.m10 (`2294dc5`), Nachtest
+  bestanden (Win+L, Strg+Alt+Entf, Abmelden/Anmelden)
 - [x] Wächter: Sitzungsende (Abmelden, Exit-Code `0x40010004`) erkennen, dann nicht neu starten
 - [ ] Deinstallation: Autostart-Aufgaben anderer Benutzerkonten im erhöhten Schritt löschen
 - [x] Mergen B → C → A, nach jedem Merge Build und Tests (2026-11-12, `aa01cba`; dazu
@@ -323,7 +325,7 @@ Tray-App außerhalb des Jobs weiterlaufen lassen?
   Gesamt-Review: 2 Runden, `dde4b5c`, 1863 Tests, 0 rot)
 - [ ] Testbuild installieren (Nutzer), dann die Checkliste in Abschnitt 6 und zusätzlich:
   - [x] Nach der Anmeldung läuft ZoomIN sofort (Aufgabe, 1 s nach der Anmeldung; Tray-Symbol folgt der Taskleiste)
-  - [x] Win+L vergrößert, Tray überlebt (mit Win+U-Trick, Q9); erstes Bild ≤ 1 s (511–551 ms)
+  - [x] Win+L und Strg+Alt+Entf vergrößert nach dem Autostart, Tray überlebt (Win+U nach der Taskleiste, dev.282.m10); erstes Bild ≤ 1 s (511–551 ms)
   - [ ] Schalter „Sperrbildschirm“ aus: Autostart läuft, auf der Sperre startet nichts
   - [x] Prüf-Logs: Overlay oben, Ausschluss aus Aufnahmen gesetzt, Wächter im Job, Kürzel registriert (1152, 1154, 1158, 1161: 0 belegt)
   - [ ] Inseln, Einfrieren und Monitorwechsel fehlen auf der Sperre, die Kürzel gehen an Windows
