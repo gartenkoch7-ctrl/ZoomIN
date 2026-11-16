@@ -148,7 +148,8 @@ dem Tag `v1.0.0`.
       offline: ≤ 1,0 % abweichende Pixel bei 12 px/Frame (vorher 7,4 % durch Nachziehen)
 - [x] Excel (dunkles Design): Tabelle sauber invertiert, Zeilennummern und Zelltext lesbar – geprüft
       2026-11-07 selbstständig (verlustfreie Aufnahme, Offline-Wiedergabe)
-- [ ] Monitorfilter, Lupe und Angedockt verhalten sich gleich; Zoomen kippt keine Fläche
+- [x] Monitorfilter, Lupe und Angedockt verhalten sich gleich; Zoomen kippt keine Fläche (2026-11-17
+      vom Nutzer freigegeben, dev.283.m13; kein Rückfall 3007 im Log)
 - [x] Budget: ≤ 1 ms extra GPU (hochgerechnet ≈ 0,9 ms; der Entwicklungsrechner i7-12700KF hat keine
       Onboard-Grafik – Messung braucht ein anderes Gerät); Monitor-Hz gehalten. Entscheidung 2026-11-17:
       Hochrechnung reicht, echte Onboard-Messung wandert nach M8; Laufzeit-Budget jetzt `SmartBudget`
