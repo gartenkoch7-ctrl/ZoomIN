@@ -1,9 +1,9 @@
-using System.ComponentModel;
-using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Folders;
 using ZoomIN.Core.Lifecycle;
+using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Watchdog.Crashes;
-using ZoomIN.Watchdog.Notification;
 
 namespace ZoomIN.Watchdog;
 
@@ -12,23 +12,22 @@ namespace ZoomIN.Watchdog;
 /// (crash, killed in Task Manager) triggers cleanup and a restart within the limits of
 /// <see cref="RestartPolicy"/> (ADR-0007).
 /// </summary>
-public static class WatchdogRunner
+/// <param name="folders">Where the crash log and the give-up mark are kept (ADR-0025).</param>
+/// <param name="cleanup">What a crashed ZoomIN leaves behind and the watchdog gives back.</param>
+/// <param name="system">Waiting, restarting and the notice; a fake in the tests.</param>
+/// <param name="clock">Time of the crash for the restart limits.</param>
+public sealed class WatchdogRunner(
+    IAppFolders folders, ILogger log, IReadOnlyList<ICleanupStep> cleanup, IWatchdogSystem system, TimeProvider clock)
 {
-    public static int Run(int processId, string appPath, ILog log, IReadOnlyList<ICleanupStep> cleanup)
-    {
-        int exitCode;
-        try
-        {
-            using var process = Process.GetProcessById(processId);
+    /// <summary>DBG_TERMINATE_PROCESS: the exit code Windows gives processes it ends at sign-out.</summary>
+    public const int TerminatedByWindows = 0x40010004;
 
-            // Touch the handle now: the exit code is only readable through a handle opened before exit.
-            _ = process.Handle;
-            process.WaitForExit();
-            exitCode = process.ExitCode;
-        }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Win32Exception)
+    /// <param name="secure">Watches the secure-desktop instance (ADR-0016): restarts it with its switch, never notifies.</param>
+    public int Run(int processId, string appPath, bool secure = false)
+    {
+        if (!system.TryWaitForExit(processId, out var exitCode, out var reason))
         {
-            log.Warn($"[Watchdog] Cannot watch process {processId}: {ex.Message}");
+            log.CannotWatch(processId, reason);
             return 1;
         }
 
@@ -37,39 +36,62 @@ public static class WatchdogRunner
             return 0;
         }
 
-        log.Error($"[Watchdog] ZoomIN ended unexpectedly (exit code 0x{exitCode:X8}).");
-        RunCleanup(cleanup, log);
-
-        var crashes = CrashHistory.Default.Record(DateTimeOffset.Now);
-        if (RestartPolicy.ShouldRestart(crashes, DateTimeOffset.Now))
+        if (secure)
         {
-            log.Info("[Watchdog] Restarting ZoomIN.");
-            // Through the shell, as CreateProcess cannot start the uiAccess build (ADR-0012).
-            Process.Start(new ProcessStartInfo(appPath) { UseShellExecute = true })?.Dispose();
+            // Windows ends the whole job (instance and watchdog) on every desktop switch. If this
+            // watchdog is still alive a moment later, the instance really crashed.
+            system.Pause(TimeSpan.FromMilliseconds(500));
+        }
+
+        // Signing out ends every process of the session with DBG_TERMINATE_PROCESS; a restart then
+        // would only start ZoomIN into a dying session (seen 2026-11-16, Q9 test). The secure
+        // instance relies on the pause above instead: how Windows ends its job is not pinned down.
+        if ((!secure && exitCode == TerminatedByWindows) || system.IsSessionEnding)
+        {
+            log.SessionEnded(exitCode);
             return 0;
         }
 
-        log.Error($"[Watchdog] Giving up after {RestartPolicy.MaxRestarts} restarts within {RestartPolicy.Window.TotalMinutes:0} minutes.");
-        TrayNotification.Show(
+        log.UnexpectedExit(exitCode);
+        RunCleanup(cleanup, log);
+
+        var now = clock.GetLocalNow();
+        var crashes = new CrashHistory(folders.CrashLog()).Record(now);
+        if (RestartPolicy.ShouldRestart(crashes, now))
+        {
+            log.Restarting();
+            system.Restart(appPath, TraceParentArgument.Append(secure ? SecureDesktopMode.Switch : string.Empty));
+            return 0;
+        }
+
+        log.GivingUp(RestartPolicy.MaxRestarts, RestartPolicy.Window.TotalMinutes);
+        if (secure)
+        {
+            // No notification on a secure desktop; stay off there until Windows restarts.
+            new SecureDesktopGiveUp(folders, clock).Mark();
+            return 2;
+        }
+
+        system.Notify(
             "ZoomIN wurde beendet",
             "ZoomIN ist wiederholt abgestürzt und wird nicht mehr neu gestartet. Details im Log unter %LocalAppData%\\ZoomIN\\logs.",
             TimeSpan.FromSeconds(10));
         return 2;
     }
 
-    private static void RunCleanup(IReadOnlyList<ICleanupStep> cleanup, ILog log)
+    private static void RunCleanup(IReadOnlyList<ICleanupStep> cleanup, ILogger log)
     {
         foreach (var step in cleanup)
         {
             try
             {
                 step.Run();
-                log.Info($"[Watchdog] Cleanup '{step.Name}' done.");
+                log.CleanupDone(step.Name);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
                 // One failing step must not prevent the others or the restart.
-                log.Error($"[Watchdog] Cleanup '{step.Name}' failed.", ex);
+                log.CleanupFailed(ex, step.Name);
             }
         }
     }

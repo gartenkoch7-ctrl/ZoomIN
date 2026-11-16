@@ -1,0 +1,184 @@
+using ZoomIN.Core.PointerFence;
+using ZoomIN.Core.Viewport;
+
+namespace ZoomIN.Core.Pointer;
+
+/// <summary>
+/// Mouse buffer (A6): the pointer stops at a monitor edge and crosses to the neighbouring monitor
+/// only after pressing against the edge for the level's time. "Pressing" means the pointer stands
+/// at the edge and further moves point outwards; moving back from the edge, or a pause longer than
+/// <see cref="MaxPause"/>, starts over. A move filter of the pointer fence: it runs inside the
+/// low-level mouse hook, only computes and never allocates.
+/// </summary>
+/// <remarks>
+/// <see cref="Configure"/> may be called from any thread (it swaps an immutable setup); the
+/// pressing state is only touched by <see cref="Filter"/>, i.e. by the hook thread. Frozen monitors
+/// are not this filter's business: the fence applies forbidden areas after all filters.
+/// </remarks>
+public sealed class EdgeBuffer : IPointerMoveFilter
+{
+    /// <summary>Pixels the pointer may wobble back from the pressed edge without starting over.</summary>
+    public const double RetreatTolerance = 3;
+
+    /// <summary>Longer without an outward move and the pressing starts over (at most half the press time).</summary>
+    public static readonly TimeSpan MaxPause = TimeSpan.FromMilliseconds(250);
+
+    /// <summary>
+    /// Allowed pause for a press time: half of it, at most <see cref="MaxPause"/>. Otherwise two
+    /// separate nudges could cross at Light (0.2 s) without any pressing in between.
+    /// </summary>
+    public static TimeSpan MaxPauseFor(TimeSpan press) => press / 2 < MaxPause ? press / 2 : MaxPause;
+
+    private readonly TimeProvider _time;
+    private Setup? _setup;
+
+    // Hook thread only.
+    private Setup? _pressSetup;
+    private int _pressHome;
+    private long _pressStart;
+    private long _lastPress;
+    private int _dirX;
+    private int _dirY;
+
+    public EdgeBuffer(TimeProvider time)
+    {
+        _time = time;
+        PointerConstraintMetrics.EnsureCreated();
+    }
+
+    public int Order => PointerFilterOrder.MouseBuffer;
+
+    /// <summary>True while the pointer presses against an edge (for tests and diagnostics).</summary>
+    public bool IsPressing => _pressSetup is not null;
+
+    /// <summary>Monitors in physical desktop pixels and the level; <see cref="EdgeBufferLevel.Off"/> lets every move through.</summary>
+    public void Configure(IReadOnlyList<PhysicalRect> monitors, EdgeBufferLevel level)
+    {
+        ArgumentNullException.ThrowIfNull(monitors);
+        var press = PointerConstraintOptions.PressTime(level);
+        var setup = press <= TimeSpan.Zero || monitors.Count < 2 ? null : new Setup([.. monitors], Ticks(press), Ticks(MaxPauseFor(press)));
+
+        // Unchanged (e.g. refreshed after a desktop switch): keep the old one, a press in progress goes on.
+        var old = Volatile.Read(ref _setup);
+        if (setup is not null && old is not null && old.PressTicks == setup.PressTicks && old.Monitors.AsSpan().SequenceEqual(setup.Monitors))
+        {
+            return;
+        }
+
+        Volatile.Write(ref _setup, setup);
+    }
+
+    public PhysicalPoint Filter(long timestamp, PhysicalPoint current, PhysicalPoint requested)
+    {
+        var setup = Volatile.Read(ref _setup);
+        var from = setup is null ? -1 : IndexOf(setup.Monitors, current);
+        if (from < 0)
+        {
+            // Off, a single monitor, or the pointer between monitors (display change): Windows decides.
+            _pressSetup = null;
+            return requested;
+        }
+
+        var home = setup!.Monitors[from];
+        if (home.Contains(requested))
+        {
+            if (_pressSetup is not null && Retreats(home, requested))
+            {
+                _pressSetup = null;
+            }
+
+            return requested;
+        }
+
+        // The direction of the push itself: re-aiming a diagonal below must not turn a wobble
+        // between "more right" and "more down" at a corner into two unrelated presses.
+        var dirX = requested.X >= home.Right ? 1 : requested.X < home.X ? -1 : 0;
+        var dirY = requested.Y >= home.Bottom ? 1 : requested.Y < home.Y ? -1 : 0;
+        if (IndexOf(setup.Monitors, requested) < 0)
+        {
+            // Into no monitor: a diagonal past a corner (e.g. right and down along the bottom
+            // edge) is a push along the axis that leads onto a neighbour, as Windows would clip
+            // it; the axis pushed harder is tried first. Otherwise (a gap of an offset layout,
+            // or a monitor this list does not know yet) Windows decides: never trap the pointer.
+            var clamped = Clamp(home, requested);
+            var alongX = new PhysicalPoint(requested.X, clamped.Y);
+            var alongY = new PhysicalPoint(clamped.X, requested.Y);
+            var xFirst = Math.Abs(requested.X - clamped.X) >= Math.Abs(requested.Y - clamped.Y);
+            if (OnNeighbour(setup, home, xFirst ? alongX : alongY))
+            {
+                requested = xFirst ? alongX : alongY;
+            }
+            else if (OnNeighbour(setup, home, xFirst ? alongY : alongX))
+            {
+                requested = xFirst ? alongY : alongX;
+            }
+            else
+            {
+                return requested;
+            }
+        }
+
+        if (!ContinuesPress(setup, from, timestamp, dirX, dirY))
+        {
+            _pressSetup = setup;
+            _pressHome = from;
+            _pressStart = timestamp;
+            _dirX = dirX;
+            _dirY = dirY;
+            PointerConstraintMetrics.Blocked();
+        }
+
+        _lastPress = timestamp;
+        if (timestamp - _pressStart >= setup.PressTicks)
+        {
+            _pressSetup = null;
+            return requested;
+        }
+
+        return Clamp(home, requested);
+    }
+
+    private static PhysicalPoint Clamp(PhysicalRect home, PhysicalPoint point) => new(
+        Math.Clamp(point.X, home.X, Math.Max(home.X, home.Right - 1)),
+        Math.Clamp(point.Y, home.Y, Math.Max(home.Y, home.Bottom - 1)));
+
+    // Same setup and home monitor, no long pause, and at least one outward direction in common
+    // (at a corner the hand wobbles between "right" and "right and down").
+    private bool ContinuesPress(Setup setup, int home, long timestamp, int dirX, int dirY) =>
+        ReferenceEquals(_pressSetup, setup)
+        && _pressHome == home
+        && timestamp - _lastPress <= setup.MaxPauseTicks
+        && ((dirX != 0 && dirX == _dirX) || (dirY != 0 && dirY == _dirY));
+
+    // Moving away from every pressed edge; sliding along one of them keeps pressing (also from a
+    // press that began diagonally at a corner). A wobble of a few pixels back (tremor) is no retreat.
+    // Sliding does not count as pushing, though: a slide longer than MaxPause starts over.
+    private bool Retreats(PhysicalRect home, PhysicalPoint requested)
+    {
+        var onX = (_dirX > 0 && requested.X >= home.Right - 1 - RetreatTolerance)
+            || (_dirX < 0 && requested.X <= home.X + RetreatTolerance);
+        var onY = (_dirY > 0 && requested.Y >= home.Bottom - 1 - RetreatTolerance)
+            || (_dirY < 0 && requested.Y <= home.Y + RetreatTolerance);
+        return !onX && !onY;
+    }
+
+    private static bool OnNeighbour(Setup setup, PhysicalRect home, PhysicalPoint point) =>
+        !home.Contains(point) && IndexOf(setup.Monitors, point) >= 0;
+
+    private static int IndexOf(PhysicalRect[] monitors, PhysicalPoint point)
+    {
+        for (var i = 0; i < monitors.Length; i++)
+        {
+            if (monitors[i].Contains(point))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private long Ticks(TimeSpan span) => (long)(span.TotalSeconds * _time.TimestampFrequency);
+
+    private sealed record Setup(PhysicalRect[] Monitors, long PressTicks, long MaxPauseTicks);
+}

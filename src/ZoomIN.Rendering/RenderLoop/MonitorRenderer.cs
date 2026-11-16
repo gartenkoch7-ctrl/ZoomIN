@@ -1,9 +1,13 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
+using ZoomIN.Core.Islands;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Tracking;
+using ZoomIN.Core.WindowFilters;
 using ZoomIN.Core.Zoom;
+using ZoomIN.Rendering.Snapshots;
 
 namespace ZoomIN.Rendering.RenderLoop;
 
@@ -19,27 +23,36 @@ internal sealed class MonitorRenderer : IDisposable
     private readonly ZoomModel _model;
     private readonly EffectsModel _effects;
     private readonly TrackingModel _tracking;
+    private readonly WindowFilterModel _windows;
+    private readonly RenderModels _models;
+    private readonly OverlayDemand _demand;
     private readonly PointerServices _pointer;
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly Action _requestRebuild;
-    private readonly AutoResetEvent _wake = new(false);
+    private readonly RenderMetrics _metrics;
+    private readonly FrameStatistics _stats;
+    private readonly RenderWakeup _wakeup = new();
     private readonly Thread _thread;
     private readonly Lock _statusGate = new();
     private ZoomStatus _status = ZoomStatus.Idle;
     private volatile bool _stopRequested;
-    private volatile bool _sleeping;
     private long _heartbeat;
 
     public MonitorRenderer(
-        string deviceName, RenderModels models, PointerServices pointer, ILog log, Action requestRebuild)
+        string deviceName, RenderModels models, PointerServices pointer, ILogger log, Action requestRebuild)
     {
         _deviceName = deviceName;
         _model = models.Zoom;
         _effects = models.Effects;
         _tracking = models.Tracking;
+        _windows = models.Windows;
+        _models = models;
+        _demand = new OverlayDemand(deviceName, models);
         _pointer = pointer;
         _log = log;
         _requestRebuild = requestRebuild;
+        _metrics = new RenderMetrics(deviceName);
+        _stats = new FrameStatistics(_metrics);
         _thread = new Thread(Run) { IsBackground = true, Name = "ZoomIN Render " + deviceName, Priority = ThreadPriority.Highest };
     }
 
@@ -61,7 +74,7 @@ internal sealed class MonitorRenderer : IDisposable
     /// <paramref name="limit"/> (e.g. stuck in a driver call). Sleeping while idle does not count.
     /// </summary>
     public bool IsHung(TimeSpan limit) =>
-        _thread.IsAlive && !_sleeping && Stopwatch.GetElapsedTime(Volatile.Read(ref _heartbeat)) > limit;
+        _thread.IsAlive && !_wakeup.IsSleeping && Stopwatch.GetElapsedTime(Volatile.Read(ref _heartbeat)) > limit;
 
     public void Start()
     {
@@ -69,18 +82,19 @@ internal sealed class MonitorRenderer : IDisposable
         _thread.Start();
     }
 
-    public void Wake() => _wake.Set();
+    /// <summary>Any thread; safe after <see cref="Dispose"/> (a rebuild may still hold the old list).</summary>
+    public void Wake() => _wakeup.Wake();
 
     public void Dispose()
     {
         _stopRequested = true;
-        _wake.Set();
+        _wakeup.Wake();
         if (_thread.IsAlive && Thread.CurrentThread != _thread)
         {
             _thread.Join(TimeSpan.FromSeconds(3));
         }
 
-        _wake.Dispose();
+        _wakeup.Dispose();
     }
 
     private void Run()
@@ -90,24 +104,27 @@ internal sealed class MonitorRenderer : IDisposable
         {
             try
             {
-                using var session = new RenderSession(_pointer, _deviceName);
-                _log.Info($"Zoom pipeline ready for {_deviceName}");
+                using var session = StartSession();
+                _log.PipelineReady(_deviceName);
+                _metrics.PipelineReady();
+                _models.Milestones.ObservePipeline();
                 SetStatus(ZoomStatus.Idle with { IsCaptureExcluded = true });
                 RunSession(session);
             }
             catch (DisplayChangedException ex)
             {
                 // The monitor set may have changed: the engine rebuilds all renderers.
-                _log.Info($"{_deviceName}: {ex.Message}");
+                _log.DisplayChanged(_deviceName, ex.Message);
+                _metrics.Restarted("display_changed");
                 _requestRebuild();
                 return;
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
-                _log.Error($"Zoom pipeline for {_deviceName} failed", ex);
+                _log.PipelineFailed(ex, _deviceName);
+                _metrics.Restarted("failure");
                 SetStatus(ZoomStatus.Idle with { LastError = ex.Message });
-                var needed = _model.TargetFor(_deviceName) > ZoomLimits.Min || NeedsOverlayUnzoomed(_effects.Current);
-                Sleep(needed ? RetryDelay : Timeout.InfiniteTimeSpan);
+                Sleep(_demand.NeededAfterFailure() ? RetryDelay : Timeout.InfiniteTimeSpan);
             }
         }
     }
@@ -115,32 +132,52 @@ internal sealed class MonitorRenderer : IDisposable
     private void RunSession(RenderSession session)
     {
         var animator = new ZoomAnimator();
-        var frames = 0;
         var lastFrame = Stopwatch.GetTimestamp();
-        var secondStart = lastFrame;
+        _stats.Woke(lastFrame);
 
         while (!_stopRequested)
         {
             Volatile.Write(ref _heartbeat, Stopwatch.GetTimestamp());
-            var effects = _effects.Current;
-            animator.SetTarget(_model.TargetFor(_deviceName));
+            // The monitor's own colour filter, if it has one (per-monitor filter).
+            var effects = _effects.CurrentFor(_deviceName);
+
+            // Frozen (G2): the level of the moment of freezing; temporary levels and the overview pass it by.
+            var frozen = _model.Frozen.For(_deviceName);
+            var lowered = false;
+            animator.SetTarget(frozen?.Level ?? _demand.EffectiveTarget(out lowered)); // one snapshot per frame
             var unzoomed = animator.IsSettled && animator.Current == ZoomLimits.Min;
+            var windows = _windows.Regions;
+            var windowsFiltered = session.FiltersWindows(windows, effects);
+            var overview = frozen is null ? _demand.Overview : null;
+            var userMode = _demand.Mode(frozen); // one read each per frame
+            var scene = _demand.SceneFor(frozen); // a frozen monitor's islands freeze with it (G2)
+            var islands = _demand.Islands(animator.Current, userMode, scene);
 
             // Filters work at 1× too (M5 decision); so do the pointer options (larger or coloured
             // pointer, crosshair, hiding while typing); the locator needs a few frames as well.
-            if (unzoomed && !NeedsOverlayUnzoomed(effects) && !session.LocatorActive && !LocatorRequested(effects))
+            // The filter per window pauses the overlay while no window here needs it (ADR-0020).
+            // The overview frame is drawn at 1× too (B2), so are the border of a frozen monitor (G2)
+            // and the island edit mode (B1).
+            if (unzoomed && overview is null && frozen is null && islands is null && !_demand.NeedsOverlayUnzoomed(effects)
+                && !windowsFiltered && !session.LocatorActive
+                && !_demand.LocatorRequested(effects))
             {
                 if (session.IsVisible)
                 {
-                    session.Hide();
+                    session.Hide(keepView: lowered);
                     SetStatus(ZoomStatus.Idle with { IsCaptureExcluded = true });
                 }
 
+                // Also asleep: still images of islands removed or set live meanwhile are freed (each wake passes here).
+                session.PruneIslands(scene?.Set ?? IslandSet.Empty);
+
                 // Not zoomed: sleep without capturing or rendering until the model changes.
+                var sleptAt = Stopwatch.GetTimestamp();
+                _metrics.Active(Stopwatch.GetElapsedTime(_stats.WokeAt, sleptAt).TotalSeconds);
                 Sleep(Timeout.InfiniteTimeSpan);
+                _metrics.Paused(Stopwatch.GetElapsedTime(sleptAt).TotalSeconds);
                 lastFrame = Stopwatch.GetTimestamp();
-                secondStart = lastFrame;
-                frames = 0;
+                _stats.Woke(lastFrame);
                 continue;
             }
 
@@ -148,43 +185,57 @@ internal sealed class MonitorRenderer : IDisposable
             var delta = Math.Min(Stopwatch.GetElapsedTime(lastFrame, now).TotalSeconds, 0.1);
             lastFrame = now;
             animator.Advance(delta, _model.AnimationSeconds);
+            islands = _demand.Islands(animator.Current, userMode, scene); // for the zoom this frame is drawn at
+            if (islands is null)
+            {
+                session.PruneIslands(scene?.Set ?? IslandSet.Empty); // the last still island may just have gone
+            }
 
             // Unzoomed: the whole monitor, no lens or strip.
-            var mode = unzoomed ? ZoomMode.Fullscreen : _model.Mode;
-            var request = new FrameRequest(mode, animator.Current, _model.Lens, _model.Dock, effects,
-                _effects.LocateRequestedAt, _tracking.Snapshot, _tracking.Options, _effects.PointerHiddenByTyping);
-            if (session.RenderFrame(request))
+            var mode = unzoomed ? ZoomMode.Fullscreen : userMode;
+            var request = new FrameRequest(mode, _demand.AnchorMode(mode, unzoomed, overview, lowered), animator.Current,
+                frozen?.Lens ?? _model.Lens, frozen?.Dock ?? _model.Dock, effects,
+                frozen is null ? _effects.LocateRequestedAt : 0, frozen is null ? _tracking.Snapshot : TrackingSnapshot.Empty, _tracking.Options,
+                frozen is null && _effects.PointerHiddenByTyping, // frozen: no locator, marks or pointer, so their news change nothing (G2)
+                windows, windowsFiltered, overview, _model.TargetFor(_deviceName), _models.ViewRequests.PlacementFor(_deviceName),
+                lowered, frozen is null ? _models.Markers.Sample : default, frozen, frozen is { Still: true, StillUnavailable: false }, islands);
+            var wasVisible = session.IsVisible;
+            _stats.Record(session.RenderFrame(request), !wasVisible && session.IsVisible);
+            if (!_models.Milestones.IsComplete) // start timings (M10, secure instance only); shown = a desktop image, not only a pointer
             {
-                frames++;
+                var image = session.IsVisible && !request.OverlayOnly && session.HasImage;
+                _models.Milestones.Observe(session.HasImage, image, image && animator.IsSettled && animator.Current > ZoomLimits.Min);
             }
 
             // Status is published once per second; the per-frame path stays lock-free.
-            if (Stopwatch.GetElapsedTime(secondStart).TotalSeconds >= 1)
+            if (_stats.SecondElapsed(out var frames))
             {
                 SetStatus(new ZoomStatus(session.IsVisible, true, frames, null));
-                frames = 0;
-                secondStart = Stopwatch.GetTimestamp();
             }
+        }
+    }
+
+    /// <summary>Builds device, duplication and overlay as the operation "zoomin.render.pipeline_start".</summary>
+    private RenderSession StartSession()
+    {
+        using var operation = Telemetry.Source.StartActivity("zoomin.render.pipeline_start")?.SetTag(RenderMetrics.MonitorTag, _deviceName);
+        try
+        {
+            return new RenderSession(_pointer, _deviceName, new SnapshotTaker(_models.Snapshots, _deviceName, _log), _models.SmartInvert, _log);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // The type, not the message: driver messages may name paths.
+            operation?.SetStatus(ActivityStatusCode.Error, ex.GetType().Name);
+            throw;
         }
     }
 
     // Waiting on purpose is not a hang: the render watchdog ignores sleeping threads.
     private void Sleep(TimeSpan timeout)
     {
-        _sleeping = true;
-        _wake.WaitOne(timeout);
-        _sleeping = false;
+        _wakeup.Sleep(timeout);
         Volatile.Write(ref _heartbeat, Stopwatch.GetTimestamp());
-    }
-
-    private bool NeedsOverlayUnzoomed(DisplayEffects effects) =>
-        effects.Filter.ChangesColors || effects.Cursor.NeedsOverlayUnzoomed || _effects.PointerHiddenByTyping;
-
-    // A locator request keeps an otherwise idle monitor rendering until the ring is gone.
-    private bool LocatorRequested(DisplayEffects effects)
-    {
-        var at = _effects.LocateRequestedAt;
-        return at != 0 && Stopwatch.GetElapsedTime(at).TotalSeconds < effects.Cursor.LocatorSeconds;
     }
 
     private void SetStatus(ZoomStatus status)

@@ -26,8 +26,10 @@ Lade nur die Dateien, die deine Aufgabe betreffen. Index: [docs/kb/README.md](do
 | SuperNova-Analyse | [docs/kb/supernova-analyse.md](docs/kb/supernova-analyse.md) | du ein Verhalten nachbaust |
 | Testumgebung | [docs/kb/testumgebung.md](docs/kb/testumgebung.md) | du testest oder misst |
 | Build & Tooling | [docs/kb/build-und-tooling.md](docs/kb/build-und-tooling.md) | Build oder Tests nicht laufen |
+| **Telemetrie (Katalog)** | [docs/kb/telemetrie.md](docs/kb/telemetrie.md) | du ein Feature baust – jedes bringt Logs/Abläufe mit |
 | Architekturentscheidungen | [docs/adr/](docs/adr/) | du eine Entscheidung infrage stellst |
 | **Roadmap & Meilensteinpläne** | [docs/plan/README.md](docs/plan/README.md) | du eine Aufgabe beginnst – arbeite im aktuellen Meilenstein, hake erledigte Punkte ab |
+| Detailplan-Vorlage | [docs/plan/detailplan-vorlage.md](docs/plan/detailplan-vorlage.md) | du einen Plan in Pakete zerlegst und Modelle zuweist (§13) |
 
 **Pflege:** Wer etwas Neues lernt (API-Eigenheit, Messwert, Verhaltensbeobachtung),
 schreibt es in die passende KB-Datei. Neue Grundsatzentscheidungen → neues ADR
@@ -78,6 +80,34 @@ ZoomIN.App ──► ZoomIN.Rendering ──► ZoomIN.Core
   (`PhysicalPoint` vs. `LogicalPoint`), nie nackte `int x, int y`.
 - Multi-Monitor ist Pflicht: Logik immer pro Monitor, nie „der Bildschirm“.
 - Mindestversion: Windows 10 2004 (Build 19041).
+
+### 2.5 Telemetrie (ADR-0019)
+- **Jedes Feature** bringt seine Telemetrie mit: Logs über `ILogger<T>` mit
+  `[LoggerMessage]`-Methoden (eine `*Log.cs` je Feature-Ordner, EventId im Bereich des Projekts),
+  Abläufe als `Telemetry.Source.StartActivity("zoomin.<feature>.<vorgang>")`, Messwerte über
+  `Telemetry.Meter`. Alles steht im Katalog [docs/kb/telemetrie.md](docs/kb/telemetrie.md).
+- **Keine Inhalte des Nutzers** in Logs oder Attributen: kein Fenstertitel, Elementname, Text,
+  kein voller Pfad (enthält den Benutzernamen) – nur Prozessname, Fensterklasse,
+  Steuerelementtyp, Rechtecke, Dateinamen eigener Dateien, technische Werte.
+- Im **Render-Loop** nur Metriken mit beim Start angelegten Instrumenten/Tags; keine Logs,
+  keine Activities pro Frame.
+- Vor einem harten Prozessende (`Environment.FailFast`) `Telemetry.FlushBeforeExit()` aufrufen.
+- Startet ZoomIN einen eigenen Prozess, gibt es den Ablauf mit `TraceParentArgument.Append` weiter.
+- Erzwungen durch `TelemetryConventionTests` und den Analyzer CA1848 (nur `[LoggerMessage]`).
+
+### 2.6 Statische Klassen (ADR-0025)
+- `static` nur für Code **ohne Nebenwirkungen**: reine Logik, Konstanten, `[LoggerMessage]`-Klassen
+  und `Telemetry`, Interop, `Program`, DI-Erweiterungen in `Composition/`, reine Texttabellen.
+  Win32-Rückrufe ohne Kontextzeiger (z. B. Low-Level-Hooks) dürfen einen statischen Einsprung
+  haben, der nur an eine Instanz weiterleitet.
+- Alles mit Dateien, Registry, Prozessen, Dialogen, Netz, Umgebungsvariablen, Pfaden, Uhr oder
+  Sprache ist ein **Dienst** (Interface + Implementierung, registriert in der Composition Root).
+  Zeit über `TimeProvider`, Pfade über `IAppFolders`, Sprache über `ILocalizer` (`Text` ist nur
+  die Fassade für XAML).
+- Im Render-Loop Dienste nur als `readonly`-Feld aus dem Konstruktor, nie pro Frame aus dem Container.
+- Die IO-Teile (Dateien, Registry, Prozesse, Umgebung, Netz) erzwingt ein Architekturtest. Er
+  kommt mit M14 Schritt 6, anfangs mit schrumpfender Ausnahmeliste. Dialoge, Uhr und Sprache
+  prüft das Review.
 
 ---
 
@@ -154,6 +184,153 @@ git config core.hooksPath .githooks           # Pre-Commit-Hook aktivieren (einm
 - [ ] `check-file-length.ps1` grün (keine Datei > 300 Zeilen)
 - [ ] Schichtregeln eingehalten (Architekturtests grün)
 - [ ] Hot Path geändert? → Benchmark mit `0 B` Allokation
+- [ ] Telemetrie mitgeliefert (Logs/Abläufe/Messwerte nach 2.5) und im Katalog `docs/kb/telemetrie.md`
 - [ ] Neues Wissen in `docs/kb/`, neue Grundsatzentscheidung als ADR
 - [ ] Overlay-Fenster aus Bildschirmaufnahmen ausgeschlossen
 - [ ] Clean-Room-Regeln eingehalten
+- [ ] Code-Review-Schleife nach Abschnitt 9 ohne offene Befunde durchlaufen
+
+---
+
+## 9. Review, Commit, Push, Merge
+
+1. **Vor jedem Commit ein Code-Review** der gesamten Änderung (z. B. `/code-review`).
+2. **Führt das Review zu Änderungen**, wird danach wieder der **komplette** geänderte Code
+   reviewt – nicht nur die Korrekturen.
+3. Schritt 2 wiederholen, **bis ein Review keine Änderungen mehr ergibt**. Erst dann committen
+   (Build, Tests und `check-file-length.ps1` vorher grün, siehe Abschnitt 8).
+4. **Push** auf den eigenen Feature-Branch ist danach ohne Rückfrage erlaubt.
+5. **Mergen** (in `develop`, `main` oder per PR) nur mit ausdrücklicher Genehmigung des Nutzers.
+
+---
+
+## 10. Selbstständig arbeiten
+
+- **Probleme so weit wie möglich selbst lösen:** reproduzieren, Daten beschaffen (Logs, Traces,
+  Debug-Schnappschuss, Settings), Ursache finden, beheben, testen, prüfen – ohne den Nutzer für
+  Zwischenschritte zu brauchen. Nachfragen nur bei echten Entscheidungen (Produkt, Datenschutz,
+  Grundsatzfragen), nicht für Arbeit, die ein Agent selbst erledigen kann.
+- **Werkzeuge nutzen:** Dateien des installierten ZoomIN (AppData) über das Terminal-Panel in
+  `TestResults/` kopieren; Oberflächen per Computer-Use bedienen, wenn der Nutzer es erlaubt hat.
+- **Adminrechte:** Braucht ein Schritt Administratorrechte (Installation, `Program Files`,
+  Signatur, Dienste), zeigt der Agent den Schritt mit Begründung an, der Nutzer bestätigt ihn
+  (UAC-Abfrage). Nicht darum herumarbeiten und nicht ohne Bestätigung erhöhen.
+- **Was ein Mensch sehen muss** (das Overlay ist aus Aufnahmen ausgenommen): erst den
+  Debug-Schnappschuss nutzen; nur wenn das nicht reicht, den Nutzer um eine Sichtprüfung bitten.
+
+---
+
+## 11. Parallel arbeiten (Zeit sparen)
+
+Bei **jedem** Plan und vor jeder Umsetzung prüfen: Was davon kann gleichzeitig laufen?
+
+### Im Plan
+- Jede Meilensteindatei hat einen Abschnitt **„Parallelisierung“** mit:
+  - **Spuren:** je Spur Inhalt, Branch, Start, worauf sie wartet, EventId-Bereich
+  - einem kleinen Ablaufbild
+  - **Schritt 0:** gemeinsame Bausteine, die mehrere Spuren brauchen. Sie kommen zuerst und
+    nacheinander.
+  - **Exklusiv-Dateien:** gehören genau einer Spur
+  - **Hotspots:** Dateien, die alle Spuren nur ergänzend ändern, etwa Einstellungen, Texte,
+    Kürzel, Telemetrie-Katalog
+  - **Merge-Reihenfolge**
+- Zwei Spuren, die dieselbe Exklusiv-Datei ändern müssen, werden **eine** Spur, die nacheinander
+  arbeitet.
+- **EventId-Bereiche** werden im Plan je Spur vergeben, damit es keine Doppelbelegung gibt.
+
+### In der Umsetzung
+1. **Integrationsbranch** je Meilenstein (`feat/mNN-…` von `develop`). Die steuernde Sitzung
+   setzt dort Schritt 0 um, mit Review-Schleife nach §9.
+2. **Spuren** laufen als Subagenten mit eigenem Worktree (`isolation: worktree`) oder als eigene
+   Sitzungen. Jede Spur:
+   - hat einen eigenen Branch vom Integrationsbranch (`feat/mNN-<id>-…`)
+   - hält Build, Tests, `check-file-length.ps1` und ihre eigene Review-Schleife (§9) ein
+   - committet und pusht nur auf ihren Branch
+   - hakt nur ihre eigene Feature-Datei ab
+   - läuft mit dem Modell und Effort aus dem Detailplan (§13)
+3. **Zusammenführen an einem Strang:** Die steuernde Sitzung mergt die Spuren in der
+   Merge-Reihenfolge in den Integrationsbranch. Nach jedem Merge laufen Build und Tests, Konflikte
+   in Hotspots löst sie dort.
+4. Danach **Gesamt-Review** des ganzen Meilensteins (§9) und Akzeptanzprüfung. Der Merge nach
+   `develop` braucht die Freigabe des Nutzers (§9.5).
+5. Gleichzeitig laufen nur Spuren mit **getrennten Exklusiv-Dateien**. Im Zweifel nacheinander:
+   Ein Merge-Konflikt kostet mehr als die gesparte Zeit.
+6. Spuren des **nächsten** Meilensteins dürfen früher starten, wenn ihre Exklusiv-Dateien frei
+   sind. Gemergt wird trotzdem erst in dessen Integrationsbranch.
+
+---
+
+## 12. Knapp antworten („Caveman“-Stil)
+
+Spart Lesezeit und Tokens. Gilt für **Chat-Antworten** und **Berichte** von Nebensitzungen,
+Spuren und Subagenten.
+
+- Stichworte statt Sätze. Keine Füllwörter, keine Höflichkeitsfloskeln, keine Wiederholung der
+  Aufgabe, kein „Ich werde jetzt …“.
+- Ergebnis zuerst, dann nur, was der Nutzer wissen oder entscheiden muss: Branch, Commit,
+  Testzahlen, offene Punkte, Risiken.
+- Fachbegriffe, Datei- und Branchnamen, Zahlen und Befehle **exakt** lassen – Kürze nie auf Kosten
+  von Genauigkeit.
+- **Nicht** knapp: Code, Kommentare, Commit-Messages, Doku/KB/ADRs und Pläne folgen weiter
+  Abschnitt 5. Warnungen (Datenverlust, Adminrechte, Merge) bleiben vollständige, eindeutige Sätze.
+- **Fragen nie im Caveman-Stil:** Jede Frage an den Nutzer (Rückfrage, Auswahl, Freigabe) samt
+  ihren Antwortoptionen und Erklärungen wird in ganzen, verständlichen Sätzen gestellt.
+
+---
+
+## 13. Detailplan und Modellwahl (Zeit und Tokens sparen)
+
+Vor der Umsetzung eines Meilenstein- oder Feature-Plans wird jeder Punkt **eingeschätzt** und
+in einen **Detailplan** zerlegt. Aus dem Detailplan folgt, **welches Modell** ihn umsetzt.
+Ziel: Teure Modelle denken und prüfen, günstige Modelle führen genau beschriebene Arbeit aus.
+Vorlage: [docs/plan/detailplan-vorlage.md](docs/plan/detailplan-vorlage.md).
+
+### 13.1 Einschätzen
+Die steuernde Sitzung bewertet jeden Aufgabenpunkt (Checkbox der Feature-Datei) nach:
+
+| Kriterium | Frage |
+|---|---|
+| **Umfang** | Wie viele Dateien und Zeilen ändern sich ungefähr? |
+| **Risiko** | Hot Path, Shader, Win32/D3D-Interop, Threads, Sicherheit/Setup, Datenverlust? |
+| **Neuheit** | Gibt es ein Muster im Code, dem man folgen kann, oder ist es neues Terrain? |
+| **Klarheit** | Ist alles entschieden, oder sind noch Designfragen offen? |
+| **Prüfbarkeit** | Belegen Build und Tests das Ergebnis, oder braucht es Messung bzw. Sichtprüfung? |
+
+Ergebnis je Punkt: **Stufe 1–4** (siehe 13.3). Offene Designfragen werden **vor** dem Detailplan
+geklärt (Grilling, Nutzer), nie vom ausführenden Modell nebenbei entschieden.
+
+### 13.2 Detailplan
+- Steht in der Feature-Datei im Abschnitt **„Detailplan“** (bei mehr als etwa 15 Dateien als
+  eigene Datei `docs/plan/features/<id>-detail.md`).
+- Je Arbeitspaket eine Tabelle mit **jeder** Datei:
+  `Datei | neu/ändern | Was genau | Tests | ca. Zeilen`.
+  „Was genau“ nennt Typen, Methoden mit Signatur, betroffene Stellen (Methode oder Zeilen) und
+  das Muster, dem gefolgt wird (z. B. „wie `CaretMarkerGeometry`“).
+- Dazu je Paket: Reihenfolge, EventIds und Telemetrie-Namen, Akzeptanz (welcher Test, welcher
+  Befehl beweist es), **Modell** und **Effort**.
+- Der Detailplan ist so genau, dass ein Modell der zugewiesenen Stufe **ohne eigene
+  Designentscheidung und ohne breite Codesuche** umsetzen kann. Das spart die meisten Tokens:
+  Der Planer liest den Code einmal, die Ausführenden lesen nur ihre Dateien.
+- Pakete gleicher Stufe, die dieselben Dateien berühren, werden **ein** Paket. Mehrere kleine
+  Pakete gleicher Stufe kommen in **einen** Subagenten (jeder Start kostet Kontext).
+- Arbeit, die nur wenige Werkzeugaufrufe braucht, erledigt die steuernde Sitzung selbst.
+
+### 13.3 Modellwahl
+Stand 2026-11, Kosten grob relativ: Haiku ≈ 1/20 Sonnet, Sonnet ≈ ½ Opus, Opus ≈ ½ Fable.
+
+| Stufe | Modell | Effort | Typische Arbeit |
+|---|---|---|---|
+| 1 – mechanisch | **Haiku** | `low` | Code suchen und zusammenfassen (Explore), Texte DE/EN, Telemetrie-Katalog, KB- und Plan-Häkchen, `[LoggerMessage]`-Methoden nach Vorgabe, Umbenennen, Datei aufteilen nach genauer Vorgabe |
+| 2 – Standard nach Plan | **Sonnet** | `medium` | Core-Logik mit Tests nach Detailplan, Settings/Mapping/Profilfelder, UI-Karten nach bestehendem Muster, WARP-Tests, Build- und Testfehler beheben |
+| 3 – anspruchsvoll | **Opus** | `high` | Detailplan erstellen, Hot Path und Benchmarks, Shader, Interop, Threads, Capture/Overlay, Setup/Sichere Bildschirme, unklare Fehlersuche, Integration und Merge-Konflikte, **jedes Review nach §9** |
+| 4 – Grenzfall | **Fable** | `high` | Spikes mit offenem Ausgang, ADR-Entwürfe mit großer Tragweite, Probleme, an denen Opus gescheitert ist |
+
+- **Steuernde Sitzung** und **Reviews** laufen mindestens auf Opus.
+- Subagenten bekommen `model` und `effort` aus dem Detailplan (Agent-Tool: `model`, `effort`);
+  Spuren nach §11 übernehmen das Modell ihres anspruchsvollsten Pakets oder werden in Pakete
+  verschiedener Stufen geteilt.
+- **Eskalation:** Scheitert ein Modell zweimal am selben Paket (Build oder Tests rot) oder stößt es
+  auf eine Entscheidung, die der Plan nicht trifft, hört es auf und meldet das. Die steuernde
+  Sitzung ergänzt den Plan oder vergibt das Paket eine Stufe höher. Kein Raten, kein Umgehen.
+- **Rückblick:** Nach dem Meilenstein trägt die steuernde Sitzung in der Meilensteindatei ein,
+  welche Einstufungen zu niedrig oder zu hoch waren, damit spätere Pläne besser schätzen.

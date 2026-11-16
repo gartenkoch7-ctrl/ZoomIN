@@ -1,5 +1,10 @@
 using ZoomIN.App.Zoom;
+using ZoomIN.Core.Filters;
+using ZoomIN.Core.Islands;
 using ZoomIN.Core.Settings;
+using ZoomIN.Core.Tracking;
+using ZoomIN.Core.WindowDrag;
+using ZoomIN.Core.Zoom;
 using ZoomIN.Rendering.RenderLoop;
 
 namespace ZoomIN.App.Settings;
@@ -16,20 +21,31 @@ public sealed class SettingsService : IDisposable
     private readonly RenderModels _models;
     private readonly ISettingsStore _store;
     private readonly IProfileStore _profiles;
+    private readonly WindowDragZoom _windowDrag;
     private readonly Timer _saveTimer;
     private readonly Lock _gate = new();
-    private AppSettings _shared;
 
-    public SettingsService(AppSettings initial, RenderModels models, ISettingsStore store, IProfileStore profiles)
+    // One save at a time: the debounce timer, an immediate save (zoom on/off, deleting a scheme) and
+    // Dispose would otherwise write the same ".tmp" file of the active profile together (M18 review).
+    private readonly Lock _saveGate = new();
+    private AppSettings _shared;
+    private bool _savedZoomOn;
+
+    public SettingsService(AppSettings initial, RenderModels models, ISettingsStore store, IProfileStore profiles, WindowDragZoom windowDrag)
     {
         _shared = initial;
+        _savedZoomOn = initial.ZoomOn;
         _models = models;
         _store = store;
         _profiles = profiles;
+        _windowDrag = windowDrag;
         _saveTimer = new Timer(_ => SaveNow());
-        _models.Zoom.Changed += ScheduleSave;
+        _models.Zoom.Changed += OnZoomChanged;
         _models.Effects.Changed += ScheduleSave;
         _models.Tracking.Changed += ScheduleSave;
+        _models.Windows.OptionsChanged += ScheduleSave;
+        _windowDrag.OptionsChanged += ScheduleSave;
+        _models.Islands.Saved += ScheduleSave;
     }
 
     /// <summary>Raised after shared settings changed (language, hotkeys, …), on the caller's thread.</summary>
@@ -48,9 +64,14 @@ public sealed class SettingsService : IDisposable
                 shared = _shared;
             }
 
-            var settings = ZoomModelFactory.Apply(shared, _models.Zoom);
-            settings = EffectsFactory.Apply(settings, _models.Effects);
-            return TrackingFactory.Apply(settings, _models.Tracking);
+            var settings = ZoomMapping.Apply(shared, _models.Zoom);
+            settings = EffectsMapping.Apply(settings, _models.Effects);
+            settings = TrackingMapping.Apply(settings, _models.Tracking);
+            settings = WindowDragMapping.Apply(settings, _windowDrag);
+            settings = IslandMapping.Apply(settings, _models.Islands);
+
+            // Shared by all profiles (ADR-0020): ApplyDisplay never takes it from a profile.
+            return settings with { WindowFilter = _models.Windows.Options };
         }
     }
 
@@ -68,25 +89,48 @@ public sealed class SettingsService : IDisposable
     /// <summary>Applies the display part of <paramref name="profile"/> to the running models.</summary>
     public void ApplyDisplay(AppSettings profile)
     {
-        ZoomModelFactory.ApplyTo(_models.Zoom, profile);
-        _models.Effects.Replace(EffectsFactory.Effects(profile));
-        _models.Tracking.SetOptions(TrackingFactory.Options(profile));
+        ZoomMapping.ApplyTo(_models.Zoom, profile);
+        _models.Effects.Replace(EffectsMapping.Effects(profile));
+        _models.Tracking.SetOptions(TrackingMapping.Options(profile));
+        _windowDrag.Options = WindowDragMapping.Options(profile);
+        IslandMapping.ApplyTo(_models.Islands, profile);
     }
 
     public void SaveNow()
     {
-        var settings = Current;
-        _store.Save(settings);
-        _profiles.Save(settings.ActiveProfile, settings);
+        lock (_saveGate)
+        {
+            var settings = Current;
+            Volatile.Write(ref _savedZoomOn, settings.ZoomOn);
+            _store.Save(settings);
+            _profiles.Save(settings.ActiveProfile, settings);
+        }
     }
 
     public void Dispose()
     {
-        _models.Zoom.Changed -= ScheduleSave;
+        _models.Zoom.Changed -= OnZoomChanged;
         _models.Effects.Changed -= ScheduleSave;
         _models.Tracking.Changed -= ScheduleSave;
+        _models.Windows.OptionsChanged -= ScheduleSave;
+        _windowDrag.OptionsChanged -= ScheduleSave;
+        _models.Islands.Saved -= ScheduleSave;
         _saveTimer.Dispose();
         SaveNow();
+    }
+
+    // The secure desktop starts with the saved on/off state (ADR-0016): Win+L right after
+    // Strg+Alt+Z must not wait for the debounce.
+    private void OnZoomChanged()
+    {
+        if (ZoomMapping.SavedOn(_models.Zoom) != Volatile.Read(ref _savedZoomOn))
+        {
+            SaveNow();
+        }
+        else
+        {
+            ScheduleSave();
+        }
     }
 
     // Wheel zooming changes the level many times per second; write the files once it settles.

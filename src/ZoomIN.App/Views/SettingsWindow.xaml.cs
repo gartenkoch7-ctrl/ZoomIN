@@ -9,24 +9,29 @@ namespace ZoomIN.App.Views;
 
 /// <summary>
 /// Settings window (M7). Closing hides it to the tray; only "Exit" in the tray closes it for real.
-/// Pages get the <see cref="PageContext"/> as navigation parameter.
+/// Pages get <see cref="PageServices"/> as navigation parameter.
 /// </summary>
 public sealed partial class SettingsWindow : Window
 {
-    private readonly PageContext _context;
+    private readonly PageServices _pages;
     private bool _exiting;
     private Type _currentPage;
 
-    public SettingsWindow(PageContext context)
+    /// <param name="startPage">Page to open with (e.g. from a notice); ignored while the first-run assistant runs.</param>
+    public SettingsWindow(PageServices pages, bool firstRunCompleted, Type? startPage = null)
     {
-        _context = context;
+        _pages = pages;
         InitializeComponent();
         AppWindow.Resize(new SizeInt32(980, 720));
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "ZoomIN.ico"));
+
+        // The system title bar of a WinUI 3 window stays light even in dark mode unless told to
+        // follow the Windows app mode; the content already does.
+        AppWindow.TitleBar.PreferredTheme = TitleBarTheme.UseDefaultAppMode;
         AppWindow.Closing += OnClosing;
         Text.LanguageChanged += OnLanguageChanged;
 
-        _currentPage = context.Settings.Current.FirstRunCompleted ? typeof(OverviewPage) : typeof(WelcomePage);
+        _currentPage = firstRunCompleted ? startPage ?? typeof(OverviewPage) : typeof(WelcomePage);
         BuildNavigation();
     }
 
@@ -74,16 +79,17 @@ public sealed partial class SettingsWindow : Window
         Add(Text.NavHotkeys, "", typeof(HotkeysPage));
         Add(Text.NavProfiles, "", typeof(ProfilesPage));
         Add(Text.NavGeneral, "", typeof(GeneralPage));
+        Add(Text.Get("NavUpdates"), "", typeof(UpdatesPage));
         Add(Text.NavInfo, "", typeof(InfoPage));
 
-        var current = Navigation.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => (Type)i.Tag == _currentPage);
+        var current = Find(_currentPage);
         if (current is not null)
         {
             Navigation.SelectedItem = current;
         }
 
         // Always navigate again so the page texts follow a language change.
-        ContentFrame.Navigate(_currentPage, _context);
+        ContentFrame.Navigate(_currentPage, _pages);
     }
 
     private void Add(string text, string glyph, Type page) => Navigation.MenuItems.Add(new NavigationViewItem
@@ -98,7 +104,7 @@ public sealed partial class SettingsWindow : Window
         if (args.SelectedItem is NavigationViewItem { Tag: Type page } && page != ContentFrame.CurrentSourcePageType)
         {
             _currentPage = page;
-            ContentFrame.Navigate(page, _context);
+            ContentFrame.Navigate(page, _pages);
         }
     }
 
@@ -108,4 +114,16 @@ public sealed partial class SettingsWindow : Window
         _currentPage = typeof(OverviewPage);
         BuildNavigation();
     }
+
+    /// <summary>Selects a page of the menu, e.g. from a notice that points to it; navigates once.</summary>
+    internal void ShowPage(Type page)
+    {
+        if (Find(page) is { } item)
+        {
+            Navigation.SelectedItem = item;
+        }
+    }
+
+    private NavigationViewItem? Find(Type page) =>
+        Navigation.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => (Type)i.Tag == page);
 }

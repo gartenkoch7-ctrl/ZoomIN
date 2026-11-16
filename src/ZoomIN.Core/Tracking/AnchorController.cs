@@ -1,13 +1,16 @@
 using System.Diagnostics;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Viewport;
+using static ZoomIN.Core.Tracking.AnchorGeometry;
 
 namespace ZoomIN.Core.Tracking;
 
 /// <summary>
 /// Decides per monitor and frame which point the view is anchored to: mouse, keyboard focus or
-/// text caret (M6). Moves only when the target is not visible yet, glides there, and hands the
-/// view back to the mouse once it moves. Owned by one render thread; no allocations.
+/// text caret (M6). A new focus glides to the middle of the view; the caret pushes the view once
+/// it reaches the margin. Hands the view back to the mouse once it moves. Owned by one render
+/// thread; no allocations. How the view follows the mouse: <see cref="MouseFollowTarget"/> (M17 A1).
+/// A <see cref="ViewPlacement"/> puts the mouse view at a requested point (M17 B2).
 /// </summary>
 public sealed class AnchorController
 {
@@ -17,15 +20,21 @@ public sealed class AnchorController
     // Focus changes this soon after a mouse movement were caused by the mouse (e.g. a click).
     private const double MouseIntentSeconds = 0.5;
 
-    // Focus rectangles covering more of the monitor (whole windows/documents) say nothing useful.
-    private const double MaxFocusShare = 0.5;
-
     private const double SettleDistance = 0.5;
 
     private bool _initialized;
+    private PhysicalPoint? _startAt;
     private PhysicalPoint _anchor;
     private PhysicalPoint _target;
+    private readonly PlacementTracker _placement = new();
+    private double _lastZoom;
+    private ZoomMode _lastMode;
+
+    // Desktop point the view centres on while following focus/caret. Kept instead of a fixpoint
+    // because the fixpoint that centres it depends on the zoom, which may still be animating.
+    private PhysicalPoint _center;
     private bool _gliding;
+    private bool _wasHeld;
     private long _lastTick;
     private PhysicalPoint _lastMouse;
     private long _lastMouseMoveAt;
@@ -48,25 +57,57 @@ public sealed class AnchorController
         _lastTick = input.Now;
 
         TrackMouse(input);
+        Place(input);
         if (input.Options.Enabled)
         {
             TrackKeyboard(input);
         }
 
         Move(input, delta);
+        _lastZoom = input.Zoom;
+
+        // A mode change while the mouse is on another monitor, or while a placed view holds, is
+        // news once that is over.
+        if ((input.MouseInside || Source != AnchorSource.Mouse) && !_wasHeld)
+        {
+            _lastMode = input.Mode;
+        }
+
         return _anchor;
     }
 
+    /// <summary>
+    /// Where the view starts if this controller has not run yet and the mouse is elsewhere, instead of
+    /// the monitor's middle: a pipeline rebuilt while its monitor was frozen (G2) goes on from the frozen view.
+    /// </summary>
+    public PhysicalPoint StartAt(PhysicalPoint anchor) => (_startAt = anchor).Value;
+
     private void Initialize(in AnchorInput input)
     {
-        _anchor = input.MouseInside ? input.Mouse : Center(input.Monitor);
+        _anchor = input.MouseInside ? input.Mouse : _startAt ?? Center(input.Monitor);
+        _startAt = null;
         _lastMouse = input.Mouse;
         _lastTick = input.Now;
+        _lastZoom = input.Zoom;
+        _lastMode = input.Mode;
 
-        // Focus and caret from before this monitor started rendering are not news.
+        // Focus, caret and placements from before this monitor started rendering are not news.
         _seenFocusAt = input.Tracking.FocusChangedAt;
         _seenCaretAt = input.Tracking.CaretChangedAt;
+        _placement.Initialize(input.Placement.At);
         _initialized = true;
+    }
+
+    private void Place(in AnchorInput input)
+    {
+        // Only the margin keeps a placed view; elsewhere the mouse decides at once (ViewPlacement).
+        if (_placement.TryTake(input, out var anchor) && PlacementTracker.Applies(input))
+        {
+            // The mouse view starts there; with the margin it stays until the pointer pushes it.
+            Switch(AnchorSource.Mouse);
+            _anchor = _target = anchor;
+            _gliding = false;
+        }
     }
 
     private void TrackMouse(in AnchorInput input)
@@ -80,6 +121,7 @@ public sealed class AnchorController
         if (Source != AnchorSource.Mouse && input.MouseInside && Distance(input.Mouse, _mouseAtSwitch) > MouseReturnPixels)
         {
             Source = AnchorSource.Mouse;
+            AnchorMetrics.Switched(AnchorSource.Mouse);
             _gliding = true;
         }
     }
@@ -100,33 +142,60 @@ public sealed class AnchorController
         // The caret wins over the focus: while typing, the caret is where the user looks.
         if (caretNews && input.Options.Caret && tracking.Caret is { } caret && input.Monitor.Contains(Center(caret)))
         {
-            Follow(AnchorSource.Caret, caret, input.Options.CaretMargin, input);
+            FollowCaret(caret, input);
         }
         else if (focusNews && input.Options.Focus && tracking.Focus is { } focus && Usable(focus, input.Monitor))
         {
-            Follow(AnchorSource.Focus, focus, 0, input);
+            // Every new focus goes to the middle, even if it was already visible near the edge.
+            Switch(AnchorSource.Focus);
+            _center = Center(focus);
+            _gliding = true;
         }
     }
 
-    private void Follow(AnchorSource source, PhysicalRect rect, double margin, in AnchorInput input)
+    private void FollowCaret(PhysicalRect caret, in AnchorInput input)
     {
-        Source = source;
-        _mouseAtSwitch = _lastMouse;
+        Switch(AnchorSource.Caret);
 
         // Where the view is heading, not where it is in the middle of a glide.
         var heading = _gliding ? _target : _anchor;
         var visible = ModeGeometry.Compute(input.Mode, input.Monitor, heading, input.Zoom, input.Lens, input.Dock).Source;
-        if (Inside(rect, Shrink(visible, margin)))
+        var inner = Shrink(visible, input.Options.CaretMargin);
+        if (Inside(caret, inner))
         {
+            if (!_gliding)
+            {
+                // Stay exactly where the view is (the mouse may have left it off-centre).
+                _center = Center(visible);
+            }
+
             return;
         }
 
-        _target = Center(rect);
+        _center = CaretCenter(caret, visible, inner);
         _gliding = true;
+    }
+
+    private void Switch(AnchorSource source)
+    {
+        // Remember where the mouse was when the keyboard took over, not at every caret step.
+        if (Source == AnchorSource.Mouse)
+        {
+            _mouseAtSwitch = _lastMouse;
+        }
+
+        if (Source != source)
+        {
+            AnchorMetrics.Switched(source);
+        }
+
+        Source = source;
     }
 
     private void Move(in AnchorInput input, double delta)
     {
+        // A placed view only holds while the mouse drives this monitor.
+        _wasHeld &= Source == AnchorSource.Mouse && input.MouseInside;
         if (Source == AnchorSource.Mouse)
         {
             if (!input.MouseInside)
@@ -136,17 +205,31 @@ public sealed class AnchorController
                 return;
             }
 
-            _target = input.Mouse;
-            if (!_gliding)
-            {
-                // Exactly at the mouse: the fixpoint that makes clicks hit (ADR-0003).
-                _anchor = input.Mouse;
-                return;
-            }
+            // Back from focus/caret the margin starts from where the view is heading, so nothing
+            // jumps; a zoom change during that glide re-anchors nothing (the pointer moves anyway).
+            // With the margin, a placed view keeps its anchor until the zoom has glided there.
+            // A new mode (e.g. the lens) opens at the pointer, as the old anchor means another view.
+            // After a placed view the margin may have to bring the pointer back: glide, not jump.
+            var held = _placement.HeldThisFrame && PlacementTracker.Applies(input);
+            var heading = input.Mode != _lastMode && !held ? input.Mouse : _gliding ? _target : _anchor;
+            var previousZoom = _gliding ? input.Zoom : _lastZoom;
+            _gliding |= _wasHeld && !held;
+            _wasHeld = held;
+            var target = held
+                ? heading
+                : MouseFollowTarget.For(input, heading, previousZoom);
+            AnchorMetrics.MouseStep(input, _lastMouseMoveAt == input.Now && target != _target, _lastZoom);
+            _target = target;
+        }
+        else
+        {
+            // Recomputed every frame: a zoom change must keep focus/caret where it is in the view.
+            _target = ViewCentering.AnchorFor(input.Mode, input.Monitor, _center, input.Zoom, input.Lens, input.Dock);
         }
 
         if (!_gliding)
         {
+            _anchor = _target;
             return;
         }
 
@@ -161,19 +244,6 @@ public sealed class AnchorController
         _anchor = _target;
         _gliding = false;
     }
-
-    private static bool Usable(PhysicalRect focus, PhysicalRect monitor) =>
-        monitor.Contains(Center(focus)) && focus.Width * focus.Height <= monitor.Width * monitor.Height * MaxFocusShare;
-
-    private static bool Inside(PhysicalRect inner, PhysicalRect outer) =>
-        inner.X >= outer.X && inner.Right <= outer.Right && inner.Y >= outer.Y && inner.Bottom <= outer.Bottom;
-
-    private static PhysicalRect Shrink(PhysicalRect r, double margin) =>
-        new(r.X + (r.Width * margin), r.Y + (r.Height * margin), r.Width * (1 - (2 * margin)), r.Height * (1 - (2 * margin)));
-
-    private static PhysicalPoint Center(PhysicalRect r) => new(r.X + (r.Width / 2), r.Y + (r.Height / 2));
-
-    private static double Distance(PhysicalPoint a, PhysicalPoint b) => Math.Sqrt(((a.X - b.X) * (a.X - b.X)) + ((a.Y - b.Y) * (a.Y - b.Y)));
 
     private static double Seconds(long ticks) => ticks / (double)Stopwatch.Frequency;
 }

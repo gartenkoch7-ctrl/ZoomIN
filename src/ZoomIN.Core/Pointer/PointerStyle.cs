@@ -54,6 +54,9 @@ public sealed record PointerStyle
 
     public double CrosshairOpacity { get; init; } = 0.8;
 
+    /// <summary>When the crosshair is shown while it is on (E1).</summary>
+    public Tracking.ShowCondition CrosshairShow { get; init; }
+
     public bool HideWhileTyping { get; init; }
 
     /// <summary>

@@ -8,4 +8,9 @@
   <ItemGroup>
     <InternalsVisibleTo Include="ZoomIN.Core.Tests" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Interfaces only, no IO (ADR-0019); logs are written by Platform's telemetry host. -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
 </Project>

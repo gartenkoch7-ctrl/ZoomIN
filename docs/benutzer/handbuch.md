@@ -1,11 +1,37 @@
 # ZoomIN – Benutzerhandbuch
 
 ## Installation
-- **Installer** (`ZoomIN-…-setup.exe`): installiert für Ihr Benutzerkonto, ohne Admin-Rechte,
-  mit Startmenü-Eintrag. Optional „Mit Windows starten“.
-- **ZIP**: Entpacken, `ZoomIN.exe` starten. Nichts wird installiert.
+- **Setup** (`ZoomIN-Setup.exe` aus dem GitHub-Release): Ein Assistent führt in fünf Schritten durch
+  die Installation – Sprache, Kanal und Version, Einstellungen, Installation, Fertig. Er lädt die
+  gewählte Version herunter, prüft Prüfsumme und Signatur und installiert sie nach
+  `C:\Program Files\ZoomIN`. Dafür fragt Windows einmal nach Administratorrechten.
+- Nur die installierte Fassung darf **über anderen Fenstern** wie dem Startmenü, dem Lautstärke- oder
+  Netzwerk-Menü vergrößern, und nur sie läuft auf Anmelde- und Sperrbildschirm.
+- Einstellungen im Assistenten (alle vorausgewählt): **Mit Windows starten**, **Auch auf Anmelde- und
+  Sperrbildschirm**, Verknüpfung auf dem Desktop, regelmäßig nach Updates suchen.
+- Eine ältere Installation (auch der frühere Installer) wird dabei ersetzt; Einstellungen bleiben.
+- **ZIP**: Entpacken, `ZoomIN.exe` starten. Nichts wird installiert. Diese Fassung vergrößert nicht
+  über Startmenü und Systemmenüs und zeigt dazu einen Hinweis mit Knopf, der das Setup startet.
 - Voraussetzung: Windows 10 Version 2004 oder neuer, 64 Bit.
-- Beim ersten Start führt ein **Assistent** in fünf Schritten durch das Wichtigste.
+- Beim ersten Start führt ein **Assistent** in fünf Schritten durch das Wichtigste (entfällt, wenn
+  das Setup schon alles eingerichtet hat).
+
+## Updates
+- **Einstellungen → Updates** zeigt die installierte Version und die verfügbaren Versionen.
+- **Kanal:** „Stabil“ zeigt nur fertige Versionen. „Experimentell“ zeigt zusätzlich
+  Release-Kandidaten und Entwicklerversionen – ungetestet, sie können Fehler haben.
+- **Aktualisieren** oder **Zurückgehen** auf eine ältere Version: ein Klick, dann die Windows-Abfrage
+  bestätigen. ZoomIN startet danach neu. Vor dem Zurückgehen werden Einstellungen und Profile gesichert.
+- Ist ein Download beschädigt oder nicht von ZoomIN signiert, wird er verworfen und nichts geändert.
+- Mit „regelmäßig nach Updates suchen“ prüft ZoomIN beim Start und einmal täglich und meldet eine neue
+  Version im Infobereich.
+
+## Deinstallation
+- **Windows-Einstellungen → Apps → Installierte Apps → ZoomIN → Deinstallieren.**
+- ZoomIN fragt, ob Ihre Einstellungen und Profile bleiben sollen. Danach fragt Windows nach
+  Administratorrechten.
+- Entfernt werden das Programm, Startmenü- und Desktop-Verknüpfung, der automatische Start (für alle
+  Benutzerkonten) und die Anmeldung beim Anmelde- und Sperrbildschirm.
 
 ZoomIN läuft danach im **Infobereich** (neben der Uhr, ggf. unter „^“):
 - **Klick** auf das Lupen-Symbol: Einstellungen
@@ -47,6 +73,11 @@ Filter: Invertiert · Invertiert mit Farbton · Graustufen · Graustufen inverti
 Gelb auf Schwarz · Schwarz auf Gelb · Weiß auf Blau. Kontrast und Helligkeit stellen Sie unter
 **Farbfilter** ein, die Glättung unter **Zoom & Modi**.
 
+Mit „Eigener Farbfilter je Monitor“ (standardmäßig an) merkt sich jeder Monitor, ob sein Filter
+an ist und welcher; die Kürzel wirken dann auf den Monitor unter der Maus. Auf der Seite
+**Farbfilter** wählen Sie den Monitor in einer Liste aus; „Standard“ gilt für alle Monitore ohne
+eigenen Filter. Kontrast und Helligkeit gelten immer für alle Monitore.
+
 Auf der Seite **Mauszeiger** (mit Live-Vorschau) stellen Sie ein: „Windows-Zeigereinstellungen
 überschreiben“ (ZoomIN zeichnet dann immer den Windows-Standardzeiger in eigener Größe und Farbe,
 Zeigergröße und -farbe aus den Windows-Einstellungen gelten nicht), Größe ohne Zoom (1–4×),
@@ -66,6 +97,14 @@ Zoom zurück zur Maus. **Strg+Alt+T** schaltet das Folgen an und aus.
 Ein Profil speichert die Darstellung (Modus, Stufen, Filter, Zeiger, Fokus-Verfolgung).
 Tastenkürzel gelten für alle Profile. **Strg+Alt+P** wechselt zum nächsten Profil. Profile
 lassen sich exportieren und auf einem anderen Rechner importieren.
+
+## Anmelde- und Sperrbildschirm
+- Mit „Auch auf Anmelde- und Sperrbildschirm“ (Einstellungen → Allgemein) vergrößert ZoomIN auch die
+  Anmeldung, die Sperre (Win+L), Strg+Alt+Entf und Windows-Abfragen nach Administratorrechten – mit
+  Ihrer Zoomstufe und Ihrem Farbfilter.
+- Dort fehlen Inseln, Einfrieren und Monitorwechsel. **Strg+Alt+Umschalt+Z** schaltet ZoomIN dort bis
+  zum nächsten Bildschirmwechsel aus.
+- Den Schalter umzustellen fragt nach Administratorrechten.
 
 ## Bildschirmfreigabe
 Teilen Sie Ihren Bildschirm in Teams, Zoom, Discord oder im Browser, sehen andere den normalen

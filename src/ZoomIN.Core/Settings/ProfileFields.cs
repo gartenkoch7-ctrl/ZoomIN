@@ -25,9 +25,13 @@ public static class ProfileFields
         DockFraction = profile.DockFraction,
         FilterEnabled = profile.FilterEnabled,
         ColorFilter = profile.ColorFilter,
+        PerMonitorFilter = profile.PerMonitorFilter,
+        MonitorFilters = profile.MonitorFilters,
         Contrast = profile.Contrast,
         Brightness = profile.Brightness,
         Smoothing = profile.Smoothing,
+        TextSharpness = profile.TextSharpness,
+        TextBold = profile.TextBold,
         CursorMaxScale = profile.CursorMaxScale,
         CursorUnzoomedScale = profile.CursorUnzoomedScale,
         CursorOverrideWindows = profile.CursorOverrideWindows,
@@ -54,8 +58,24 @@ public static class ProfileFields
         CaretMargin = profile.CaretMargin,
         FocusFrame = profile.FocusFrame,
         CaretMarker = profile.CaretMarker,
+        MouseFollow = profile.MouseFollow,
+        MouseMargin = profile.MouseMargin,
+        CaretMarkerShape = profile.CaretMarkerShape,
+        CaretMarkerColor = profile.CaretMarkerColor,
+        CaretMarkerThickness = profile.CaretMarkerThickness,
+        CrosshairShow = profile.CrosshairShow,
+        CaretMarkerShow = profile.CaretMarkerShow,
+        FocusFrameShow = profile.FocusFrameShow,
         AnimationMilliseconds = profile.AnimationMilliseconds,
+        WindowDrag = profile.WindowDrag,
+        Islands = profile.Islands,
     };
+
+    /// <summary>
+    /// What a profile file holds: everything but the own colour schemes (M18). Their definitions are
+    /// shared and live in settings.json only, so profile files carry no stale copies.
+    /// </summary>
+    public static AppSettings ForProfileFile(AppSettings settings) => settings with { CustomSchemes = [] };
 
     /// <summary>Profile names are file names: letters, digits, space, dash and underscore only.</summary>
     public static bool IsValidName(string name) =>

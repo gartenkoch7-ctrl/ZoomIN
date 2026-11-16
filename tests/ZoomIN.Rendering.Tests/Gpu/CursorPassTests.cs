@@ -51,6 +51,37 @@ public sealed class CursorPassTests
         Assert.Equal(new Bgra(0, 0, 0, 0), pixels.At(20, 4));
     }
 
+    [Theory]
+    [InlineData(false, false, 10, 10)]
+    [InlineData(false, true, 10, 20)]
+    [InlineData(true, false, 20, 10)]
+    [InlineData(true, true, 20, 20)]
+    public void Mirroring_MovesTheTopLeftQuadrant_InsideTheRimMargin(bool flipU, bool flipV, int whiteX, int whiteY)
+    {
+        using var gpu = GpuDevice.CreateWarp();
+        using var target = RenderTarget.Create(gpu.Device, Size);
+        using var pass = new CursorPass(gpu.Device);
+
+        // 16×16 image, only its top-left 8×8 quadrant opaque white.
+        var pixels = new byte[16 * 16 * 4];
+        for (var y = 0; y < 8; y++)
+        {
+            Array.Fill(pixels, (byte)255, y * 16 * 4, 8 * 4);
+        }
+
+        using var pointer = PointerTexture.Create(gpu.Device, new CursorShape(1, 16, 16, 0, 0, pixels));
+        gpu.Context.ClearRenderTargetView(target.View, new Color4(0, 0, 0, 0));
+
+        // Viewport 32×32 with a 25 % margin on every side (room for a rim): the image covers 8..24.
+        pass.DrawPointer(gpu.Context, target.View, pointer, 0, 0, Size, Size,
+            CursorConstants.ForPointer(0.25f, 0.25f, 16, 16, 0, default, default, flipU, flipV));
+        var result = target.ReadBack(gpu.Device, gpu.Context);
+
+        Assert.Equal(new Bgra(255, 255, 255, 255), result.At(whiteX, whiteY));
+        Assert.Equal(0, result.At(30 - whiteX, 30 - whiteY).A);
+        Assert.Equal(0, result.At(4, 4).A); // the margin stays empty
+    }
+
     // A 16×16 opaque white pointer at (0,0), no rim, scaled 1:1.
     private static PixelBuffer DrawWhitePointer(FrameColor tint)
     {

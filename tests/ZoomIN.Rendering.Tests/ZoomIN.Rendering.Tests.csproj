@@ -14,5 +14,7 @@
   <ItemGroup>
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="Vortice.Direct3D11" />
+    <!-- The real SDK listening: render-loop measurements must not allocate (ADR-0019). -->
+    <PackageReference Include="OpenTelemetry" />
   </ItemGroup>
 </Project>

@@ -2,7 +2,7 @@ using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
 using Windows.Win32.UI.WindowsAndMessaging;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Hotkeys;
 
 namespace ZoomIN.Platform.Input;
@@ -19,20 +19,19 @@ public sealed unsafe class Win32WheelHook : IMouseWheelHook
     private static Win32WheelHook? s_active;
     private static readonly HOOKPROC s_proc = HookProc;
 
-    private readonly ILog _log;
-    private Thread? _thread;
-    private uint _threadId;
+    private readonly ILogger _log;
+    private LowLevelHookThread? _hooks;
     private HotkeyModifiers _modifiers;
     private Action<double>? _onNotches;
 
-    public Win32WheelHook(ILog log)
+    public Win32WheelHook(ILogger<Win32WheelHook> log)
     {
         _log = log;
     }
 
     public void Start(HotkeyModifiers modifiers, Action<double> onNotches)
     {
-        if (_thread is not null)
+        if (_hooks is not null)
         {
             return;
         }
@@ -40,40 +39,22 @@ public sealed unsafe class Win32WheelHook : IMouseWheelHook
         _modifiers = modifiers;
         _onNotches = onNotches;
         s_active = this;
-        using var started = new ManualResetEventSlim();
-        _thread = new Thread(() => Run(started)) { IsBackground = true, Name = "ZoomIN Wheel Hook" };
-        _thread.Start();
-        started.Wait();
+        _hooks = new LowLevelHookThread("ZoomIN Wheel Hook", (WINDOWS_HOOK_ID.WH_MOUSE_LL, s_proc));
+        if (!_hooks.AllInstalled)
+        {
+            _log.WheelHookUnavailable();
+        }
     }
 
     public void Dispose()
     {
-        if (_thread is null)
+        if (_hooks is null)
         {
             return;
         }
 
-        PInvoke.PostThreadMessage(_threadId, PInvoke.WM_QUIT, default, default);
-        _thread.Join(TimeSpan.FromSeconds(2));
+        _hooks.Dispose();
         s_active = null;
-    }
-
-    private void Run(ManualResetEventSlim started)
-    {
-        _threadId = PInvoke.GetCurrentThreadId();
-        using var module = PInvoke.GetModuleHandle((string?)null);
-        using var hook = PInvoke.SetWindowsHookEx(WINDOWS_HOOK_ID.WH_MOUSE_LL, s_proc, module, 0);
-        if (hook.IsInvalid)
-        {
-            _log.Error("Installing the mouse wheel hook failed; Ctrl+wheel zoom is unavailable.");
-        }
-
-        started.Set();
-        while (PInvoke.GetMessage(out var msg, HWND.Null, 0, 0) > 0)
-        {
-            PInvoke.TranslateMessage(msg);
-            PInvoke.DispatchMessage(msg);
-        }
     }
 
     private static LRESULT HookProc(int code, WPARAM wParam, LPARAM lParam)
@@ -109,7 +90,7 @@ public sealed unsafe class Win32WheelHook : IMouseWheelHook
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             // An exception escaping a hook callback would crash the process.
-            _log.Error("Wheel zoom handler failed", ex);
+            _log.WheelHandlerFailed(ex);
         }
     }
 }

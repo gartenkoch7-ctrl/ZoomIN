@@ -10,9 +10,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZoomIN.Core\ZoomIN.Core.csproj" />
+    <InternalsVisibleTo Include="ZoomIN.Platform.Tests" />
+    <InternalsVisibleTo Include="ZoomIN.TrackingProbe" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Windows.CsWin32" PrivateAssets="all" />
+    <!-- Telemetry host (ADR-0019): SDK, logging and the OTLP exporter, which is only loaded with an address. -->
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="OpenTelemetry" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
   </ItemGroup>
 </Project>

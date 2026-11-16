@@ -10,11 +10,28 @@
         <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Style="{StaticResource CardStackStyle}">
             <TextBlock Style="{StaticResource PageTitleStyle}" Text="{x:Bind loc:Text.Get('NavFilter')}" />
 
+            <c:SettingCard Description="{x:Bind loc:Text.Get('FilterPerMonitor.Desc')}" Glyph="&#xE7F4;" Header="{x:Bind loc:Text.Get('FilterPerMonitor')}">
+                <ToggleSwitch IsOn="{x:Bind Vm.PerMonitor, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard
+                Description="{x:Bind loc:Text.Get('FilterMonitor.Desc')}"
+                Glyph="&#xE7F8;"
+                Header="{x:Bind loc:Text.Get('FilterMonitor')}"
+                Visibility="{x:Bind Vm.PerMonitor, Mode=OneWay}">
+                <ComboBox MinWidth="240" ItemsSource="{x:Bind Vm.MonitorNames}" SelectedIndex="{x:Bind Vm.MonitorIndex, Mode=TwoWay}" />
+            </c:SettingCard>
             <c:SettingCard Description="{x:Bind loc:Text.Get('FilterOn.Desc')}" Glyph="&#xE790;" Header="{x:Bind loc:Text.Get('FilterOn')}">
                 <ToggleSwitch IsOn="{x:Bind Vm.FilterOn, Mode=TwoWay}" />
             </c:SettingCard>
             <c:SettingCard Description="{x:Bind loc:Text.Get('FilterKind.Desc')}" Glyph="&#xE7B3;" Header="{x:Bind loc:Text.Get('FilterKind')}">
                 <ComboBox MinWidth="240" ItemsSource="{x:Bind Vm.FilterNames}" SelectedIndex="{x:Bind Vm.FilterIndex, Mode=TwoWay}" />
+            </c:SettingCard>
+
+            <c:SettingCard Description="{x:Bind loc:Text.Get('Schemes.Card.Desc')}" Glyph="&#xE790;" Header="{x:Bind loc:Text.Get('Schemes.Card')}">
+                <Button Click="OnCustomSchemes" Content="{x:Bind loc:Text.Get('Schemes.Open')}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('WinFilter.Card.Desc')}" Glyph="&#xE737;" Header="{x:Bind loc:Text.Get('WinFilter.Title')}">
+                <Button Click="OnWindowFilter" Content="{x:Bind loc:Text.Get('WinFilter.Open')}" />
             </c:SettingCard>
 
             <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('FilterAdjust')}" />
@@ -23,6 +40,9 @@
             </c:SettingCard>
             <c:SettingCard Description="{x:Bind loc:Text.Get('FilterBrightness.Desc')}" Glyph="&#xE706;" Header="{x:Bind loc:Text.Get('FilterBrightness')}">
                 <c:ValueSlider Format="{}{0:+0;-0;0} %" Maximum="50" Minimum="-50" Step="5" Value="{x:Bind Vm.Brightness, Mode=TwoWay}" />
+            </c:SettingCard>
+            <c:SettingCard Description="{x:Bind loc:Text.Get('FilterProtectPhotos.Desc')}" Glyph="&#xEB9F;" Header="{x:Bind loc:Text.Get('FilterProtectPhotos')}">
+                <ToggleSwitch IsOn="{x:Bind Vm.ProtectPhotos, Mode=TwoWay}" />
             </c:SettingCard>
             <c:SettingCard Glyph="&#xE777;" Header="{x:Bind loc:Text.Get('FilterReset')}">
                 <Button Click="OnReset" Content="{x:Bind loc:Text.Get('Reset')}" />

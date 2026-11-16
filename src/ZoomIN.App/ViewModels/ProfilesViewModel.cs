@@ -1,18 +1,18 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ZoomIN.App.Localization;
-using ZoomIN.App.Views;
+using ZoomIN.App.Settings;
 
 namespace ZoomIN.App.ViewModels;
 
 /// <summary>Profile list and commands (M7). File dialogs are handled by the page.</summary>
 public sealed partial class ProfilesViewModel : ObservableObject
 {
-    private readonly PageContext _context;
+    private readonly ProfileService _profiles;
 
-    public ProfilesViewModel(PageContext context)
+    public ProfilesViewModel(ProfileService profiles)
     {
-        _context = context;
+        _profiles = profiles;
         Refresh();
     }
 
@@ -30,13 +30,13 @@ public sealed partial class ProfilesViewModel : ObservableObject
     [ObservableProperty]
     public partial string Message { get; set; } = string.Empty;
 
-    public void Create() => Report(_context.Profiles.CreateFromCurrent(NewName.Trim()));
+    public void Create() => Report(_profiles.CreateFromCurrent(NewName.Trim()));
 
     public void Activate()
     {
         if (Selected is { } name)
         {
-            _context.Profiles.SwitchTo(name);
+            _profiles.SwitchTo(name);
             Refresh();
         }
     }
@@ -45,13 +45,13 @@ public sealed partial class ProfilesViewModel : ObservableObject
     {
         if (Selected is { } name)
         {
-            Report(_context.Profiles.Rename(name, NewName.Trim()));
+            Report(_profiles.Rename(name, NewName.Trim()));
         }
     }
 
     public void Delete()
     {
-        if (Selected is { } name && _context.Profiles.Delete(name))
+        if (Selected is { } name && _profiles.Delete(name))
         {
             Refresh();
         }
@@ -61,13 +61,13 @@ public sealed partial class ProfilesViewModel : ObservableObject
     {
         if (Selected is { } name)
         {
-            _context.Profiles.Export(name, filePath);
+            _profiles.Export(name, filePath);
         }
     }
 
     public void Import(string filePath)
     {
-        Message = _context.Profiles.Import(filePath) is null ? Text.Get("ProfilesInvalidName") : string.Empty;
+        Message = _profiles.Import(filePath) is null ? Text.Get("ProfilesInvalidName") : string.Empty;
         Refresh();
     }
 
@@ -84,12 +84,12 @@ public sealed partial class ProfilesViewModel : ObservableObject
     private void Refresh()
     {
         Names.Clear();
-        foreach (var name in _context.Profiles.Names())
+        foreach (var name in _profiles.Names())
         {
             Names.Add(name);
         }
 
-        Active = _context.Profiles.Active;
+        Active = _profiles.Active;
         Selected = Active;
     }
 }

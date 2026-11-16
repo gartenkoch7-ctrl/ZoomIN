@@ -10,15 +10,13 @@ using ZoomIN.Core.Pointer;
 namespace ZoomIN.App.Views.Controls;
 
 /// <summary>
-/// Colour choice for the pointer page: six preset swatches (pointer page decision) and a free
+/// Colour choice for the pointer page and the caret marker: six preset swatches (pointer page decision) and a free
 /// colour picker. <see cref="Color"/> is "#RRGGBB", as stored in the settings.
 /// </summary>
 public sealed partial class ColorChooser : UserControl
 {
     public static readonly DependencyProperty ColorProperty = DependencyProperty.Register(
         nameof(Color), typeof(string), typeof(ColorChooser), new PropertyMetadata("#FFFFFF", OnColorChanged));
-
-    private static readonly string[] s_presetNames = ["Yellow", "Green", "Cyan", "Magenta", "White", "Black"];
 
     private readonly List<(RgbColor Color, ToggleButton Button)> _swatches = [];
     private readonly ColorPicker _picker = new() { IsAlphaEnabled = false, IsMoreButtonVisible = true };
@@ -31,7 +29,7 @@ public sealed partial class ColorChooser : UserControl
         for (var i = 0; i < RgbColor.Presets.Count; i++)
         {
             var color = RgbColor.Presets[i];
-            var name = Text.Get("Color." + s_presetNames[i]);
+            var name = Text.Get("Color." + RgbColor.PresetName(color));
             var button = new ToggleButton
             {
                 Width = 32,

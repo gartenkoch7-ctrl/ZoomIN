@@ -15,7 +15,7 @@ public sealed partial class PointerPage : Page
     // The large preview shows the pointer as it looks at this zoom level.
     private const double PreviewZoom = 3;
 
-    private PageContext? _context;
+    private PageServices? _services;
     private CursorShape? _arrow;
 
     public PointerPage()
@@ -25,10 +25,15 @@ public sealed partial class PointerPage : Page
 
     public PointerViewModel? Vm { get; private set; }
 
+    /// <summary>Mouse buffer and axis lock (A6); global, so "Reset" leaves it alone.</summary>
+    public PointerConstraintViewModel? Constraint { get; private set; }
+
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        _context = (PageContext)e.Parameter;
-        _arrow = _context.CursorShapes.Load(_context.CursorShapes.ArrowHandle());
+        _services = (PageServices)e.Parameter;
+        Constraint = _services.Create<PointerConstraintViewModel>();
+        var shapes = _services.Get<ICursorShapeSource>();
+        _arrow = shapes.Load(shapes.ArrowHandle());
         CreateViewModel();
     }
 
@@ -47,7 +52,7 @@ public sealed partial class PointerPage : Page
             Vm.StyleChanged -= RenderPreview;
         }
 
-        Vm = new PointerViewModel(_context!);
+        Vm = _services!.Create<PointerViewModel>();
         Vm.StyleChanged += RenderPreview;
         Bindings.Update();
         RenderPreview();
@@ -70,7 +75,7 @@ public sealed partial class PointerPage : Page
     // Overriding Windows: the standard arrow, loaded sharp for exactly this size.
     private WriteableBitmap? Bitmap(PointerStyle style, double scale)
     {
-        var shapes = _context!.CursorShapes;
+        var shapes = _services!.Get<ICursorShapeSource>();
         var shape = style.OverrideWindows ? shapes.LoadStandard(shapes.ArrowHandle(), scale) : _arrow;
         if (shape is null)
         {

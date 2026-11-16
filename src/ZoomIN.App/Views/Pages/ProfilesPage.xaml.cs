@@ -2,13 +2,14 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.Storage.Pickers;
+using ZoomIN.App.Lifecycle;
 using ZoomIN.App.ViewModels;
 
 namespace ZoomIN.App.Views.Pages;
 
 public sealed partial class ProfilesPage : Page
 {
-    private PageContext? _context;
+    private PageServices? _services;
 
     public ProfilesPage()
     {
@@ -19,8 +20,8 @@ public sealed partial class ProfilesPage : Page
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        _context = (PageContext)e.Parameter;
-        Vm = new ProfilesViewModel(_context);
+        _services = (PageServices)e.Parameter;
+        Vm = _services.Create<ProfilesViewModel>();
         Bindings.Update();
     }
 
@@ -61,5 +62,5 @@ public sealed partial class ProfilesPage : Page
 
     // Unpackaged WinUI apps must tell file pickers which window owns them.
     private void InitializeWithWindow(object picker) =>
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, _context!.WindowHandle());
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, _services!.Get<IShellActions>().SettingsWindowHandle);
 }

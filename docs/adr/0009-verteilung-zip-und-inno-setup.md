@@ -1,6 +1,6 @@
 # ADR-0009: Verteilung als ZIP und Inno-Setup-Installer, nur x64
 
-- **Status:** Angenommen
+- **Status:** Ersetzt durch 0014
 - **Datum:** 2026-10-30
 
 ## Entscheidung

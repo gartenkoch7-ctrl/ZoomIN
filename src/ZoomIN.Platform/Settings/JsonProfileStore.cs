@@ -1,5 +1,6 @@
+using ZoomIN.Core.Folders;
 using System.Text.Json;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Settings;
 
 namespace ZoomIN.Platform.Settings;
@@ -7,15 +8,15 @@ namespace ZoomIN.Platform.Settings;
 /// <summary>Profiles as JSON files in %AppData%\ZoomIN\profiles\ (ADR-0004, M7).</summary>
 public sealed class JsonProfileStore : IProfileStore
 {
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly string _directory;
 
-    public JsonProfileStore(ILog log)
-        : this(log, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ZoomIN", "profiles"))
+    public JsonProfileStore(ILogger<JsonProfileStore> log, IAppFolders folders)
+        : this(log, folders.Profiles())
     {
     }
 
-    public JsonProfileStore(ILog log, string directory)
+    public JsonProfileStore(ILogger<JsonProfileStore> log, string directory)
     {
         _log = log;
         _directory = directory;
@@ -37,7 +38,8 @@ public sealed class JsonProfileStore : IProfileStore
 
         Directory.CreateDirectory(_directory);
         var temp = PathOf(name) + ".tmp";
-        File.WriteAllText(temp, JsonSerializer.Serialize(settings, SettingsJsonContext.Default.AppSettings));
+        // Every profile file, imports included, leaves out the shared own schemes (M18).
+        File.WriteAllText(temp, JsonSerializer.Serialize(ProfileFields.ForProfileFile(settings), SettingsJsonContext.Default.AppSettings));
         File.Move(temp, PathOf(name), overwrite: true);
     }
 
@@ -90,7 +92,7 @@ public sealed class JsonProfileStore : IProfileStore
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
-            _log.Warn($"Profile '{path}' is unreadable: {ex.Message}");
+            _log.ProfileUnreadable(Path.GetFileName(path), ex.Message);
             return null;
         }
     }

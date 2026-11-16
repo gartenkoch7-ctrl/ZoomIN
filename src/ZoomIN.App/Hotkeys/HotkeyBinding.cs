@@ -4,7 +4,11 @@ using ZoomIN.Core.Settings;
 namespace ZoomIN.App.Hotkeys;
 
 /// <summary>One editable shortcut: its label key and where it lives in <see cref="AppSettings"/>.</summary>
-public sealed record HotkeyBinding(string TextKey, Func<AppSettings, HotkeyGesture> Get, Func<AppSettings, HotkeyGesture, AppSettings> Set)
+/// <param name="Optional">May stay unassigned (Del removes it), like the window filter shortcut.</param>
+/// <param name="HintKey">Text key of an explanation shown under the name, or null.</param>
+public sealed record HotkeyBinding(
+    string TextKey, Func<AppSettings, HotkeyGesture> Get, Func<AppSettings, HotkeyGesture, AppSettings> Set, bool Optional = false,
+    string? HintKey = null)
 {
     public static IReadOnlyList<HotkeyBinding> All { get; } =
     [
@@ -20,5 +24,12 @@ public sealed record HotkeyBinding(string TextKey, Func<AppSettings, HotkeyGestu
         new("Act.Crosshair", s => s.CrosshairHotkey, (s, g) => s with { CrosshairHotkey = g }),
         new("Act.Tracking", s => s.TrackingHotkey, (s, g) => s with { TrackingHotkey = g }),
         new("Act.Profile", s => s.ProfileHotkey, (s, g) => s with { ProfileHotkey = g }),
+        new("Act.WindowFilter", s => s.WindowFilterHotkey, (s, g) => s with { WindowFilterHotkey = g }, Optional: true),
+        new("Act.Overview", s => s.OverviewHotkey, (s, g) => s with { OverviewHotkey = g }, Optional: true, HintKey: "Act.Overview.Hint"),
+        new("Act.Islands", s => s.IslandsHotkey, (s, g) => s with { IslandsHotkey = g }, Optional: true),
+        new("Act.IslandEdit", s => s.IslandEditHotkey, (s, g) => s with { IslandEditHotkey = g }, Optional: true, HintKey: "Act.IslandEdit.Hint"),
+        new("Act.FreezeMonitor", s => s.FreezeMonitorHotkey, (s, g) => s with { FreezeMonitorHotkey = g }, Optional: true,
+            HintKey: "Act.FreezeMonitor.Hint"),
+        new("Act.NextMonitor", s => s.NextMonitorHotkey, (s, g) => s with { NextMonitorHotkey = g }, Optional: true),
     ];
 }

@@ -6,7 +6,10 @@ namespace ZoomIN.App.Hotkeys;
 /// <summary>Readable shortcut names in the UI language, e.g. "Strg+Alt+Z" / "Ctrl+Alt+Z".</summary>
 public static class HotkeyFormat
 {
-    public static string Describe(HotkeyGesture gesture)
+    public static string Describe(HotkeyGesture gesture) =>
+        gesture.VirtualKey == 0 ? Text.Get("HotkeyNone") : DescribeAssigned(gesture);
+
+    private static string DescribeAssigned(HotkeyGesture gesture)
     {
         var parts = new List<string>();
         if (gesture.Modifiers.HasFlag(HotkeyModifiers.Control))

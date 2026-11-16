@@ -41,6 +41,11 @@ IUIAutomationElement
 GetGUIThreadInfo
 GUITHREADINFO
 ClientToScreen
+GetTitleBarInfo
+TITLEBARINFO
+GetWindowDpiAwarenessContext
+SetThreadDpiAwarenessContext
+LogicalToPhysicalPointForPerMonitorDPI
 
 // Shell/Win32TrayIcon
 Shell_NotifyIcon
@@ -99,3 +104,150 @@ LoadCursor
 DestroyCursor
 GetDpiForSystem
 IDC_ARROW
+
+// Updates/AuthenticodeVerifier
+WinVerifyTrust
+WINTRUST_DATA
+WINTRUST_FILE_INFO
+WINTRUST_ACTION_GENERIC_VERIFY_V2
+
+// Shell/MessageDialog
+MessageBox
+
+// SecureDesktop/GuardedFileReader, SecureDesktop/SessionUserFolders
+GetFinalPathNameByHandle
+GetFileInformationByHandle
+GetFileType
+ProcessIdToSessionId
+WTSQueryUserToken
+SHGetKnownFolderPath
+FOLDERID_RoamingAppData
+CoTaskMemFree
+
+// SecureDesktop/SessionUserToken
+OpenProcess
+OpenProcessToken
+
+// SecureDesktop/EaseOfAccessNotifier
+SendInput
+INPUT
+
+// Lifecycle/Win32UiAccessProbe
+GetTokenInformation
+
+// Automation/UiaTextCaret, Automation/MsaaCaret, Automation/ChromiumAccessibility
+IUIAutomationTextPattern
+IUIAutomationTextPattern2
+IUIAutomationTextRange
+IUIAutomationTextRangeArray
+AccessibleObjectFromWindow
+IAccessible
+IServiceProvider
+CHILDID_SELF
+OBJECT_IDENTIFIER
+UIA_PATTERN_ID
+UIA_CONTROLTYPE_ID
+SafeArrayGetLBound
+SafeArrayGetUBound
+SafeArrayGetElement
+SafeArrayDestroy
+GetClassName
+FindWindowEx
+GetAncestor
+GetForegroundWindow
+GetWindowThreadProcessId
+
+// Shell/FileReveal
+SHParseDisplayName
+SHOpenFolderAndSelectItems
+ILFree
+
+// WindowFilters/Win32WindowFilterSource, WindowFilters/WindowEnumerator, WindowFilters/ScreenSampler
+SetWinEventHook
+UnhookWinEvent
+EnumWindows
+IsWindowVisible
+IsIconic
+IsWindow
+GetWindowLong
+GetWindow
+GetWindowRect
+DwmGetWindowAttribute
+DWMWINDOWATTRIBUTE
+QueryFullProcessImageName
+CloseHandle
+SetTimer
+KillTimer
+WM_TIMER
+CreateCompatibleDC
+DeleteDC
+CreateDIBSection
+SelectObject
+StretchBlt
+SetStretchBltMode
+SetBrushOrgEx
+BITMAPINFO
+GetCurrentProcessId
+
+// PointerFence/Win32FenceNative, Win32FenceHook, Win32FenceWatcher, Win32PointerMover (M19)
+ClipCursor
+GetClipCursor
+SetCursorPos
+WTSRegisterSessionNotification
+WTSUnRegisterSessionNotification
+NOTIFY_FOR_THIS_SESSION
+WM_WTSSESSION_CHANGE
+WTS_SESSION_UNLOCK
+WTS_CONSOLE_CONNECT
+WTS_REMOTE_CONNECT
+WM_DISPLAYCHANGE
+EVENT_SYSTEM_DESKTOPSWITCH
+WINEVENT_OUTOFCONTEXT
+WNDCLASSEXW
+
+// Tests: solid test windows (WindowFilters tests)
+GetStockObject
+UnregisterClass
+UpdateWindow
+
+// Shell/UiaAnnouncer (overview announcement, M17 B2)
+UiaHostProviderFromHwnd
+UiaRaiseNotificationEvent
+UiaClientsAreListening
+IRawElementProviderSimple
+NotificationKind
+NotificationProcessing
+
+// WindowDrag/WindowDragWatcher (G1: zoom while moving windows)
+SendMessageTimeout
+WM_NCHITTEST
+PhysicalToLogicalPointForPerMonitorDPI
+SystemParametersInfo
+IsZoomed
+GetWindowPlacement
+WINDOWPLACEMENT
+
+// Input/IslandEditCapture
+WM_MBUTTONUP
+WM_XBUTTONDOWN
+WM_XBUTTONUP
+WM_MOUSEHWHEEL
+
+// SecureDesktop/Win32SecureDesktopProbe (M10 checks), SecureDesktop/SecureLogCopy
+GetThreadDesktop
+GetUserObjectInformation
+GetWindowDisplayAffinity
+IsProcessInJob
+WaitForSingleObject
+GetCurrentProcess
+CreateFile
+// Lifecycle/LaunchOriginProbe, Lifecycle/JobBreakaway (M10 A1: leaving the Ease of Access job)
+QueryInformationJobObject
+JOBOBJECT_BASIC_LIMIT_INFORMATION
+CreateToolhelp32Snapshot
+Process32FirstW
+Process32NextW
+PROCESSENTRY32W
+CreateProcess
+OpenInputDesktop
+CloseDesktop

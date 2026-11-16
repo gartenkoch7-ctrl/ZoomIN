@@ -1,8 +1,12 @@
 using Vortice.DXGI;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Filters;
+using ZoomIN.Core.Overview;
 using ZoomIN.Core.Zoom;
 using ZoomIN.Rendering.Capture;
+using ZoomIN.Rendering.Schemes;
+using ZoomIN.Rendering.TextEnhance;
 
 namespace ZoomIN.Rendering.RenderLoop;
 
@@ -23,23 +27,32 @@ public sealed class ZoomEngine : IZoomOutput
     private readonly ZoomModel _model;
     private readonly EffectsModel _effects;
     private readonly PointerServices _pointer;
-    private readonly ILog _log;
+    private readonly ILogger<ZoomEngine> _log;
+    private readonly SchemePaletteWatch _schemes;
+    private readonly EnhanceWatch _enhance;
     private readonly Lock _gate = new();
     private MonitorRenderer[] _renderers = [];
     private int _rebuildPending;
     private bool _started;
     private bool _disposed;
 
-    public ZoomEngine(RenderModels models, PointerServices pointerServices, ILog log)
+    public ZoomEngine(RenderModels models, PointerServices pointerServices, ILogger<ZoomEngine> log)
     {
         _models = models;
         _model = models.Zoom;
         _effects = models.Effects;
         _pointer = pointerServices;
         _log = log;
+        _schemes = new SchemePaletteWatch(_effects, log);
+        _enhance = new EnhanceWatch(_effects, log);
         _model.Changed += Wake;
+        _model.Temporary.Changed += Wake;
         _effects.Changed += Wake;
         _effects.Signaled += Wake;
+        _models.Windows.RegionsChanged += Wake;
+        _models.Islands.Changed += Wake;
+        _models.Overview.Started += OnOverview;
+        _models.Overview.Ended += OnOverview;
         _watchdog = new Timer(_ => CheckForHangs(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
@@ -75,9 +88,16 @@ public sealed class ZoomEngine : IZoomOutput
     public void Dispose()
     {
         _watchdog.Dispose();
+        _schemes.Dispose();
+        _enhance.Dispose();
         _model.Changed -= Wake;
+        _model.Temporary.Changed -= Wake;
         _effects.Changed -= Wake;
         _effects.Signaled -= Wake;
+        _models.Windows.RegionsChanged -= Wake;
+        _models.Islands.Changed -= Wake;
+        _models.Overview.Started -= OnOverview;
+        _models.Overview.Ended -= OnOverview;
         lock (_gate)
         {
             _disposed = true;
@@ -93,9 +113,15 @@ public sealed class ZoomEngine : IZoomOutput
         }
     }
 
+    // The frame appears or goes away even when no zoom level changes (e.g. after a cancel).
+    private void OnOverview<T>(T _) => Wake();
+
     /// <summary>Called from a render thread; the rebuild runs elsewhere so that thread can end.</summary>
     private void RequestRebuild()
     {
+        // The overview running now ends with the rebuild (its monitor may be gone); one the user
+        // starts after this point stays. Its handlers take locks, so not on the render thread.
+        var overview = _models.Overview.Current;
         if (Interlocked.Exchange(ref _rebuildPending, 1) == 1)
         {
             return;
@@ -103,6 +129,7 @@ public sealed class ZoomEngine : IZoomOutput
 
         _ = Task.Run(async () =>
         {
+            CancelOverview(overview);
             await Task.Delay(SettleDelay).ConfigureAwait(false);
             lock (_gate)
             {
@@ -118,13 +145,32 @@ public sealed class ZoomEngine : IZoomOutput
         });
     }
 
+    private void CancelOverview(OverviewSession? overview)
+    {
+        if (overview is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _models.Overview.Cancel(overview);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _log.OverviewCancelFailed(ex, overview.MonitorId);
+        }
+    }
+
     private void StartRenderers()
     {
+        using var operation = Telemetry.Source.StartActivity("zoomin.render.rebuild");
         using var factory = DXGI.CreateDXGIFactory1<IDXGIFactory1>();
         var names = MonitorOutput.AttachedDeviceNames(factory);
-        _log.Info($"Monitors: {string.Join(", ", names)}");
+        _log.Monitors(names);
 
         var renderers = names.Select(name => new MonitorRenderer(name, _models, _pointer, _log, RequestRebuild)).ToArray();
+        operation?.SetTag("zoomin.monitors", renderers.Length);
         foreach (var renderer in renderers)
         {
             renderer.Start();
@@ -144,7 +190,8 @@ public sealed class ZoomEngine : IZoomOutput
             {
                 // A thread stuck in the driver cannot be stopped, and its overlay may still cover
                 // the screen. End the process; the watchdog cleans up and restarts ZoomIN (ADR-0007).
-                _log.Error("A render thread does not stop; restarting ZoomIN via the watchdog.");
+                _log.RenderThreadStuck();
+                Telemetry.FlushBeforeExit();
                 Environment.FailFast("ZoomIN render thread hung");
             }
         }
@@ -156,7 +203,7 @@ public sealed class ZoomEngine : IZoomOutput
         {
             if (renderer.IsHung(HangLimit))
             {
-                _log.Error($"Render thread without progress for over {HangLimit.TotalSeconds:0} s; rebuilding the zoom pipeline.");
+                _log.RenderThreadHung(HangLimit.TotalSeconds);
                 RequestRebuild();
                 return;
             }

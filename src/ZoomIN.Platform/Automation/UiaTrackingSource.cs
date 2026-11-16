@@ -1,18 +1,15 @@
 using System.Diagnostics;
-using System.Drawing;
-using System.Runtime.InteropServices;
 using Windows.Win32;
 using Windows.Win32.System.Com;
 using Windows.Win32.UI.Accessibility;
-using Windows.Win32.UI.WindowsAndMessaging;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Viewport;
 
 namespace ZoomIN.Platform.Automation;
 
 /// <summary>
-/// Polls keyboard focus (UI Automation) and the text caret (GetGUIThreadInfo) about 30 times per
+/// Polls keyboard focus and text caret (see <see cref="FocusReader"/>) about 30 times per
 /// second on its own thread. Polling instead of event callbacks needs no COM callback objects and
 /// a hanging application can only delay this thread, never the zoom (M6).
 /// </summary>
@@ -20,11 +17,11 @@ public sealed unsafe class UiaTrackingSource : ITrackingSource
 {
     private static readonly TimeSpan Interval = TimeSpan.FromMilliseconds(33);
 
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly ManualResetEventSlim _stop = new();
     private Thread? _thread;
 
-    public UiaTrackingSource(ILog log)
+    public UiaTrackingSource(ILogger<UiaTrackingSource> log)
     {
         _log = log;
     }
@@ -50,95 +47,82 @@ public sealed unsafe class UiaTrackingSource : ITrackingSource
 
     private void Run(TrackingModel model)
     {
-        var automation = CreateAutomation();
-        PhysicalRect? focus = null;
-        PhysicalRect? caret = null;
+        using var reader = CreateReader();
+        var telemetry = new TrackingTelemetry(_log);
+        var last = new FocusReading(null, null, CaretEstimated: false);
+        PhysicalRect? seenCaret = null;
         long focusAt = 0;
         long caretAt = 0;
 
         while (!_stop.Wait(Interval))
         {
-            var newFocus = automation is null ? null : ReadFocus(automation);
-            var newCaret = ReadCaret();
-            if (newFocus == focus && newCaret == caret)
+            var readStart = Stopwatch.GetTimestamp();
+            var next = Read(reader, telemetry);
+            if (reader is not null)
+            {
+                telemetry.Observe(reader.LastProcessId, reader.LastSource, Stopwatch.GetElapsedTime(readStart).TotalMilliseconds);
+            }
+
+            // Same spot from another source (blinking system caret vs. line-high UIA range): keep
+            // the shape that is shown, so the caret bar does not flicker (CaretMotion).
+            if (next.Caret is { } c && last.Caret is { } shown && CaretMotion.SamePlace(c, shown))
+            {
+                next = next with { Caret = shown };
+            }
+
+            if (next == last)
             {
                 continue;
             }
 
             var now = Stopwatch.GetTimestamp();
-            if (newFocus != focus && newFocus is not null)
+            if (next.Focus != last.Focus && next.Focus is not null)
             {
                 focusAt = now;
             }
 
-            if (newCaret != caret && newCaret is not null)
+            // Only a caret that moved is news; one that reappears where it was (blinking) is not,
+            // or it would pull the view back from the mouse every blink.
+            if (next.Caret is { } moved && (seenCaret is not { } seen || !CaretMotion.SamePlace(moved, seen)))
             {
                 caretAt = now;
             }
 
-            (focus, caret) = (newFocus, newCaret);
-            model.Publish(new TrackingSnapshot(focus, focusAt, caret, caretAt));
-        }
-
-        if (automation is not null)
-        {
-            Marshal.ReleaseComObject(automation);
+            seenCaret = next.Caret ?? seenCaret;
+            last = next;
+            model.Publish(new TrackingSnapshot(next.Focus, focusAt, next.Caret, caretAt, next.CaretEstimated));
         }
     }
 
-    private IUIAutomation? CreateAutomation()
+    private static FocusReading Read(FocusReader? reader, TrackingTelemetry telemetry)
     {
-        try
+        if (reader is not null)
         {
-            return (IUIAutomation)new CUIAutomation();
-        }
-        catch (COMException ex)
-        {
-            _log.Error("UI Automation is unavailable; focus tracking is off.", ex);
-            return null;
-        }
-    }
-
-    private static PhysicalRect? ReadFocus(IUIAutomation automation)
-    {
-        try
-        {
-            var element = automation.GetFocusedElement();
             try
             {
-                var r = element.CurrentBoundingRectangle;
-                return r.right > r.left && r.bottom > r.top
-                    ? new PhysicalRect(r.left, r.top, r.right - r.left, r.bottom - r.top)
-                    : null;
+                return reader.Read();
             }
-            finally
+            catch (Exception ex) when (ex is not OutOfMemoryException)
             {
-                Marshal.ReleaseComObject(element);
+                // Readings go into other applications; an exception escaping this thread would end
+                // ZoomIN, and the watchdog restart would meet the same window again.
+                telemetry.ReadFailed(ex);
             }
         }
-        catch (Exception ex) when (ex is COMException or InvalidCastException)
-        {
-            // Focus in a window that does not answer (or just closed): no information this time.
-            return null;
-        }
+
+        return new FocusReading(null, GuiThreadCaret.Read(out _), CaretEstimated: false);
     }
 
-    private static PhysicalRect? ReadCaret()
+    private FocusReader? CreateReader()
     {
-        var info = new GUITHREADINFO { cbSize = (uint)sizeof(GUITHREADINFO) };
-        if (!PInvoke.GetGUIThreadInfo(0, ref info) || info.hwndCaret.IsNull)
+        try
         {
+            return new FocusReader((IUIAutomation)new CUIAutomation());
+        }
+        catch (Exception ex) when (ComFailure.IsAnswer(ex))
+        {
+            _log.AutomationUnavailable(ex);
             return null;
         }
-
-        var r = info.rcCaret;
-        var topLeft = new Point(r.left, r.top);
-        if (!PInvoke.ClientToScreen(info.hwndCaret, ref topLeft))
-        {
-            return null;
-        }
-
-        // Some applications report a zero-width caret.
-        return new PhysicalRect(topLeft.X, topLeft.Y, Math.Max(r.right - r.left, 1), Math.Max(r.bottom - r.top, 1));
     }
 }

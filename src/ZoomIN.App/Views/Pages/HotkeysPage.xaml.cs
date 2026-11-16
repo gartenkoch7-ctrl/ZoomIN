@@ -23,7 +23,7 @@ public sealed partial class HotkeysPage : Page
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        Vm = new HotkeysViewModel((PageContext)e.Parameter);
+        Vm = ((PageServices)e.Parameter).Create<HotkeysViewModel>();
         Vm.PropertyChanged += (_, _) => Bindings.Update();
         Bindings.Update();
     }

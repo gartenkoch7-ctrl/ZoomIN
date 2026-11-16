@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tests of the app's composition and flows (M14 step 11). No WinUI window is created here. -->
+  <PropertyGroup>
+    <TargetFramework>$(ZoomInWindowsTfm)</TargetFramework>
+    <SupportedOSPlatformVersion>$(ZoomInMinWindows)</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- The app is a self-contained exe; the tests only load its types and never start it. -->
+    <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
+    <!-- The Windows App SDK would inject its start-up initializers here too; they clash with the
+         app's own (visible through InternalsVisibleTo), and no WinUI runs in these tests. -->
+    <WindowsAppSdkBootstrapInitialize>false</WindowsAppSdkBootstrapInitialize>
+    <WindowsAppSdkUndockedRegFreeWinRTInitialize>false</WindowsAppSdkUndockedRegFreeWinRTInitialize>
+    <WindowsAppSdkDeploymentManagerInitialize>false</WindowsAppSdkDeploymentManagerInitialize>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ZoomIN.App\ZoomIN.App.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+</Project>

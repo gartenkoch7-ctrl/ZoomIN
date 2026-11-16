@@ -1,5 +1,6 @@
 // Magnified mouse pointer (optionally tinted or inverted) with contrast rim, the pointer
-// locator ring, and filled or hollow rectangles (focus frame, caret marker, crosshair).
+// locator ring, filled or hollow rectangles (focus frame, caret marker, crosshair) and the caret
+// wedges (E2).
 // Drawn with premultiplied alpha blending on top of the magnified image.
 
 cbuffer CursorConstants : register(b0)
@@ -75,6 +76,15 @@ float4 PSRect(VertexOutput input) : SV_Target
 {
     float2 edge = min(input.Uv, 1 - input.Uv);
     return (edge.x < TexelSize.x || edge.y < TexelSize.y) ? RingColor : 0;
+}
+
+// Caret wedge (E2): a triangle with its wide edge at the top and the tip at the bottom centre.
+// InnerOffset/InnerScale mirror it like the pointer, so the wedge below the caret points up.
+float4 PSWedge(VertexOutput input) : SV_Target
+{
+    float2 uv = (input.Uv - InnerOffset) / InnerScale;
+    float d = (1 - uv.y) - abs(uv.x - 0.5) * 2; // > 0 inside, 0 on the slanted edges
+    return RingColor * smoothstep(0, fwidth(d), d);
 }
 
 float4 PSRing(VertexOutput input) : SV_Target

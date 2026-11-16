@@ -1,0 +1,123 @@
+name: Build release assets
+
+# Shared by release.yml (tags) and develop.yml (every push to develop), ADR-0014.
+# Builds the portable ZIP and the UIAccess package, lets SignPath sign the UIAccess build and
+# writes checksums.txt. Without SignPath (secret SIGNPATH_API_TOKEN missing) nothing is signed,
+# no package is made and the caller does not publish: an unsigned UIAccess exe never starts.
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+    outputs:
+      signed:
+        description: "'true' when the release assets are complete and may be published."
+        value: ${{ jobs.build.outputs.signed }}
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+    outputs:
+      signed: ${{ steps.package.outputs.signed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Normalize version
+        shell: pwsh
+        # Passed through env, never pasted into the script: a tag name could contain quotes.
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        # Tags arrive as v1.0.0; assets and dotnet need 1.0.0.
+        run: |
+          $version = $env:INPUT_VERSION.TrimStart('v')
+          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$') {
+            throw "Not a release version: $env:INPUT_VERSION"
+          }
+          "ZOOMIN_VERSION=$version" >> $env:GITHUB_ENV
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Check file length (max 300 lines)
+        shell: pwsh
+        run: ./scripts/check-file-length.ps1
+
+      - name: Test
+        run: dotnet test --solution ZoomIN.slnx -c Release
+
+      - name: Publish portable ZIP
+        shell: pwsh
+        run: ./scripts/publish.ps1 -Version $env:ZOOMIN_VERSION
+
+      - name: Publish UIAccess build (unsigned)
+        shell: pwsh
+        run: ./scripts/publish.ps1 -Version $env:ZOOMIN_VERSION -UiAccess -Unsigned
+
+      - name: Publish setup (single file)
+        shell: pwsh
+        run: ./scripts/publish-setup.ps1 -Version $env:ZOOMIN_VERSION
+
+      # One signing request for both: the SignPath artifact configuration expects this layout
+      # (docs/plan/signpath-antrag.md): uiaccess/ (ZoomIN.exe + our DLLs) and setup/ZoomIN-Setup.exe.
+      # An unsigned setup would make SmartScreen warn and the app's setup button refuse it.
+      - name: Stage files for signing
+        if: env.SIGNPATH_API_TOKEN != ''
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts/sign/setup | Out-Null
+          Copy-Item artifacts/publish/ZoomIN-uiaccess artifacts/sign/uiaccess -Recurse
+          Copy-Item artifacts/ZoomIN-Setup.exe artifacts/sign/setup/
+
+      - name: Upload files for signing
+        id: unsigned
+        if: env.SIGNPATH_API_TOKEN != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned
+          path: artifacts/sign/
+
+      - name: Sign with SignPath
+        if: env.SIGNPATH_API_TOKEN != ''
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: artifacts/signed
+
+      - name: Take over signed files
+        if: env.SIGNPATH_API_TOKEN != ''
+        shell: pwsh
+        run: |
+          Remove-Item artifacts/publish/ZoomIN-uiaccess -Recurse -Force
+          Copy-Item artifacts/signed/uiaccess artifacts/publish/ZoomIN-uiaccess -Recurse
+          Copy-Item artifacts/signed/setup/ZoomIN-Setup.exe artifacts/ZoomIN-Setup.exe -Force
+
+      - name: Package and checksums
+        id: package
+        shell: pwsh
+        run: |
+          if (-not $env:SIGNPATH_API_TOKEN) {
+            Write-Host '::warning::SignPath not configured - assets built, nothing will be published (ADR-0014).'
+            "signed=false" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+          ./scripts/package-release.ps1 -Version $env:ZOOMIN_VERSION
+          "signed=true" >> $env:GITHUB_OUTPUT
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: |
+            artifacts/*.zip
+            artifacts/ZoomIN-Setup.exe
+            artifacts/checksums.txt
+          if-no-files-found: error

@@ -65,4 +65,4 @@ finally {
     Remove-Item $cer -ErrorAction SilentlyContinue
 }
 
-Write-Host 'Done. Next: ./scripts/publish.ps1 -UiAccess' -ForegroundColor Green
+Write-Host 'Done. Next: ./scripts/publish.ps1 -UiAccess, then (as administrator) ./scripts/install-uiaccess.ps1' -ForegroundColor Green

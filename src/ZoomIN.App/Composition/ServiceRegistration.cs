@@ -1,75 +1,135 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using ZoomIN.App.AgentDebug;
 using ZoomIN.App.Lifecycle;
-using ZoomIN.App.Settings;
-using ZoomIN.App.Zoom;
+using ZoomIN.App.SecureDesktop;
+using ZoomIN.App.Localization;
+using ZoomIN.App.Schemes;
+using ZoomIN.App.Pointer;
+using ZoomIN.App.Updates;
+using ZoomIN.App.Views;
+using ZoomIN.Core.AgentDebug;
 using ZoomIN.Core.Diagnostics;
-using ZoomIN.Core.Filters;
-using ZoomIN.Core.Hotkeys;
+using ZoomIN.Core.Folders;
 using ZoomIN.Core.Lifecycle;
-using ZoomIN.Core.Modes;
-using ZoomIN.Core.Monitors;
+using ZoomIN.Core.Localization;
 using ZoomIN.Core.Pointer;
+using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Settings;
-using ZoomIN.Core.Tracking;
-using ZoomIN.Core.Zoom;
-using ZoomIN.Platform.Automation;
-using ZoomIN.Platform.Cursor;
+using ZoomIN.Core.Updates;
+using ZoomIN.Platform.AgentDebug;
 using ZoomIN.Platform.Diagnostics;
-using ZoomIN.Platform.Input;
 using ZoomIN.Platform.Lifecycle;
-using ZoomIN.Platform.Monitors;
+using ZoomIN.Platform.PointerConstraint;
+using ZoomIN.Platform.SecureDesktop;
 using ZoomIN.Platform.Settings;
 using ZoomIN.Platform.Shell;
 using ZoomIN.Platform.Updates;
-using ZoomIN.Rendering.RenderLoop;
 
 namespace ZoomIN.App.Composition;
 
-/// <summary>The only place where concrete Platform/Rendering types are wired to Core interfaces.</summary>
+/// <summary>
+/// The only place where concrete Platform/Rendering types are wired to Core interfaces; the
+/// shared engine part is in <see cref="EngineRegistration"/>.
+/// </summary>
 internal static class ServiceRegistration
 {
-    public static ServiceProvider Build()
+    /// <summary>The tray app on the user's desktop.</summary>
+    public static ServiceProvider Build(TelemetryHost telemetry, IAppFolders folders) =>
+        Tray(telemetry, folders).BuildServiceProvider();
+
+    /// <summary>The tray app's registrations; the container tests validate them without starting it.</summary>
+    internal static ServiceCollection Tray(TelemetryHost telemetry, IAppFolders folders)
     {
         var services = new ServiceCollection();
+        services.AddTelemetry(telemetry);
+        services.AddSingleton(folders);
 
-        // Settings and models
-        services.AddSingleton<ILog, FileLog>();
+        // One localizer for the app; XAML reaches it through the static facade Text (ADR-0025).
+        var localizer = AppTexts.CreateLocalizer();
+        Text.Use(localizer);
+        services.AddSingleton<ILocalizer>(localizer);
+
         services.AddSingleton<ISettingsStore, JsonSettingsStore>();
         services.AddSingleton<IProfileStore, JsonProfileStore>();
-        services.AddSingleton(sp => sp.GetRequiredService<ISettingsStore>().Load());
-        services.AddSingleton(sp => ZoomModelFactory.Create(sp.GetRequiredService<AppSettings>()));
-        services.AddSingleton(sp => EffectsFactory.Create(sp.GetRequiredService<AppSettings>()));
-        services.AddSingleton(sp => TrackingFactory.Create(sp.GetRequiredService<AppSettings>()));
-        services.AddSingleton(sp => new RenderModels(
-            sp.GetRequiredService<ZoomModel>(),
-            sp.GetRequiredService<EffectsModel>(),
-            sp.GetRequiredService<TrackingModel>()));
-        services.AddSingleton<SettingsService>();
-        services.AddSingleton<ProfileService>();
+        services.AddEngine(EngineScope.Full);
 
-        // Platform
-        services.AddSingleton<ICursorSource, Win32CursorSource>();
-        services.AddSingleton<ICursorShapeSource, Win32CursorShapeSource>();
-        services.AddSingleton<ISystemCursor, MagnifierSystemCursor>();
-        services.AddSingleton(sp => new PointerServices(
-            sp.GetRequiredService<ICursorSource>(),
-            sp.GetRequiredService<ICursorShapeSource>(),
-            sp.GetRequiredService<ISystemCursor>()));
-        services.AddSingleton<IMonitorProvider, Win32MonitorProvider>();
-        services.AddSingleton<IScreenReservation, AppBarReservation>();
-        services.AddSingleton<IHotkeyService, Win32HotkeyService>();
-        services.AddSingleton<IMouseWheelHook, Win32WheelHook>();
-        services.AddSingleton<IInputActivitySource, Win32InputActivityHook>();
-        services.AddSingleton<ITrackingSource, UiaTrackingSource>();
         services.AddSingleton<ITrayIcon, Win32TrayIcon>();
-        services.AddSingleton<IAutostart, RegistryAutostart>();
-        services.AddSingleton<IUpdateChecker, GitHubUpdateChecker>();
+        services.AddSingleton<IAutostart, AutostartSelector>();
+        services.AddSingleton<HttpClient, UpdateHttpClient>();
+        services.AddSingleton<IReleaseFeed, GitHubReleaseFeed>();
+        services.AddSingleton<IPackageDownloader, HttpPackageDownloader>();
+        services.AddSingleton<ISettingsBackup, FolderSettingsBackup>();
+        services.AddInstall();
+        services.AddSingleton<IUiAccessProbe, Win32UiAccessProbe>();
+        services.AddSingleton<UpdateService>();
+        services.AddSingleton<IDiagnosticsPackage, DiagnosticsPackage>();
+        services.AddSingleton<ISecureLogsRequest, ElevatedSecureLogsRequest>();
+        services.AddSingleton<SetupLauncher>();
+        services.AddSingleton<ISecureDesktopSwitch, SecureDesktopSwitch>();
+        services.AddSingleton<IWatchdogLauncher, ShellWatchdogLauncher>();
+        services.AddSingleton<TrayMenuSync>();
 
-        // Rendering and app
-        services.AddSingleton<IZoomOutput, ZoomEngine>();
-        services.AddSingleton<ZoomController>();
+        // Mouse buffer and axis lock (A6): tray app only; the fence itself is part of the engine.
+        services.AddSingleton<IHoldKeyWatch, Win32HoldKeyWatch>();
+        services.AddSingleton<PointerConstraintController>();
+        services.AddSingleton<StartupNotices>();
         services.AddSingleton<AppShell>();
+        services.AddSingleton<IShellActions>(sp => sp.GetRequiredService<AppShell>());
+        services.AddSingleton<PageServices>();
+        services.AddSingleton<CustomSchemeService>();
+        services.AddSingleton<FilterNames>();
 
-        return services.BuildServiceProvider();
+        // KI-Debug (ADR-0027): tray app only, never on secure desktops.
+        services.AddSingleton<IAgentDebugServer, PipeAgentServer>();
+        services.AddSingleton<AgentStateReport>();
+        services.AddSingleton<AgentSnapshot>();
+        services.AddSingleton<AgentCommandHandler>();
+        services.AddSingleton<AgentDebugHost>();
+        return services;
+    }
+
+    /// <summary>
+    /// A short-lived role without UI (update step, uninstall): installation services and the
+    /// role's flow only, no engine. Built per process in <see cref="Program"/> (M14 step 7).
+    /// </summary>
+    public static ServiceProvider BuildRole(TelemetryHost telemetry, IAppFolders folders) =>
+        Role(telemetry, folders).BuildServiceProvider();
+
+    /// <summary>The short-lived role's registrations.</summary>
+    internal static ServiceCollection Role(TelemetryHost telemetry, IAppFolders folders)
+    {
+        var services = new ServiceCollection();
+        services.AddTelemetry(telemetry);
+        services.AddSingleton(folders);
+        services.AddSingleton<ILocalizer>(AppTexts.CreateLocalizer());
+        services.AddInstall();
+        services.AddSingleton<UpdateRunner>();
+        services.AddSingleton<UninstallFlow>();
+        services.AddSingleton<IRemovalSteps, ProcessRemovalSteps>();
+        services.AddSingleton<IAutostart, AutostartSelector>();
+        services.AddSingleton<ISecureDesktopSwitch, SecureDesktopSwitch>();
+        return services;
+    }
+
+    /// <summary>
+    /// The secure-desktop instance's registrations (ADR-0016): the core engine only, settings
+    /// read-only from the session user, nothing that opens windows, files chosen by the user or the
+    /// network. <see cref="SecureDesktopHost"/> adds its checks (<see cref="SecureCheckRegistration"/>) and builds it.
+    /// </summary>
+    internal static ServiceCollection SecureDesktop(TelemetryHost telemetry, IAppFolders folders)
+    {
+        var services = new ServiceCollection();
+        services.AddTelemetry(telemetry);
+        services.AddSingleton(folders);
+
+        // Created by a factory, so the provider disposes it (and the user's token) at exit.
+        services.AddSingleton(sp => SessionUser.Open(sp.GetRequiredService<ILogger<SessionUser>>(), folders));
+        services.AddSingleton<ISettingsStore>(sp => new SecureSettingsStore(
+            sp.GetRequiredService<ILogger<SecureSettingsStore>>(), sp.GetRequiredService<SessionUser>(), folders.Local));
+        services.AddSingleton<IProfileStore>(sp => new SecureProfileStore(sp.GetRequiredService<SessionUser>()));
+        services.AddSingleton<IWatchdogLauncher, ShellWatchdogLauncher>();
+        services.AddEngine(EngineScope.SecureDesktop);
+        return services;
     }
 }

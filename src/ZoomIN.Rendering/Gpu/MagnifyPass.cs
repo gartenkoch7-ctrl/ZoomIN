@@ -11,18 +11,34 @@ internal sealed class MagnifyPass : IDisposable
 {
     private readonly ID3D11VertexShader _vertexShader;
     private readonly ID3D11PixelShader _pixelShader;
+
+    // "Schärfe"/"Fett" (M18, D1): bound per draw only when the constants ask for it.
+    private readonly ID3D11PixelShader _enhancedShader;
     private readonly ID3D11SamplerState _sampler;
     private readonly ID3D11SamplerState _pointSampler;
     private readonly ID3D11Buffer _constants;
+    private readonly ID3D11Buffer _windows;
+
+    // Not readonly: it remembers the last upload. A resting zoom draws the same values each frame.
+    private ConstantUpload<MagnifyConstants> _uploaded;
 
     public MagnifyPass(ID3D11Device device)
     {
-        _vertexShader = device.CreateVertexShader(ShaderSource.Compile("Magnify.hlsl", "VSMain", "vs_4_0").Span);
-        _pixelShader = device.CreatePixelShader(ShaderSource.Compile("Magnify.hlsl", "PSMain", "ps_4_0").Span);
+        _vertexShader = device.CreateVertexShader(ShaderSource.Load("Magnify.hlsl", "VSMain", "vs_4_0"));
+        _pixelShader = device.CreatePixelShader(ShaderSource.Load("Magnify.hlsl", "PSMain", "ps_4_0"));
+        _enhancedShader = device.CreatePixelShader(ShaderSource.Load("Magnify.hlsl", "PSEnhanced", "ps_4_0"));
         _sampler = device.CreateSamplerState(SamplerDescription.LinearClamp);
         _pointSampler = device.CreateSamplerState(SamplerDescription.PointClamp);
         _constants = device.CreateBuffer(new BufferDescription(MagnifyConstants.SizeInBytes, BindFlags.ConstantBuffer, ResourceUsage.Default));
+
+        // Starts with no regions, so the monitor matrix applies everywhere until the first update.
+        var none = default(WindowConstants);
+        _windows = device.CreateBuffer(in none, new BufferDescription((uint)WindowConstants.SizeInBytes, BindFlags.ConstantBuffer, ResourceUsage.Default));
     }
+
+    /// <summary>New window regions or palette; call only when they changed (3.2 KB upload).</summary>
+    public void UpdateWindows(ID3D11DeviceContext context, in WindowConstants windows) =>
+        context.UpdateSubresource(windows, _windows);
 
     /// <summary>Draws into the whole render target.</summary>
     public void Draw(
@@ -31,10 +47,12 @@ internal sealed class MagnifyPass : IDisposable
         ID3D11RenderTargetView target,
         int targetWidth,
         int targetHeight,
-        in MagnifyConstants constants) =>
-        Draw(context, source, target, 0, 0, targetWidth, targetHeight, constants);
+        in MagnifyConstants constants,
+        ID3D11ShaderResourceView? weights = null) =>
+        Draw(context, source, target, 0, 0, targetWidth, targetHeight, constants, weights);
 
     /// <summary>Draws into the viewport (x, y, width, height) of the render target; the rest is untouched.</summary>
+    /// <param name="weights">Smart inversion weights (<see cref="AmbientPass"/>); null if nothing on the monitor is smart.</param>
     public void Draw(
         ID3D11DeviceContext context,
         ID3D11ShaderResourceView source,
@@ -43,28 +61,41 @@ internal sealed class MagnifyPass : IDisposable
         float y,
         float width,
         float height,
-        in MagnifyConstants constants)
+        in MagnifyConstants constants,
+        ID3D11ShaderResourceView? weights = null)
     {
-        context.UpdateSubresource(constants, _constants);
+        _uploaded.Update(context, _constants, constants);
 
         context.OMSetRenderTargets(target);
         context.RSSetViewport(x, y, width, height);
         context.IASetInputLayout(null);
         context.IASetPrimitiveTopology(PrimitiveTopology.TriangleList);
         context.VSSetShader(_vertexShader);
-        context.PSSetShader(_pixelShader);
+        context.PSSetShader(constants.Enhanced ? _enhancedShader : _pixelShader);
         context.PSSetShaderResource(0, source);
+        if (weights is null)
+        {
+            context.PSUnsetShaderResource(1);
+        }
+        else
+        {
+            context.PSSetShaderResource(1, weights);
+        }
+
         context.PSSetSampler(0, _sampler);
         context.PSSetSampler(1, _pointSampler);
         context.PSSetConstantBuffer(0, _constants);
+        context.PSSetConstantBuffer(1, _windows);
         context.Draw(3, 0);
     }
 
     public void Dispose()
     {
+        _windows.Dispose();
         _constants.Dispose();
         _pointSampler.Dispose();
         _sampler.Dispose();
+        _enhancedShader.Dispose();
         _pixelShader.Dispose();
         _vertexShader.Dispose();
     }

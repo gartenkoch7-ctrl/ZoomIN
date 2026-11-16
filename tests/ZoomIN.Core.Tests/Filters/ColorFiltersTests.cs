@@ -11,7 +11,7 @@ public sealed class ColorFiltersTests
     [Fact]
     public void Inverted_SwapsBlackAndWhite_AndInvertsRed()
     {
-        var m = ColorFilters.For(ColorFilter.Inverted);
+        var m = ColorFilters.For(FilterId.Inverted);
 
         Assert.Equal((Black, Black, Black), m.Apply(White, White, White));
         Assert.Equal((0f, 1f, 1f), m.Apply(1, 0, 0));
@@ -20,7 +20,7 @@ public sealed class ColorFiltersTests
     [Fact]
     public void InvertedKeepHue_SwapsBlackAndWhite_ButRedStaysReddish()
     {
-        var m = ColorFilters.For(ColorFilter.InvertedKeepHue);
+        var m = ColorFilters.For(FilterId.InvertedKeepHue);
 
         AssertClose((Black, Black, Black), m.Apply(White, White, White));
         AssertClose((White, White, White), m.Apply(Black, Black, Black));
@@ -31,7 +31,7 @@ public sealed class ColorFiltersTests
     [Fact]
     public void Grayscale_MakesChannelsEqual()
     {
-        var (r, g, b) = ColorFilters.For(ColorFilter.Grayscale).Apply(0.9f, 0.2f, 0.4f);
+        var (r, g, b) = ColorFilters.For(FilterId.Grayscale).Apply(0.9f, 0.2f, 0.4f);
 
         Assert.Equal(r, g, 5);
         Assert.Equal(g, b, 5);
@@ -40,7 +40,7 @@ public sealed class ColorFiltersTests
     [Fact]
     public void YellowOnBlack_TurnsWhiteBackgroundBlack_AndBlackTextYellow()
     {
-        var m = ColorFilters.For(ColorFilter.YellowOnBlack);
+        var m = ColorFilters.For(FilterId.YellowOnBlack);
 
         AssertClose((Black, Black, Black), m.Apply(White, White, White));
         AssertClose((White, White, Black), m.Apply(Black, Black, Black));
@@ -49,7 +49,7 @@ public sealed class ColorFiltersTests
     [Fact]
     public void BlackOnYellow_TurnsWhiteBackgroundYellow_AndKeepsBlackText()
     {
-        var m = ColorFilters.For(ColorFilter.BlackOnYellow);
+        var m = ColorFilters.For(FilterId.BlackOnYellow);
 
         AssertClose((White, White, Black), m.Apply(White, White, White));
         AssertClose((Black, Black, Black), m.Apply(Black, Black, Black));
@@ -58,7 +58,7 @@ public sealed class ColorFiltersTests
     [Fact]
     public void WhiteOnBlue_TurnsWhiteBackgroundDarkBlue_AndBlackTextWhite()
     {
-        var m = ColorFilters.For(ColorFilter.WhiteOnBlue);
+        var m = ColorFilters.For(FilterId.WhiteOnBlue);
 
         AssertClose((Black, Black, 0.5f), m.Apply(White, White, White));
         AssertClose((White, White, White), m.Apply(Black, Black, Black));
@@ -84,32 +84,7 @@ public sealed class ColorFiltersTests
     {
         var effects = DisplayEffects.Default with { Filter = FilterSettings.Default with { Enabled = true } };
 
-        Assert.Equal(ColorFilters.For(ColorFilter.Inverted), effects.Matrix);
-    }
-
-    [Fact]
-    public void EffectsModel_NextFilter_CyclesAndEnables()
-    {
-        var model = new EffectsModel(DisplayEffects.Default);
-
-        model.NextFilter();
-
-        Assert.True(model.Current.Filter.Enabled);
-        Assert.Equal(ColorFilter.InvertedKeepHue, model.Current.Filter.Filter);
-    }
-
-    [Fact]
-    public void EffectsModel_ToggleFilter_FlipsEnabled_AndRaisesChanged()
-    {
-        var model = new EffectsModel(DisplayEffects.Default);
-        var raised = 0;
-        model.Changed += () => raised++;
-
-        model.ToggleFilter();
-        model.ToggleFilter();
-
-        Assert.False(model.Current.Filter.Enabled);
-        Assert.Equal(2, raised);
+        Assert.Equal(ColorFilters.For(FilterId.Inverted), effects.Matrix);
     }
 
     [Fact]

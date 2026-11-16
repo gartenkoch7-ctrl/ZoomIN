@@ -1,0 +1,46 @@
+using Windows.Win32.UI.Input.KeyboardAndMouse;
+using ZoomIN.Core.Pointer;
+
+namespace ZoomIN.Platform.PointerConstraint;
+
+/// <summary>Key codes of the axis lock's hold key (A6): left and right variants as the low-level hook reports them.</summary>
+internal static class HoldKeyCodes
+{
+    /// <summary>AltGr sends a fake left Ctrl with this scan code before the right Alt.</summary>
+    public const uint AltGrFakeControlScanCode = 0x21D;
+
+    // Keys Windows makes up: AltGr's left Ctrl carries this bit (0x21D); the Shift up/down it sends
+    // around numpad and navigation keys while NumLock is on is reported either with this bit
+    // (0x22A, 0x236) or as an extended (E0) left Shift, which the real left Shift never is. The
+    // right Shift is left out of the extended rule: some layouts flag the real one as extended.
+    // Injected keys (remappers, accessibility tools) may send an extended Shift on purpose: those count.
+    private const uint FakeScanCodeBit = 0x200;
+    private const uint LeftShiftScanCode = 0x2A;
+
+    /// <summary>A key event Windows generated itself, not a key the user pressed or released.</summary>
+    public static bool IsFake(uint scanCode, bool extended, bool injected) =>
+        (scanCode & FakeScanCodeBit) != 0
+        || (extended && !injected && (scanCode & 0xFF) == LeftShiftScanCode);
+
+    /// <summary>
+    /// The left or right code for a neutral modifier (injected input may carry VK_SHIFT, VK_CONTROL
+    /// or VK_MENU): by scan code for Shift, by the extended flag for Ctrl and Alt. Others unchanged.
+    /// </summary>
+    public static int Sided(int virtualKey, uint scanCode, bool extended) => (VIRTUAL_KEY)virtualKey switch
+    {
+        VIRTUAL_KEY.VK_SHIFT => (int)((scanCode & 0xFF) == 0x36 ? VIRTUAL_KEY.VK_RSHIFT : VIRTUAL_KEY.VK_LSHIFT),
+        VIRTUAL_KEY.VK_CONTROL => (int)(extended ? VIRTUAL_KEY.VK_RCONTROL : VIRTUAL_KEY.VK_LCONTROL),
+        VIRTUAL_KEY.VK_MENU => (int)(extended ? VIRTUAL_KEY.VK_RMENU : VIRTUAL_KEY.VK_LMENU),
+        _ => virtualKey,
+    };
+
+    public static int VirtualKey(AxisLockKey key) => (int)(key switch
+    {
+        AxisLockKey.RightShift => VIRTUAL_KEY.VK_RSHIFT,
+        AxisLockKey.LeftControl => VIRTUAL_KEY.VK_LCONTROL,
+        AxisLockKey.RightControl => VIRTUAL_KEY.VK_RCONTROL,
+        AxisLockKey.LeftAlt => VIRTUAL_KEY.VK_LMENU,
+        AxisLockKey.RightAlt => VIRTUAL_KEY.VK_RMENU,
+        _ => VIRTUAL_KEY.VK_LSHIFT,
+    });
+}

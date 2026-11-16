@@ -25,7 +25,7 @@ public sealed class MagnifyFilterTests
     [Fact]
     public void Inverted_TurnsRedIntoCyan_AndBlueIntoYellow()
     {
-        var pixels = Render(ColorFilters.For(ColorFilter.Inverted), Smoothing.Pixel);
+        var pixels = Render(ColorFilters.For(FilterId.Inverted), Smoothing.Pixel);
 
         Assert.Equal(new Bgra(255, 255, 0, 255), pixels.At(24, 40));
         Assert.Equal(new Bgra(0, 255, 255, 255), pixels.At(56, 40));
@@ -34,7 +34,7 @@ public sealed class MagnifyFilterTests
     [Fact]
     public void Grayscale_MakesChannelsEqual()
     {
-        var pixel = Render(ColorFilters.For(ColorFilter.Grayscale), Smoothing.Pixel).At(24, 40);
+        var pixel = Render(ColorFilters.For(FilterId.Grayscale), Smoothing.Pixel).At(24, 40);
 
         Assert.Equal(pixel.R, pixel.G);
         Assert.Equal(pixel.G, pixel.B);

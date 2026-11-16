@@ -1,5 +1,9 @@
+using ZoomIN.Core.Folders;
+using System.Diagnostics;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
+using ZoomIN.Core.Filters;
 using ZoomIN.Core.Settings;
 
 namespace ZoomIN.Platform.Settings;
@@ -10,17 +14,20 @@ namespace ZoomIN.Platform.Settings;
 /// </summary>
 public sealed class JsonSettingsStore : ISettingsStore
 {
-    private readonly ILog _log;
+    // Operation tag of zoomin.settings.load: "ok", "missing" (first start) or "unreadable".
+    private const string ResultTag = "zoomin.settings.result";
+    private const string Unreadable = "unreadable";
+
+    private readonly ILogger _log;
     private readonly string _path;
     private readonly Lock _gate = new();
 
-    public JsonSettingsStore(ILog log)
-        : this(log, Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ZoomIN", "settings.json"))
+    public JsonSettingsStore(ILogger<JsonSettingsStore> log, IAppFolders folders)
+        : this(log, folders.Settings())
     {
     }
 
-    public JsonSettingsStore(ILog log, string path)
+    public JsonSettingsStore(ILogger<JsonSettingsStore> log, string path)
     {
         _log = log;
         _path = path;
@@ -28,11 +35,24 @@ public sealed class JsonSettingsStore : ISettingsStore
 
     public AppSettings Load()
     {
+        using var operation = Telemetry.Source.StartActivity("zoomin.settings.load");
+        var (settings, result) = LoadFile();
+        operation?.SetTag(ResultTag, result);
+        if (result == Unreadable)
+        {
+            operation?.SetStatus(ActivityStatusCode.Error, result);
+        }
+
+        return settings;
+    }
+
+    private (AppSettings Settings, string Result) LoadFile()
+    {
         lock (_gate)
         {
             if (!File.Exists(_path))
             {
-                return new AppSettings();
+                return (new AppSettings(), "missing");
             }
 
             try
@@ -41,24 +61,26 @@ public sealed class JsonSettingsStore : ISettingsStore
                 var settings = JsonSerializer.Deserialize(json, SettingsJsonContext.Default.AppSettings) ?? new AppSettings();
 
                 // A hand-edited file may contain "null" for the levels.
-                return settings with
+                return (settings with
                 {
                     MonitorZoomLevels = settings.MonitorZoomLevels ?? new Dictionary<string, double>(),
                     LensMonitorZoomLevels = settings.LensMonitorZoomLevels ?? new Dictionary<string, double>(),
                     DockedMonitorZoomLevels = settings.DockedMonitorZoomLevels ?? new Dictionary<string, double>(),
-                };
+                    MonitorFilters = settings.MonitorFilters ?? new Dictionary<string, MonitorFilter>(),
+                }, "ok");
             }
             catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
             {
-                _log.Error($"Settings file '{_path}' is unreadable; using defaults.", ex);
+                _log.SettingsUnreadable(ex, Path.GetFileName(_path));
                 BackUpBrokenFile();
-                return new AppSettings();
+                return (new AppSettings(), Unreadable);
             }
         }
     }
 
     public void Save(AppSettings settings)
     {
+        using var operation = Telemetry.Source.StartActivity("zoomin.settings.save");
         lock (_gate)
         {
             try
@@ -72,7 +94,8 @@ public sealed class JsonSettingsStore : ISettingsStore
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                _log.Error($"Saving settings to '{_path}' failed.", ex);
+                _log.SaveFailed(ex, Path.GetFileName(_path));
+                operation?.SetStatus(ActivityStatusCode.Error, ex.GetType().Name);
             }
         }
     }
@@ -85,7 +108,7 @@ public sealed class JsonSettingsStore : ISettingsStore
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            _log.Warn($"Could not back up broken settings file: {ex.Message}");
+            _log.BrokenBackupFailed(ex.Message);
         }
     }
 }

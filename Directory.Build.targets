@@ -1,0 +1,24 @@
+<Project>
+  <!--
+    WinUI ships its own control texts (context menus, screen reader names) as .mui files in ~86
+    language folders (af-ZA … zu-ZA) next to the app. SatelliteResourceLanguages only filters .NET
+    resources, not these. ZoomIN speaks German and English only, so every other language is dropped
+    before it is copied: not in bin/, not in the published package.
+    The folders cannot be moved into one "Languages" folder: Windows loads a .mui only from a
+    culture folder right next to its DLL. Kept: every de-* and en-* folder (de-DE, en-GB, en-us).
+
+    Self-contained (App, Setup), the Windows App SDK adds the files as None items with
+    Link="fr-FR\Microsoft.ui.xaml.dll.mui" in AddMicrosoftWindowsAppSDKPayloadFilesFromComponents.
+  -->
+  <Target Name="ZoomInDropForeignWinUILanguages"
+          AfterTargets="AddMicrosoftWindowsAppSDKPayloadFilesFromComponents"
+          BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <_ZoomInForeignMui Include="@(None)"
+                         Condition="'%(None.Extension)' == '.mui'
+                                and !$([System.String]::Copy('%(None.Link)').StartsWith('de-', System.StringComparison.OrdinalIgnoreCase))
+                                and !$([System.String]::Copy('%(None.Link)').StartsWith('en-', System.StringComparison.OrdinalIgnoreCase))" />
+      <None Remove="@(_ZoomInForeignMui)" />
+    </ItemGroup>
+  </Target>
+</Project>

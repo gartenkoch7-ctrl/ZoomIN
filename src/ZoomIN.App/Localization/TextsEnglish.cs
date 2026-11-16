@@ -30,10 +30,9 @@ internal static class TextsEnglish
 
         ["GeneralLanguage"] = "Language",
         ["LanguageSystem"] = "Like Windows",
-        ["GeneralAutostart"] = "Start with Windows",
+        ["GeneralAutostart"] = "Start with Windows (right after sign-in)",
         ["GeneralUpdates"] = "Check for new versions",
-        ["GeneralUpdatesHint"] = "Only asks for the latest version number at start-up. No data is sent and nothing is installed.",
-        ["GeneralUpdateUrl"] = "Update address (GitHub API \"releases/latest\")",
+        ["GeneralUpdatesHint"] = "Asks GitHub for the version list at start-up and once a day. No data is sent; nothing is installed without a click.",
 
         ["ZoomMode"] = "Mode for Ctrl+Alt+Z",
         ["ZoomPerMonitor"] = "Separate zoom level per monitor",
@@ -60,6 +59,7 @@ internal static class TextsEnglish
         ["Filter.YellowOnBlack"] = "Yellow on black",
         ["Filter.BlackOnYellow"] = "Black on yellow",
         ["Filter.WhiteOnBlue"] = "White on blue",
+        ["Filter.InvertedSmart"] = "Inverted (smart)",
         ["ColorsContrast"] = "Contrast",
         ["ColorsBrightness"] = "Brightness",
 
@@ -69,7 +69,7 @@ internal static class TextsEnglish
         ["TrackingPan"] = "Panning (ms, 0 = jump)",
         ["TrackingMargin"] = "Edge margin for the text cursor (%)",
         ["TrackingFocusFrame"] = "Frame around the focused element",
-        ["TrackingCaretMarker"] = "Bar over the text cursor",
+        ["TrackingCaretMarker"] = "Mark the text cursor",
 
         ["HotkeysIntro"] = "All shortcuts work system-wide. Zoom with the wheel: Ctrl+wheel (ZoomIN takes precedence over the applications' own zoom).",
         ["HotkeyChange"] = "Change",

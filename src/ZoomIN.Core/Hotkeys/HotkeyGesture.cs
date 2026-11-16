@@ -32,6 +32,27 @@ public readonly record struct HotkeyGesture(HotkeyModifiers Modifiers, int Virtu
 
     public static HotkeyGesture NextProfile { get; } = new(CtrlAlt, 0x50); // P
 
+    /// <summary>Overview (B2): tap = 1× with a frame, tap again = zoom in there; hold = while held.</summary>
+    public static HotkeyGesture Overview { get; } = new(CtrlAlt, 0x4F); // O
+
+    /// <summary>Islands (M19 B1): show or hide all of them.</summary>
+    public static HotkeyGesture ToggleIslands { get; } = new(CtrlAlt, 0x49); // I
+
+    /// <summary>Islands (M19 B1): start the edit mode (drag out, move, resize, wheel, Del, Esc).</summary>
+    public static HotkeyGesture EditIslands { get; } = new(CtrlAltShift, 0x49); // Shift+I
+
+    /// <summary>Freezes the monitor under the pointer, or unfreezes all if one is frozen (G2, M19).</summary>
+    public static HotkeyGesture FreezeMonitor { get; } = new(CtrlAlt, 0x48); // H
+
+    /// <summary>Moves the pointer to the next free monitor along the layout (G2, M19).</summary>
+    public static HotkeyGesture NextMonitor { get; } = new(CtrlAlt, 0x4E); // N
+
+    /// <summary>Ends ZoomIN on the secure desktop only (ADR-0016); Shift+Z, because Q types @ with AltGr.</summary>
+    public static HotkeyGesture ExitSecureDesktop { get; } = new(CtrlAltShift, 0x5A); // Shift+Z
+
+    /// <summary>Saves a debug snapshot on the secure desktop only (M10), into SYSTEM's debug folder.</summary>
+    public static HotkeyGesture SecureDesktopSnapshot { get; } = new(CtrlAltShift, 0x44); // Shift+D
+
     // Ctrl+Alt+arrows rotate the screen on some Intel drivers, hence Shift (ADR-0008).
     public static HotkeyGesture LensWider { get; } = new(CtrlAltShift, 0x27); // Right
 

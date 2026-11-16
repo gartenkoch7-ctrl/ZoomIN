@@ -2,7 +2,7 @@ using System.Globalization;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Shell;
-using ZoomIN.Core.Lifecycle;
+using ZoomIN.Core.Folders;
 
 namespace ZoomIN.Watchdog.Crashes;
 
@@ -10,7 +10,7 @@ namespace ZoomIN.Watchdog.Crashes;
 /// Gives the docked strip back after a crash: the shell keeps an AppBar's space reserved until
 /// it is removed, even when the owning process is gone.
 /// </summary>
-public sealed unsafe class AppBarCleanup : ICleanupStep
+public sealed unsafe class AppBarCleanup(IAppFolders folders) : ICleanupStep
 {
     private const uint AbmRemove = 1;
 
@@ -18,7 +18,7 @@ public sealed unsafe class AppBarCleanup : ICleanupStep
 
     public void Run()
     {
-        var file = RecoveryFiles.AppBarWindow;
+        var file = folders.AppBarWindow();
         if (!File.Exists(file))
         {
             return;

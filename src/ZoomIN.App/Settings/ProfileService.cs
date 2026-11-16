@@ -1,3 +1,4 @@
+using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Settings;
 
 namespace ZoomIN.App.Settings;
@@ -38,6 +39,9 @@ public sealed class ProfileService
         {
             return;
         }
+
+        // No profile names in telemetry: users name them freely (ADR-0019).
+        using var operation = Telemetry.Source.StartActivity("zoomin.profile.switch");
 
         // Keep the current state in the profile being left.
         _settings.SaveNow();

@@ -6,7 +6,11 @@ public interface IHotkeyService : IDisposable
     /// <param name="gesture">Key combination.</param>
     /// <param name="onPressed">Called on every press.</param>
     /// <param name="repeat">Also call while the key is held (auto-repeat), e.g. for zoom steps.</param>
-    /// <returns>False if the gesture is already taken by another application.</returns>
+    /// <returns>
+    /// False if the gesture is taken right now (another application, or the other ZoomIN instance
+    /// during a desktop switch). It is still tried again for a few seconds; a late success is logged
+    /// (2207) and supersedes this answer.
+    /// </returns>
     bool Register(HotkeyGesture gesture, Action onPressed, bool repeat = false);
 
     /// <summary>Releases every registered shortcut, e.g. before changed shortcuts are registered again.</summary>

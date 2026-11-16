@@ -15,3 +15,9 @@ MagShowSystemCursor
 // Crashes/AppBarCleanup
 SHAppBarMessage
 APPBARDATA
+
+// Crashes/PointerClipCleanup
+ClipCursor
+
+// ProcessWatchdogSystem: no restart while Windows signs out or shuts down
+GetSystemMetrics

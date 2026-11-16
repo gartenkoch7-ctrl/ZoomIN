@@ -3,15 +3,18 @@ using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
 using Windows.Win32.UI.WindowsAndMessaging;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Pointer;
+using ZoomIN.Core.Viewport;
 
 namespace ZoomIN.Platform.Input;
 
 /// <summary>
 /// Low-level mouse and keyboard hooks on their own thread, for the locator triggers and for
-/// hiding the pointer while typing. Only observes: every event is passed on unchanged, and the
-/// callbacks only forward and return (Windows removes slow hooks).
+/// hiding the pointer while typing. Only observes: every event is passed on unchanged (except Esc
+/// while the overview runs, see <see cref="OverviewKeyWatch"/>, and clicks, wheel, Esc and Del
+/// while islands are edited, see <see cref="IslandEditCapture"/>), and the callbacks only forward
+/// and return (Windows removes slow hooks).
 /// </summary>
 public sealed unsafe class Win32InputActivityHook : IInputActivitySource
 {
@@ -20,63 +23,50 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
     private static readonly HOOKPROC s_mouseProc = MouseProc;
     private static readonly HOOKPROC s_keyboardProc = KeyboardProc;
 
-    private readonly ILog _log;
-    private Thread? _thread;
-    private uint _threadId;
+    private readonly ILogger _log;
+    private readonly OverviewKeyWatch _overviewKeys;
+    private readonly IslandEditCapture _islandEdit;
+    private LowLevelHookThread? _hooks;
     private IInputActivityHandler? _handler;
 
     // Ctrl went down with nothing else pressed; a release now counts as "Ctrl alone".
     private bool _ctrlAlone;
 
-    public Win32InputActivityHook(ILog log)
+    public Win32InputActivityHook(ILogger<Win32InputActivityHook> log, OverviewKeyWatch overviewKeys, IslandEditCapture islandEdit)
     {
         _log = log;
+        _overviewKeys = overviewKeys;
+        _islandEdit = islandEdit;
     }
 
     public void Start(IInputActivityHandler handler)
     {
-        if (_thread is not null)
+        if (_hooks is not null)
         {
             return;
         }
 
         _handler = handler;
         s_active = this;
-        using var started = new ManualResetEventSlim();
-        _thread = new Thread(() => Run(started)) { IsBackground = true, Name = "ZoomIN Activity Hook" };
-        _thread.Start();
-        started.Wait();
+        _hooks = new LowLevelHookThread(
+            "ZoomIN Activity Hook", (WINDOWS_HOOK_ID.WH_MOUSE_LL, s_mouseProc), (WINDOWS_HOOK_ID.WH_KEYBOARD_LL, s_keyboardProc));
+        _islandEdit.HooksInstalled(_hooks.AllInstalled);
+        if (!_hooks.AllInstalled)
+        {
+            _log.ActivityHooksUnavailable();
+        }
     }
 
     public void Dispose()
     {
-        if (_thread is null)
+        if (_hooks is null)
         {
             return;
         }
 
-        PInvoke.PostThreadMessage(_threadId, PInvoke.WM_QUIT, default, default);
-        _thread.Join(TimeSpan.FromSeconds(2));
+        _islandEdit.HooksInstalled(false);
+        _hooks.Dispose();
         s_active = null;
-    }
-
-    private void Run(ManualResetEventSlim started)
-    {
-        _threadId = PInvoke.GetCurrentThreadId();
-        using var module = PInvoke.GetModuleHandle((string?)null);
-        using var mouse = PInvoke.SetWindowsHookEx(WINDOWS_HOOK_ID.WH_MOUSE_LL, s_mouseProc, module, 0);
-        using var keyboard = PInvoke.SetWindowsHookEx(WINDOWS_HOOK_ID.WH_KEYBOARD_LL, s_keyboardProc, module, 0);
-        if (mouse.IsInvalid || keyboard.IsInvalid)
-        {
-            _log.Error("Installing the activity hooks failed; shake/Ctrl locator and hiding while typing are unavailable.");
-        }
-
-        started.Set();
-        while (PInvoke.GetMessage(out var msg, HWND.Null, 0, 0) > 0)
-        {
-            PInvoke.TranslateMessage(msg);
-            PInvoke.DispatchMessage(msg);
-        }
     }
 
     private static LRESULT MouseProc(int code, WPARAM wParam, LPARAM lParam)
@@ -84,9 +74,17 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
         if (code >= 0 && s_active is { } self)
         {
             var message = (uint)wParam.Value;
+            var info = (MSLLHOOKSTRUCT*)lParam.Value;
+
+            // Island edit mode (B1): its clicks and wheel never reach applications.
+            if (self.SwallowForIslandEdit(message, info))
+            {
+                self._ctrlAlone = false; // Ctrl+click on an island is not "Ctrl alone" either
+                return (LRESULT)1;
+            }
+
             if (message == PInvoke.WM_MOUSEMOVE)
             {
-                var info = (MSLLHOOKSTRUCT*)lParam.Value;
                 self.OnMove(info->pt.X, info->pt.Y);
             }
             else if (message is PInvoke.WM_LBUTTONDOWN or PInvoke.WM_RBUTTONDOWN or PInvoke.WM_MBUTTONDOWN)
@@ -107,6 +105,15 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
             var message = (uint)wParam.Value;
             var down = message is PInvoke.WM_KEYDOWN or PInvoke.WM_SYSKEYDOWN;
             var up = message is PInvoke.WM_KEYUP or PInvoke.WM_SYSKEYUP;
+
+            // Keys this hook swallows: Esc and Del while islands are edited (B1), Esc while the overview runs (B2).
+            if (self.SwallowForIslandEdit((int)info->vkCode, down, up, info->time) || self.SwallowForOverview((int)info->vkCode, down, up, info->time))
+            {
+                // Ctrl+Esc is not "Ctrl alone", even though OnKey never sees the Esc.
+                self._ctrlAlone = false;
+                return (LRESULT)1;
+            }
+
             self.OnKey((VIRTUAL_KEY)info->vkCode, down, up);
         }
 
@@ -138,21 +145,17 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
         }
 
         _ctrlAlone = false;
-        if (!IsModifier(key) && !IsDown(VIRTUAL_KEY.VK_CONTROL) && !IsDown(VIRTUAL_KEY.VK_MENU) && !WindowsDown())
+        if (!ModifierKeys.Is(key) && !IsDown(VIRTUAL_KEY.VK_CONTROL) && !IsDown(VIRTUAL_KEY.VK_MENU) && !WindowsDown())
         {
             Forward(Signal.Typed);
         }
     }
 
-    private static bool IsModifier(VIRTUAL_KEY key) => key is VIRTUAL_KEY.VK_SHIFT or VIRTUAL_KEY.VK_LSHIFT or VIRTUAL_KEY.VK_RSHIFT
-        or VIRTUAL_KEY.VK_MENU or VIRTUAL_KEY.VK_LMENU or VIRTUAL_KEY.VK_RMENU or VIRTUAL_KEY.VK_LWIN or VIRTUAL_KEY.VK_RWIN
-        or VIRTUAL_KEY.VK_CAPITAL;
-
     private static bool AnyOtherModifier() => IsDown(VIRTUAL_KEY.VK_MENU) || IsDown(VIRTUAL_KEY.VK_SHIFT) || WindowsDown();
 
     private static bool WindowsDown() => IsDown(VIRTUAL_KEY.VK_LWIN) || IsDown(VIRTUAL_KEY.VK_RWIN);
 
-    private static bool IsDown(VIRTUAL_KEY key) => PInvoke.GetAsyncKeyState((int)key) < 0;
+    private static bool IsDown(VIRTUAL_KEY key) => KeyState.IsDown((int)key);
 
     // Called for every mouse move: no closures, no allocations.
     private void OnMove(int x, int y)
@@ -163,7 +166,48 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            _log.Error("Input activity handler failed", ex);
+            _log.ActivityHandlerFailed(ex);
+        }
+    }
+
+    private bool SwallowForIslandEdit(uint message, MSLLHOOKSTRUCT* info)
+    {
+        try
+        {
+            return _islandEdit.OnMouse(message, new PhysicalPoint(info->pt.X, info->pt.Y), info->mouseData);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // An exception escaping a hook callback would crash the process.
+            _log.ActivityHandlerFailed(ex);
+            return false;
+        }
+    }
+
+    private bool SwallowForIslandEdit(int key, bool down, bool up, uint time)
+    {
+        try
+        {
+            return _islandEdit.OnKey(key, down, up, time);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _log.ActivityHandlerFailed(ex);
+            return false;
+        }
+    }
+
+    private bool SwallowForOverview(int key, bool down, bool up, uint time)
+    {
+        try
+        {
+            return _overviewKeys.OnKey(key, down, up, time);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // An exception escaping a hook callback would crash the process.
+            _log.OverviewKeyHandlerFailed(ex);
+            return false;
         }
     }
 
@@ -183,7 +227,7 @@ public sealed unsafe class Win32InputActivityHook : IInputActivitySource
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             // An exception escaping a hook callback would crash the process.
-            _log.Error("Input activity handler failed", ex);
+            _log.ActivityHandlerFailed(ex);
         }
     }
 

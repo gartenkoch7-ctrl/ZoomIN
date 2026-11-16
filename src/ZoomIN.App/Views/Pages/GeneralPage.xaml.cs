@@ -13,9 +13,19 @@ public sealed partial class GeneralPage : Page
 
     public GeneralViewModel? Vm { get; private set; }
 
+    public DiagnosticsViewModel? Diag { get; private set; }
+
+    public DebugSnapshotViewModel? Snapshot { get; private set; }
+
+    public AgentDebugViewModel? Agent { get; private set; }
+
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
-        Vm = new GeneralViewModel((PageContext)e.Parameter);
+        var services = (PageServices)e.Parameter;
+        Vm = services.Create<GeneralViewModel>();
+        Diag = services.Create<DiagnosticsViewModel>();
+        Snapshot = services.Create<DebugSnapshotViewModel>();
+        Agent = services.Create<AgentDebugViewModel>();
         Bindings.Update();
     }
 }

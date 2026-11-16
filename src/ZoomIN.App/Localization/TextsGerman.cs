@@ -30,10 +30,9 @@ internal static class TextsGerman
 
         ["GeneralLanguage"] = "Sprache",
         ["LanguageSystem"] = "Wie Windows",
-        ["GeneralAutostart"] = "Mit Windows starten",
+        ["GeneralAutostart"] = "Mit Windows starten (sofort nach der Anmeldung)",
         ["GeneralUpdates"] = "Nach neuen Versionen suchen",
-        ["GeneralUpdatesHint"] = "Fragt beim Start nur die neueste Versionsnummer ab. Es werden keine Daten gesendet und nichts installiert.",
-        ["GeneralUpdateUrl"] = "Update-Adresse (GitHub-API „releases/latest“)",
+        ["GeneralUpdatesHint"] = "Fragt beim Start und einmal täglich die Versionsliste bei GitHub ab. Es werden keine Daten gesendet; installiert wird nur auf Klick.",
 
         ["ZoomMode"] = "Modus für Strg+Alt+Z",
         ["ZoomPerMonitor"] = "Eigene Zoomstufe je Monitor",
@@ -60,6 +59,7 @@ internal static class TextsGerman
         ["Filter.YellowOnBlack"] = "Gelb auf Schwarz",
         ["Filter.BlackOnYellow"] = "Schwarz auf Gelb",
         ["Filter.WhiteOnBlue"] = "Weiß auf Blau",
+        ["Filter.InvertedSmart"] = "Invertiert (intelligent)",
         ["ColorsContrast"] = "Kontrast",
         ["ColorsBrightness"] = "Helligkeit",
 
@@ -69,7 +69,7 @@ internal static class TextsGerman
         ["TrackingPan"] = "Schwenken (ms, 0 = sofort springen)",
         ["TrackingMargin"] = "Randabstand für den Textcursor (%)",
         ["TrackingFocusFrame"] = "Rahmen um das fokussierte Element",
-        ["TrackingCaretMarker"] = "Balken über dem Textcursor",
+        ["TrackingCaretMarker"] = "Textcursor markieren",
 
         ["HotkeysIntro"] = "Alle Kürzel wirken systemweit. Zoomen per Mausrad: Strg+Mausrad (ZoomIN hat Vorrang vor dem Zoom der Programme).",
         ["HotkeyChange"] = "Ändern",

@@ -2,8 +2,10 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ZoomIN.App.Hotkeys;
 using ZoomIN.App.Localization;
-using ZoomIN.App.Views;
+using ZoomIN.App.Settings;
+using ZoomIN.App.Zoom;
 using ZoomIN.Core.Hotkeys;
+using ZoomIN.Core.Tracking;
 
 namespace ZoomIN.App.ViewModels;
 
@@ -13,14 +15,24 @@ namespace ZoomIN.App.ViewModels;
 /// </summary>
 public sealed partial class HotkeysViewModel : ObservableObject
 {
-    private readonly PageContext _context;
+    private readonly SettingsService _settings;
+    private readonly HotkeyBindings _hotkeys;
+    private readonly bool _ready;
     private HotkeyRow? _recording;
 
-    public HotkeysViewModel(PageContext context)
+    public HotkeysViewModel(SettingsService settings, HotkeyBindings hotkeys)
     {
-        _context = context;
+        _settings = settings;
+        _hotkeys = hotkeys;
+        var key = settings.Current.MarkerHoldKey;
+        HoldKeyIndex = Enum.IsDefined(key) ? (int)key : 0;
+        _ready = true;
         Refresh();
     }
+
+    /// <summary>Key that shows highlights set to "only while held" (E1); shared by all profiles.</summary>
+    [ObservableProperty]
+    public partial int HoldKeyIndex { get; set; }
 
     public ObservableCollection<HotkeyRow> Rows { get; } = [];
 
@@ -32,8 +44,8 @@ public sealed partial class HotkeysViewModel : ObservableObject
     public void StartRecording(HotkeyRow row)
     {
         _recording = row;
-        _context.Controller.SuspendHotkeys();
-        row.Gesture = Text.Get("HotkeyPress");
+        _hotkeys.Suspend();
+        row.Gesture = Text.Get(row.Binding.Optional ? "HotkeyClearHint" : "HotkeyPress");
         Message = string.Empty;
     }
 
@@ -49,6 +61,13 @@ public sealed partial class HotkeysViewModel : ObservableObject
         if (virtualKey == 0x1B)
         {
             Finish(null);
+            return true;
+        }
+
+        // Del alone removes an optional shortcut (it stays unassigned).
+        if (virtualKey == 0x2E && modifiers == HotkeyModifiers.None && row.Binding.Optional)
+        {
+            Finish((row.Binding, default));
             return true;
         }
 
@@ -69,22 +88,32 @@ public sealed partial class HotkeysViewModel : ObservableObject
         return true;
     }
 
+    // −1 = no selection (the ComboBox unloads): not a choice. The constructor only shows the setting.
+    partial void OnHoldKeyIndexChanged(int value)
+    {
+        var key = ComboChoice.Or(value, _settings.Current.MarkerHoldKey);
+        if (_ready && key != _settings.Current.MarkerHoldKey)
+        {
+            _settings.Update(s => s with { MarkerHoldKey = key });
+        }
+    }
+
     private void Finish((HotkeyBinding Binding, HotkeyGesture Gesture)? change)
     {
         if (change is { } c)
         {
-            _context.Settings.Update(s => c.Binding.Set(s, c.Gesture));
+            _settings.Update(s => c.Binding.Set(s, c.Gesture));
         }
 
         _recording = null;
-        _context.Controller.ReloadHotkeys();
+        _hotkeys.Register();
         Refresh();
     }
 
     private void Refresh()
     {
-        var settings = _context.Settings.Current;
-        var unavailable = _context.Controller.UnavailableHotkeys;
+        var settings = _settings.Current;
+        var unavailable = _hotkeys.Unavailable;
         Rows.Clear();
         foreach (var binding in HotkeyBinding.All)
         {
@@ -92,6 +121,7 @@ public sealed partial class HotkeysViewModel : ObservableObject
             Rows.Add(new HotkeyRow(binding, Text.Get(binding.TextKey))
             {
                 Gesture = HotkeyFormat.Describe(gesture),
+                Hint = binding.HintKey is { } hint ? Text.Get(hint) : string.Empty,
                 Warning = unavailable.Contains(gesture) ? Text.Get("HotkeyUnavailable") : string.Empty,
             });
         }

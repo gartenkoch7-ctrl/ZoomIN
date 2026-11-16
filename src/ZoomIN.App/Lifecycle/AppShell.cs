@@ -1,43 +1,51 @@
 using Microsoft.UI.Dispatching;
 using ZoomIN.App.Localization;
+using ZoomIN.App.Pointer;
 using ZoomIN.App.Settings;
+using ZoomIN.App.Updates;
 using ZoomIN.App.Views;
+using ZoomIN.App.Views.Pages;
 using ZoomIN.App.Zoom;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Lifecycle;
-using ZoomIN.Core.Modes;
-using ZoomIN.Core.Tracking;
+using ZoomIN.Core.Localization;
 
 namespace ZoomIN.App.Lifecycle;
 
 /// <summary>
 /// Runs ZoomIN as a tray application (M7): starts zoom and tray, opens the settings window on
-/// demand, shows the first-run assistant once, checks for updates if allowed, and exits cleanly.
+/// demand, shows the first-run assistant once and exits cleanly. The tray menu is
+/// <see cref="TrayMenuSync"/>, the start-up notices are <see cref="StartupNotices"/>.
 /// </summary>
-public sealed class AppShell
+public sealed class AppShell : IShellActions
 {
     private readonly ZoomController _controller;
     private readonly SettingsService _settings;
-    private readonly ProfileService _profiles;
     private readonly ITrayIcon _tray;
-    private readonly IUpdateChecker _updates;
-    private readonly ILog _log;
-    private readonly PageContext _pages;
+    private readonly TrayMenuSync _trayMenu;
+    private readonly StartupNotices _notices;
+    private readonly UpdateService _updates;
+    private readonly ILocalizer _texts;
+    private readonly PageServices _pages;
     private readonly DispatcherQueue _dispatcher;
+    private readonly PointerConstraintController _pointerConstraint;
     private SettingsWindow? _window;
 
     public AppShell(
-        ZoomController controller, SettingsService settings, ProfileService profiles, ITrayIcon tray,
-        IUpdateChecker updates, IAutostart autostart, ICursorShapeSource cursorShapes, ILog log)
+        ZoomController controller, SettingsService settings, ITrayIcon tray, TrayMenuSync trayMenu,
+        StartupNotices notices, UpdateService updates, PageServices pages, ILocalizer texts,
+        PointerConstraintController pointerConstraint)
     {
         _controller = controller;
+        _pointerConstraint = pointerConstraint;
         _settings = settings;
-        _profiles = profiles;
         _tray = tray;
+        _trayMenu = trayMenu;
+        _notices = notices;
         _updates = updates;
-        _log = log;
+        _pages = pages;
+        _texts = texts;
         _dispatcher = DispatcherQueue.GetForCurrentThread();
-        _pages = new PageContext(settings, profiles, controller, autostart, cursorShapes, () => _window?.Handle ?? 0, () => _window?.ShowOverview());
     }
 
     /// <summary>Raised on the UI thread when the user chose "Exit".</summary>
@@ -45,33 +53,65 @@ public sealed class AppShell
 
     public void Start()
     {
-        Text.SetLanguage(_settings.Current.Language);
-        _controller.Initialize();
+        _texts.SetLanguage(_settings.Current.Language);
 
-        _tray.Command += command => _dispatcher.TryEnqueue(() => OnTrayCommand(command));
-        _controller.Model.Changed += UpdateTray;
-        _profiles.Changed += UpdateTray;
-        Text.LanguageChanged += UpdateTray;
-        UpdateTray();
-
-        if (!_settings.Current.FirstRunCompleted)
+        // Children of zoomin.app.start.shell (M14): the start runs synchronously on this thread.
+        using (Telemetry.Source.StartActivity("zoomin.app.start.shell.engine"))
         {
-            OpenSettings();
+            _controller.Initialize();
+
+            // Mouse buffer and axis lock (A6): tray app only, the secure desktop keeps the plain pointer.
+            _pointerConstraint.Start();
         }
 
-        _ = CheckForUpdatesAsync();
+        using (Telemetry.Source.StartActivity("zoomin.app.start.shell.tray"))
+        {
+            _tray.Command += command => _dispatcher.TryEnqueue(() => OnTrayCommand(command));
+            _trayMenu.Start();
+
+            if (!_settings.Current.FirstRunCompleted)
+            {
+                OpenSettings();
+            }
+
+            _notices.Start();
+        }
     }
 
     /// <summary>Thread-safe: e.g. called when a second ZoomIN start asks for the settings.</summary>
-    public void OpenSettings() => _dispatcher.TryEnqueue(() =>
+    public void OpenSettings() => OpenSettings(null);
+
+    /// <param name="page">Page to show, e.g. from a notice; not while the first-run assistant runs.</param>
+    private void OpenSettings(Type? page) => _dispatcher.TryEnqueue(() =>
     {
-        _window ??= CreateWindow();
+        if (_window is null)
+        {
+            _window = CreateWindow(page);
+        }
+        else if (page is not null && _settings.Current.FirstRunCompleted)
+        {
+            _window.ShowPage(page);
+        }
+
         _window.ShowAndActivate();
     });
 
-    private SettingsWindow CreateWindow()
+    /// <inheritdoc/>
+    public nint SettingsWindowHandle => _window?.Handle ?? 0;
+
+    /// <inheritdoc/>
+    public void ShowOverview() => _window?.ShowOverview();
+
+    /// <inheritdoc/>
+    public void ExitForUpdate() => _dispatcher.TryEnqueue(() =>
     {
-        var window = new SettingsWindow(_pages);
+        _updates.StartNewVersion();
+        Exit();
+    });
+
+    private SettingsWindow CreateWindow(Type? page)
+    {
+        var window = new SettingsWindow(_pages, _settings.Current.FirstRunCompleted, page);
         window.HiddenToTray += OnHiddenToTray;
         return window;
     }
@@ -89,64 +129,27 @@ public sealed class AppShell
 
     private void OnTrayCommand(TrayCommand command)
     {
-        switch (command)
+        if (command == TrayCommand.Open)
         {
-            case TrayCommand.Open: OpenSettings(); break;
-            case TrayCommand.ToggleZoom: _controller.Toggle(); break;
-            case TrayCommand.Fullscreen: _controller.Activate(ZoomMode.Fullscreen); break;
-            case TrayCommand.Lens: _controller.Activate(ZoomMode.Lens); break;
-            case TrayCommand.Docked: _controller.Activate(ZoomMode.Docked); break;
-            case TrayCommand.NextProfile: _profiles.Next(); break;
-            case TrayCommand.Exit:
-                _window?.CloseForExit();
-                ExitRequested?.Invoke();
-                break;
+            OpenSettings();
+        }
+        else if (command == TrayCommand.OpenTracking)
+        {
+            OpenSettings(typeof(TrackingPage));
+        }
+        else if (command == TrayCommand.Exit)
+        {
+            Exit();
+        }
+        else
+        {
+            _trayMenu.Handle(command);
         }
     }
 
-    private void UpdateTray()
+    private void Exit()
     {
-        var model = _controller.Model;
-        var mode = model.Mode;
-        var on = model.IsOn;
-        _tray.Show(new TrayMenu(
-            Text.Format("TrayTooltip", ModeName(mode), on ? Text.On : Text.Off),
-            [
-                new(TrayCommand.Open, Text.TraySettings),
-                new(TrayCommand.Open, null),
-                new(TrayCommand.ToggleZoom, Text.TrayToggle, on),
-                new(TrayCommand.Fullscreen, Text.ModeFullscreen, mode == ZoomMode.Fullscreen),
-                new(TrayCommand.Lens, Text.ModeLens, mode == ZoomMode.Lens),
-                new(TrayCommand.Docked, Text.ModeDocked, mode == ZoomMode.Docked),
-                new(TrayCommand.Open, null),
-                new(TrayCommand.NextProfile, Text.Format("TrayNextProfile", _profiles.Active)),
-                new(TrayCommand.Open, null),
-                new(TrayCommand.Exit, Text.TrayExit),
-            ]));
+        _window?.CloseForExit();
+        ExitRequested?.Invoke();
     }
-
-    private async Task CheckForUpdatesAsync()
-    {
-        var settings = _settings.Current;
-        if (!settings.CheckForUpdates || string.IsNullOrWhiteSpace(settings.UpdateFeedUrl))
-        {
-            return;
-        }
-
-        // Not during start-up: the check is never urgent.
-        await Task.Delay(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
-        var current = typeof(AppShell).Assembly.GetName().Version ?? new Version(0, 0);
-        if (await _updates.NewerVersionAsync(settings.UpdateFeedUrl, current, CancellationToken.None).ConfigureAwait(false) is { } newer)
-        {
-            _log.Info($"Update available: {newer}");
-            _tray.Notify(Text.UpdateTitle, Text.Format("UpdateText", newer));
-        }
-    }
-
-    internal static string ModeName(ZoomMode mode) => mode switch
-    {
-        ZoomMode.Lens => Text.ModeLens,
-        ZoomMode.Docked => Text.ModeDocked,
-        _ => Text.ModeFullscreen,
-    };
 }

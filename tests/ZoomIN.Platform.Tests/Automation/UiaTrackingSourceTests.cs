@@ -1,4 +1,4 @@
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Platform.Automation;
 
@@ -11,7 +11,7 @@ public sealed class UiaTrackingSourceTests
     public void StartAndDispose_DoesNotThrow_AndStops()
     {
         var model = new TrackingModel(TrackingOptions.Default);
-        var source = new UiaTrackingSource(NullLog.Instance);
+        var source = new UiaTrackingSource(NullLogger<UiaTrackingSource>.Instance);
 
         var exception = Record.Exception(() =>
         {

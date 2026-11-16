@@ -1,24 +1,36 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using ZoomIN.App.Localization;
-using ZoomIN.App.Views;
+using ZoomIN.App.SecureDesktop;
+using ZoomIN.App.Settings;
+using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.Settings;
 
 namespace ZoomIN.App.ViewModels;
 
-/// <summary>Language, autostart and update check. Every change applies and saves at once (M7).</summary>
+/// <summary>
+/// Language, autostart and the sign-in screen (updates have their own page, M9). Every change
+/// applies and saves at once (M7); the sign-in screen switch asks for administrator rights (ADR-0016).
+/// Both switches show the system's state, read anew each time the page opens (a new view model per
+/// navigation): the user can delete the autostart task in the Task Scheduler (ADR-0030).
+/// </summary>
 public sealed partial class GeneralViewModel : ObservableObject
 {
-    private readonly PageContext _context;
+    private readonly SettingsService _settings;
+    private readonly IAutostart _autostart;
+    private readonly ISecureDesktopSwitch _secureDesktop;
     private readonly bool _ready;
+    private bool _reverting;
 
-    public GeneralViewModel(PageContext context)
+    public GeneralViewModel(SettingsService settings, IAutostart autostart, ISecureDesktopSwitch secureDesktop)
     {
-        _context = context;
-        var s = context.Settings.Current;
+        _settings = settings;
+        _autostart = autostart;
+        _secureDesktop = secureDesktop;
+        var s = settings.Current;
         LanguageIndex = (int)s.Language;
-        Autostart = context.Autostart.IsEnabled;
-        CheckUpdates = s.CheckForUpdates;
-        UpdateUrl = s.UpdateFeedUrl;
+        Autostart = autostart.IsEnabled;
+        SecureDesktopAvailable = secureDesktop.IsAvailable;
+        SecureDesktop = secureDesktop.IsEnabled;
         _ready = true;
     }
 
@@ -29,10 +41,10 @@ public sealed partial class GeneralViewModel : ObservableObject
     public partial bool Autostart { get; set; }
 
     [ObservableProperty]
-    public partial bool CheckUpdates { get; set; }
+    public partial bool SecureDesktop { get; set; }
 
-    [ObservableProperty]
-    public partial string UpdateUrl { get; set; } = string.Empty;
+    /// <summary>False for developer builds and the portable ZIP: Windows only starts the copy in Program Files.</summary>
+    public bool SecureDesktopAvailable { get; }
 
     partial void OnLanguageIndexChanged(int value)
     {
@@ -42,31 +54,65 @@ public sealed partial class GeneralViewModel : ObservableObject
         }
 
         var language = (AppLanguage)value;
-        _context.Settings.Update(s => s with { Language = language });
+        _settings.Update(s => s with { Language = language });
         Text.SetLanguage(language);
     }
 
     partial void OnAutostartChanged(bool value)
     {
-        if (_ready)
+        if (!_ready || _reverting)
         {
-            _context.Autostart.SetEnabled(value);
+            return;
+        }
+
+        _autostart.SetEnabled(value);
+        _ = ShowRealAutostartAsync(value);
+    }
+
+    // The scheduled task (ADR-0030, Q9) can fail without an exception: show the real state, but
+    // only after the binding has finished writing the switch's value into this property.
+    private async Task ShowRealAutostartAsync(bool value)
+    {
+        await Task.Yield();
+        bool actual;
+        try
+        {
+            actual = _autostart.IsEnabled;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            // Unreadable: keep what the user chose; the page reads it anew next time.
+            return;
+        }
+
+        if (actual != value)
+        {
+            _reverting = true;
+            Autostart = actual;
+            _reverting = false;
         }
     }
 
-    partial void OnCheckUpdatesChanged(bool value)
+    partial void OnSecureDesktopChanged(bool value)
     {
-        if (_ready)
+        if (_ready && !_reverting)
         {
-            _context.Settings.Update(s => s with { CheckForUpdates = value });
+            _ = ChangeSecureDesktopAsync(value);
         }
     }
 
-    partial void OnUpdateUrlChanged(string value)
+    private async Task ChangeSecureDesktopAsync(bool value)
     {
-        if (_ready)
+        // The administrator prompt blocks until answered; keep the UI responsive meanwhile.
+        await Task.Run(() => _secureDesktop.RequestChange(value));
+
+        // "No" at the prompt or a failure: show the real state again.
+        var actual = _secureDesktop.IsEnabled;
+        if (actual != value)
         {
-            _context.Settings.Update(s => s with { UpdateFeedUrl = value.Trim() });
+            _reverting = true;
+            SecureDesktop = actual;
+            _reverting = false;
         }
     }
 }

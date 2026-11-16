@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
 using Windows.Win32;
 using Windows.Win32.Foundation;
-using Windows.Win32.UI.Input.KeyboardAndMouse;
+using Windows.Win32.UI.Accessibility;
 using Windows.Win32.UI.WindowsAndMessaging;
-using ZoomIN.Core.Diagnostics;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Hotkeys;
 
 namespace ZoomIN.Platform.Input;
@@ -11,21 +11,30 @@ namespace ZoomIN.Platform.Input;
 /// <summary>
 /// Global shortcuts via RegisterHotKey on a dedicated thread. Thread-bound hotkeys (no window)
 /// post WM_HOTKEY to that thread's queue, so registration must also happen on that thread.
+/// Shortcuts are given up while another desktop (Win+L, Ctrl+Alt+Del, UAC) has the input, so the
+/// secure-desktop instance can have them there (<see cref="HotkeyTable"/>).
 /// </summary>
 public sealed class Win32HotkeyService : IHotkeyService
 {
-    private readonly ILog _log;
+    // Kept in a static field so the GC never collects the delegate Windows calls back into; one
+    // service per process (DI singleton), so the callback finds it through s_active.
+    private static readonly WINEVENTPROC s_desktopSwitch = OnDesktopSwitch;
+    private static Win32HotkeyService? s_active;
+
+    private readonly ILogger _log;
+    private readonly HotkeyTable _table;
     private readonly Thread _thread;
     private readonly ManualResetEventSlim _queueReady = new();
     private readonly ConcurrentQueue<Registration> _pending = new();
     private readonly ConcurrentQueue<TaskCompletionSource> _unregisterRequests = new();
-    private readonly Dictionary<int, Action> _callbacks = [];
     private uint _threadId;
-    private int _nextId = 1;
+    private nuint _retryTimer;
 
-    public Win32HotkeyService(ILog log)
+    public Win32HotkeyService(ILogger<Win32HotkeyService> log)
     {
         _log = log;
+        _table = new HotkeyTable(log);
+        Volatile.Write(ref s_active, this);
         _thread = new Thread(Run) { IsBackground = true, Name = "ZoomIN Hotkeys" };
         _thread.Start();
         _queueReady.Wait();
@@ -51,6 +60,7 @@ public sealed class Win32HotkeyService : IHotkeyService
     {
         PInvoke.PostThreadMessage(_threadId, PInvoke.WM_QUIT, default, default);
         _thread.Join(TimeSpan.FromSeconds(2));
+        Interlocked.CompareExchange(ref s_active, null, this);
         _queueReady.Dispose();
     }
 
@@ -60,11 +70,16 @@ public sealed class Win32HotkeyService : IHotkeyService
 
         // A thread only gets a message queue once it touches the message API.
         PInvoke.PeekMessage(out _, HWND.Null, 0, 0, PEEK_MESSAGE_REMOVE_TYPE.PM_NOREMOVE);
+
+        // Out of context: Windows calls back on this thread while it waits in GetMessage. Not fatal
+        // if missing: the shortcuts then simply stay registered, as before.
+        var desktopHook = PInvoke.SetWinEventHook(
+            PInvoke.EVENT_SYSTEM_DESKTOPSWITCH, PInvoke.EVENT_SYSTEM_DESKTOPSWITCH, HMODULE.Null, s_desktopSwitch, 0, 0, PInvoke.WINEVENT_OUTOFCONTEXT);
         _queueReady.Set();
 
         while (PInvoke.GetMessage(out var msg, HWND.Null, 0, 0) > 0)
         {
-            if (msg.message == PInvoke.WM_HOTKEY && _callbacks.TryGetValue((int)msg.wParam.Value, out var callback))
+            if (msg.message == PInvoke.WM_HOTKEY && _table.Callback((int)msg.wParam.Value) is { } callback)
             {
                 Invoke(callback);
             }
@@ -74,49 +89,90 @@ public sealed class Win32HotkeyService : IHotkeyService
             }
             else if (msg.message == PInvoke.WM_APP + 1)
             {
-                UnregisterRegistered();
+                _table.Clear();
+                UpdateRetryTimer();
                 while (_unregisterRequests.TryDequeue(out var done))
                 {
                     done.SetResult();
                 }
             }
+            else if (msg.message == PInvoke.WM_TIMER && msg.wParam.Value == _retryTimer)
+            {
+                OnTimer();
+            }
         }
 
-        UnregisterRegistered();
+        if (!desktopHook.IsNull)
+        {
+            PInvoke.UnhookWinEvent(desktopHook);
+        }
+
+        _table.Clear();
+        UpdateRetryTimer();
     }
 
-    private void UnregisterRegistered()
+    private static void OnDesktopSwitch(HWINEVENTHOOK hook, uint winEvent, HWND hwnd, int idObject, int idChild, uint thread, uint time)
     {
-        foreach (var id in _callbacks.Keys)
+        var self = Volatile.Read(ref s_active);
+        if (self is null || PInvoke.GetCurrentThreadId() != self._threadId)
         {
-            PInvoke.UnregisterHotKey(HWND.Null, id);
+            return;
         }
 
-        _callbacks.Clear();
+        try
+        {
+            self._table.DesktopChanged(InputDesktop.IsCurrent());
+            self.UpdateRetryTimer();
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // Escaping a Windows callback would end ZoomIN; the shortcuts keep their state.
+            self._log.HotkeyHandlerFailed(ex);
+        }
+    }
+
+    private void OnTimer()
+    {
+        try
+        {
+            // While suspended, look again: a missed or undelivered switch event must not cost the shortcuts.
+            if (_table.Suspended)
+            {
+                _table.DesktopChanged(InputDesktop.IsCurrent());
+            }
+            else
+            {
+                _table.Retry();
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _log.HotkeyHandlerFailed(ex);
+        }
+
+        UpdateRetryTimer();
     }
 
     private void RegisterPending()
     {
         while (_pending.TryDequeue(out var registration))
         {
-            var id = _nextId++;
-            var modifiers = (HOT_KEY_MODIFIERS)registration.Gesture.Modifiers;
-            if (!registration.Repeat)
-            {
-                modifiers |= HOT_KEY_MODIFIERS.MOD_NOREPEAT;
-            }
+            registration.Result.SetResult(_table.Add(registration.Gesture, registration.OnPressed, registration.Repeat));
+        }
 
-            var ok = PInvoke.RegisterHotKey(HWND.Null, id, modifiers, (uint)registration.Gesture.VirtualKey);
-            if (ok)
-            {
-                _callbacks[id] = registration.OnPressed;
-            }
-            else
-            {
-                _log.Warn($"Hotkey {registration.Gesture} is already in use by another application.");
-            }
+        UpdateRetryTimer();
+    }
 
-            registration.Result.SetResult(ok);
+    private void UpdateRetryTimer()
+    {
+        if (_table.NeedsTimer && _retryTimer == 0)
+        {
+            _retryTimer = PInvoke.SetTimer(HWND.Null, 0, HotkeyTable.RetryIntervalMs, null);
+        }
+        else if (!_table.NeedsTimer && _retryTimer != 0)
+        {
+            PInvoke.KillTimer(HWND.Null, _retryTimer);
+            _retryTimer = 0;
         }
     }
 
@@ -129,7 +185,7 @@ public sealed class Win32HotkeyService : IHotkeyService
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             // A failing handler must not kill the hotkey thread.
-            _log.Error("Hotkey handler failed", ex);
+            _log.HotkeyHandlerFailed(ex);
         }
     }
 

@@ -16,9 +16,6 @@ internal sealed class CrashHistory
         _path = path;
     }
 
-    public static CrashHistory Default { get; } = new(Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ZoomIN", "crashes.log"));
-
     /// <summary>Records a crash and returns all known crash times, including this one.</summary>
     public IReadOnlyList<DateTimeOffset> Record(DateTimeOffset time)
     {
