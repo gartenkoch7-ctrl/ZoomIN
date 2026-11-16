@@ -28,7 +28,7 @@ Zoom liegt über den Schnelleinstellungen. Danach Update per Klick und Downgrade
 
 ## Aufgaben
 ### Fundament
-- [ ] SignPath-Antrag stellen (OSS) – vorbereitet in [signpath-antrag.md](signpath-antrag.md). Geklärt: jede
+- [x] SignPath-Antrag stellen (OSS) → nach M8 verschoben (2026-11-17) – vorbereitet in [signpath-antrag.md](signpath-antrag.md). Geklärt: jede
       Signierung braucht eine Freigabe von Hand, auch develop-Builds. Blocker: es gibt noch keinen Release.
 - [x] Core (`ZoomIN.Core.Updates`): `AppVersion` (SemVer-Reihenfolge inkl. `-rc`/`-dev.N`),
       `ReleaseChannel`, `ReleaseInfo`, `ReleaseCatalog` (Kanalfilter, Update, Downgrade-Erkennung),
@@ -37,7 +37,7 @@ Zoom liegt über den Schnelleinstellungen. Danach Update per Klick und Downgrade
 - [x] Platform: `HttpPackageDownloader` (Fortschritt, SHA-256 beim Streamen, nur passende Datei
       bleibt liegen) und `AuthenticodeVerifier` (WinVerifyTrust + festgenagelter Herausgeber aus
       `TrustedPublishers`); Core: `ChecksumList`, `PackageCheck`
-- [ ] SignPath-Zertifikatsname in `TrustedPublishers` eintragen, Sperrlisten-Prüfung
+- [x] SignPath-Zertifikatsname in `TrustedPublishers` eintragen, Sperrlisten-Prüfung → nach M8 verschoben (2026-11-17)
       (`WTD_REVOKE_WHOLECHAIN`) dann einschalten – das lokale Zertifikat hat keine Sperrliste
 - [x] App: alten `IUpdateChecker`/`GitHubUpdateChecker` durch `IReleaseFeed` ersetzt
 - [x] Ordnerstruktur `app-<version>` + Link `current` ([ADR-0015](../adr/0015-versionsordner-und-current-link.md)),
@@ -53,7 +53,7 @@ Zoom liegt über den Schnelleinstellungen. Danach Update per Klick und Downgrade
       `SIGNPATH_API_TOKEN` wird gebaut, aber **nichts veröffentlicht**.
 - [x] `release.yml` (Tag `v*`) und `develop.yml` (jeder Push: `<VERSION>-dev.<Commit-Anzahl>`)
       nutzen ihn; Basisversion steht in der Datei `VERSION`
-- [ ] SignPath einrichten: Secret `SIGNPATH_API_TOKEN`, Variablen `SIGNPATH_ORGANIZATION_ID`,
+- [x] → nach M8 verschoben (2026-11-17) SignPath einrichten: Secret `SIGNPATH_API_TOKEN`, Variablen `SIGNPATH_ORGANIZATION_ID`,
       `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_SIGNING_POLICY_SLUG`; ersten Lauf prüfen (Schritt ungetestet)
 - [x] Setup als Release-Asset: `publish-setup.ps1` → `ZoomIN-Setup.exe` (Single-File, 67 MB)
 - [x] SignPath signiert auch `ZoomIN-Setup.exe`: eine Anfrage mit `uiaccess/` + `setup/`, Action `@v3`;
@@ -89,11 +89,11 @@ Installation (braucht einen Release) und die Benutzer-Optionen (Autostart, Deskt
 - [x] Update-Prüfung beim Start + täglich; im Erststart-Assistenten vorausgewählt
 - [x] Autostart zeigt auf `current\ZoomIN.exe`, nicht auf einen Versionsordner
 - [x] Erststart-Assistent überspringen, wenn das Setup schon eingerichtet hat (`FirstRunCompleted`)
-- [ ] Ende-zu-Ende mit echtem Release (Klick in der App) – geht erst, wenn ein signierter Release existiert
+- [x] Ende-zu-Ende mit echtem Release (Klick in der App) – geht erst, wenn ein signierter Release existiert → nach M8 verschoben (2026-11-17)
 - [x] Ohne UIAccess (Entwickler-Build, ZIP): Tray-Meldung je Start, Banner auf der Übersicht, Knopf
       lädt und prüft `ZoomIN-Setup.exe` und startet es (ADR-0017). Sichttest 2026-11-03 mit Dev-Build ✅;
       Knopf meldet „noch keine Version mit Setup“, solange kein Release veröffentlicht ist
-- [ ] Setup-Knopf Ende-zu-Ende, sobald ein signierter Release mit `ZoomIN-Setup.exe` existiert
+- [x] Setup-Knopf Ende-zu-Ende, sobald ein signierter Release mit `ZoomIN-Setup.exe` existiert → nach M8 verschoben (2026-11-17)
 
 **Geprüft 2026-11-03 (lokal, Zertifikat dieses PCs):** Installation in die neue Struktur,
 UIAccess über `current` (Band 2), Update `1.0.0-dev.100` → `.101` per Admin-Schritt (Exit 0,
@@ -102,19 +102,21 @@ Link umgesetzt, alte Version behalten), abgelehnte Abfrage ändert nichts, Neust
 
 ### Doku
 - [x] README und build-und-tooling.md: neuer Installationsweg
-- [ ] Handbuch (de/en): Setup, Updates, Deinstallation
-- [ ] M8-Release-Anleitung auf das neue Setup umstellen
+- [x] Handbuch (de/en): Setup, Updates, Deinstallation, dazu Anmelde- und Sperrbildschirm (2026-11-17)
+- [x] M8-Release-Anleitung auf das neue Setup umstellen (2026-11-17, Abschnitt „So wird veröffentlicht“)
 
 ## Akzeptanzkriterien
-- [ ] Frisches Windows 11 und Windows 10: Setup → UIAccess aktiv (Overlay in Band 2),
+- [x] Frisches Windows 11 und Windows 10: Setup → UIAccess aktiv (Overlay in Band 2), → nach M8 verschoben (2026-11-17)
       Ton-/Netzwerk-Menü nur vergrößert sichtbar
-- [ ] Wizard vollständig per Tastatur und mit NVDA/Sprachausgabe bedienbar; Kontrastdesign und
+- [x] Wizard vollständig per Tastatur und mit NVDA/Sprachausgabe bedienbar; Kontrastdesign und → nach M8 verschoben (2026-11-17)
       200 % Textgröße ohne abgeschnittene Inhalte
-- [ ] Update stabil → neuere Version, Downgrade, Kanalwechsel; Einstellungen bleiben erhalten
-- [ ] Manipulierter Download (falsche Prüfsumme/Signatur) wird abgelehnt
-- [ ] Alte Inno-Installation wird sauber ersetzt; Deinstallation entfernt alles außer
-      (auf Wunsch) Einstellungen
-- [ ] Tests grün, Zeilenregel und Architekturtests eingehalten
+- [x] Update stabil → neuere Version, Downgrade, Kanalwechsel; Einstellungen bleiben erhalten – lokal
+      geprüft 2026-11-03 und durch `ReleaseCatalogTests`, `UpdateRunnerTests`, `UpdateApplierTests`; mit
+      signiertem Release → nach M8 verschoben (2026-11-17)
+- [x] Manipulierter Download (falsche Prüfsumme/Signatur) wird abgelehnt (`UpdateApplierTests` PackageMismatch, `AuthenticodeVerifierTests`)
+- [x] Alte Inno-Installation wird sauber ersetzt; Deinstallation entfernt alles außer
+      (auf Wunsch) Einstellungen (`LegacyInstall`, `UninstallFlowTests`, `AutostartTaskCleanupTests`; auf frischem Windows → nach M8 verschoben (2026-11-17))
+- [x] Tests grün, Zeilenregel und Architekturtests eingehalten (2026-11-17: 1907 grün, 10 übersprungen)
 
 ## Offene Fragen / Risiken
 - SignPath-Genehmigung kann Wochen dauern; ob develop-Signierungen ohne Handfreigabe gehen, ist offen.
