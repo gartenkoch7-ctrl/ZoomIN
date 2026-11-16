@@ -15,6 +15,7 @@ internal static class TemporaryZoomMetrics
     private static readonly KeyValuePair<string, object?> s_overview = new("zoomin.owner", "overview");
     private static readonly KeyValuePair<string, object?> s_windowDrag = new("zoomin.owner", "window_drag");
     private static readonly KeyValuePair<string, object?> s_islandEdit = new("zoomin.owner", "island_edit");
+    private static readonly KeyValuePair<string, object?> s_holdKey = new("zoomin.owner", "hold_key");
     private static readonly KeyValuePair<string, object?> s_set = new("zoomin.action", "set");
     private static readonly KeyValuePair<string, object?> s_release = new("zoomin.action", "release");
     private static readonly KeyValuePair<string, object?> s_move = new("zoomin.action", "move");
@@ -35,6 +36,7 @@ internal static class TemporaryZoomMetrics
         TemporaryZoomOwner.Overview => s_overview,
         TemporaryZoomOwner.WindowDrag => s_windowDrag,
         TemporaryZoomOwner.IslandEdit => s_islandEdit,
+        TemporaryZoomOwner.HoldKey => s_holdKey,
         _ => throw new ArgumentOutOfRangeException(nameof(owner), owner, "Every owner needs its own metric tag."),
     };
 }

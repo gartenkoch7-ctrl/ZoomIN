@@ -34,7 +34,7 @@ internal static class SetupTextsGerman
 
         ["Step2.Title"] = "Einstellungen",
         ["Step2.Text"] = "Alles lässt sich später in ZoomIN ändern.",
-        ["Autostart"] = "ZoomIN mit Windows starten",
+        ["Autostart"] = "ZoomIN mit Windows starten (sofort nach der Anmeldung)",
         ["Desktop"] = "Verknüpfung auf dem Desktop",
         ["Updates"] = "Nach neuen Versionen suchen",
         ["SecureDesktop"] = "Auch auf dem Anmeldebildschirm, Sperrbildschirm und bei Admin-Abfragen vergrößern",

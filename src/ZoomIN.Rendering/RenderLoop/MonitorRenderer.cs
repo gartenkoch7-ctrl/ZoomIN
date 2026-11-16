@@ -107,6 +107,7 @@ internal sealed class MonitorRenderer : IDisposable
                 using var session = StartSession();
                 _log.PipelineReady(_deviceName);
                 _metrics.PipelineReady();
+                _models.Milestones.ObservePipeline();
                 SetStatus(ZoomStatus.Idle with { IsCaptureExcluded = true });
                 RunSession(session);
             }
@@ -200,6 +201,11 @@ internal sealed class MonitorRenderer : IDisposable
                 lowered, frozen is null ? _models.Markers.Sample : default, frozen, frozen is { Still: true, StillUnavailable: false }, islands);
             var wasVisible = session.IsVisible;
             _stats.Record(session.RenderFrame(request), !wasVisible && session.IsVisible);
+            if (!_models.Milestones.IsComplete) // start timings (M10, secure instance only); shown = a desktop image, not only a pointer
+            {
+                var image = session.IsVisible && !request.OverlayOnly && session.HasImage;
+                _models.Milestones.Observe(session.HasImage, image, image && animator.IsSettled && animator.Current > ZoomLimits.Min);
+            }
 
             // Status is published once per second; the per-frame path stays lock-free.
             if (_stats.SecondElapsed(out var frames))

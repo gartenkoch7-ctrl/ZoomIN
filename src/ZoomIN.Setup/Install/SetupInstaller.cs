@@ -88,7 +88,9 @@ internal sealed class SetupInstaller
     private void ApplyUserChoices(SetupChoices choices)
     {
         var exe = _services.Layout.CurrentExecutable;
-        new RegistryAutostart(RegistryAutostart.RunKey, $"\"{exe}\"").SetEnabled(choices.Autostart);
+
+        // The autostart task at sign-in, as this (non-elevated) user (ADR-0030, Q9).
+        AutostartSelector.ForInstall(_services.Layout, _services.Telemetry.Logger<AutostartSelector>()).SetEnabled(choices.Autostart);
         if (choices.DesktopShortcut)
         {
             _services.Shortcuts.Create(_services.Shortcuts.UserDesktop, exe);

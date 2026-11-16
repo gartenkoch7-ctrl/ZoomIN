@@ -107,6 +107,37 @@ public sealed class WatchdogRunnerTests : IDisposable
         Assert.True(File.Exists(_folders.SecureGaveUp()));
     }
 
+    [Fact]
+    public void EndedBySignOut_IsNeitherCleanedNorRestarted()
+    {
+        _system.ExitCode = WatchdogRunner.TerminatedByWindows;
+
+        Assert.Equal(0, Runner().Run(42, AppPath));
+        Assert.Empty(_system.Calls);
+        Assert.Empty(_cleaned);
+        Assert.False(File.Exists(_folders.CrashLog()));
+    }
+
+    [Fact]
+    public void CrashWhileTheSessionEnds_IsNotRestarted()
+    {
+        _system.IsSessionEnding = true;
+
+        Assert.Equal(0, Runner().Run(42, AppPath));
+        Assert.Empty(_system.Calls);
+        Assert.Empty(_cleaned);
+        Assert.False(File.Exists(_folders.CrashLog()));
+    }
+
+    [Fact]
+    public void SecureInstance_WithTheSignOutCode_StillRestarts()
+    {
+        _system.ExitCode = WatchdogRunner.TerminatedByWindows;
+
+        Assert.Equal(0, Runner().Run(42, AppPath, secure: true));
+        Assert.Contains(SecureDesktopMode.Switch, _system.Calls[1], StringComparison.Ordinal);
+    }
+
     private WatchdogRunner Runner() =>
         new(_folders, NullLogger.Instance, [new Step("failing", _cleaned, fail: true), new Step("cursor", _cleaned)], _system, new Clock(this));
 
@@ -130,6 +161,8 @@ public sealed class WatchdogRunnerTests : IDisposable
         public void Notify(string title, string message, TimeSpan duration) => Calls.Add("notify " + title);
 
         public void Pause(TimeSpan duration) => Calls.Add("pause " + duration.TotalMilliseconds);
+
+        public bool IsSessionEnding { get; set; }
     }
 
     private sealed class Step(string name, List<string> cleaned, bool fail = false) : ICleanupStep

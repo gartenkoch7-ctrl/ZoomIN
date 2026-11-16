@@ -63,6 +63,42 @@ public sealed class SecureDesktopRegistrationTests : IDisposable
     }
 
     [Fact]
+    public void Off_KeepsTheAtEntry_ButStartsNothingOnSecureDesktops()
+    {
+        // The autostart list needs ATs\ZoomIN; "none" keeps Windows from starting it on lock and UAC (ADR-0030).
+        Registration.Apply(_layout, choice: false);
+
+        Assert.True(Registration.IsAtRegistered);
+        Assert.False(Registration.IsRegistered);
+        Assert.Equal(SecureDesktopRegistration.NoAccommodation, AtValue(SecureDesktopRegistration.AccommodationValue));
+        Assert.Equal(string.Empty, Configuration() ?? string.Empty);
+    }
+
+    [Fact]
+    public void OnAgain_ClearsTheAccommodation()
+    {
+        Registration.Apply(_layout, choice: false);
+
+        Assert.True(Registration.Apply(_layout, choice: true));
+
+        Assert.True(Registration.IsRegistered);
+        Assert.Null(AtValue(SecureDesktopRegistration.AccommodationValue));
+        Assert.Equal("ZoomIN", Configuration());
+    }
+
+    [Fact]
+    public void AccommodationNone_CountsAsOff_EvenInTheList()
+    {
+        Registration.Apply(_layout, choice: true);
+        using (var at = _root.CreateSubKey(Accessibility + @"\ATs\ZoomIN"))
+        {
+            at.SetValue(SecureDesktopRegistration.AccommodationValue, "NONE");
+        }
+
+        Assert.False(Registration.IsRegistered);
+    }
+
+    [Fact]
     public void RemoveAll_ForgetsTheChoice()
     {
         Registration.Apply(_layout, choice: false);
@@ -71,6 +107,17 @@ public sealed class SecureDesktopRegistrationTests : IDisposable
 
         Assert.Null(Registration.Preference);
         Assert.False(Registration.IsRegistered);
+        Assert.False(Registration.IsAtRegistered);
+    }
+
+    [Fact]
+    public void RemoveAll_TakesZoomINOutOfTheList()
+    {
+        Registration.Apply(_layout, choice: true);
+
+        Registration.RemoveAll();
+
+        Assert.Equal(string.Empty, Configuration());
     }
 
     public void Dispose()
@@ -82,6 +129,12 @@ public sealed class SecureDesktopRegistrationTests : IDisposable
         {
             Registry.CurrentUser.DeleteSubKey(Parent, throwOnMissingSubKey: false);
         }
+    }
+
+    private object? AtValue(string name)
+    {
+        using var at = _root.OpenSubKey(Accessibility + @"\ATs\ZoomIN");
+        return at?.GetValue(name);
     }
 
     private string? Configuration()

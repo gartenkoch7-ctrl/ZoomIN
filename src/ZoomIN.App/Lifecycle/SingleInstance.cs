@@ -19,8 +19,12 @@ internal sealed class SingleInstance : IDisposable
         _openRequested = new EventWaitHandle(false, EventResetMode.AutoReset, OpenEventName);
     }
 
+    /// <param name="askToOpen">
+    /// False for a start Windows made by itself (Ease of Access, ADR-0030): the user did not ask
+    /// for a window, so a running instance is left alone.
+    /// </param>
     /// <returns>Null if another instance runs; it has then been asked to open its settings.</returns>
-    public static SingleInstance? TryAcquire()
+    public static SingleInstance? TryAcquire(bool askToOpen = true)
     {
         var mutex = new Mutex(false, MutexName);
         try
@@ -28,8 +32,12 @@ internal sealed class SingleInstance : IDisposable
             if (!mutex.WaitOne(0))
             {
                 mutex.Dispose();
-                using var open = new EventWaitHandle(false, EventResetMode.AutoReset, OpenEventName);
-                open.Set();
+                if (askToOpen)
+                {
+                    using var open = new EventWaitHandle(false, EventResetMode.AutoReset, OpenEventName);
+                    open.Set();
+                }
+
                 return null;
             }
         }
@@ -39,6 +47,33 @@ internal sealed class SingleInstance : IDisposable
         }
 
         return new SingleInstance(mutex);
+    }
+
+    /// <summary>Another ZoomIN runs; the mutex is held only for the check itself.</summary>
+    public static bool IsTaken()
+    {
+        if (!Mutex.TryOpenExisting(MutexName, out var mutex))
+        {
+            return false;
+        }
+
+        using (mutex)
+        {
+            try
+            {
+                if (!mutex.WaitOne(0))
+                {
+                    return true;
+                }
+            }
+            catch (AbandonedMutexException)
+            {
+                // The previous instance crashed: ours now, so nobody runs.
+            }
+
+            mutex.ReleaseMutex();
+            return false;
+        }
     }
 
     /// <summary>Calls <paramref name="onOpen"/> (on a thread-pool thread) whenever another start asks for it.</summary>

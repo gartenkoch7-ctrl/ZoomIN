@@ -34,7 +34,7 @@ public static class SecureSettingsSanitizer
     public static AppSettings Sanitize(AppSettings s)
     {
         var d = s_defaults;
-        return s with
+        var sanitized = s with
         {
             SchemaVersion = AppSettings.CurrentSchemaVersion,
             Language = Defined(s.Language, d.Language),
@@ -113,6 +113,7 @@ public static class SecureSettingsSanitizer
             ProfileHotkey = Hotkey(s.ProfileHotkey, d.ProfileHotkey),
 
             // Filter per window off on the secure desktop (ADR-0020): no window tracking there.
+            // Its automatic filter becomes the monitor filter instead (SecureWindowFilterFallback).
             WindowFilter = new WindowFilterOptions { Enabled = false },
             WindowFilterHotkey = default,
 
@@ -134,6 +135,8 @@ public static class SecureSettingsSanitizer
             // Not used on the secure desktop (A6 runs in the tray app only); bounded for the copy.
             PointerConstraint = PointerConstraintOptions.Normalize(s.PointerConstraint),
         };
+
+        return SecureWindowFilterFallback.Apply(sanitized, s.WindowFilter);
     }
 
     private static T Defined<T>(T value, T fallback)

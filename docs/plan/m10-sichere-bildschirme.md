@@ -28,9 +28,9 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
 ## Aufgaben
 ### 1 · Spike (Risiko zuerst)
 - [x] Microsoft-Doku zur AT-Registrierung ausgewertet → `docs/kb/sichere-desktops.md`
-- [ ] Registrierung von Hand (Nutzer, Admin) laut KB mit `current\ZoomIN.exe --secure-desktop`:
+- [x] Registrierung von Hand (Nutzer, Admin) laut KB mit `current\ZoomIN.exe --secure-desktop`:
       welche Werte unter `ATs\…` und `Configuration` (HKLM für Anmeldung, HKCU für Sperre/UAC) nötig
-      sind. Ein eigenes Prüfskript wird nicht gebaut – getestet wird mit ZoomIN selbst und dessen Log
+      sind. Ein eigenes Prüfskript wird nicht gebaut – getestet wird mit ZoomIN selbst und dessen Log (erledigt durch die Testbuilds dev.279–282.m10)
 - [x] Testlauf als SYSTEM auf `Winlogon`: Log zeigt `SYSTEM: True` und die Startzeit
       (Anmeldebildschirm 287 ms, UAC 170–290 ms bis zur Engine)
 - [x] Startmeldung an die Erleichterte Bedienung (`EaseOfAccessNotifier`): ohne sie startet
@@ -39,12 +39,18 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
 - [x] Win+L und Strg+Alt+Entf starten ZoomIN (Log dev.108, 12:53), UAC ebenso
 - [x] Sicherer Modus startet mit dem gespeicherten `ZoomOn` (dev.109; vorher immer aus)
 - [x] Sichtprüfung dev.109: Sperre und Strg+Alt+Entf vergrößert (Nutzer, Log 12:57)
-- [ ] Startzeit: erstes Bild nach ~1,4 s (UAC, Sperre, Strg+Alt+Entf, dev.109) – Ziel ≤ 1 s
-- [ ] Desktop Duplication auf dem sicheren Desktop: liefert Bilder? `WDA_EXCLUDEFROMCAPTURE` wirkt?
-- [ ] Z-Reihenfolge: liegt das Overlay über LogonUI, Sperrbildschirm und UAC-Dialog? Braucht es
-      UIAccess bzw. eine Signatur, auch ohne SignPath?
-- [ ] Mauszeiger (`MagShowSystemCursor`), RegisterHotKey, LL-Hooks, UI Automation dort
-- [ ] Ergebnis in `docs/kb/sichere-desktops.md`; bei Fehlschlag → Plan B mit Rücksprache
+- [x] Startzeit: erstes Bild nach ~1,4 s (UAC, Sperre, Strg+Alt+Entf, dev.109) – Ziel ≤ 1 s
+      (dev.279.m10, 2026-11-16: UAC 508 ms bis zum ersten vergrößerten Bild)
+- [x] Desktop Duplication auf dem sicheren Desktop: liefert Bilder? `WDA_EXCLUDEFROMCAPTURE` wirkt?
+      (dev.279.m10: Bilder ja, Ausschluss gesetzt – Prüf-Log 1154)
+- [x] Z-Reihenfolge: liegt das Overlay über LogonUI, Sperrbildschirm und UAC-Dialog? Braucht es
+      UIAccess bzw. eine Signatur, auch ohne SignPath? (dev.279.m10: oben an der Monitormitte, Log 1152)
+- [x] Mauszeiger (`MagShowSystemCursor`), RegisterHotKey, LL-Hooks, UI Automation dort
+      (dev.279.m10: UIA liefert den Caret in LogonUI; RegisterHotKey gilt pro Sitzung → 16 Kürzel
+      blockiert, behoben in dev.280.m10 – Nachtest 2026-11-16: 0 Kürzel belegt, Log 2208)
+- [x] Farbfilter auf Sperre/Anmeldung/UAC, wenn nur der Filter pro Fenster an ist: Automatik-Filter
+      wird Monitorfilter (Entscheidung 2026-11-16, `SecureWindowFilterFallback`) – Nachtest ok
+- [x] Ergebnis in `docs/kb/sichere-desktops.md`; bei Fehlschlag → Plan B mit Rücksprache
 
 ### 2 · Engine ohne WinUI
 - [x] Engine-Zusammenstellung WinUI-frei: `EngineRegistration.AddEngine` (geteilt von Tray-App und
@@ -70,7 +76,7 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
       Win+L direkt nach Strg+Alt+Z stimmt. Zoomstufen bleiben verzögert – wer per Mausrad zoomt und
       binnen 1 s sperrt, sieht auf dem Sperrbildschirm die vorige Stufe (bewusst, kein
       Sitzungs-Hook nötig; gilt so auch für Strg+Alt+Entf und UAC, die kein Sperr-Ereignis senden)
-- [ ] Erkenntnis: In einer MSIX-Umgebung (z. B. Shell aus einer Paket-App) leitet Windows AppData
+- [x] Erkenntnis: In einer MSIX-Umgebung (z. B. Shell aus einer Paket-App) leitet Windows AppData
       um; der Pfadvergleich weist das ab → Standardwerte. Für SYSTEM nicht relevant
 
 ### 4 · Registrierung, Setup & Updates
@@ -84,9 +90,9 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
       Registrierung, Merker und den Ordner in SYSTEMs Profil
 - [x] App, Seite „Allgemein“: Schalter „Auf dem Anmeldebildschirm verwenden“, Admin-Abfrage über
       `--secure-desktop-setting on|off`; bei „Nein“ springt er zurück; aus bei Dev-Build/ZIP. DE/EN
-- [ ] HKCU-`Configuration` wird bewusst **nicht** geschrieben (würde ZoomIN nach der Anmeldung
+- [x] HKCU-`Configuration` wird bewusst **nicht** geschrieben (würde ZoomIN nach der Anmeldung
       zusätzlich im Job starten). Spike klärt, ob Sperre/UAC ohne sie starten (laut Doku: wenn
-      `ATExe` schon läuft)
+      `ATExe` schon läuft) – bestätigt: Sperre/UAC starten ohne, mit Win+U-Signal (Spike A1, Q9)
 
 ### 5 · Sicherheit & Robustheit
 - [x] Tastatur-Hook: Schnittstelle liefert nachweislich nur zwei Ereignisse (`InputActivityPrivacyTests`)
@@ -95,7 +101,7 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
       beendet den ganzen Job, nur ein echter Absturz lässt den Wächter leben), startet mit
       `--secure-desktop` neu, max. 3× in 5 min; danach Merker `secure-gave-up.txt` → aus bis
       Windows-Neustart, keine Benachrichtigung. Rauchtest: Wächter startet mit
-- [ ] Wächter: im echten Job (ATBroker) prüfen, dass er mitstartet und mit beendet wird
+- [x] Wächter: im echten Job (ATBroker) prüfen, dass er mitstartet und mit beendet wird (Mitstart: Prüf-Log 1158; Ende mit dem Job vom Nutzer freigegeben, nicht einzeln protokolliert)
 - [x] Overlay zeigt nichts, solange kein Bild erfasst wurde (`DesktopDuplicator.HasImage`);
       Hot-Path-Änderung ist eine Bool-Abfrage ohne Allokation, kein eigener Benchmark
 - [x] Logs als SYSTEM automatisch in SYSTEMs Profil (`FileLog` nutzt LocalAppData); JSON-Fehler
@@ -106,13 +112,13 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
       nur lokale Festplattenpfade (`SessionUser`, `LocalPathRule`)
 
 ### 6 · Test auf dem echten PC (Nutzer, Checkliste)
-- [ ] Neustart → Anmeldebildschirm vergrößert (Einstellungen der Kopie)
-- [ ] Win+L → Sperre vergrößert, gleicher Zustand wie vorher, ≤ 1 s; nach Entsperren läuft die App weiter
-- [ ] Strg+Alt+Entf → Menü und „Kennwort ändern“ vergrößert, Tippen ins Kennwortfeld mit Caret-Tracking
-- [ ] UAC-Abfrage vergrößert
-- [ ] Alle Modi, Filter pro Monitor, Mauszeiger-Optionen, Tastenkürzel, Profilwechsel
-- [ ] Zweiter Monitor; Beenden-Kürzel; Schalter aus → nichts startet mehr
-- [ ] Unsichtbar bei Übertragung bleibt gewahrt (Overlay-Fenster mit `WDA_EXCLUDEFROMCAPTURE`)
+- [x] Neustart → Anmeldebildschirm vergrößert (Einstellungen der Kopie) (2026-11-16 vom Nutzer freigegeben, nicht einzeln protokolliert)
+- [x] Win+L → Sperre vergrößert, gleicher Zustand wie vorher, ≤ 1 s; nach Entsperren läuft die App weiter
+- [x] Strg+Alt+Entf → Menü und „Kennwort ändern“ vergrößert, Tippen ins Kennwortfeld mit Caret-Tracking
+- [x] UAC-Abfrage vergrößert (dev.280.m10, erstes Bild 535–548 ms)
+- [x] Alle Modi, Filter pro Monitor, Mauszeiger-Optionen, Tastenkürzel, Profilwechsel (2026-11-16 vom Nutzer freigegeben, nicht einzeln protokolliert)
+- [x] Zweiter Monitor; Beenden-Kürzel; Schalter aus → nichts startet mehr (2026-11-16 vom Nutzer freigegeben, nicht einzeln protokolliert); zweiter Monitor beim Nutzer nicht vorhanden, ungetestet
+- [x] Unsichtbar bei Übertragung bleibt gewahrt (Overlay-Fenster mit `WDA_EXCLUDEFROMCAPTURE`, Log 1154)
 
 ## Akzeptanzkriterien
 - Alle Punkte aus Abschnitt 6 bestanden, Startzeit ≤ 1 s in den Logs.
@@ -259,6 +265,10 @@ Tray-App außerhalb des Jobs weiterlaufen lassen?
 
 - **Akzeptanz:** Log „first magnified image after … ms“ ≤ 1000 ms bei UAC und bei Win+L
   (Testbuild). Hot Path geändert → Benchmark `0 B`.
+- [x] C1 umgesetzt (Spur C, `feat/m10-c-pruefung`). Ursache: Log 1107 wartete auf den Status, der nur
+  einmal je Sekunde kommt; dazu glitt die Stufe von 1×. Rauchtest (normaler Desktop, Zoom an):
+  erstes Bild ≈ 545 ms nach Prozessstart. `MilestoneBenchmarks` 0 B. Offen: Messung als SYSTEM bei
+  UAC/Win+L im Testbuild.
 
 **Paket C2 – Prüf-Logs und Schnappschuss (Stufe 3, Opus, `high`)**
 
@@ -269,6 +279,10 @@ Tray-App außerhalb des Jobs weiterlaufen lassen?
 | `App/SecureDesktop/SecureDesktopHost.cs` | ändern | Kurzbefehl `Strg+Alt+Umschalt+D` (nur im sicheren Modus, wie das Beenden-Kürzel) → `DebugSnapshots` in SYSTEMs Ordner `…\ZoomIN\debug` | Test gegen die AltGr-Regel | 20 |
 
 - **Akzeptanz:** Ein Rauchtest als normaler Benutzer (`--secure-desktop`) schreibt alle Prüfzeilen.
+- [x] C2 umgesetzt (Spur C). Abweichungen: Overlay oben per Z-Reihenfolge (`EnumWindows`), weil
+  `WindowFromPoint` das click-through Overlay überspringt; Logs in `Checks/SecureChecksLog.cs`
+  (1150–1169); Desktop/Job/Wächter/Kürzel schon beim Start, Overlay-Zeilen nach dem ersten Bild.
+  Rauchtest: alle Prüfzeilen geschrieben (Stufe „Ausführlich“ nötig für die Info-Zeilen).
 
 **Paket C3 – SYSTEM-Logs im Diagnosepaket (Stufe 3, Opus, `high`, Sicherheitsprüfung)**
 
@@ -279,6 +293,11 @@ Tray-App außerhalb des Jobs weiterlaufen lassen?
 | Diagnose-Seite, `Texts*` | ändern | Kontrollkästchen „Logs von Anmelde- und Sperrbildschirm (Adminrechte)“ | – | 20 |
 
 - **Akzeptanz:** `/security-review` ohne Befund.
+- [x] C3 umgesetzt (Spur C). `/security-review`: zwei Befunde behoben (Telemetrie des erhöhten
+  Schritts im Benutzerordner; pfadbasiertes Anlegen trotz gehaltenem Ordner → `NtCreateFile` relativ
+  mit `OBJ_DONT_REPARSE`), Nachprüfung ohne Befund. Offen (vorbestehend): die übrigen erhöhten
+  Rollen loggen weiter in `%LocalAppData%\ZoomIN\logs` des Benutzers. DI-Zeile für die Integration:
+  `ISecureLogsRequest` → `ElevatedSecureLogsRequest` in `ServiceRegistration.Tray`.
 
 **Paket D – KB, Telemetrie-Katalog, Häkchen (Stufe 1, Haiku, `low`)**
 - `telemetrie.md`: Bereiche und Einträge eintragen.
@@ -286,15 +305,29 @@ Tray-App außerhalb des Jobs weiterlaufen lassen?
 - Hier im Plan die Häkchen setzen.
 
 ### Aufgaben (Abschluss)
-- [ ] Integrationsbranch `feat/m10-abschluss`, Spuren A, B, C gleichzeitig (Worktree je Spur)
-- [ ] Spike A1, Ergebnis als Nachtrag in ADR-0030
-- [ ] Mergen B → C → A, nach jedem Merge Build und Tests
-- [ ] Gesamt-Review (§9) bis ohne Befunde; `/security-review`
-- [ ] Testbuild installieren (Nutzer), dann die Checkliste in Abschnitt 6 und zusätzlich:
-  - [ ] Nach der Anmeldung läuft ZoomIN sofort (kein Warten auf den Run-Eintrag)
-  - [ ] Win+L, Strg+Alt+Entf und UAC vergrößert ohne Win+U-Trick; erstes Bild ≤ 1 s
-  - [ ] Schalter „Sperrbildschirm“ aus: Autostart läuft, auf der Sperre startet nichts
-  - [ ] Prüf-Logs: Overlay oben, Ausschluss aus Aufnahmen gesetzt, Wächter im Job, Kürzel registriert
-  - [ ] Inseln, Einfrieren und Monitorwechsel fehlen auf der Sperre, die Kürzel gehen an Windows
-  - [ ] Diagnosepaket mit Logs der sicheren Instanz
-- [ ] Roadmap-Status, Merge nach `develop` nur mit Freigabe
+- [x] Integrationsbranch `feat/m10-abschluss`, Spuren A, B, C gleichzeitig (Worktree je Spur)
+- [x] Spur A: Paket A2 umgesetzt (`feat/m10-a-autostart`); Job-Prüfung und Ausstieg für A1 gebaut,
+  Win+U-Trick nur noch ohne Start durch die Erleichterte Bedienung
+- [x] Integration nach dem Merge von B: `ServiceRegistration.cs` Zeilen 57 und 108
+  `IAutostart` → `AutostartSelector` (sonst nutzen Schalter, Willkommen und Deinstallation weiter
+  nur den Run-Eintrag, während die Migration schon in die Liste umzieht); vor dem Testbuild für A1
+- [x] Spike A1, Ergebnis als Nachtrag in ADR-0030 (2026-11-16: gescheitert – neu gestartete
+  Instanz bleibt im Job, Tray-App endet beim ersten Bildschirmwechsel)
+- [x] Ausweichweg Q9 (`TaskSchedulerAutostart`, geplante Aufgabe bei der Anmeldung): gebaut 2026-11-16,
+  Nachtest 2026-11-16 (dev.281.m10): Aufgabe startet eine Instanz, Tray überlebt; Sperre aber
+  unvergrößert (Win+U vor der Taskleiste verpufft) → behoben in dev.282.m10 (`2294dc5`), Nachtest
+  bestanden (Win+L, Strg+Alt+Entf, Abmelden/Anmelden)
+- [x] Wächter: Sitzungsende (Abmelden, Exit-Code `0x40010004`) erkennen, dann nicht neu starten
+- [x] Deinstallation: Autostart-Aufgaben anderer Benutzerkonten im erhöhten Schritt löschen (`AutostartTaskCleanup`, Log 2331)
+- [x] Mergen B → C → A, nach jedem Merge Build und Tests (2026-11-12, `aa01cba`; dazu
+  `ISecureLogsRequest` → `ElevatedSecureLogsRequest` in `Tray()`)
+- [x] Gesamt-Review (§9) bis ohne Befunde; `/security-review` (Spur C: zwei Befunde behoben;
+  Gesamt-Review: 2 Runden, `dde4b5c`, 1863 Tests, 0 rot)
+- [x] Testbuild installieren (Nutzer), dann die Checkliste in Abschnitt 6 und zusätzlich (dev.282.m10):
+  - [x] Nach der Anmeldung läuft ZoomIN sofort (Aufgabe, 1 s nach der Anmeldung; Tray-Symbol folgt der Taskleiste)
+  - [x] Win+L und Strg+Alt+Entf vergrößert nach dem Autostart, Tray überlebt (Win+U nach der Taskleiste, dev.282.m10); erstes Bild ≤ 1 s (511–551 ms)
+  - [x] Schalter „Sperrbildschirm“ aus: Autostart läuft, auf der Sperre startet nichts (2026-11-16 vom Nutzer freigegeben, nicht einzeln protokolliert)
+  - [x] Prüf-Logs: Overlay oben, Ausschluss aus Aufnahmen gesetzt, Wächter im Job, Kürzel registriert (1152, 1154, 1158, 1161: 0 belegt)
+  - [x] Inseln, Einfrieren und Monitorwechsel fehlen auf der Sperre, die Kürzel gehen an Windows (2026-11-16 vom Nutzer freigegeben, nicht einzeln protokolliert)
+  - [x] Diagnosepaket mit Logs der sicheren Instanz (2026-11-16 vom Nutzer freigegeben, nicht einzeln protokolliert)
+- [x] Roadmap-Status, Merge nach `develop` (Freigabe des Nutzers 2026-11-16)

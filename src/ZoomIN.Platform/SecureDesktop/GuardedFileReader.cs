@@ -73,7 +73,8 @@ public static unsafe class GuardedFileReader
         return info.nNumberOfLinks == 1 && (info.dwFileAttributes & (ReparsePoint | Directory)) == 0;
     }
 
-    private static bool IsSamePath(SafeFileHandle handle, string expected)
+    /// <summary>Windows really opened <paramref name="expected"/>: no link anywhere in the path, no network share.</summary>
+    internal static bool IsSamePath(SafeFileHandle handle, string expected)
     {
         Span<char> buffer = stackalloc char[1024];
         var length = PInvoke.GetFinalPathNameByHandle(handle, buffer, GETFINALPATHNAMEBYHANDLE_FLAGS.FILE_NAME_NORMALIZED);

@@ -3,7 +3,7 @@ using ZoomIN.Core.Tracking;
 
 namespace ZoomIN.App.Markers;
 
-/// <summary>Log messages of the highlights (M18 lane C: E2 caret shapes 1640–1649, E1 conditions 1650–1659).</summary>
+/// <summary>Log messages of the highlights (M18 lane C: E2 caret shapes 1640–1649, E1 conditions and zoom off while held 1650–1659).</summary>
 internal static partial class MarkerLog
 {
     [LoggerMessage(EventId = 1640, Level = LogLevel.Information, Message = "Caret marker changed: {Shape}, {Thickness}")]
@@ -14,4 +14,10 @@ internal static partial class MarkerLog
 
     [LoggerMessage(EventId = 1651, Level = LogLevel.Information, Message = "Hold key changed: {Key}")]
     public static partial void HoldKeyChanged(this ILogger logger, MarkerHoldKey key);
+
+    [LoggerMessage(EventId = 1652, Level = LogLevel.Information, Message = "Hold key held: zoom off on {Monitors} monitor(s)")]
+    public static partial void HoldKeyZoomOff(this ILogger logger, int monitors);
+
+    [LoggerMessage(EventId = 1653, Level = LogLevel.Information, Message = "Hold key released: zoom back")]
+    public static partial void HoldKeyZoomBack(this ILogger logger);
 }

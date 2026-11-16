@@ -14,6 +14,7 @@ using ZoomIN.Core.Folders;
 using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.Localization;
 using ZoomIN.Core.Pointer;
+using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.AgentDebug;
@@ -51,10 +52,10 @@ internal static class ServiceRegistration
 
         services.AddSingleton<ISettingsStore, JsonSettingsStore>();
         services.AddSingleton<IProfileStore, JsonProfileStore>();
-        services.AddEngine();
+        services.AddEngine(EngineScope.Full);
 
         services.AddSingleton<ITrayIcon, Win32TrayIcon>();
-        services.AddSingleton<IAutostart, RegistryAutostart>();
+        services.AddSingleton<IAutostart, AutostartSelector>();
         services.AddSingleton<HttpClient, UpdateHttpClient>();
         services.AddSingleton<IReleaseFeed, GitHubReleaseFeed>();
         services.AddSingleton<IPackageDownloader, HttpPackageDownloader>();
@@ -63,6 +64,7 @@ internal static class ServiceRegistration
         services.AddSingleton<IUiAccessProbe, Win32UiAccessProbe>();
         services.AddSingleton<UpdateService>();
         services.AddSingleton<IDiagnosticsPackage, DiagnosticsPackage>();
+        services.AddSingleton<ISecureLogsRequest, ElevatedSecureLogsRequest>();
         services.AddSingleton<SetupLauncher>();
         services.AddSingleton<ISecureDesktopSwitch, SecureDesktopSwitch>();
         services.AddSingleton<IWatchdogLauncher, ShellWatchdogLauncher>();
@@ -105,19 +107,16 @@ internal static class ServiceRegistration
         services.AddSingleton<UpdateRunner>();
         services.AddSingleton<UninstallFlow>();
         services.AddSingleton<IRemovalSteps, ProcessRemovalSteps>();
-        services.AddSingleton<IAutostart, RegistryAutostart>();
+        services.AddSingleton<IAutostart, AutostartSelector>();
         services.AddSingleton<ISecureDesktopSwitch, SecureDesktopSwitch>();
         return services;
     }
 
     /// <summary>
-    /// The secure-desktop instance (ADR-0016): engine only, settings read-only from the session
-    /// user, nothing that opens windows, files chosen by the user or the network.
+    /// The secure-desktop instance's registrations (ADR-0016): the core engine only, settings
+    /// read-only from the session user, nothing that opens windows, files chosen by the user or the
+    /// network. <see cref="SecureDesktopHost"/> adds its checks (<see cref="SecureCheckRegistration"/>) and builds it.
     /// </summary>
-    public static ServiceProvider BuildSecureDesktop(TelemetryHost telemetry, IAppFolders folders) =>
-        SecureDesktop(telemetry, folders).BuildServiceProvider();
-
-    /// <summary>The secure-desktop instance's registrations.</summary>
     internal static ServiceCollection SecureDesktop(TelemetryHost telemetry, IAppFolders folders)
     {
         var services = new ServiceCollection();
@@ -130,7 +129,7 @@ internal static class ServiceRegistration
             sp.GetRequiredService<ILogger<SecureSettingsStore>>(), sp.GetRequiredService<SessionUser>(), folders.Local));
         services.AddSingleton<IProfileStore>(sp => new SecureProfileStore(sp.GetRequiredService<SessionUser>()));
         services.AddSingleton<IWatchdogLauncher, ShellWatchdogLauncher>();
-        services.AddEngine();
+        services.AddEngine(EngineScope.SecureDesktop);
         return services;
     }
 }

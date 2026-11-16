@@ -82,6 +82,7 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 |---|---|---|
 | `zoomin.app.start` | app | Prozessstart bis Tray-App bereit |
 | `zoomin.secure.start` | secure | Prozessstart bis Engine läuft bzw. erstes vergrößertes Bild (Tag `zoomin.secure.zoom_on`) |
+| `zoomin.secure.start.pipeline`, `.capture`, `.present`, `.zoom_in` | secure | Kinder von `zoomin.secure.start` (M10-Abschluss), lückenlos hintereinander: Engine-Start → Pipeline bereit → erste Desktopkopie (Warten auf Desktop Duplication) → erstes gezeigtes Bild → Zoomstufe erreicht. Die Kopie wird nach ihrem Frame gestempelt, `.present` ist darum kurz. Nachträglich aus `RenderMilestones` angelegt, nur wenn der Zoom an startet |
 | `zoomin.watchdog.run` | watchdog | Überwachung, bis die App endet |
 | `zoomin.update.run`, `zoomin.elevated.run`, `zoomin.uninstall.run` | jeweilige Rolle | ganzer Lauf; Exit-Code ≠ 0 → Status Error |
 | `zoomin.setup.install` | setup | Installation im Assistenten (Tag `zoomin.version`) |
@@ -101,10 +102,12 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.update.restart` | app | Neustart nach dem Update; Kind von `zoomin.update.install`, darunter `zoomin.app.start` der neuen Version |
 | `zoomin.setup.launch` | app | Setup herunterladen, prüfen, starten (Ergebnis); das Setup setzt den Trace fort |
 | `zoomin.secure.settings` | secure | Woher die Einstellungen kommen (Tag `zoomin.secure.settings_source`: `user`, `copy`, `default`) |
+| `zoomin.autostart.migrate` | app | Einmaliger Umzug des Autostarts in die geplante Aufgabe (ADR-0030, Q9) – vom Run-Eintrag oder aus der Liste der Erleichterten Bedienung (Spike-Builds) –, nur bei installierter ZoomIN, Kind von `zoomin.app.start`. Tag `zoomin.autostart.from` (`run`, `ease_of_access`, `none`); Fehler: `task missing` oder Ausnahmetyp |
+| `zoomin.autostart.leave_job` | app | Die von der Erleichterten Bedienung im Job gestartete Instanz startet ZoomIN außerhalb des Jobs neu und endet (Spike A1, ADR-0030). Tag `zoomin.autostart.left_job`; darunter `zoomin.app.start` der neuen Instanz |
 | `zoomin.settings.load` | app, setup | `settings.json` lesen (Tag `zoomin.settings.result`: `ok`, `missing`, `unreadable` → Error) |
 | `zoomin.settings.save` | app, setup | `settings.json` schreiben (Fehler: Ausnahmetyp) |
 | `zoomin.profile.switch` | app | Profilwechsel (ohne Profilnamen – die vergibt der Nutzer frei) |
-| `zoomin.diagnostics.package` | app | Diagnosepaket erstellen (Tag `zoomin.diagnostics.files`) |
+| `zoomin.diagnostics.package` | app | Diagnosepaket erstellen (Tags `zoomin.diagnostics.files`, `zoomin.diagnostics.secure_logs`: `not_requested`, `copied`, `declined`, `failed`) |
 | `zoomin.debug.snapshot` | app | Debug-Schnappschuss eines Monitors schreiben (Tag `zoomin.monitor`; Fehler: Ausnahmetyp) |
 | `zoomin.windowfilter.toggle` | app | Kürzel „Filter für aktives Fenster“ (Tags `process.name`, `zoomin.choice`: `None`, `Filter`) |
 | `zoomin.view.overview` | app | Übersicht (M17 B2) vom Kürzel bis zum Hineinzoomen, Esc oder Abbruch; eigener Wurzel-Ablauf über Threads hinweg. Tags `zoomin.monitor`, `zoomin.mode`, `zoomin.overview.level_before` (Stufe vorher), am Ende `zoomin.overview.kind` (`tap`, `hold`) und `zoomin.overview.end` (`zoom_in`, `escape`, `cancelled`) |
@@ -135,7 +138,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | `zoomin.tracking.chromium_nudges` | Fenster | – | Chromium-Inhaltsfenster nach IAccessible2 gefragt |
 | `zoomin.tracking.read_failures` | Abfragen | `exception.type` | Abfrage von Fokus und Caret mit unerwarteter Ausnahme abgebrochen; Tracking läuft mit Systemcaret weiter (dazu Log 2003, einmal je Ausnahmetyp) |
 | `zoomin.tracking.anchor_switches` | Wechsel | `zoomin.anchor.source` (`mouse`, `focus`, `caret`) | Ansicht folgt jetzt Maus, Fokus oder Caret (Render-Thread, ohne Allokation) |
-| `zoomin.zoom.temporary_levels` | Änderungen | `zoomin.owner` (`overview`, `window_drag`, `island_edit`), `zoomin.action` (`set`, `release`, `move`, `cleared`) | Vorübergehende Zoomstufe (M17) gesetzt, freigegeben, auf einen anderen Monitor verschoben oder durch einen Befehl des Nutzers gelöscht. `set` zählt nur neue Stufen (Ersetzen nicht), ein `move` auf eine eigene Stufe zählt zusätzlich ein `release`. Bleibt ein `set` ohne späteres `release` oder `cleared`, gibt ein Besitzer nicht frei (der KI-Debug-Zustand zeigt dann „temporary“ am Monitor). Abläufe und Logs bringen Übersicht (B2), Fenster-Verschieben (G1) und der Bearbeitungsmodus der Inseln (B1, 1× auf allen Monitoren) selbst mit |
+| `zoomin.zoom.temporary_levels` | Änderungen | `zoomin.owner` (`overview`, `window_drag`, `island_edit`, `hold_key`), `zoomin.action` (`set`, `release`, `move`, `cleared`) | Vorübergehende Zoomstufe (M17) gesetzt, freigegeben, auf einen anderen Monitor verschoben oder durch einen Befehl des Nutzers gelöscht. `set` zählt nur neue Stufen (Ersetzen nicht), ein `move` auf eine eigene Stufe zählt zusätzlich ein `release`. Bleibt ein `set` ohne späteres `release` oder `cleared`, gibt ein Besitzer nicht frei (der KI-Debug-Zustand zeigt dann „temporary“ am Monitor). Abläufe und Logs bringen Übersicht (B2), Fenster-Verschieben (G1) und der Bearbeitungsmodus der Inseln (B1, 1× auf allen Monitoren) selbst mit |
 | `zoomin.tracking.mouse_push` | Frames | `zoomin.mouse.follow` (`center`, `margin`, `fixpoint`) | Frames, in denen eine Mausbewegung die Ansicht verschoben hat (M17 A1); die Rate je Sekunde zeigt, wie unruhig das Bild im jeweiligen Modus ist. Render-Thread, Instrument und Tags beim Start angelegt, ohne Allokation |
 | `zoomin.render.smart_invert_gpu_time` | ms | `zoomin.monitor` | Mittlere Zusatz-GPU-Zeit des intelligenten Invertierens: Umgebungs-Durchgang (Mittel über 120 Läufe) plus Mehrkosten im Magnify-Durchgang (seit M14 je Pipeline gemessen, 32 Frames schlicht gegen intelligent nach 60 Frames Aufwärmen, erneut wenn der ganze Monitor intelligent wird); > 1 ms → Rückfall (Log 3007) |
 | `zoomin.render.gpu_time` | ms | `zoomin.monitor`, `zoomin.pass` (`magnify`, `islands`) | Mittlere GPU-Zeit eines Durchgangs über 120 Frames (M14; `islands` seit M19 B1: alle Inseln eines Frames zusammen); Zeitstempel-Abfragen laufen nur, solange jemand das Instrument abonniert (Diagnose, OTLP). Durchgänge überlappen nicht: kein Gesamt-Frame-Wert, weil verschachtelte Disjoint-Abfragen nicht überall erlaubt sind |
@@ -178,10 +181,31 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1104 | Warnung | Exit shortcut for the secure desktop is unavailable |
 | 1105 | Info | Secure desktop engine running after {Milliseconds} ms (zoom on: {ZoomOn}) |
 | 1106 | Warnung | Secure desktop: no magnified image after {Seconds} s |
-| 1107 | Info | Secure desktop: first magnified image after {Milliseconds} ms |
+| 1107 | Info | Secure desktop: first magnified image after {Milliseconds} ms (ab M10-Abschluss aus `RenderMilestones`: das Overlay ist wirklich sichtbar, nur wenn der Zoom an startet; vorher aus dem Status, der nur einmal je Sekunde kam) |
 | 1108 | Info | Secure desktop support switched {State} |
 | 1109 | Fehler | Changing the secure desktop registration failed |
 | 1110 | Fehler | Starting the secure desktop switch failed |
+| 1140 | Info | Secure desktop runs the core engine (scope {Scope}) |
+| 1150 | Info | Secure desktop start: pipeline after {PipelineMs} ms, first desktop copy after {CaptureMs} ms, first image after {ShownMs} ms, zoom level after {ZoomMs} ms (ab Prozessstart; nur wenn der Zoom an startet) |
+| 1151 | Info | Secure desktop check: desktop {Desktop} (`Winlogon`, `Default`) |
+| 1152 | Info | Secure desktop check: overlay on top at the centre of monitor {Monitor} |
+| 1153 | Warnung | Secure desktop check: overlay not on top at the centre of monitor {Monitor} (top window class {WindowClass}) – nur Fensterklasse, kein Titel |
+| 1154 | Info | Secure desktop check: overlay 0x{Window:X} excluded from capture |
+| 1155 | Warnung | Secure desktop check: overlay 0x{Window:X} not excluded from capture (display affinity {Affinity}) |
+| 1156 | Info | Secure desktop check: no overlay on screen |
+| 1157 | Info | Secure desktop check: process in a job: {InJob} (`yes`, `no`, `unknown`) |
+| 1158 | Info | Secure desktop check: watchdog {ProcessId} running, in a job: {InJob} |
+| 1159 | Warnung | Secure desktop check: no watchdog known (not started, or the shell gave no id) |
+| 1160 | Warnung | Secure desktop check: shortcut {Gesture} unavailable (je Kürzel, das Windows abgelehnt hat) |
+| 1161 | Info | Secure desktop check: {Unavailable} shortcut(s) unavailable, exit shortcut registered: {Exit}, snapshot shortcut registered: {Snapshot} |
+| 1162 | Fehler | Secure desktop checks failed |
+| 1163 | Info | Secure desktop snapshot requested (Strg+Alt+Umschalt+D) |
+| 1164 | Info | Secure desktop snapshot: {Saved} monitor(s) saved in {Folder} (nur Ordnername) |
+| 1165 | Warnung | Secure desktop snapshot: nothing saved (no monitor drew in time) |
+| 1166 | Warnung | Snapshot shortcut for the secure desktop is unavailable |
+| 1167 | Warnung | Secure desktop: zoom level not reached after {Seconds} s (ein Bild kam, aber nie auf der gespeicherten Stufe; `zoomin.secure.start` endet mit Error) |
+| 1168 | Fehler | Secure desktop snapshot failed |
+| 1169 | Warnung | Secure desktop check: watchdog {ProcessId} is not running (in a job: {InJob}) – statt 1158, wenn der Wächter schon fehlt |
 | 1201 | Info | Setup: release list unavailable: {Reason} |
 | 1202 | Warnung | Setup {Version} not started: {Reason} |
 | 1203 | Info | Setup {Version} started |
@@ -216,6 +240,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 1640 | Info | Caret marker changed: {Shape}, {Thickness} – Form oder Dicke auf der Seite „Fokus & Textcursor“ geändert (E2) |
 | 1650 | Info | Show condition of {Marker} changed: {Condition} – `crosshair`, `caret`, `focus_frame`; auch beim Profilwechsel (E1) |
 | 1651 | Info | Hold key changed: {Key} (E1) |
+| 1652 | Info | Hold key held: zoom off on {Monitors} monitor(s) – Haltetaste ≥ 250 ms gehalten, alle Monitore auf 1× (`TemporaryZoomOwner.HoldKey`) |
+| 1653 | Info | Hold key released: zoom back – Haltetaste losgelassen (oder verpasstes Loslassen nach 1,5 s), vorherige Stufe kehrt zurück |
 | 1720 | Info | Monitor {Monitor} frozen at {Level:0.00}x ({Image}, {Islands} islands); pointer moved to {Target} (G2) – `Islands`: Inseln, die mit dem Monitor einfrieren und dort gezeigt werden (B1) |
 | 1721 | Info | Freeze lifted on {Count} monitors ({Reason}) – `command`, `display_change`, `desktop_switch`, `session_unlock`, `move_refused` (der Zeiger kam beim Einfrieren zurück und liess sich nicht wieder versetzen), `shortcut_gone` (Kürzel werden bearbeitet oder `Strg+Alt+H` ist nicht registriert), `pointer_inside` (Zaun versagt, Zeiger auf dem eingefrorenen Monitor), `exit` |
 | 1722 | Info | Pointer switched from {From} to {To} (skipped {Skipped} frozen) |
@@ -246,6 +272,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2204 | Fehler | Input activity handler failed |
 | 2205 | Fehler | Installing the mouse wheel hook failed; Ctrl+wheel zoom is unavailable |
 | 2206 | Fehler | Wheel zoom handler failed |
+| 2207 | Info | Hotkey {Gesture} registered after {Attempts} retries (ein abgelehntes Kürzel wird 5 s lang alle 250 ms erneut versucht, M10) |
+| 2208 | Info | Hotkeys {Action} for another desktop: {Count} – `released` (Sperre/Strg+Alt+Entf/UAC hat die Eingabe), `taken back` (zurück auf dem eigenen Desktop), M10 |
 | 2301 | Info | Ease of Access notified ({Signal}) |
 | 2302 | Warnung | Ease of Access not notified ({Error}) |
 | 2303 | Info | Secure desktop support {State} |
@@ -260,6 +288,23 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2312 | Info | Secure desktop: no signed-in user in session {Session} (error {Error}) |
 | 2313 | Info | Secure desktop: no user shell in session {Session} |
 | 2314 | Info | Secure desktop: using the token of the user's shell |
+| 2315 | Debug | Ease of Access start signal deferred until the tray icon is shown (Win+U erst, wenn das Tray-Symbol drin ist, plus 2 s – auch beim normalen Start, weil das Symbol asynchron kommt; Q9-Nachtest) |
+| 2316 | Warnung | No tray icon after {Seconds} s: Ease of Access start signal sent anyway (kein Explorer/andere Shell; Grenze 60 s) |
+| 2320 | Info | Autostart moved from {From} to the scheduled task (`run` oder `ease_of_access`; Q9) |
+| 2321 | – | entfallen mit Q9 (die Aufgabe braucht keinen AT-Eintrag) |
+| 2322 | Warnung | Autostart migration failed ({Error}) |
+| 2323 | Info | Launch origin: in job {InJob}, job limits 0x{JobLimits:X8}, parent {ParentProcess}, left job {LeftJob}, Ease of Access start {EaseOfAccessStart} (bei jedem Start der Tray-App; Elternprozess nur als Name, `unknown`, wenn er schon beendet ist) |
+| 2324 | Info | Leaving the Ease of Access job: started process {ProcessId} ({Method}) (`breakaway` = `CREATE_BREAKAWAY_FROM_JOB`, `shell` = ShellExecute nach Fehler 740) |
+| 2325 | Warnung | Cannot leave job (job limits 0x{JobLimits:X8}): the tray app ends at the next desktop switch |
+| 2326 | Warnung | Leaving the job failed (error {Error}); staying in the job |
+| 2327 | Warnung | Still in a job after leaving the Ease of Access job (job limits 0x{JobLimits:X8}) |
+| 2328 | Info | Started by Ease of Access: no Win+U signal |
+| 2329 | Info | Autostart switched {State} ({Method}) (`task` oder `run`; auch im Setup, Rolle `setup`) |
+| 2330 | Warnung | Autostart task {Action} failed (code {Code}) (`create`/`delete`: Exit-Code von schtasks oder HResult; -1 = Zeitlimit 5 s, -2 = schtasks nicht gestartet) |
+| 2331 | Info | Uninstall removed {Count} autostart tasks (erhöhter Schritt, alle Konten; `list` in 2330 = Aufgabenspeicher nicht lesbar) |
+| 2340 | Info | Secure logs for the diagnostics package: {Result} (exit code {ExitCode}) – `copied`, `declined`; schreibt die Tray-App. Der erhöhte Schritt `--copy-secure-logs` hat bewusst kein eigenes Log (es läge im Ordner des Benutzers, den er umleiten kann) |
+| 2341 | Fehler | Starting the secure log copy failed |
+| 2342 | Warnung | Secure logs for the diagnostics package not copied: {Result} (exit code {ExitCode}) – `refused` (Exit-Code 2: Ziel abgelehnt), `failed` (1, oder −1: nicht gestartet bzw. nicht rechtzeitig beendet) |
 | 2401 | Info | Settings backed up to {Folder} |
 | 2402 | Fehler | Settings backup failed |
 | 2403 | Warnung | Profile {File} is unreadable: {Reason} |
@@ -270,6 +315,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2502 | Info | Docked strip released |
 | 2503 | Warnung | Adding the tray icon failed |
 | 2504 | Fehler | Tray command {Command} failed |
+| 2505 | Fehler | Handling the shown tray icon failed (Abonnent von `ITrayIcon.Shown` warf in der Fensterprozedur) |
 | 2601 | Info | Install step for {Version}: {Result} |
 | 2602 | Fehler | Starting the install step failed |
 | 2603 | Info | Release list skipped: {Reason} |
@@ -344,6 +390,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 4004 | Fehler | Giving up after {Restarts} restarts within {Minutes} minutes |
 | 4005 | Info | Cleanup {Step} done |
 | 4006 | Fehler | Cleanup {Step} failed |
+| 4007 | Info | ZoomIN ended with the session (exit code 0x{ExitCode:X8}); no restart (Abmelden: `0x40010004` oder `SM_SHUTTINGDOWN`) |
 | 5001 | Info | Setup: ZoomIN {ProcessId} not ended: {Reason} |
 | 5002 | Fehler | Setup: registering the installation failed |
 | 5003 | Info | Setup: old Inno installation removed |

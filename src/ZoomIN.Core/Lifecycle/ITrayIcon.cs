@@ -5,6 +5,15 @@ public interface ITrayIcon : IDisposable
 {
     event Action<TrayCommand>? Command;
 
+    /// <summary>
+    /// The icon got into the notification area: right away, or once Explorer's taskbar exists (an
+    /// autostart before it, an Explorer restart). Raised on the tray thread.
+    /// </summary>
+    event Action? Shown;
+
+    /// <summary>The icon is in the notification area now.</summary>
+    bool IsShown { get; }
+
     /// <summary>Shows the icon, or updates tooltip and menu if it is already shown.</summary>
     void Show(TrayMenu menu);
 

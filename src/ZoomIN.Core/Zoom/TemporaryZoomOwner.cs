@@ -14,4 +14,7 @@ public enum TemporaryZoomOwner
 
     /// <summary>M19 B1: every monitor at 1× while islands are edited, so the pointer is where the user sees the islands.</summary>
     IslandEdit,
+
+    /// <summary>Every monitor at 1× while the hold key is held, so the user can click on the unzoomed desktop.</summary>
+    HoldKey,
 }

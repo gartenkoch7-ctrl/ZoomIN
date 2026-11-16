@@ -1,5 +1,3 @@
-using ZoomIN.Core.Pointer;
-
 namespace ZoomIN.Core.Tracking;
 
 /// <summary>Whether a highlight is shown under its <see cref="ShowCondition"/> (E1). Pure, no allocation.</summary>
@@ -20,19 +18,6 @@ public static class MarkerVisibility
     /// longer counts.
     /// </summary>
     public static readonly TimeSpan HoldTimeout = TimeSpan.FromSeconds(1.5);
-
-    /// <summary>
-    /// The global keyboard hook is needed only while a switched-on highlight waits for the hold key;
-    /// a highlight that is off draws nothing (and <see cref="MarkerAlphas"/> keeps it hidden).
-    /// </summary>
-    public static bool NeedsHoldKey(PointerStyle cursor, TrackingOptions tracking)
-    {
-        ArgumentNullException.ThrowIfNull(cursor);
-        ArgumentNullException.ThrowIfNull(tracking);
-        return (cursor.CrosshairEnabled && cursor.CrosshairShow == ShowCondition.HoldKey)
-            || (tracking.Enabled && tracking.CaretMarker && tracking.CaretShow == ShowCondition.HoldKey)
-            || (tracking.Enabled && tracking.FocusFrame && tracking.FocusFrameShow == ShowCondition.HoldKey);
-    }
 
     /// <param name="condition">The highlight's condition.</param>
     /// <param name="activity">Latest input activity.</param>

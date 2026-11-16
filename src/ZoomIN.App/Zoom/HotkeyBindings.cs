@@ -6,6 +6,7 @@ using ZoomIN.App.Settings;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Modes;
 using ZoomIN.Core.Pointer;
+using ZoomIN.Core.SecureDesktop;
 
 namespace ZoomIN.App.Zoom;
 
@@ -13,7 +14,8 @@ namespace ZoomIN.App.Zoom;
 public sealed class HotkeyBindings(
     SettingsService settings, ProfileService profiles, IHotkeyService hotkeys, ZoomCommands zoom,
     WindowFilterCommands windowFilter, OverviewController overview, MonitorFreezeController freeze,
-    MonitorSwitchController monitorSwitch, IslandController islands, IslandVisibility islandVisibility, ILogger<HotkeyBindings> log)
+    MonitorSwitchController monitorSwitch, IslandController islands, IslandVisibility islandVisibility, ILogger<HotkeyBindings> log,
+    EngineScope scope)
 {
     /// <summary>Hotkeys that could not be registered because another application owns them.</summary>
     public IReadOnlyList<HotkeyGesture> Unavailable { get; private set; } = [];
@@ -65,12 +67,18 @@ public sealed class HotkeyBindings(
         Add(s.ProfileHotkey, profiles.Next);
         Add(s.WindowFilterHotkey, () => windowFilter.Toggle());
         Add(s.OverviewHotkey, () => overview.Press());
-        Add(s.IslandsHotkey, islandVisibility.Toggle);
-        Add(s.IslandEditHotkey, () => islands.ToggleEdit());
-        var refusedBefore = unavailable.Count;
-        Add(s.FreezeMonitorHotkey, freeze.ToggleFreeze);
-        var freezeLost = s.FreezeMonitorHotkey.VirtualKey == 0 || unavailable.Count > refusedBefore;
-        Add(s.NextMonitorHotkey, monitorSwitch.NextMonitor);
+        var freezeLost = false;
+        if (scope == EngineScope.Full)
+        {
+            // The secure desktop runs the core only: no islands, freeze or monitor switch, and no "unavailable" report for them.
+            Add(s.IslandsHotkey, islandVisibility.Toggle);
+            Add(s.IslandEditHotkey, () => islands.ToggleEdit());
+            var refusedBefore = unavailable.Count;
+            Add(s.FreezeMonitorHotkey, freeze.ToggleFreeze);
+            freezeLost = s.FreezeMonitorHotkey.VirtualKey == 0 || unavailable.Count > refusedBefore;
+            Add(s.NextMonitorHotkey, monitorSwitch.NextMonitor);
+        }
+
         Unavailable = unavailable;
 
         // Without Ctrl+Alt+H nothing could give a frozen monitor back (G2).

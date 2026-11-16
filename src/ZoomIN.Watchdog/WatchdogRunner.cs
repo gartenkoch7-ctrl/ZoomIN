@@ -19,6 +19,9 @@ namespace ZoomIN.Watchdog;
 public sealed class WatchdogRunner(
     IAppFolders folders, ILogger log, IReadOnlyList<ICleanupStep> cleanup, IWatchdogSystem system, TimeProvider clock)
 {
+    /// <summary>DBG_TERMINATE_PROCESS: the exit code Windows gives processes it ends at sign-out.</summary>
+    public const int TerminatedByWindows = 0x40010004;
+
     /// <param name="secure">Watches the secure-desktop instance (ADR-0016): restarts it with its switch, never notifies.</param>
     public int Run(int processId, string appPath, bool secure = false)
     {
@@ -38,6 +41,15 @@ public sealed class WatchdogRunner(
             // Windows ends the whole job (instance and watchdog) on every desktop switch. If this
             // watchdog is still alive a moment later, the instance really crashed.
             system.Pause(TimeSpan.FromMilliseconds(500));
+        }
+
+        // Signing out ends every process of the session with DBG_TERMINATE_PROCESS; a restart then
+        // would only start ZoomIN into a dying session (seen 2026-11-16, Q9 test). The secure
+        // instance relies on the pause above instead: how Windows ends its job is not pinned down.
+        if ((!secure && exitCode == TerminatedByWindows) || system.IsSessionEnding)
+        {
+            log.SessionEnded(exitCode);
+            return 0;
         }
 
         log.UnexpectedExit(exitCode);

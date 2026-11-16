@@ -1,20 +1,29 @@
 using Microsoft.Win32;
-using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Updates;
 
 namespace ZoomIN.Platform.SecureDesktop;
 
 /// <summary>
-/// Registers ZoomIN with Windows' Ease of Access so Windows starts it on the sign-in screen, lock
-/// screen, Ctrl+Alt+Del and UAC (ADR-0016; values from Microsoft's "Ease of Access – Assistive
-/// Technology Registration"). Writes HKLM, so it only runs in elevated steps. The user's choice is
-/// kept machine-wide, so updates keep "off" off.
+/// Registers ZoomIN with Windows' Ease of Access (ADR-0016; values from Microsoft's "Ease of Access –
+/// Assistive Technology Registration"). Writes HKLM, so it only runs in elevated steps. The user's
+/// choice is kept machine-wide, so updates keep "off" off.
+/// <para>
+/// Since ADR-0030 the AT entry "ATs\ZoomIN" stays while ZoomIN is installed, because the autostart
+/// after sign-in (<c>EaseOfAccessAutostart</c>) needs it. The switch only decides the secure
+/// desktops: on puts ZoomIN into the HKLM list (sign-in screen); off takes it out and sets
+/// SecureDesktopAccommodation=none, so Windows starts nothing on the lock screen, Ctrl+Alt+Del or
+/// UAC although ZoomIN runs as an AT.
+/// </para>
 /// </summary>
 public sealed class SecureDesktopRegistration
 {
     public const string AtName = "ZoomIN";
 
-    private const string AccessibilityPath = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Accessibility";
+    /// <summary>The AT that runs on secure desktops instead; <see cref="NoAccommodation"/> for none.</summary>
+    public const string AccommodationValue = "SecureDesktopAccommodation";
+
+    public const string NoAccommodation = "none";
+
     private const string PreferencePath = @"SOFTWARE\ZoomIN";
     private const string PreferenceValue = "SecureDesktop";
 
@@ -38,20 +47,35 @@ public sealed class SecureDesktopRegistration
         }
     }
 
+    /// <summary>The secure desktops are on: AT entry, in the HKLM list and no "none" accommodation.</summary>
     public bool IsRegistered
     {
         get
         {
             using var at = _machine.OpenSubKey(AtKeyPath);
-            using var access = _machine.OpenSubKey(AccessibilityPath);
-            return at is not null && AtConfigurationList.Contains(access?.GetValue("Configuration") as string, AtName);
+            return at is not null
+                && SignInList.Contains(AtName)
+                && !NoAccommodation.Equals(at.GetValue(AccommodationValue) as string, StringComparison.OrdinalIgnoreCase);
         }
     }
 
-    private static string AtKeyPath => AccessibilityPath + @"\ATs\" + AtName;
+    /// <summary>The AT entry exists, whatever the switch says: the autostart list can use it (ADR-0030).</summary>
+    public bool IsAtRegistered
+    {
+        get
+        {
+            using var at = _machine.OpenSubKey(AtKeyPath);
+            return at is not null;
+        }
+    }
 
-    /// <summary>Registers or removes according to <paramref name="choice"/>, else the kept preference (default on).</summary>
-    /// <returns>Whether ZoomIN is now registered.</returns>
+    private static string AtKeyPath => AtStartList.KeyPath + @"\ATs\" + AtName;
+
+    // HKLM "Configuration": the ATs Windows starts on the sign-in screen.
+    private AtStartList SignInList => new(_machine);
+
+    /// <summary>Registers and switches according to <paramref name="choice"/>, else the kept preference (default on).</summary>
+    /// <returns>Whether the secure desktops are now on.</returns>
     public bool Apply(InstallLayout layout, bool? choice)
     {
         ArgumentNullException.ThrowIfNull(layout);
@@ -62,26 +86,19 @@ public sealed class SecureDesktopRegistration
         }
 
         var enabled = choice ?? Preference ?? true;
-        if (enabled)
-        {
-            Register(layout);
-        }
-        else
-        {
-            Unregister();
-        }
-
+        Register(layout, enabled);
         return enabled;
     }
 
     /// <summary>Removes the registration and the kept preference (uninstall).</summary>
     public void RemoveAll()
     {
-        Unregister();
+        _machine.DeleteSubKeyTree(AtKeyPath, throwOnMissingSubKey: false);
+        SignInList.Set(AtName, listed: false);
         _machine.DeleteSubKeyTree(PreferencePath, throwOnMissingSubKey: false);
     }
 
-    private void Register(InstallLayout layout)
+    private void Register(InstallLayout layout, bool secureDesktops)
     {
         using (var at = _machine.CreateSubKey(AtKeyPath))
         {
@@ -98,19 +115,16 @@ public sealed class SecureDesktopRegistration
 
             // Default behaviour, written explicitly: a fresh instance per secure desktop, ended on the way back.
             at.SetValue("TerminateOnDesktopSwitch", 1, RegistryValueKind.DWord);
+            if (secureDesktops)
+            {
+                at.DeleteValue(AccommodationValue, throwOnMissingValue: false);
+            }
+            else
+            {
+                at.SetValue(AccommodationValue, NoAccommodation);
+            }
         }
 
-        using var access = _machine.CreateSubKey(AccessibilityPath);
-        access.SetValue("Configuration", AtConfigurationList.Add(access.GetValue("Configuration") as string, AtName));
-    }
-
-    private void Unregister()
-    {
-        _machine.DeleteSubKeyTree(AtKeyPath, throwOnMissingSubKey: false);
-        using var access = _machine.OpenSubKey(AccessibilityPath, writable: true);
-        if (access?.GetValue("Configuration") is string list && AtConfigurationList.Contains(list, AtName))
-        {
-            access.SetValue("Configuration", AtConfigurationList.Remove(list, AtName));
-        }
+        SignInList.Set(AtName, secureDesktops);
     }
 }

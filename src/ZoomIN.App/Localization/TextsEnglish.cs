@@ -30,7 +30,7 @@ internal static class TextsEnglish
 
         ["GeneralLanguage"] = "Language",
         ["LanguageSystem"] = "Like Windows",
-        ["GeneralAutostart"] = "Start with Windows",
+        ["GeneralAutostart"] = "Start with Windows (right after sign-in)",
         ["GeneralUpdates"] = "Check for new versions",
         ["GeneralUpdatesHint"] = "Asks GitHub for the version list at start-up and once a day. No data is sent; nothing is installed without a click.",
 

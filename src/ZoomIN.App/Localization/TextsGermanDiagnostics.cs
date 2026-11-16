@@ -40,6 +40,8 @@ internal static class TextsGermanDiagnostics
         ["Diag.Creating"] = "Wird erstellt …",
         ["Diag.Created"] = "Gespeichert: {0}",
         ["Diag.CreateFailed"] = "Das Paket konnte nicht erstellt werden.",
+        ["Diag.SecureLogs"] = "Logs von Anmelde- und Sperrbildschirm (Adminrechte)",
+        ["Diag.CreatedWithoutSecure"] = "Gespeichert: {0} – ohne die Logs von Anmelde- und Sperrbildschirm (Grund in ZoomIN-Info.txt).",
         ["SmartInvert.Title"] = "Invertiert (intelligent)",
         ["SmartInvert.Active"] = "Läuft wie vorgesehen, auf allen Monitoren.",
         ["SmartInvert.Budget"] = "{0}: Grafik zu langsam ({1} ms je Bild) – zeigt „Invertiert, Farbton erhalten“.",

@@ -14,7 +14,7 @@ namespace ZoomIN.Rendering.Overlay;
 /// </summary>
 internal sealed unsafe class OverlayWindow : IDisposable
 {
-    private const string ClassName = "ZoomIN.Overlay";
+    private const string ClassName = Core.Zoom.OverlayWindowClass.Name;
 
     // Returned for WM_NCHITTEST so the mouse always reaches the window below.
     private const int HitTransparent = -1;

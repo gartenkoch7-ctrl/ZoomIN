@@ -12,6 +12,7 @@ using ZoomIN.Core.Filters;
 using ZoomIN.Core.Hotkeys;
 using ZoomIN.Core.Monitors;
 using ZoomIN.Core.Overview;
+using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
 using ZoomIN.Core.Viewport;
@@ -86,8 +87,8 @@ public sealed class HotkeyBindingsTests
         Assert.DoesNotContain(HotkeyGesture.FreezeMonitor, hotkeys.Registered.Keys);
     }
 
-    private static (HotkeyBindings Bindings, FakeHotkeys Hotkeys, RenderModels Models) Create(
-        AppSettings settings, HotkeyGesture? taken = null)
+    internal static (HotkeyBindings Bindings, FakeHotkeys Hotkeys, RenderModels Models) Create(
+        AppSettings settings, HotkeyGesture? taken = null, EngineScope scope = EngineScope.Full)
     {
         var models = new RenderModels(
             ZoomMapping.Create(settings), EffectsMapping.Create(settings), TrackingMapping.Create(settings),
@@ -111,11 +112,11 @@ public sealed class HotkeyBindingsTests
         var visibility = new IslandVisibility(service, new RecordingAnnouncer(), AppTexts.CreateLocalizer(), NullLogger<IslandVisibility>.Instance);
         var bindings = new HotkeyBindings(
             service, new ProfileService(service, new NoProfiles()), hotkeys, zoom, windowFilter, overview, freeze, monitorSwitch,
-            islands, visibility, NullLogger<HotkeyBindings>.Instance);
+            islands, visibility, NullLogger<HotkeyBindings>.Instance, scope);
         return (bindings, hotkeys, models);
     }
 
-    private sealed class FakeHotkeys(HotkeyGesture? taken) : IHotkeyService
+    internal sealed class FakeHotkeys(HotkeyGesture? taken) : IHotkeyService
     {
         public Dictionary<HotkeyGesture, (Action Action, bool Repeat)> Registered { get; } = [];
 

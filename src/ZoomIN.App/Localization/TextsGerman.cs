@@ -30,7 +30,7 @@ internal static class TextsGerman
 
         ["GeneralLanguage"] = "Sprache",
         ["LanguageSystem"] = "Wie Windows",
-        ["GeneralAutostart"] = "Mit Windows starten",
+        ["GeneralAutostart"] = "Mit Windows starten (sofort nach der Anmeldung)",
         ["GeneralUpdates"] = "Nach neuen Versionen suchen",
         ["GeneralUpdatesHint"] = "Fragt beim Start und einmal täglich die Versionsliste bei GitHub ab. Es werden keine Daten gesendet; installiert wird nur auf Klick.",
 

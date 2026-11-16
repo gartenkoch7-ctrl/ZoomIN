@@ -53,6 +53,7 @@
             <InfoBar IsClosable="False" IsOpen="{x:Bind Diag.HasEndpointWarning, Mode=OneWay}" Message="{x:Bind Diag.EndpointWarning, Mode=OneWay}" Severity="Warning" />
             <c:SettingCard Description="{x:Bind loc:Text.Get('Diag.Package.Desc')}" Glyph="&#xE8B7;" Header="{x:Bind loc:Text.Get('Diag.Package')}">
                 <StackPanel HorizontalAlignment="Right" Spacing="4">
+                    <CheckBox HorizontalAlignment="Right" Content="{x:Bind loc:Text.Get('Diag.SecureLogs')}" IsChecked="{x:Bind Diag.IncludeSecureLogs, Mode=TwoWay}" IsEnabled="{x:Bind Diag.CanCreatePackage, Mode=OneWay}" Visibility="{x:Bind Diag.CanIncludeSecureLogs}" />
                     <Button HorizontalAlignment="Right" Click="{x:Bind Diag.CreatePackage}" Content="{x:Bind loc:Text.Get('Diag.Create')}" IsEnabled="{x:Bind Diag.CanCreatePackage, Mode=OneWay}" />
                     <TextBlock MaxWidth="320" HorizontalAlignment="Right" AutomationProperties.LiveSetting="Polite" Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind Diag.PackageStatus, Mode=OneWay}" TextWrapping="Wrap" />
                 </StackPanel>

@@ -59,3 +59,62 @@ Bedienung (HKCU `…\Accessibility\Configuration`). Das ist auf dem Testrechner 
 - Windows zeigt ZoomIN in „Einstellungen › Barrierefreiheit“ bei den Hilfsmitteln, die nach der
   Anmeldung starten. Schaltet der Nutzer es dort aus, zeigt die App das beim nächsten Öffnen der
   Seite „Allgemein“ richtig an (der Schalter liest die Liste, keinen eigenen Merker).
+
+## Nachtrag: Spike A1 (gescheitert, 2026-11-16)
+Stand 2026-11-12: Kandidat 1 ist gebaut und meldet sein Ergebnis selbst ins Log, die Messung mit dem
+Nutzer steht aus. Ablauf und gesuchte Logzeilen:
+[sichere-desktops.md › Spike A1 durchführen](../kb/sichere-desktops.md#spike-a1-durchführen-nutzer-offen).
+- Gebaut: Prüfung auf Job und Elternprozess vor dem Einzelinstanz-Mutex; bei erlaubtem Ausstieg
+  Neustart mit `CREATE_BREAKAWAY_FROM_JOB` und Marker `--left-job`; der Win+U-Trick nur, wenn die
+  Erleichterte Bedienung nicht selbst gestartet hat.
+- Nicht gebaut: der Ausweichweg aus Q9 (geplante Aufgabe). Er kommt nur, wenn der Spike scheitert.
+- Ergänzung zu Folge 1 (Umsetzung): Die Liste wird nur genutzt, wenn HKLM `ATs\ZoomIN` existiert;
+  sonst bleibt der Run-Eintrag, bis ein erhöhter Schritt der neuen Version ihn geschrieben hat
+  (`--apply-update` läuft mit der alten Version).
+- Ergebnis (2026-11-16, dev.280.m10, Abmelden/Anmelden): **gescheitert** – es gilt Q9.
+  - Windows startet ZoomIN nach der Anmeldung aus der Liste (`Configuration = nvda_nvda_v1,ZoomIN`),
+    ohne Win+U-Signal (Log 2328). Die Job-Instanz meldet `left_job = True` (Ablauf
+    `zoomin.autostart.leave_job`), die neu gestartete Instanz aber 2327 „Still in a job“ mit
+    Job-Limits `0x00000800` (nur `BREAKAWAY_OK`) – der Ausstieg bringt sie nicht aus dem Job.
+  - Innerhalb von 5 s kamen **drei** Job-Instanzen (22:39:03, 22:39:08 zweimal): Windows startet
+    das Hilfsmittel neu, sobald die Job-Instanz endet. Die erste neue Instanz fand weder Tray noch
+    Grafik (Log 2503, 3003) und verschwand.
+  - Beim ersten Bildschirmwechsel danach (UAC) verschwand die Tray-App ohne Logzeile (hartes Ende
+    des Jobs), Sekunden später lief eine neue. Die Tray-App überlebt den Wechsel also nicht.
+  - Nebenbefund: Beim Abmelden startet der Wächter ZoomIN neu (Exit-Code `0x40010004`, Log
+    4002/4003) – er muss das Sitzungsende erkennen.
+
+## Nachtrag: Ausweichweg Q9 umgesetzt (2026-11-16)
+- Eine installierte ZoomIN startet über eine **geplante Aufgabe** `ZoomIN Autostart <SID>` im
+  Stammordner der Aufgabenplanung: Trigger „bei Anmeldung“ nur dieses Benutzers,
+  `InteractiveToken`, `LeastPrivilege`, Priorität 4 (normal), keine Laufzeitgrenze, auch im
+  Akkubetrieb, `AllowHardTerminate=false`. Angelegt mit `schtasks /Create /XML` als der Benutzer
+  selbst – ohne Adminrechte (Probe 2026-11-16).
+- Die Aufgabenplanung kann die UIAccess-EXE nicht selbst starten (`0x800702E4`, Fehler 740). Die
+  Aktion ist darum `rundll32.exe shell32.dll,ShellExec_RunDLL "<current>\ZoomIN.exe"`: ShellExecute
+  lässt AppInfo UIAccess vergeben, rundll32 endet sofort, ZoomIN läuft weiter (Probe mit `osk.exe`
+  und einem Pfad mit Leerzeichen).
+- Die Liste der Erleichterten Bedienung wird für den Autostart nicht mehr genutzt. Die Migration
+  zieht Run-Wert **und** Listeneintrag (Spike-Builds) in die Aufgabe um und löscht beide erst, wenn
+  die Aufgabe existiert. Folge 2 („`EaseOfAccessNotifier` entfällt“) gilt nicht: Windows kennt die
+  Aufgabe nicht als Hilfsmittel, der Win+U-Trick bleibt.
+- „Im Job mit beendetem Elternprozess“ zählt nicht mehr als Start durch die Erleichterte Bedienung –
+  so startet auch die Aufgabe (Job der Aufgabenplanung, rundll32 schon beendet).
+- Wächter: Beim Abmelden (Exit-Code `0x40010004` oder `SM_SHUTTINGDOWN`) startet er nicht neu.
+- Einmalig nach dem Update von einem Spike-Build: Startet die Liste ZoomIN noch über einen schon
+  beendeten Broker, verlässt diese Instanz den Job nicht mehr und endet beim nächsten Win+L. Die
+  Migration entfernt den Listeneintrag beim selben Start, ab der nächsten Anmeldung gilt die Aufgabe.
+- Nachtest 2026-11-16 (dev.281.m10, Nutzer): Abmelden ohne Neustart durch den Wächter; nach der
+  Anmeldung startet die Aufgabe genau eine Instanz (Ergebnis 0), der Umzug aus der Liste lief;
+  Win+L vergrößert, die Tray-App überlebt. Das erste Tray-Symbol scheitert, solange die Taskleiste
+  fehlt (Log 2503), und kommt mit `TaskbarCreated`.
+- Befund danach (Nutzer): Nach dem Autostart blieben Sperre und Strg+Alt+Entf unvergrößert, nach
+  einem Start aus dem Startmenü nicht. Ursache: Win+U ist ein Kürzel von Explorer; die Aufgabe
+  startet ZoomIN vor der Taskleiste, das Start-Signal verpufft. Behoben: `EaseOfAccessNotifier`
+  sendet es erst, wenn das Tray-Symbol in der Taskleiste ist (`ITrayIcon.Shown`), plus 2 s (Log 2315).
+  Nachtest dev.282.m10 (Nutzer, 2026-11-16): Aufgabe 23:47:49, Signal 23:47:53 (2315 → 2301), danach
+  sichere Instanz mit erstem Bild nach 524 ms; Win+L, Strg+Alt+Entf und Abmelden laut Nutzer sauber.
+- Deinstallation (2026-11-16): Der erhöhte Schritt löscht die Aufgaben **aller** Konten
+  (`AutostartTaskCleanup`: Dateien `ZoomIN Autostart *` im Aufgabenspeicher `System32\Tasks`, je eine
+  pro Aufgabe – erhöht geprüft – dann `schtasks /Delete`; Log 2331). Vorher blieb die Aufgabe anderer
+  Benutzerkonten stehen; deren Anmeldung meldete dann eine fehlende Datei.

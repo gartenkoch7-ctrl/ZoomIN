@@ -52,5 +52,7 @@ internal static class TextsEnglishDiagnostics
         ["Diag.Creating"] = "Creating …",
         ["Diag.Created"] = "Saved: {0}",
         ["Diag.CreateFailed"] = "The package could not be created.",
+        ["Diag.SecureLogs"] = "Logs of the sign-in and lock screen (administrator rights)",
+        ["Diag.CreatedWithoutSecure"] = "Saved: {0} – without the logs of the sign-in and lock screen (reason in ZoomIN-Info.txt).",
     };
 }

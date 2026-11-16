@@ -18,4 +18,7 @@ public interface IWatchdogSystem
     void Notify(string title, string message, TimeSpan duration);
 
     void Pause(TimeSpan duration);
+
+    /// <summary>Windows is signing the user out or shutting down (SM_SHUTTINGDOWN).</summary>
+    bool IsSessionEnding { get; }
 }

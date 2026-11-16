@@ -84,6 +84,9 @@ public sealed class SecureSettingsSanitizerTests
             CaretMarkerShape = (CaretMarkerShape)99,
             CaretMarkerThickness = (CaretMarkerThickness)99,
             CaretMarkerColor = new string('c', 500),
+
+            // Off, so its automatic filter does not replace the monitor filter (SecureWindowFilterFallback).
+            WindowFilter = WindowFilterOptions.Default with { Enabled = false },
         });
 
         Assert.Equal(new AppSettings().CaretMarkerShape, result.CaretMarkerShape);
@@ -140,4 +143,12 @@ public sealed class SecureSettingsSanitizerTests
     [Fact]
     public void ExitShortcut_DoesNotBlockAnAltGrCharacter() =>
         Assert.False(HotkeyRules.BlocksAltGrCharacter(HotkeyGesture.ExitSecureDesktop));
+
+    // Strg+Alt+Umschalt+D (M10): AltGr+D types nothing on a German keyboard, so the password field keeps every character.
+    [Fact]
+    public void SnapshotShortcut_DoesNotBlockAnAltGrCharacter()
+    {
+        Assert.False(HotkeyRules.BlocksAltGrCharacter(HotkeyGesture.SecureDesktopSnapshot));
+        Assert.True(HotkeyRules.HasModifier(HotkeyGesture.SecureDesktopSnapshot));
+    }
 }

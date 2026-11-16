@@ -22,4 +22,7 @@ internal static partial class WatchdogLog
 
     [LoggerMessage(EventId = 4006, Level = LogLevel.Error, Message = "Cleanup {Step} failed")]
     public static partial void CleanupFailed(this ILogger logger, Exception exception, string step);
+
+    [LoggerMessage(EventId = 4007, Level = LogLevel.Information, Message = "ZoomIN ended with the session (exit code 0x{ExitCode:X8}); no restart")]
+    public static partial void SessionEnded(this ILogger logger, int exitCode);
 }

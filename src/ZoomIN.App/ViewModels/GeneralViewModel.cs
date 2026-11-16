@@ -10,6 +10,8 @@ namespace ZoomIN.App.ViewModels;
 /// <summary>
 /// Language, autostart and the sign-in screen (updates have their own page, M9). Every change
 /// applies and saves at once (M7); the sign-in screen switch asks for administrator rights (ADR-0016).
+/// Both switches show the system's state, read anew each time the page opens (a new view model per
+/// navigation): the user can delete the autostart task in the Task Scheduler (ADR-0030).
 /// </summary>
 public sealed partial class GeneralViewModel : ObservableObject
 {
@@ -58,9 +60,36 @@ public sealed partial class GeneralViewModel : ObservableObject
 
     partial void OnAutostartChanged(bool value)
     {
-        if (_ready)
+        if (!_ready || _reverting)
         {
-            _autostart.SetEnabled(value);
+            return;
+        }
+
+        _autostart.SetEnabled(value);
+        _ = ShowRealAutostartAsync(value);
+    }
+
+    // The scheduled task (ADR-0030, Q9) can fail without an exception: show the real state, but
+    // only after the binding has finished writing the switch's value into this property.
+    private async Task ShowRealAutostartAsync(bool value)
+    {
+        await Task.Yield();
+        bool actual;
+        try
+        {
+            actual = _autostart.IsEnabled;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            // Unreadable: keep what the user chose; the page reads it anew next time.
+            return;
+        }
+
+        if (actual != value)
+        {
+            _reverting = true;
+            Autostart = actual;
+            _reverting = false;
         }
     }
 

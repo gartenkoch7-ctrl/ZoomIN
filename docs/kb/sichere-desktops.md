@@ -120,6 +120,203 @@ Schlüssel `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Accessibility\ATs\
 - Prüfen, ob wirklich gesperrt wurde: Ereignisanzeige `Microsoft-Windows-Winlogon/Operational`,
   Ereignis 811 mit Benachrichtigung (4) = Sperre, (5) = Entsperren.
 
+## Autostart über die Erleichterte Bedienung (M10-Abschluss, Spur A, ADR-0030)
+Umgesetzt (Stand 2026-11-12, Branch `feat/m10-a-autostart`):
+- **Stand Q9 (2026-11-16, ersetzt die Liste):** Installiert startet „Mit Windows starten“ ZoomIN über
+  die geplante Aufgabe `ZoomIN Autostart <SID>` (`TaskSchedulerAutostart`, `schtasks /Create /XML`
+  als Benutzer, ohne Adminrechte; Aktion `rundll32 shell32.dll,ShellExec_RunDLL "<current>\ZoomIN.exe"`,
+  weil die Aufgabenplanung UIAccess-EXEs mit Fehler 740 ablehnt). `AutostartSelector` hält genau
+  einen Weg: Run-Wert und Listeneintrag früherer Versionen werden entfernt, sobald schtasks die
+  Aufgabe bestätigt (Exit-Code 0; nach einem Timeout zählt eine erneute Abfrage). Lässt sich keine
+  Aufgabe anlegen (Richtlinie, Dienst aus), gilt der Run-Eintrag und ein Listeneintrag fällt weg
+  (Log 2330), aber nur wenn die Aufgabe sicher fehlt (`/Query` = 1); die Migration versucht es bei
+  jedem Start erneut. Der Schalter zeigt danach den echten Stand.
+  **ZIP/Entwickler-Build:** weiter Run-Eintrag. schtasks läuft synchron (Einstellungsseite,
+  Start der Tray-App), Zeitlimit 5 s.
+- **Umzug:** Beim Start der Tray-App: installiert und Run-Wert **oder** Listeneintrag `ZoomIN` →
+  Aufgabe anlegen, dann beides löschen (Log 2320 `from`, Ablauf `zoomin.autostart.migrate`). Ohne
+  beides ändert sich nichts. Der AT-Eintrag in HKLM spielt für den Autostart keine Rolle mehr
+  (Log 2321 entfällt).
+- **Deinstallation:** `UninstallFlow` schaltet über `AutostartSelector` aus: Aufgabe, Listeneintrag und
+  Run-Wert des deinstallierenden Benutzers sind weg; `RemoveAll` löscht `ATs\ZoomIN` und den
+  HKLM-Listeneintrag. Die Aufgaben **aller** Konten löscht der erhöhte Schritt (`AutostartTaskCleanup`,
+  Aufgabenspeicher `C:\Windows\System32\Tasks` = eine Datei je Aufgabe, nur mit Adminrechten lesbar;
+  Log 2331). Früher blieben Aufgaben anderer Konten stehen (Anmeldung meldete dann eine
+  fehlende Datei).
+- Bekannte Grenze: Aufgabennamen sind vorhersagbar, und jeder Benutzer darf im Stammordner Aufgaben
+  anlegen. Legt ein anderes Konto den Namen vorher an, scheitert `/Create` (kein Autostart, Log 2330).
+- Historisch (Spike A1, Liste der Erleichterten Bedienung): Windows startet Namen aus der HKCU-Liste
+  `…\Accessibility\Configuration` nur mit HKLM `ATs\ZoomIN`, im Job mit `TerminateOnDesktopSwitch` –
+  darum gescheitert. „Sperrbildschirm aus“ heißt weiter: HKLM `Configuration` ohne ZoomIN und
+  `SecureDesktopAccommodation=none` unter `ATs\ZoomIN`.
+- **Job-Ausstieg (Spike A1):** `Program` prüft vor dem Einzelinstanz-Mutex `IsProcessInJob`, die
+  Limits des Jobs (`QueryInformationJobObject`) und den Elternprozess (Toolhelp-Schnappschuss,
+  Name ohne Pfad; unbekannt, wenn er jünger ist als wir oder sein Alter nicht lesbar ist –
+  dann könnte die Id schon einem anderen Prozess gehören). Start durch die Erleichterte Bedienung =
+  Eltern `ATBroker`/`utilman` oder Marker `--left-job` (seit Q9 nicht mehr „im Job mit beendetem
+  Elternprozess“ – so startet auch die Aufgabe). Erlaubt der Job den Ausstieg (`JOB_OBJECT_LIMIT_BREAKAWAY_OK` 0x800 oder
+  `SILENT_BREAKAWAY_OK` 0x1000), startet ZoomIN sich mit `CREATE_BREAKAWAY_FROM_JOB` und
+  `--left-job` neu und endet, ohne den Mutex je zu halten. Lehnt `CreateProcess` die
+  UIAccess-EXE ab (Fehler 740), versucht es ShellExecute; ob dieser Prozess draußen ist, loggt er selbst.
+  Vermutung (ungeprüft): Über ShellExecute erzeugt der AppInfo-Dienst den Prozess mit uns als
+  Elternteil, er landet dann im selben Job (Log 2327). Ob `CreateProcess` aus einer Instanz mit
+  UIAccess klappt, zeigt 2324 `breakaway`.
+- Win+U ist ein Kürzel von Explorer: vor der Taskleiste gesendet, verpufft es (Autostart-Aufgabe,
+  2026-11-16). Darum wartet das Start-Signal auf das Tray-Symbol (`ITrayIcon.Shown`) plus 2 s (Log 2315).
+- `EaseOfAccessNotifier` (Win+U-Trick): Das **Start**-Signal kommt, wenn **nicht** die
+  Erleichterte Bedienung gestartet hat (Aufgabe, Startmenü, Run-Eintrag, nach Update); sonst Log
+  2328. Das **Ende**-Signal (Tray › Beenden) kommt immer: Laut Doku muss ein von der Erleichterten
+  Bedienung gestartetes Hilfsmittel, das sich selbst beendet, das melden.
+- Nachtest Q9 beachten: Startet Windows ZoomIN nach Sperre/UAC selbst neu (wie im Spike, dreimal in
+  5 s) und ist der Starter schon weg, öffnet die zweite Instanz das Einstellungsfenster der laufenden
+  (2323 `parent unknown, in job True`). Dann eine engere Regel einführen.
+
+### Spike A1 durchführen (Nutzer, offen)
+**Ergebnis 2026-11-16: gescheitert** (Instanz bleibt im Job, Tray endet beim Bildschirmwechsel) – Details im Nachtrag von [ADR-0030](../adr/0030-autostart-ueber-erleichterte-bedienung.md), es gilt Q9, umgesetzt als geplante Aufgabe `ZoomIN Autostart <SID>` (Aktion `rundll32 shell32.dll,ShellExec_RunDLL`, weil die Aufgabenplanung UIAccess-EXEs mit Fehler 740 ablehnt), Details im zweiten Nachtrag.
+Voraussetzung: Testbuild dieses Stands installiert, „Mit Windows starten“ an. Prüfen in `regedit`
+(nicht aus einer Agenten-Shell, die sieht ein umgeleitetes HKCU):
+`HKCU\Software\Microsoft\Windows NT\CurrentVersion\Accessibility` → `Configuration` enthält
+`ZoomIN`; unter `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` gibt es keinen Wert `ZoomIN`.
+1. **Abmelden und wieder anmelden** (kein Neustart nötig). Etwa 10 s warten, bis das Tray-Symbol da ist.
+   Ein Start durch die Erleichterte Bedienung, der auf eine laufende ZoomIN trifft, endet still
+   (kein Einstellungsfenster). Stehen 2323/2324 im Log mehrfach, hat Windows die beendete
+   Job-Instanz neu gestartet – notieren.
+2. Neueste Datei aus `%LocalAppData%\ZoomIN\logs\` sichern (Agent: per Terminal-Panel nach
+   `TestResults/` kopieren). Gesucht:
+   - **2323 der ersten Instanz:** `in job True, job limits 0x…, parent ATBroker, … Ease of Access
+     start True` → Start im Job, welche Limits, wer startet.
+   - **2324** `started process N (breakaway)` → Ausstieg geklappt; `(shell)` → `CreateProcess` hat die
+     UIAccess-EXE abgelehnt.
+   - **2325** (Job verbietet den Ausstieg) oder **2326** (Fehlercode) → Kandidat 1 gescheitert.
+   - **2323 der zweiten Instanz:** `in job False, … parent ZoomIN, left job True` → draußen.
+     **2327** → trotz Neustart im Job.
+   - **2328** → kein Win+U gesendet.
+3. **Win+L**, 5 s warten: Ist der Sperrbildschirm vergrößert? Entsperren: Ist das Tray-Symbol noch
+   da, und steht im Benutzer-Log **keine** neue 2323 (die Tray-App lief durch)?
+4. Eine **UAC-Abfrage** auslösen (z. B. Rechtsklick › Als Administrator ausführen): vergrößert?
+5. Tray › **Beenden** (Log 2301 `exiting`), dann **Win+L**: Die Sperre darf **nicht** vergrößert sein.
+6. ZoomIN aus dem **Startmenü** starten: 2323 mit `parent explorer, … Ease of Access start False`
+   und 2301 `Ease of Access notified (starting)`; danach Win+L vergrößert.
+7. Optional (Adminrechte, der Nutzer setzt es selbst): HKLM `ATs\ZoomIN\TerminateOnDesktopSwitch=0`,
+   Schritte 1–3 wiederholen. Bleibt die sichere Instanz stehen, wie lange dauert der zweite Start
+   (SYSTEM-Log 1107)? Danach den Wert zurück auf 1.
+
+**Auswertung:** 2324 + zweite Instanz `in job False` + Tray überlebt Win+L + Sperre vergrößert →
+Spike gelungen, Nachtrag in ADR-0030. Sonst gilt Q9 ohne Rückfrage: geplante Aufgabe bei der
+Anmeldung (`TaskSchedulerAutostart`, noch nicht gebaut), Win+U-Trick bleibt.
+- Sonderfall: Ausstieg gelingt, Tray überlebt, aber die Sperre bleibt unvergrößert → Windows hält
+  das Hilfsmittel nach dem Ende der Job-Instanz für beendet. Dann müsste die neue Instanz
+  (`--left-job`) das Start-Signal senden; das ist eine neue Entscheidung, kein stiller Umbau.
+## Startzeit, Prüf-Logs, Schnappschuss, SYSTEM-Logs (M10-Abschluss, Spur C, 2026-11-12)
+- **Ursache der ~1 s Lücke (aus dem Code):** Log 1107 wartete auf `ZoomController.Status.IsVisible`.
+  Der Render-Thread veröffentlicht seinen Status aber nur **einmal je Sekunde** (`FrameStatistics.SecondElapsed`,
+  damit der Frame ohne Lock bleibt). Die Sekunde beginnt mit `RunSession`, also mit „Zoom pipeline ready“
+  – genau die gemessenen ~430 ms + 1000 ms. Das Bild selbst kam früher; gemessen wurde zu spät.
+- Dazu glitt die Stufe bisher von 1× hoch (Standard 150 ms bis 95 %, bis zum Einrasten ~2,4 × so lange).
+  Jetzt setzt `SecureStartWatch.SkipZoomAnimation` die Animationszeit vor dem Einschalten auf 0 und
+  stellt sie 1 s nach dem ersten Bild auf der Stufe (Zeit für die übrigen Monitore) bzw. nach 10 s
+  zurück.
+- Neue Messung: `RenderMilestones` (in `RenderModels`, ohne DI, Uhr `TimeProvider.System`) hält
+  Pipeline bereit, erste Desktopkopie, erstes gezeigtes Bild und erreichte Stufe. Nur die sichere
+  Instanz schaltet sie scharf (`Arm`); der Render-Thread prüft je Frame nur, bis alles gesetzt ist,
+  in der Tray-App gar nicht (Benchmark `MilestoneBenchmarks`: 0 B, < 1 ns). Daraus Log 1107 und
+  1150 und die Kinder `zoomin.secure.start.pipeline`/`.capture`/`.present`/`.zoom_in`. Die Kopie
+  wird erst nach ihrem Frame gestempelt; ein langes `.capture` heißt: Desktop Duplication kam spät.
+- **Messung (2026-11-12 18:33, Debug-Build, normaler Desktop, Bildschirm an, Zoom an, ein Monitor):**
+  Prozessstart → Engine-Start ~360 ms (davon `zoomin.secure.settings` 169 ms) → Pipeline +160 ms →
+  erste Desktopkopie +22 ms → erstes Bild und Zoomstufe im selben Frame (`.present`/`.zoom_in` 0 ms).
+  **Erstes vergrößertes Bild ≈ 545 ms nach Prozessstart** (Ziel ≤ 1 s); eine frische Duplication
+  liefert ihr erstes Bild bei eingeschaltetem Bildschirm sofort. Bestätigung als SYSTEM bei UAC/Win+L
+  steht aus (Testbuild, Log 1107/1150 bei Stufe „Ausführlich“, sonst die Abläufe im `.trace.jsonl`).
+- **Falle beim Rauchtest:** Ist der Bildschirm aus (Nutzer lange inaktiv, hier 17 min), komponiert DWM
+  nichts; eine neu angelegte Desktop Duplication liefert dann **kein einziges** Bild (`AcquireNextFrame`
+  nur `WAIT_TIMEOUT`, auch nicht mit `LastPresentTime == 0`). Der Rauchtest meldet dann 1106 nach 10 s.
+  Startzeiten nur bei eingeschaltetem Bildschirm messen. Offen: Liefert eine frische Duplication bei
+  **statischem**, aber eingeschaltetem Bild sofort ein erstes Bild? Die Zeit 1150 „first desktop copy“
+  im Testbuild beantwortet das.
+- Prüf-Logs 1151–1162 (`SecureDesktopChecks`): Desktop, Job, Wächter und Kürzel gleich beim Start (Windows beendet die Instanz beim Desktopwechsel ohne Vorwarnung, oft nach Sekunden); die Overlay-Prüfungen nach dem ersten Bild (+1 s), sonst nach 10 s oder beim Beenden-Kürzel.
+  `WindowFromPoint` überspringt das Overlay (WS_EX_LAYERED + WS_EX_TRANSPARENT ist für die
+  Trefferprüfung unsichtbar), darum läuft `Win32SecureDesktopProbe` die Z-Reihenfolge ab
+  (`GetTopWindow`/`GW_HWNDNEXT`, sichtbar und nicht „cloaked“) und nimmt das erste Fenster, dessen
+  Rechteck die Monitormitte enthält. Geprüft nur auf Monitoren, deren Mitte ein eigenes Overlay deckt.
+- Die Prüfzeilen sind Information (wie 1105/1107): Bei Stufe „Normal“ (ab Warnung) erscheinen nur
+  die Warnungen. Für die Checkliste vorher „Ausführlich“ wählen.
+- Watchdog-PID: `IWatchdogLauncher.Start` gibt sie jetzt zurück (ShellExecute liefert das Handle).
+- Strg+Alt+Umschalt+D (nur sicherer Modus, wie Strg+Alt+Umschalt+Z): Debug-Schnappschuss in
+  `folders.Debug()\secure-snapshot-<Zeit>` – als SYSTEM in dessen Profil, nur für Admins lesbar.
+  AltGr+D erzeugt auf deutscher Tastatur kein Zeichen. Jeder am Anmeldebildschirm kann das Kürzel
+  drücken: Es bleiben höchstens 3 Schnappschüsse, ältere löscht der nächste. Offen: Belegt der
+  Benutzer Strg+Alt+Umschalt+D (oder +Z) mit einem eigenen Kürzel, fehlt es auf der Sperre (Log 1166/1104);
+  der Kürzel-Editor kennt die festen Kürzel des sicheren Modus nicht. Ebenfalls offen:
+  `HotkeyRules` kennt nur deutsche AltGr-Zeichen; auf US-International tippt AltGr+Umschalt+D „Ð“
+  (und +Z „Æ“) – dort blockieren beide Kürzel ein Zeichen im Kennwortfeld.
+- Rauchtest als normaler Benutzer (dev-Build, Terminal-Panel, nicht die Agent-Shell): Desktop
+  `Default`, nicht im Job, Wächter läuft (nicht im Job), 16 Kürzel „unavailable“ (die Tray-App hält
+  sie – erwartet), Beenden- und Schnappschuss-Kürzel registriert.
+- **SYSTEM-Logs ins Diagnosepaket:** Kontrollkästchen auf der Diagnoseseite → `ElevatedSecureLogsRequest`
+  startet `ZoomIN.exe --copy-secure-logs <Diagnose>\secure-logs-<GUID>` mit „runas“. Der erhöhte
+  Schritt (`SecureLogCopy`) schreibt als Admin in einen Ordner des Benutzers, darum:
+  - Ziel nur genau `<eigener Diagnoseordner>\secure-logs-<32 hex>` (`SecureLogCopyRule`), Laufwerk fest.
+    „Eigener“ heißt: der des Kontos, das den erhöhten Schritt ausführt. Bei Erhöhung „über die
+    Schulter“ (Standardbenutzer gibt Admin-Kennwort ein) ist das ein anderes Konto: Der Schritt lehnt
+    ab (Exit-Code 2), das Paket entsteht ohne SYSTEM-Logs. Gewollt, kein Ausweg über fremde Pfade.
+  - Diagnoseordner wird ohne Folgen von Reparse-Points geöffnet; `GetFinalPathNameByHandle` muss dem
+    erwarteten Pfad entsprechen (kein Junction irgendwo). Danach **nur noch über das Handle**:
+    Zielordner und jede Datei entstehen mit `NtCreateFile` relativ zum Handle (`RootDirectory`,
+    `FILE_CREATE`, `FILE_OPEN_REPARSE_POINT`, `OBJ_DONT_REPARSE`; `Interop/NtFiles`). Falle
+    (Sicherheitsprüfung): Teilen nur Lesen verhindert zwar Umbenennen und Löschen, aber nicht, dass
+    der Benutzer den (leeren) Ordner zum Mount Point macht – `FSCTL_SET_REPARSE_POINT` braucht nur
+    `FILE_WRITE_ATTRIBUTES`, und das regeln Freigabemodi nicht. Pfadbasiertes `CreateDirectory` danach
+    wäre umleitbar.
+  - Zielordner mit eigener Zugriffsliste (Besitzer Administratoren, geschützt; Benutzer nur Lesen und
+    Löschen, also kein Eintrag und kein Link darin); existiert der Name in irgendeiner Form, Abbruch
+    (Exit-Code 2). Nur `*.log`/`*.jsonl` aus SYSTEMs `logs` und `debug`, neueste zuerst, zusammen
+    höchstens 20 MB.
+  - Der Schritt startet **keine Telemetrie**: Ihr Log läge als Administrator im `%LocalAppData%\ZoomIN\logs`
+    des Benutzers, das er per Junction/Objekt-Link umleiten kann (Anlegen/Anhängen und Löschen
+    beliebiger Dateien als Admin). Das Ergebnis meldet der Exit-Code, die Tray-App loggt 2340.
+    **Offen (vorbestehend, nicht Spur C):** Die übrigen erhöhten Rollen (`--secure-desktop-setting`,
+    `--apply-update`, Deinstallation) loggen weiter dorthin – eigene Aufgabe vor `v1.0.0`.
+  - Das Paket legt sie unter `secure/` ab und löscht die Kopie danach. Abgelehnte UAC-Abfrage →
+    Vermerk in `ZoomIN-Info.txt`.
+  - Grenze: Bei Erhöhung mit einem **anderen** Admin-Konto (Over-the-shoulder) ist der Diagnoseordner
+    des erhöhten Kontos ein anderer → Ziel abgelehnt, Vermerk „copying them failed“.
+
+## Testlauf dev.279.m10 (2026-11-16, Nutzer, SYSTEM-Log)
+- Win+L, Strg+Alt+Entf und UAC starten die sichere Instanz auf `Winlogon`, im Job, Wächter im Job.
+  Prüf-Logs: Overlay oben an der Monitormitte, Ausschluss aus Aufnahmen gesetzt. Desktop
+  Duplication liefert dort Bilder.
+- Startzeit (UAC, Zoom an): Pipeline 486 ms, erstes vergrößertes Bild **508 ms** nach dem
+  Prozessstart (Ziel ≤ 1 s erfüllt; vorher ~1,4 s).
+- **Tastenkürzel gelten pro Sitzung, nicht pro Desktop:** 16 von 18 Kürzeln meldete die sichere
+  Instanz als belegt (Log 2201/1160), weil die Tray-App auf `Default` sie hält. Nur Beenden- und
+  Schnappschuss-Kürzel (gibt es nur im sicheren Modus) kamen durch.
+  → Behoben: `Win32HotkeyService` hört auf `EVENT_SYSTEM_DESKTOPSWITCH`. Hat ein anderer Desktop die
+  Eingabe (`OpenInputDesktop` scheitert für normale Benutzer an `Winlogon` mit „Zugriff verweigert“
+  oder liefert einen anderen Namen; jeder andere Fehler heißt „unbekannt“, nichts ändert sich), gibt
+  die Tray-App alle Kürzel frei und holt sie bei der Rückkehr zurück (Log 2208). Solange sie
+  freigegeben hat, prüft ein Zeitgeber alle 250 ms erneut – ein verpasstes Ereignis kostet so nie die
+  Kürzel. Ein abgelehntes Kürzel versucht jede Instanz 5 s lang alle 250 ms erneut (Log 2207), so
+  gewinnt die sichere Instanz das Rennen gegen die Freigabe. Eigene Kürzel der Tray-App, die nach der
+  Rückkehr noch belegt sind (sichere Instanz hängt nach), gibt sie nie auf (nach 5 s einmal Log 2201).
+- **Farbfilter fehlte:** Der Nutzer arbeitet nur mit dem Filter pro Fenster („Invertiert,
+  intelligent“), der Monitorfilter ist aus. Der Filter pro Fenster läuft auf dem sicheren Desktop
+  nicht (ADR-0020). Entscheidung 2026-11-16 (Nutzer): Dort wird sein Automatik-Filter zum
+  Monitorfilter, überall wo kein Monitorfilter eingeschaltet ist (`SecureWindowFilterFallback`).
+  Eingeschaltete Monitorfilter bleiben. „Intelligent“ lässt das dunkle Sperrbild in Ruhe.
+- Zoom startete bei Sperre und Strg+Alt+Entf zweimal „aus“: Die Tray-App hatte 5 s vorher „Zoom aus“
+  gespeichert und nach der Rückkehr wieder „an“. Ursache nicht belegt (Ein-/Ausschalten wird nicht
+  geloggt); der Nutzer meldet den Zoom danach als in Ordnung.
+
+## Nachtest dev.280.m10 (2026-11-16, Nutzer, SYSTEM-Log)
+- UAC zweimal (22:29): Tray-App gibt 20 Kürzel frei (Log 2208 „released“), die sichere Instanz
+  meldet **0 Kürzel belegt** (Prüf-Log 1161), nach der Rückkehr holt die Tray-App alle 20 nach 3 s
+  zurück (2208 „taken back“). Kein 2201 auf dem sicheren Desktop.
+- Kopie der Einstellungen der sicheren Instanz: `FilterEnabled = true`, Monitorfilter
+  `InvertedSmart` aus dem Automatik-Filter – Fallback greift.
+- Erstes vergrößertes Bild nach 535–548 ms.
+- Sichtprüfung (Nutzer): Zoom, Farbfilter und Kürzel auf den sicheren Bildschirmen „sauber“.
+
 ## Offen (Spike mit ZoomIN selbst)
 Plan zum Abschluss (Autostart, Kern-Modus, Prüf-Logs, Startzeit): [M10 „Abschluss“](../plan/m10-sichere-bildschirme.md#abschluss-grilling-2026-11-12), [ADR-0030](../adr/0030-autostart-ueber-erleichterte-bedienung.md).
 
@@ -127,9 +324,7 @@ Plan zum Abschluss (Autostart, Kern-Modus, Prüf-Logs, Startzeit): [M10 „Absch
   Benutzereinstellungen. Sichtprüfung dev.109 (12:57, Nutzer): Strg+Alt+Entf und Sperre
   vergrößert, erstes Bild nach 1402–1423 ms.
 - ~1 s zwischen Pipeline bereit und erstem vergrößerten Bild.
-- Gelten Tastenkürzel (`RegisterHotKey`) pro Desktop? Sonst würde die Tray-App auf `Default` die
-  Kürzel der sicheren Instanz blockieren.
-- Startet ATBroker den Wächter mit im Job, und wird er beim Wechsel mit beendet?
-- Liegt ein Topmost-Fenster über LogonUI, Sperrbildschirm und UAC-Dialog?
-- Wirkt `SetWindowDisplayAffinity` dort? Desktop Duplication (Runde 2, mit ZoomIN selbst).
-- Wie lange dauert der Start?
+- ~~Gelten Tastenkürzel pro Desktop?~~ Nein, pro Sitzung – siehe Testlauf dev.279.m10.
+- ~~Wächter im Job?~~ Ja (Prüf-Log 1158). Ob er beim Wechsel mit beendet wird, steht noch aus.
+- ~~Topmost über LogonUI/Sperre/UAC, Affinität, Desktop Duplication, Startzeit?~~ Ja / ja / ja /
+  508 ms – siehe Testlauf dev.279.m10.

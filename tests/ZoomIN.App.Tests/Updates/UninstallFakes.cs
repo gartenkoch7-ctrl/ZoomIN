@@ -94,6 +94,8 @@ internal sealed class UninstallFakes
 
         public void EndOtherInstances(int waitForProcessId) => calls.Calls.Add("end-others " + waitForProcessId);
 
+        public void RemoveAutostartTasks() => calls.Calls.Add("autostart-tasks");
+
         public void ScheduleFolderRemoval(InstallLayout layout, int waitForProcessId) =>
             calls.Calls.Add($"schedule-removal {layout.Root} {waitForProcessId}");
     }

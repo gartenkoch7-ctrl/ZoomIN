@@ -40,6 +40,7 @@ internal sealed class UninstallFlow(
             return (int)UpdateResult.Failed;
         }
 
+        // Removes this user's autostart task, an old Ease of Access list entry and Run value alike (AutostartSelector, ADR-0030).
         TryRun(() => autostart.SetEnabled(false));
         TryRun(() => shortcuts.Remove(shortcuts.UserDesktop));
         if (answer == DialogAnswer.No)
@@ -68,6 +69,9 @@ internal sealed class UninstallFlow(
         removal.EndOtherInstances(waitForProcessId);
         registration.Unregister();
         secureDesktop.Remove();
+
+        // Other accounts' tasks would point at the deleted exe and greet every sign-in with an error.
+        TryRun(removal.RemoveAutostartTasks);
         removal.ScheduleFolderRemoval(layout, waitForProcessId);
         log.RemovalScheduled();
         return 0;

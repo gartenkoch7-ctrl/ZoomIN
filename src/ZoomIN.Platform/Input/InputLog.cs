@@ -25,6 +25,12 @@ internal static partial class InputLog
     [LoggerMessage(EventId = 2206, Level = LogLevel.Error, Message = "Wheel zoom handler failed")]
     public static partial void WheelHandlerFailed(this ILogger logger, Exception exception);
 
+    [LoggerMessage(EventId = 2207, Level = LogLevel.Information, Message = "Hotkey {Gesture} registered after {Attempts} retries")]
+    public static partial void HotkeyRegisteredLate(this ILogger logger, HotkeyGesture gesture, int attempts);
+
+    [LoggerMessage(EventId = 2208, Level = LogLevel.Information, Message = "Hotkeys {Action} for another desktop: {Count}")]
+    public static partial void HotkeysDesktopSwitch(this ILogger logger, string action, int count);
+
     // M17 lane B2 (overview) uses 2920–2939: 2920–2921 here, 2922 in ShellLog.
     [LoggerMessage(EventId = 2920, Level = LogLevel.Information, Message = "Overview: Esc swallowed {Count} times")]
     public static partial void OverviewEscapesSwallowed(this ILogger logger, int count);

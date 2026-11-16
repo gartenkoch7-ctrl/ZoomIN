@@ -4,5 +4,6 @@ namespace ZoomIN.App.Lifecycle;
 internal interface IWatchdogLauncher
 {
     /// <param name="secure">The current process is the secure-desktop instance (ADR-0016).</param>
-    void Start(bool secure = false);
+    /// <returns>The watchdog's process id, or null if none was started (for the secure checks, M10).</returns>
+    int? Start(bool secure = false);
 }
