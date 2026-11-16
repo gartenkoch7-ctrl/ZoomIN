@@ -139,7 +139,9 @@ Umgesetzt (Stand 2026-11-12, Branch `feat/m10-a-autostart`):
   (Log 2321 entfällt).
 - **Deinstallation:** `UninstallFlow` schaltet über `AutostartSelector` aus: Aufgabe, Listeneintrag und
   Run-Wert des deinstallierenden Benutzers sind weg; `RemoveAll` löscht `ATs\ZoomIN` und den
-  HKLM-Listeneintrag. Offen: Aufgaben anderer Benutzerkonten bleiben (Anmeldung meldet dann eine
+  HKLM-Listeneintrag. Die Aufgaben **aller** Konten löscht der erhöhte Schritt (`AutostartTaskCleanup`,
+  Aufgabenspeicher `C:\Windows\System32\Tasks` = eine Datei je Aufgabe, nur mit Adminrechten lesbar;
+  Log 2331). Früher blieben Aufgaben anderer Konten stehen (Anmeldung meldete dann eine
   fehlende Datei).
 - Bekannte Grenze: Aufgabennamen sind vorhersagbar, und jeder Benutzer darf im Stammordner Aufgaben
   anlegen. Legt ein anderes Konto den Namen vorher an, scheitert `/Create` (kein Autostart, Log 2330).

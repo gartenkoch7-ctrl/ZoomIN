@@ -114,5 +114,7 @@ Nutzer steht aus. Ablauf und gesuchte Logzeilen:
   sendet es erst, wenn das Tray-Symbol in der Taskleiste ist (`ITrayIcon.Shown`), plus 2 s (Log 2315).
   Nachtest dev.282.m10 (Nutzer, 2026-11-16): Aufgabe 23:47:49, Signal 23:47:53 (2315 → 2301), danach
   sichere Instanz mit erstem Bild nach 524 ms; Win+L, Strg+Alt+Entf und Abmelden laut Nutzer sauber.
-- Offen: Bei der Deinstallation bleibt die Aufgabe **anderer** Benutzerkonten stehen; deren
-  Anmeldung meldet dann eine fehlende Datei. Aufräumen im erhöhten Schritt kommt später.
+- Deinstallation (2026-11-16): Der erhöhte Schritt löscht die Aufgaben **aller** Konten
+  (`AutostartTaskCleanup`: Dateien `ZoomIN Autostart *` im Aufgabenspeicher `System32\Tasks`, je eine
+  pro Aufgabe – erhöht geprüft – dann `schtasks /Delete`; Log 2331). Vorher blieb die Aufgabe anderer
+  Benutzerkonten stehen; deren Anmeldung meldete dann eine fehlende Datei.

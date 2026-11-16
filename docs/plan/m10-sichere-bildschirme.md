@@ -318,7 +318,7 @@ Tray-App außerhalb des Jobs weiterlaufen lassen?
   unvergrößert (Win+U vor der Taskleiste verpufft) → behoben in dev.282.m10 (`2294dc5`), Nachtest
   bestanden (Win+L, Strg+Alt+Entf, Abmelden/Anmelden)
 - [x] Wächter: Sitzungsende (Abmelden, Exit-Code `0x40010004`) erkennen, dann nicht neu starten
-- [ ] Deinstallation: Autostart-Aufgaben anderer Benutzerkonten im erhöhten Schritt löschen
+- [x] Deinstallation: Autostart-Aufgaben anderer Benutzerkonten im erhöhten Schritt löschen (`AutostartTaskCleanup`, Log 2331)
 - [x] Mergen B → C → A, nach jedem Merge Build und Tests (2026-11-12, `aa01cba`; dazu
   `ISecureLogsRequest` → `ElevatedSecureLogsRequest` in `Tray()`)
 - [x] Gesamt-Review (§9) bis ohne Befunde; `/security-review` (Spur C: zwei Befunde behoben;

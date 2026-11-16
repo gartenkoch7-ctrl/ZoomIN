@@ -301,6 +301,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2328 | Info | Started by Ease of Access: no Win+U signal |
 | 2329 | Info | Autostart switched {State} ({Method}) (`task` oder `run`; auch im Setup, Rolle `setup`) |
 | 2330 | Warnung | Autostart task {Action} failed (code {Code}) (`create`/`delete`: Exit-Code von schtasks oder HResult; -1 = Zeitlimit 5 s, -2 = schtasks nicht gestartet) |
+| 2331 | Info | Uninstall removed {Count} autostart tasks (erhöhter Schritt, alle Konten; `list` in 2330 = Aufgabenspeicher nicht lesbar) |
 | 2340 | Info | Secure logs for the diagnostics package: {Result} (exit code {ExitCode}) – `copied`, `declined`; schreibt die Tray-App. Der erhöhte Schritt `--copy-secure-logs` hat bewusst kein eigenes Log (es läge im Ordner des Benutzers, den er umleiten kann) |
 | 2341 | Fehler | Starting the secure log copy failed |
 | 2342 | Warnung | Secure logs for the diagnostics package not copied: {Result} (exit code {ExitCode}) – `refused` (Exit-Code 2: Ziel abgelehnt), `failed` (1, oder −1: nicht gestartet bzw. nicht rechtzeitig beendet) |

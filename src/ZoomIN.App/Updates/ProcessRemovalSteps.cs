@@ -4,6 +4,7 @@ using System.Globalization;
 using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Updates;
+using ZoomIN.Platform.Lifecycle;
 
 namespace ZoomIN.App.Updates;
 
@@ -12,6 +13,8 @@ internal sealed class ProcessRemovalSteps(ILogger<ProcessRemovalSteps> log) : IR
 {
     // ERROR_CANCELLED: the user said "No" at the administrator prompt.
     private const int ErrorCancelled = 1223;
+
+    public void RemoveAutostartTasks() => new AutostartTaskCleanup(log).RemoveAll();
 
     public bool RunElevated()
     {

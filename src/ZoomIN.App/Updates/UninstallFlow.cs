@@ -69,6 +69,9 @@ internal sealed class UninstallFlow(
         removal.EndOtherInstances(waitForProcessId);
         registration.Unregister();
         secureDesktop.Remove();
+
+        // Other accounts' tasks would point at the deleted exe and greet every sign-in with an error.
+        TryRun(removal.RemoveAutostartTasks);
         removal.ScheduleFolderRemoval(layout, waitForProcessId);
         log.RemovalScheduled();
         return 0;

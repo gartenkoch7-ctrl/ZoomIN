@@ -37,4 +37,7 @@ internal static partial class AutostartLog
 
     [LoggerMessage(EventId = 2330, Level = LogLevel.Warning, Message = "Autostart task {Action} failed (code {Code})")]
     public static partial void TaskCommandFailed(this ILogger logger, string action, int code);
+
+    [LoggerMessage(EventId = 2331, Level = LogLevel.Information, Message = "Uninstall removed {Count} autostart tasks")]
+    public static partial void AutostartTasksRemoved(this ILogger logger, int count);
 }
