@@ -122,47 +122,53 @@ Schlüssel `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Accessibility\ATs\
 
 ## Autostart über die Erleichterte Bedienung (M10-Abschluss, Spur A, ADR-0030)
 Umgesetzt (Stand 2026-11-12, Branch `feat/m10-a-autostart`):
-- **Installiert:** „Mit Windows starten“ schreibt `ZoomIN` in HKCU
-  `Software\Microsoft\Windows NT\CurrentVersion\Accessibility\Configuration` (`EaseOfAccessAutostart`).
-  Andere Namen (z. B. `nvda_nvda_v1`) bleiben, Groß/klein egal. Ein alter Run-Wert wird bei jedem
-  Umschalten mit entfernt (`AutostartSelector`), sonst würde ein zweiter Start das Einstellungsfenster
-  öffnen. **ZIP/Entwickler-Build:** weiter Run-Eintrag.
-- Windows startet Namen aus der Liste nur, wenn HKLM `ATs\ZoomIN` existiert. Darum bleibt der
-  AT-Eintrag, solange ZoomIN installiert ist, auch bei „Sperrbildschirm aus“. Aus heißt jetzt:
-  HKLM `Configuration` ohne ZoomIN und `SecureDesktopAccommodation=none` unter `ATs\ZoomIN`
-  (Annahme laut Doku, beim Testbuild prüfen: Autostart läuft, auf der Sperre startet nichts).
-- **Falle Update:** `--apply-update` führt die bisher installierte Version aus. Hatte sie
-  „Sperrbildschirm aus“, löscht sie `ATs\ZoomIN`. Darum wählt `AutostartSelector` die Liste nur,
-  wenn `ATs\ZoomIN` existiert, sonst den Run-Eintrag. `AutostartMigration` wartet dann
-  (Log 2321) und zieht beim ersten Start nach dem nächsten erhöhten Schritt um.
-- **Umzug:** Beim Start der Tray-App: installiert und Run-Wert `ZoomIN` vorhanden → erst Listeneintrag,
-  dann Run-Wert löschen (Log 2320, Ablauf `zoomin.autostart.migrate`). Ohne Run-Wert ändert sich nichts.
-- **Deinstallation:** `UninstallFlow` schaltet über `AutostartSelector` aus: Listeneintrag und Run-Wert
-  des deinstallierenden Benutzers sind weg; `RemoveAll` löscht `ATs\ZoomIN` und den HKLM-Listeneintrag.
+- **Stand Q9 (2026-11-16, ersetzt die Liste):** Installiert startet „Mit Windows starten“ ZoomIN über
+  die geplante Aufgabe `ZoomIN Autostart <SID>` (`TaskSchedulerAutostart`, `schtasks /Create /XML`
+  als Benutzer, ohne Adminrechte; Aktion `rundll32 shell32.dll,ShellExec_RunDLL "<current>\ZoomIN.exe"`,
+  weil die Aufgabenplanung UIAccess-EXEs mit Fehler 740 ablehnt). `AutostartSelector` hält genau
+  einen Weg: Run-Wert und Listeneintrag früherer Versionen werden entfernt, sobald schtasks die
+  Aufgabe bestätigt (Exit-Code 0; nach einem Timeout zählt eine erneute Abfrage). Lässt sich keine
+  Aufgabe anlegen (Richtlinie, Dienst aus), gilt der Run-Eintrag und ein Listeneintrag fällt weg
+  (Log 2330), aber nur wenn die Aufgabe sicher fehlt (`/Query` = 1); die Migration versucht es bei
+  jedem Start erneut. Der Schalter zeigt danach den echten Stand.
+  **ZIP/Entwickler-Build:** weiter Run-Eintrag. schtasks läuft synchron (Einstellungsseite,
+  Start der Tray-App), Zeitlimit 5 s.
+- **Umzug:** Beim Start der Tray-App: installiert und Run-Wert **oder** Listeneintrag `ZoomIN` →
+  Aufgabe anlegen, dann beides löschen (Log 2320 `from`, Ablauf `zoomin.autostart.migrate`). Ohne
+  beides ändert sich nichts. Der AT-Eintrag in HKLM spielt für den Autostart keine Rolle mehr
+  (Log 2321 entfällt).
+- **Deinstallation:** `UninstallFlow` schaltet über `AutostartSelector` aus: Aufgabe, Listeneintrag und
+  Run-Wert des deinstallierenden Benutzers sind weg; `RemoveAll` löscht `ATs\ZoomIN` und den
+  HKLM-Listeneintrag. Offen: Aufgaben anderer Benutzerkonten bleiben (Anmeldung meldet dann eine
+  fehlende Datei).
+- Bekannte Grenze: Aufgabennamen sind vorhersagbar, und jeder Benutzer darf im Stammordner Aufgaben
+  anlegen. Legt ein anderes Konto den Namen vorher an, scheitert `/Create` (kein Autostart, Log 2330).
+- Historisch (Spike A1, Liste der Erleichterten Bedienung): Windows startet Namen aus der HKCU-Liste
+  `…\Accessibility\Configuration` nur mit HKLM `ATs\ZoomIN`, im Job mit `TerminateOnDesktopSwitch` –
+  darum gescheitert. „Sperrbildschirm aus“ heißt weiter: HKLM `Configuration` ohne ZoomIN und
+  `SecureDesktopAccommodation=none` unter `ATs\ZoomIN`.
 - **Job-Ausstieg (Spike A1):** `Program` prüft vor dem Einzelinstanz-Mutex `IsProcessInJob`, die
   Limits des Jobs (`QueryInformationJobObject`) und den Elternprozess (Toolhelp-Schnappschuss,
   Name ohne Pfad; unbekannt, wenn er jünger ist als wir oder sein Alter nicht lesbar ist –
   dann könnte die Id schon einem anderen Prozess gehören). Start durch die Erleichterte Bedienung =
-  Eltern `ATBroker`/`utilman`, oder im Job mit schon beendetem Elternprozess (nicht nach
-  `--wait-for`, dort endet der Elternprozess absichtlich), oder Marker `--left-job`. Erlaubt der Job den Ausstieg (`JOB_OBJECT_LIMIT_BREAKAWAY_OK` 0x800 oder
+  Eltern `ATBroker`/`utilman` oder Marker `--left-job` (seit Q9 nicht mehr „im Job mit beendetem
+  Elternprozess“ – so startet auch die Aufgabe). Erlaubt der Job den Ausstieg (`JOB_OBJECT_LIMIT_BREAKAWAY_OK` 0x800 oder
   `SILENT_BREAKAWAY_OK` 0x1000), startet ZoomIN sich mit `CREATE_BREAKAWAY_FROM_JOB` und
   `--left-job` neu und endet, ohne den Mutex je zu halten. Lehnt `CreateProcess` die
   UIAccess-EXE ab (Fehler 740), versucht es ShellExecute; ob dieser Prozess draußen ist, loggt er selbst.
   Vermutung (ungeprüft): Über ShellExecute erzeugt der AppInfo-Dienst den Prozess mit uns als
   Elternteil, er landet dann im selben Job (Log 2327). Ob `CreateProcess` aus einer Instanz mit
   UIAccess klappt, zeigt 2324 `breakaway`.
-- Bekannte Grenze: Steckt ein anderer Starter in einem Job und endet sofort nach dem Start von
-  ZoomIN, zählt das als Start durch die Erleichterte Bedienung (kein Start-Signal, unnötiger
-  Neustart). Der Spike zeigt, ob die Regel „Job ohne Elternprozess“ überhaupt gebraucht wird.
-- `EaseOfAccessNotifier` (Win+U-Trick): Das **Start**-Signal kommt nur noch, wenn **nicht** die
-  Erleichterte Bedienung gestartet hat (Startmenü, Run-Eintrag, nach Update); sonst Log 2328. Das
-  **Ende**-Signal (Tray › Beenden) kommt immer: Laut Doku muss ein von der Erleichterten Bedienung
-  gestartetes Hilfsmittel, das sich selbst beendet, das melden.
-- `AutostartSelector` prüft `ATs\ZoomIN` bei jedem Lesen und Schalten, nicht nur beim Start: Der
-  erhöhte Schritt kann den Eintrag schreiben, während die App läuft.
+- `EaseOfAccessNotifier` (Win+U-Trick): Das **Start**-Signal kommt, wenn **nicht** die
+  Erleichterte Bedienung gestartet hat (Aufgabe, Startmenü, Run-Eintrag, nach Update); sonst Log
+  2328. Das **Ende**-Signal (Tray › Beenden) kommt immer: Laut Doku muss ein von der Erleichterten
+  Bedienung gestartetes Hilfsmittel, das sich selbst beendet, das melden.
+- Nachtest Q9 beachten: Startet Windows ZoomIN nach Sperre/UAC selbst neu (wie im Spike, dreimal in
+  5 s) und ist der Starter schon weg, öffnet die zweite Instanz das Einstellungsfenster der laufenden
+  (2323 `parent unknown, in job True`). Dann eine engere Regel einführen.
 
 ### Spike A1 durchführen (Nutzer, offen)
-**Ergebnis 2026-11-16: gescheitert** (Instanz bleibt im Job, Tray endet beim Bildschirmwechsel) – Details im Nachtrag von [ADR-0030](../adr/0030-autostart-ueber-erleichterte-bedienung.md), es gilt Q9.
+**Ergebnis 2026-11-16: gescheitert** (Instanz bleibt im Job, Tray endet beim Bildschirmwechsel) – Details im Nachtrag von [ADR-0030](../adr/0030-autostart-ueber-erleichterte-bedienung.md), es gilt Q9, umgesetzt als geplante Aufgabe `ZoomIN Autostart <SID>` (Aktion `rundll32 shell32.dll,ShellExec_RunDLL`, weil die Aufgabenplanung UIAccess-EXEs mit Fehler 740 ablehnt), Details im zweiten Nachtrag.
 Voraussetzung: Testbuild dieses Stands installiert, „Mit Windows starten“ an. Prüfen in `regedit`
 (nicht aus einer Agenten-Shell, die sieht ein umgeleitetes HKCU):
 `HKCU\Software\Microsoft\Windows NT\CurrentVersion\Accessibility` → `Configuration` enthält

@@ -111,7 +111,7 @@ public static class Program
 
         // Ease of Access starts the tray app in a job that ends at the next lock screen (ADR-0030):
         // leave it before taking the single-instance mutex, so the new instance can take it.
-        Origin = new LaunchOriginProbe().Read(leftJob) with { AfterRestart = restarted };
+        Origin = new LaunchOriginProbe().Read(leftJob);
         if (Origin.ShouldLeaveJob && SingleInstance.IsTaken())
         {
             // Windows started its AT again while ZoomIN runs outside the job: nothing to do.
@@ -160,7 +160,7 @@ public static class Program
 
     /// <summary>
     /// How Windows started the tray app (spike A1; unless <see cref="LeaveJob"/> logged it already)
-    /// and the one-time move of the autostart into the Ease of Access list (ADR-0030), before any
+    /// and the one-time move of the autostart into the scheduled task (ADR-0030, Q9), before any
     /// view model reads the autostart.
     /// </summary>
     private static void PrepareAutostart(TelemetryHost telemetry, bool reported)

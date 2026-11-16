@@ -83,3 +83,26 @@ Nutzer steht aus. Ablauf und gesuchte Logzeilen:
     des Jobs), Sekunden später lief eine neue. Die Tray-App überlebt den Wechsel also nicht.
   - Nebenbefund: Beim Abmelden startet der Wächter ZoomIN neu (Exit-Code `0x40010004`, Log
     4002/4003) – er muss das Sitzungsende erkennen.
+
+## Nachtrag: Ausweichweg Q9 umgesetzt (2026-11-16)
+- Eine installierte ZoomIN startet über eine **geplante Aufgabe** `ZoomIN Autostart <SID>` im
+  Stammordner der Aufgabenplanung: Trigger „bei Anmeldung“ nur dieses Benutzers,
+  `InteractiveToken`, `LeastPrivilege`, Priorität 4 (normal), keine Laufzeitgrenze, auch im
+  Akkubetrieb, `AllowHardTerminate=false`. Angelegt mit `schtasks /Create /XML` als der Benutzer
+  selbst – ohne Adminrechte (Probe 2026-11-16).
+- Die Aufgabenplanung kann die UIAccess-EXE nicht selbst starten (`0x800702E4`, Fehler 740). Die
+  Aktion ist darum `rundll32.exe shell32.dll,ShellExec_RunDLL "<current>\ZoomIN.exe"`: ShellExecute
+  lässt AppInfo UIAccess vergeben, rundll32 endet sofort, ZoomIN läuft weiter (Probe mit `osk.exe`
+  und einem Pfad mit Leerzeichen).
+- Die Liste der Erleichterten Bedienung wird für den Autostart nicht mehr genutzt. Die Migration
+  zieht Run-Wert **und** Listeneintrag (Spike-Builds) in die Aufgabe um und löscht beide erst, wenn
+  die Aufgabe existiert. Folge 2 („`EaseOfAccessNotifier` entfällt“) gilt nicht: Windows kennt die
+  Aufgabe nicht als Hilfsmittel, der Win+U-Trick bleibt.
+- „Im Job mit beendetem Elternprozess“ zählt nicht mehr als Start durch die Erleichterte Bedienung –
+  so startet auch die Aufgabe (Job der Aufgabenplanung, rundll32 schon beendet).
+- Wächter: Beim Abmelden (Exit-Code `0x40010004` oder `SM_SHUTTINGDOWN`) startet er nicht neu.
+- Einmalig nach dem Update von einem Spike-Build: Startet die Liste ZoomIN noch über einen schon
+  beendeten Broker, verlässt diese Instanz den Job nicht mehr und endet beim nächsten Win+L. Die
+  Migration entfernt den Listeneintrag beim selben Start, ab der nächsten Anmeldung gilt die Aufgabe.
+- Offen: Bei der Deinstallation bleibt die Aufgabe **anderer** Benutzerkonten stehen; deren
+  Anmeldung meldet dann eine fehlende Datei. Aufräumen im erhöhten Schritt kommt später.

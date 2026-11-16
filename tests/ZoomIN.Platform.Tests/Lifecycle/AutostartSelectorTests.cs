@@ -1,106 +1,151 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Win32;
-using ZoomIN.Core.Updates;
+using ZoomIN.Core.Lifecycle;
 using ZoomIN.Platform.Lifecycle;
 using ZoomIN.Platform.SecureDesktop;
 
 namespace ZoomIN.Platform.Tests.Lifecycle;
 
-/// <summary>Which autostart a ZoomIN uses (ADR-0030); private keys stand in for HKCU, HKLM and the Run key.</summary>
+/// <summary>
+/// Which autostart a ZoomIN uses (ADR-0030, Q9): a private key stands in for HKCU and the Run key,
+/// a fake for schtasks.
+/// </summary>
 public sealed class AutostartSelectorTests : IDisposable
 {
     private const string Installed = @"C:\Program Files\ZoomIN\current\ZoomIN.exe";
+    private const string Sid = "S-1-5-21-1-2-3-1001";
 
     private readonly TestRegistry _user = new("Selector.User");
-    private readonly TestRegistry _machine = new("Selector.Machine");
-    private readonly InstallLayout _layout = new(@"C:\Program Files\ZoomIN");
+    private readonly FakeSchtasks _schtasks = new();
 
     private string RunKey => _user.RootPath + @"\Run";
 
+    private bool HasTask => _schtasks.Tasks.ContainsKey(AutostartTask.Name(Sid));
+
     [Fact]
-    public void Installed_UsesTheEaseOfAccessList_AndDropsAnOldRunValue()
+    public void Installed_UsesTheTask_AndDropsRunValueAndListEntry()
     {
-        RegisterAt();
         new RegistryAutostart(RunKey, "\"C:\\Old\\ZoomIN.exe\"").SetEnabled(true);
-
-        var autostart = Selector(Installed);
-        autostart.SetEnabled(true);
-
-        Assert.Equal("ease_of_access", autostart.Method);
-        Assert.True(autostart.IsEnabled);
-        Assert.Equal("ZoomIN", List());
-        Assert.Null(RunValue());
-    }
-
-    [Fact]
-    public void Installed_Off_RemovesListEntryAndRunValue()
-    {
-        RegisterAt();
         SetList("nvda_nvda_v1,ZoomIN");
-        new RegistryAutostart(RunKey, $"\"{Installed}\"").SetEnabled(true);
 
-        Selector(Installed).SetEnabled(false);
-
-        Assert.Equal("nvda_nvda_v1", List());
-        Assert.Null(RunValue());
-    }
-
-    [Fact]
-    public void Installed_ReadsTheList_SoWindowsSettingsWin()
-    {
-        RegisterAt();
         var autostart = Selector(Installed);
         autostart.SetEnabled(true);
 
-        // The user switches ZoomIN off in Windows' Settings › Accessibility.
-        SetList(string.Empty);
-
-        Assert.False(autostart.IsEnabled);
+        Assert.Equal("task", autostart.Method);
+        Assert.True(autostart.IsEnabled);
+        Assert.True(HasTask);
+        Assert.Null(RunValue());
+        Assert.Equal("nvda_nvda_v1", List());
     }
 
     [Fact]
-    public void Installed_WithoutAtEntry_KeepsTheRunKey()
+    public void Installed_Off_RemovesTaskRunValueAndListEntry()
     {
-        // An update applied by an older version has not written ATs\ZoomIN yet.
+        var autostart = Selector(Installed);
+        autostart.SetEnabled(true);
+        new RegistryAutostart(RunKey, $"\"{Installed}\"").SetEnabled(true);
         SetList("ZoomIN");
 
-        var autostart = Selector(Installed);
-        autostart.SetEnabled(true);
+        autostart.SetEnabled(false);
 
-        Assert.Equal("run", autostart.Method);
-        Assert.True(autostart.IsInstalled);
-        Assert.Equal($"\"{Installed}\"", RunValue());
+        Assert.False(autostart.IsEnabled);
+        Assert.False(HasTask);
+        Assert.Null(RunValue());
         Assert.Equal(string.Empty, List());
     }
 
     [Fact]
-    public void AtEntryWrittenWhileRunning_SwitchesToTheList()
+    public void TaskDeletedByTheUser_ReadsAsOff()
     {
         var autostart = Selector(Installed);
-        Assert.False(autostart.UsesEaseOfAccess);
-
-        // The user turns the sign-in screen switch on: the elevated step writes ATs\ZoomIN.
-        RegisterAt();
         autostart.SetEnabled(true);
 
-        Assert.Equal("ease_of_access", autostart.Method);
-        Assert.Equal("ZoomIN", List());
+        // The user deletes the task in the Task Scheduler.
+        _schtasks.Run(["/Delete", "/TN", AutostartTask.Name(Sid), "/F"]);
+
+        Assert.False(autostart.IsEnabled);
+    }
+
+    [Fact]
+    public void TaskCannotBeCreated_KeepsTheOldAutostart()
+    {
+        new RegistryAutostart(RunKey, $"\"{Installed}\"").SetEnabled(true);
+        _schtasks.CreateExitCode = 1;
+
+        var autostart = Selector(Installed);
+        autostart.SetEnabled(true);
+
+        Assert.False(HasTask);
+        Assert.Equal($"\"{Installed}\"", RunValue());
+        Assert.True(autostart.IsEnabled);
+    }
+
+    [Fact]
+    public void TasksBlocked_FreshInstall_FallsBackToTheRunKey()
+    {
+        _schtasks.CreateExitCode = 1;
+
+        var autostart = Selector(Installed);
+
+        Assert.False(autostart.TrySetEnabled(true));
+        Assert.Equal($"\"{Installed}\"", RunValue());
+        Assert.True(autostart.IsEnabled);
+    }
+
+    [Fact]
+    public void TasksBlocked_ListEntry_IsReplacedByTheRunKey()
+    {
+        SetList("nvda_nvda_v1,ZoomIN");
+        _schtasks.CreateExitCode = 1;
+
+        Selector(Installed).SetEnabled(true);
+
+        Assert.Equal($"\"{Installed}\"", RunValue());
+        Assert.Equal("nvda_nvda_v1", List());
+    }
+
+    [Fact]
+    public void CreateTimesOutAfterRegistering_CountsAsDone()
+    {
+        _schtasks.CreateExitCode = SchtasksProcess.TimedOut;
+        _schtasks.RegisterDespiteFailure = true;
+        new RegistryAutostart(RunKey, $"\"{Installed}\"").SetEnabled(true);
+
+        Assert.True(Selector(Installed).TrySetEnabled(true));
         Assert.Null(RunValue());
     }
 
     [Fact]
-    public void LeftoverRunValue_CountsAsOn_UntilSwitchedOff()
+    public void CreateAndQueryTimeOut_WritesNoRunValue_KeepsAnOldOne()
     {
-        // Migration waited for the AT entry; meanwhile the Run value still starts ZoomIN.
-        new RegistryAutostart(RunKey, $"\"{Installed}\"").SetEnabled(true);
-        RegisterAt();
-        var autostart = Selector(Installed);
+        _schtasks.CreateExitCode = SchtasksProcess.TimedOut;
+        _schtasks.QueryExitCode = SchtasksProcess.TimedOut;
 
-        Assert.True(autostart.IsEnabled);
-
-        autostart.SetEnabled(false);
-        Assert.False(autostart.IsEnabled);
+        Assert.False(Selector(Installed).TrySetEnabled(true));
         Assert.Null(RunValue());
+
+        new RegistryAutostart(RunKey, $"\"{Installed}\"").SetEnabled(true);
+        Selector(Installed).TrySetEnabled(true);
+        Assert.Equal($"\"{Installed}\"", RunValue());
+    }
+
+    [Fact]
+    public void DeleteFails_StaysOn_AndReportsIt()
+    {
+        var autostart = Selector(Installed);
+        autostart.SetEnabled(true);
+        _schtasks.DeleteExitCode = 5;
+
+        Assert.False(autostart.TrySetEnabled(false));
+        Assert.True(autostart.IsEnabled);
+    }
+
+    [Fact]
+    public void Leftovers_CountAsOn()
+    {
+        SetList("ZoomIN");
+
+        Assert.True(Selector(Installed).IsEnabled);
     }
 
     [Fact]
@@ -109,13 +154,12 @@ public sealed class AutostartSelectorTests : IDisposable
         // An installed ZoomIN may run from app-1.2.0; an update removes that folder later.
         Selector(@"C:\Program Files\ZoomIN\app-1.2.0\ZoomIN.exe").SetEnabled(true);
 
-        Assert.Equal($"\"{Installed}\"", RunValue());
+        Assert.Contains($"\"{Installed}\"", _schtasks.Tasks[AutostartTask.Name(Sid)], StringComparison.Ordinal);
     }
 
     [Fact]
-    public void NotInstalled_UsesTheRunKey_AndLeavesTheListAlone()
+    public void NotInstalled_UsesTheRunKey_AndTouchesNeitherTaskNorList()
     {
-        RegisterAt();
         SetList("ZoomIN");
 
         var autostart = Selector(@"D:\Tools\ZoomIN\ZoomIN.exe");
@@ -127,18 +171,13 @@ public sealed class AutostartSelectorTests : IDisposable
         autostart.SetEnabled(false);
         Assert.Null(RunValue());
         Assert.Equal("ZoomIN", List());
+        Assert.Empty(_schtasks.Calls);
     }
 
-    public void Dispose()
-    {
-        _user.Dispose();
-        _machine.Dispose();
-    }
+    public void Dispose() => _user.Dispose();
 
     private AutostartSelector Selector(string executable) =>
-        new(executable, new SecureDesktopRegistration(_machine.Root), _user.Root, RunKey, NullLogger.Instance);
-
-    private void RegisterAt() => new SecureDesktopRegistration(_machine.Root).Apply(_layout, choice: false);
+        new(executable, _user.Root, RunKey, _schtasks, Sid, NullLogger.Instance);
 
     private void SetList(string list)
     {

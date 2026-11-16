@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using Windows.Win32;
+using Windows.Win32.UI.WindowsAndMessaging;
 using ZoomIN.Watchdog.Notification;
 
 namespace ZoomIN.Watchdog;
@@ -34,4 +36,6 @@ public sealed class ProcessWatchdogSystem : IWatchdogSystem
     public void Notify(string title, string message, TimeSpan duration) => TrayNotification.Show(title, message, duration);
 
     public void Pause(TimeSpan duration) => Thread.Sleep(duration);
+
+    public bool IsSessionEnding => PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_SHUTTINGDOWN) != 0;
 }

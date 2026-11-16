@@ -26,21 +26,18 @@ public sealed record LaunchOrigin(bool InJob, uint JobLimits, string? ParentProc
     /// <summary>Not started by Ease of Access, or no information yet.</summary>
     public static LaunchOrigin Unknown { get; } = new(false, 0, null, false);
 
-    /// <summary>Started with "--wait-for" after an update or restart: its parent has exited on purpose.</summary>
-    public bool AfterRestart { get; init; }
-
     public bool BreakawayAllowed => InJob && (JobLimits & (BreakawayOk | SilentBreakawayOk)) != 0;
 
     public bool ParentIsEaseOfAccess =>
         ParentProcess is { } name && s_easeOfAccessParents.Any(known => known.Equals(name, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
-    /// Ease of Access started this instance: its broker is the parent, or the instance is in a job
-    /// whose creator has already exited (the broker need not wait), or the previous instance left
-    /// that job for us. A start from the Start menu or a terminal has a living parent that is neither,
-    /// and a restart's parent exits on purpose, so neither counts.
+    /// Ease of Access started this instance: its broker is the parent, or the previous instance left
+    /// that job for us. "In a job with an exited parent" no longer counts (Q9, 2026-11-16): the
+    /// autostart task starts ZoomIN the same way (task job, rundll32 exits at once) and needs the
+    /// Win+U signal; a restart after an update looks the same.
     /// </summary>
-    public bool ByEaseOfAccess => LeftJob || ParentIsEaseOfAccess || (InJob && ParentProcess is null && !AfterRestart);
+    public bool ByEaseOfAccess => LeftJob || ParentIsEaseOfAccess;
 
     /// <summary>Start outside the job and exit: only once, and only if the job lets a child leave.</summary>
     public bool ShouldLeaveJob => !LeftJob && ByEaseOfAccess && BreakawayAllowed;

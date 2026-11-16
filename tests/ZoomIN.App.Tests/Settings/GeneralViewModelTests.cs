@@ -17,7 +17,7 @@ public sealed class GeneralViewModelTests : IDisposable
         _autostart.Enabled = true;
         Assert.True(Page().Autostart);
 
-        // Windows' Settings › Accessibility took ZoomIN out of the list meanwhile.
+        // The user deleted the autostart task in the Task Scheduler meanwhile.
         _autostart.Enabled = false;
         Assert.False(Page().Autostart);
         Assert.Empty(_autostart.Calls);
@@ -34,6 +34,25 @@ public sealed class GeneralViewModelTests : IDisposable
         Assert.Equal([true, false], _autostart.Calls);
     }
 
+    [Fact]
+    public async Task SwitchingFails_SwitchShowsTheRealState()
+    {
+        _autostart.Refuse = true;
+        var page = Page();
+
+        page.Autostart = true;
+
+        // The switch goes back after the binding is done (Task.Yield), not inside the setter.
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (page.Autostart && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
+        Assert.False(page.Autostart);
+        Assert.Equal([true], _autostart.Calls);
+    }
+
     public void Dispose() => _rig.Dispose();
 
     // The settings window builds a new view model each time the page is opened (PageServices.Create).
@@ -47,10 +66,13 @@ public sealed class GeneralViewModelTests : IDisposable
 
         public bool IsEnabled => Enabled;
 
+        /// <summary>Like a failing schtasks: the call returns, nothing changes.</summary>
+        public bool Refuse { get; set; }
+
         public void SetEnabled(bool enabled)
         {
             Calls.Add(enabled);
-            Enabled = enabled;
+            Enabled = Refuse ? Enabled : enabled;
         }
     }
 

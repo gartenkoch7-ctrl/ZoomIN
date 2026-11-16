@@ -5,11 +5,9 @@ namespace ZoomIN.Platform.Lifecycle;
 /// <summary>Log messages of the autostart and of leaving the Ease of Access job (event ids 2320–2339, ADR-0030).</summary>
 internal static partial class AutostartLog
 {
-    [LoggerMessage(EventId = 2320, Level = LogLevel.Information, Message = "Autostart moved from the Run key to the Ease of Access list")]
-    public static partial void AutostartMigrated(this ILogger logger);
-
-    [LoggerMessage(EventId = 2321, Level = LogLevel.Information, Message = "Autostart migration postponed: ZoomIN is not registered with Ease of Access yet")]
-    public static partial void MigrationPostponed(this ILogger logger);
+    // 2321 (migration waits for the AT entry) is gone with Q9: the task needs no AT entry.
+    [LoggerMessage(EventId = 2320, Level = LogLevel.Information, Message = "Autostart moved from {From} to the scheduled task")]
+    public static partial void AutostartMigrated(this ILogger logger, string from);
 
     [LoggerMessage(EventId = 2322, Level = LogLevel.Warning, Message = "Autostart migration failed ({Error})")]
     public static partial void MigrationFailed(this ILogger logger, string error);
@@ -36,4 +34,7 @@ internal static partial class AutostartLog
 
     [LoggerMessage(EventId = 2329, Level = LogLevel.Information, Message = "Autostart switched {State} ({Method})")]
     public static partial void AutostartSwitched(this ILogger logger, string state, string method);
+
+    [LoggerMessage(EventId = 2330, Level = LogLevel.Warning, Message = "Autostart task {Action} failed (code {Code})")]
+    public static partial void TaskCommandFailed(this ILogger logger, string action, int code);
 }

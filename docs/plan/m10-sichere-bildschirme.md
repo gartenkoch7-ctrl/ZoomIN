@@ -313,9 +313,10 @@ Tray-App außerhalb des Jobs weiterlaufen lassen?
   nur den Run-Eintrag, während die Migration schon in die Liste umzieht); vor dem Testbuild für A1
 - [x] Spike A1, Ergebnis als Nachtrag in ADR-0030 (2026-11-16: gescheitert – neu gestartete
   Instanz bleibt im Job, Tray-App endet beim ersten Bildschirmwechsel)
-- [ ] Ausweichweg Q9 (`TaskSchedulerAutostart`, geplante Aufgabe bei der Anmeldung): jetzt fällig,
-  noch nicht gebaut
-- [ ] Wächter: Sitzungsende (Abmelden, Exit-Code `0x40010004`) erkennen, dann nicht neu starten
+- [x] Ausweichweg Q9 (`TaskSchedulerAutostart`, geplante Aufgabe bei der Anmeldung): gebaut 2026-11-16,
+  Nachtest mit dem Nutzer offen (Abmelden/Anmelden, Win+L, UAC)
+- [x] Wächter: Sitzungsende (Abmelden, Exit-Code `0x40010004`) erkennen, dann nicht neu starten
+- [ ] Deinstallation: Autostart-Aufgaben anderer Benutzerkonten im erhöhten Schritt löschen
 - [x] Mergen B → C → A, nach jedem Merge Build und Tests (2026-11-12, `aa01cba`; dazu
   `ISecureLogsRequest` → `ElevatedSecureLogsRequest` in `Tray()`)
 - [x] Gesamt-Review (§9) bis ohne Befunde; `/security-review` (Spur C: zwei Befunde behoben;

@@ -89,7 +89,7 @@ internal sealed class SetupInstaller
     {
         var exe = _services.Layout.CurrentExecutable;
 
-        // Ease of Access list once the elevated step registered the AT, else the Run key (ADR-0030).
+        // The autostart task at sign-in, as this (non-elevated) user (ADR-0030, Q9).
         AutostartSelector.ForInstall(_services.Layout, _services.Telemetry.Logger<AutostartSelector>()).SetEnabled(choices.Autostart);
         if (choices.DesktopShortcut)
         {

@@ -102,7 +102,7 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.update.restart` | app | Neustart nach dem Update; Kind von `zoomin.update.install`, darunter `zoomin.app.start` der neuen Version |
 | `zoomin.setup.launch` | app | Setup herunterladen, prüfen, starten (Ergebnis); das Setup setzt den Trace fort |
 | `zoomin.secure.settings` | secure | Woher die Einstellungen kommen (Tag `zoomin.secure.settings_source`: `user`, `copy`, `default`) |
-| `zoomin.autostart.migrate` | app | Einmaliger Umzug des Autostarts vom Run-Eintrag in die Liste der Erleichterten Bedienung (ADR-0030), nur bei installierter ZoomIN, Kind von `zoomin.app.start`. Tags `zoomin.autostart.from` (`run`, `none`), `zoomin.autostart.postponed` (AT-Eintrag in HKLM fehlt noch, Run-Eintrag bleibt); Fehler: Ausnahmetyp |
+| `zoomin.autostart.migrate` | app | Einmaliger Umzug des Autostarts in die geplante Aufgabe (ADR-0030, Q9) – vom Run-Eintrag oder aus der Liste der Erleichterten Bedienung (Spike-Builds) –, nur bei installierter ZoomIN, Kind von `zoomin.app.start`. Tag `zoomin.autostart.from` (`run`, `ease_of_access`, `none`); Fehler: `task missing` oder Ausnahmetyp |
 | `zoomin.autostart.leave_job` | app | Die von der Erleichterten Bedienung im Job gestartete Instanz startet ZoomIN außerhalb des Jobs neu und endet (Spike A1, ADR-0030). Tag `zoomin.autostart.left_job`; darunter `zoomin.app.start` der neuen Instanz |
 | `zoomin.settings.load` | app, setup | `settings.json` lesen (Tag `zoomin.settings.result`: `ok`, `missing`, `unreadable` → Error) |
 | `zoomin.settings.save` | app, setup | `settings.json` schreiben (Fehler: Ausnahmetyp) |
@@ -288,8 +288,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2312 | Info | Secure desktop: no signed-in user in session {Session} (error {Error}) |
 | 2313 | Info | Secure desktop: no user shell in session {Session} |
 | 2314 | Info | Secure desktop: using the token of the user's shell |
-| 2320 | Info | Autostart moved from the Run key to the Ease of Access list |
-| 2321 | Info | Autostart migration postponed: ZoomIN is not registered with Ease of Access yet |
+| 2320 | Info | Autostart moved from {From} to the scheduled task (`run` oder `ease_of_access`; Q9) |
+| 2321 | – | entfallen mit Q9 (die Aufgabe braucht keinen AT-Eintrag) |
 | 2322 | Warnung | Autostart migration failed ({Error}) |
 | 2323 | Info | Launch origin: in job {InJob}, job limits 0x{JobLimits:X8}, parent {ParentProcess}, left job {LeftJob}, Ease of Access start {EaseOfAccessStart} (bei jedem Start der Tray-App; Elternprozess nur als Name, `unknown`, wenn er schon beendet ist) |
 | 2324 | Info | Leaving the Ease of Access job: started process {ProcessId} ({Method}) (`breakaway` = `CREATE_BREAKAWAY_FROM_JOB`, `shell` = ShellExecute nach Fehler 740) |
@@ -297,7 +297,8 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2326 | Warnung | Leaving the job failed (error {Error}); staying in the job |
 | 2327 | Warnung | Still in a job after leaving the Ease of Access job (job limits 0x{JobLimits:X8}) |
 | 2328 | Info | Started by Ease of Access: no Win+U signal |
-| 2329 | Info | Autostart switched {State} ({Method}) (`ease_of_access` oder `run`; auch im Setup, Rolle `setup`) |
+| 2329 | Info | Autostart switched {State} ({Method}) (`task` oder `run`; auch im Setup, Rolle `setup`) |
+| 2330 | Warnung | Autostart task {Action} failed (code {Code}) (`create`/`delete`: Exit-Code von schtasks oder HResult; -1 = Zeitlimit 5 s, -2 = schtasks nicht gestartet) |
 | 2340 | Info | Secure logs for the diagnostics package: {Result} (exit code {ExitCode}) – `copied`, `declined`; schreibt die Tray-App. Der erhöhte Schritt `--copy-secure-logs` hat bewusst kein eigenes Log (es läge im Ordner des Benutzers, den er umleiten kann) |
 | 2341 | Fehler | Starting the secure log copy failed |
 | 2342 | Warnung | Secure logs for the diagnostics package not copied: {Result} (exit code {ExitCode}) – `refused` (Exit-Code 2: Ziel abgelehnt), `failed` (1, oder −1: nicht gestartet bzw. nicht rechtzeitig beendet) |
@@ -385,6 +386,7 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 4004 | Fehler | Giving up after {Restarts} restarts within {Minutes} minutes |
 | 4005 | Info | Cleanup {Step} done |
 | 4006 | Fehler | Cleanup {Step} failed |
+| 4007 | Info | ZoomIN ended with the session (exit code 0x{ExitCode:X8}); no restart (Abmelden: `0x40010004` oder `SM_SHUTTINGDOWN`) |
 | 5001 | Info | Setup: ZoomIN {ProcessId} not ended: {Reason} |
 | 5002 | Fehler | Setup: registering the installation failed |
 | 5003 | Info | Setup: old Inno installation removed |

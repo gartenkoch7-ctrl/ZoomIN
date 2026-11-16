@@ -20,19 +20,10 @@ public sealed class LaunchOriginTests
     }
 
     [Fact]
-    public void JobWhoseCreatorHasExited_IsAnEaseOfAccessStart()
+    public void AutostartTask_JobWhoseCreatorHasExited_IsNot()
     {
-        var origin = new LaunchOrigin(InJob: true, LaunchOrigin.SilentBreakawayOk, null, LeftJob: false);
-
-        Assert.True(origin.ByEaseOfAccess);
-        Assert.True(origin.ShouldLeaveJob);
-    }
-
-    [Fact]
-    public void RestartInAJob_IsNot_ThoughItsParentHasExited()
-    {
-        // "--wait-for": the old version or the updater exits on purpose before we look.
-        var origin = new LaunchOrigin(InJob: true, LaunchOrigin.BreakawayOk, null, LeftJob: false) { AfterRestart = true };
+        // The scheduled task (Q9): task job, rundll32 already gone. It needs the Win+U signal.
+        var origin = new LaunchOrigin(InJob: true, LaunchOrigin.BreakawayOk, null, LeftJob: false);
 
         Assert.False(origin.ByEaseOfAccess);
         Assert.False(origin.ShouldLeaveJob);

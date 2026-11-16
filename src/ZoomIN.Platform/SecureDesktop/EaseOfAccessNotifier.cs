@@ -15,9 +15,9 @@ namespace ZoomIN.Platform.SecureDesktop;
 /// "Ease of Access – Assistive Technology Registration"). Observed 2026-11-03: without this,
 /// Windows never started ZoomIN on Win+L.
 /// <para>
-/// Since ADR-0030 an installed ZoomIN usually starts through the Ease of Access list; Windows then
-/// knows it already, and the start signal is skipped. It stays for every other start (Start menu,
-/// the Run key of an older setup, after an update), and the exit signal stays for every start.
+/// An installed ZoomIN starts through a scheduled task (ADR-0030, Q9), which Windows does not know
+/// as an AT, so the start signal is sent then too. It is skipped only when Ease of Access started
+/// ZoomIN itself (an old list entry); the exit signal stays for every start.
 /// </para>
 /// </summary>
 public sealed class EaseOfAccessNotifier

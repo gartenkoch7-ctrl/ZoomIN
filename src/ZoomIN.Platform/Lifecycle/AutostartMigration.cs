@@ -6,10 +6,11 @@ using ZoomIN.Core.Diagnostics;
 namespace ZoomIN.Platform.Lifecycle;
 
 /// <summary>
-/// Moves the autostart of an installed ZoomIN once from the Run key to the Ease of Access list
-/// (ADR-0030, decision Q6): a "ZoomIN" Run value is removed and the list entry added. Without a Run
-/// value the autostart stays as it is. Only logged, no hint. The portable ZIP and developer builds
-/// keep the Run key (Q10). Runs at every start of the tray app; after the move it finds nothing.
+/// Moves the autostart of an installed ZoomIN once to the scheduled task (ADR-0030, Q6 and Q9): a
+/// "ZoomIN" Run value or an entry in the Ease of Access start list (spike A1 builds) becomes the
+/// task. Without either the autostart stays as it is. Only logged, no hint. The portable ZIP and
+/// developer builds keep the Run key (Q10). Runs at every start of the tray app; after the move it
+/// finds nothing.
 /// </summary>
 public sealed class AutostartMigration(AutostartSelector autostart, ILogger log)
 {
@@ -24,25 +25,23 @@ public sealed class AutostartMigration(AutostartSelector autostart, ILogger log)
         using var activity = Telemetry.Source.StartActivity("zoomin.autostart.migrate");
         try
         {
-            var fromRun = autostart.HasRunValue;
-            activity?.SetTag("zoomin.autostart.from", fromRun ? "run" : "none");
-            if (!fromRun)
+            var from = autostart.HasRunValue ? "run" : autostart.HasListEntry ? "ease_of_access" : "none";
+            activity?.SetTag("zoomin.autostart.from", from);
+            if (from == "none")
             {
                 return false;
             }
 
-            // An update is applied by the previous version, which may not write the AT entry yet;
-            // the list would then start nothing, so the Run value stays until it exists.
-            if (!autostart.UsesEaseOfAccess)
+            // Creates the task, then removes the old entries only if that worked. A failure retries
+            // at the next start (one schtasks call; blocked task creation is rare).
+            if (!autostart.TrySetEnabled(true))
             {
-                activity?.SetTag("zoomin.autostart.postponed", true);
-                log.MigrationPostponed();
+                activity?.SetStatus(ActivityStatusCode.Error, "task missing");
+                log.MigrationFailed("task missing");
                 return false;
             }
 
-            // Adds the list entry, then removes the Run value.
-            autostart.SetEnabled(true);
-            log.AutostartMigrated();
+            log.AutostartMigrated(from);
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SecurityException)

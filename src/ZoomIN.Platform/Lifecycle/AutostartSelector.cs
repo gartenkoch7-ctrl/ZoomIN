@@ -1,87 +1,112 @@
+using System.Security.Principal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using ZoomIN.Core.Lifecycle;
 using ZoomIN.Core.Updates;
-using ZoomIN.Platform.SecureDesktop;
 
 namespace ZoomIN.Platform.Lifecycle;
 
 /// <summary>
-/// The autostart this ZoomIN uses (ADR-0030): an installed copy starts through the Ease of Access
-/// list (<see cref="EaseOfAccessAutostart"/>), the portable ZIP and developer builds through the Run
-/// key (decision Q10). An installed copy keeps exactly one of both: switching removes the other, so
-/// an old Run value never starts a second ZoomIN (which would only open the settings window).
+/// The autostart this ZoomIN uses (ADR-0030): an installed copy starts through a scheduled task at
+/// sign-in (<see cref="TaskSchedulerAutostart"/>, Q9), the portable ZIP and developer builds through
+/// the Run key (Q10). An installed copy keeps only the task: switching removes a Run value and the
+/// Ease of Access list entry of earlier versions. That list started the tray app in a job that
+/// Windows ends at the next lock screen (spike A1, 2026-11-16).
 /// </summary>
 public sealed class AutostartSelector : IAutostart
 {
     private readonly RegistryAutostart _run;
+    private readonly TaskSchedulerAutostart? _task;
     private readonly EaseOfAccessAutostart? _list;
-    private readonly SecureDesktopRegistration _machine;
     private readonly ILogger _log;
 
     /// <summary>For the DI container: decided by the running exe.</summary>
     public AutostartSelector(ILogger<AutostartSelector> log)
-        : this(Environment.ProcessPath, SecureDesktopRegistration.Default, Registry.CurrentUser, RegistryAutostart.RunKey, log)
+        : this(Environment.ProcessPath, Registry.CurrentUser, RegistryAutostart.RunKey, new SchtasksProcess(), null, log)
     {
     }
 
-    /// <param name="executable">The running exe; only an installation in Program Files uses the list.</param>
-    /// <param name="machine">HKLM; the list only works with the AT entry there.</param>
+    /// <param name="executable">The running exe; only an installation in Program Files uses the task.</param>
     /// <param name="user">HKCU (the Ease of Access list); tests pass a private key.</param>
     /// <param name="runKey">The Run key below HKCU; tests pass a private path.</param>
-    internal AutostartSelector(string? executable, SecureDesktopRegistration machine, RegistryKey user, string runKey, ILogger log)
+    /// <param name="schtasks">schtasks.exe; tests pass a fake.</param>
+    /// <param name="userSid">The user the task belongs to; null reads the signed-in user (only when installed).</param>
+    internal AutostartSelector(string? executable, RegistryKey user, string runKey, ISchtasks schtasks, string? userSid, ILogger log)
     {
-        _run = new RegistryAutostart(runKey, $"\"{RegistryAutostart.StableExecutablePath(executable)}\"");
-        _list = InstallLayout.TryFromExecutable(executable, out _) ? new EaseOfAccessAutostart(user) : null;
-        _machine = machine;
+        var stable = RegistryAutostart.StableExecutablePath(executable);
+        _run = new RegistryAutostart(runKey, $"\"{stable}\"");
+        if (InstallLayout.TryFromExecutable(executable, out _))
+        {
+            _task = new TaskSchedulerAutostart(stable!, userSid ?? CurrentUserSid(), schtasks, log);
+            _list = new EaseOfAccessAutostart(user);
+        }
+
         _log = log;
     }
 
-    /// <summary>Runs from Program Files (not the ZIP or a developer build).</summary>
-    public bool IsInstalled => _list is not null;
+    private static string CurrentUserSid()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        return identity.User?.Value ?? throw new InvalidOperationException("The current user has no SID.");
+    }
 
-    /// <summary>
-    /// The list is in charge. Windows ignores list names without an AT entry under HKLM; it is
-    /// missing until an elevated step of this version ran (an update is applied by the previous
-    /// version), and until then the Run key keeps working. Read at every call: the elevated step
-    /// may run while the app is open.
-    /// </summary>
-    public bool UsesEaseOfAccess => _list is not null && _machine.IsAtRegistered;
+    /// <summary>Runs from Program Files (not the ZIP or a developer build).</summary>
+    public bool IsInstalled => _task is not null;
 
     /// <summary>A "ZoomIN" Run value exists, whatever it points at.</summary>
     public bool HasRunValue => _run.Exists;
 
-    /// <summary>"ease_of_access" or "run", for logs.</summary>
-    public string Method => UsesEaseOfAccess ? "ease_of_access" : "run";
+    /// <summary>"ZoomIN" is in the user's Ease of Access start list (earlier versions wrote it).</summary>
+    public bool HasListEntry => _list?.IsEnabled == true;
 
-    /// <summary>
-    /// With the list in charge, a Run value left over (migration waiting for the AT entry) starts
-    /// ZoomIN too, so it counts as on until the next switch or start removes it.
-    /// </summary>
-    public bool IsEnabled => UsesEaseOfAccess ? _list!.IsEnabled || _run.Exists : _run.IsEnabled;
+    /// <summary>The autostart task exists.</summary>
+    public bool HasTask => _task?.IsEnabled == true;
+
+    /// <summary>"task" or "run", for logs.</summary>
+    public string Method => IsInstalled ? "task" : "run";
+
+    /// <summary>Leftovers of earlier versions start ZoomIN too, so they count as on until removed.</summary>
+    public bool IsEnabled => IsInstalled ? HasTask || HasRunValue || HasListEntry : _run.IsEnabled;
 
     /// <summary>The setup: the copy just installed at <paramref name="layout"/>, as the signed-in user.</summary>
     public static AutostartSelector ForInstall(InstallLayout layout, ILogger log)
     {
         ArgumentNullException.ThrowIfNull(layout);
-        return new(layout.CurrentExecutable, SecureDesktopRegistration.Default, Registry.CurrentUser, RegistryAutostart.RunKey, log);
+        return new(layout.CurrentExecutable, Registry.CurrentUser, RegistryAutostart.RunKey, new SchtasksProcess(), null, log);
     }
 
-    public void SetEnabled(bool enabled)
+    public void SetEnabled(bool enabled) => TrySetEnabled(enabled);
+
+    /// <returns>True if the autostart now is as asked (always for the Run key, which throws instead).</returns>
+    public bool TrySetEnabled(bool enabled)
     {
-        // The new way first: a failure in between must not leave the user without autostart.
-        var easeOfAccess = UsesEaseOfAccess;
-        if (easeOfAccess)
-        {
-            _list!.SetEnabled(enabled);
-            _run.SetEnabled(false);
-        }
-        else
+        if (_task is null)
         {
             _run.SetEnabled(enabled);
-            _list?.SetEnabled(false);
+            _log.AutostartSwitched(enabled ? "on" : "off", Method);
+            return true;
         }
 
-        _log.AutostartSwitched(enabled ? "on" : "off", easeOfAccess ? "ease_of_access" : "run");
+        // The task first, and the old ways only once it exists: a failure must not leave the user
+        // without autostart. Where tasks cannot be created (policy, service off), the Run key starts
+        // ZoomIN instead (Explorer uses ShellExecute, so UIAccess works); the migration retries.
+        // The list entry goes either way: it starts the tray app in a job that ends at every lock.
+        var done = _task.TrySetEnabled(enabled);
+        // The Run value only if the task surely is missing: a task that exists unconfirmed plus a Run
+        // value would start ZoomIN twice (the second start opens the settings window). Unknown keeps
+        // the Run value as it is; the migration sorts it out at the next start.
+        if (!enabled || done)
+        {
+            _run.SetEnabled(false);
+        }
+        else if (_task.IsSurelyMissing)
+        {
+            _run.SetEnabled(true);
+        }
+
+        _list!.SetEnabled(false);
+
+        _log.AutostartSwitched(enabled ? "on" : "off", Method);
+        return done;
     }
 }
