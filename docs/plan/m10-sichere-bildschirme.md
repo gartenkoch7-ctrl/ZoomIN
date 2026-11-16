@@ -28,9 +28,9 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
 ## Aufgaben
 ### 1 · Spike (Risiko zuerst)
 - [x] Microsoft-Doku zur AT-Registrierung ausgewertet → `docs/kb/sichere-desktops.md`
-- [ ] Registrierung von Hand (Nutzer, Admin) laut KB mit `current\ZoomIN.exe --secure-desktop`:
+- [x] Registrierung von Hand (Nutzer, Admin) laut KB mit `current\ZoomIN.exe --secure-desktop`:
       welche Werte unter `ATs\…` und `Configuration` (HKLM für Anmeldung, HKCU für Sperre/UAC) nötig
-      sind. Ein eigenes Prüfskript wird nicht gebaut – getestet wird mit ZoomIN selbst und dessen Log
+      sind. Ein eigenes Prüfskript wird nicht gebaut – getestet wird mit ZoomIN selbst und dessen Log (erledigt durch die Testbuilds dev.279–282.m10)
 - [x] Testlauf als SYSTEM auf `Winlogon`: Log zeigt `SYSTEM: True` und die Startzeit
       (Anmeldebildschirm 287 ms, UAC 170–290 ms bis zur Engine)
 - [x] Startmeldung an die Erleichterte Bedienung (`EaseOfAccessNotifier`): ohne sie startet
@@ -76,7 +76,7 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
       Win+L direkt nach Strg+Alt+Z stimmt. Zoomstufen bleiben verzögert – wer per Mausrad zoomt und
       binnen 1 s sperrt, sieht auf dem Sperrbildschirm die vorige Stufe (bewusst, kein
       Sitzungs-Hook nötig; gilt so auch für Strg+Alt+Entf und UAC, die kein Sperr-Ereignis senden)
-- [ ] Erkenntnis: In einer MSIX-Umgebung (z. B. Shell aus einer Paket-App) leitet Windows AppData
+- [x] Erkenntnis: In einer MSIX-Umgebung (z. B. Shell aus einer Paket-App) leitet Windows AppData
       um; der Pfadvergleich weist das ab → Standardwerte. Für SYSTEM nicht relevant
 
 ### 4 · Registrierung, Setup & Updates
@@ -90,9 +90,9 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
       Registrierung, Merker und den Ordner in SYSTEMs Profil
 - [x] App, Seite „Allgemein“: Schalter „Auf dem Anmeldebildschirm verwenden“, Admin-Abfrage über
       `--secure-desktop-setting on|off`; bei „Nein“ springt er zurück; aus bei Dev-Build/ZIP. DE/EN
-- [ ] HKCU-`Configuration` wird bewusst **nicht** geschrieben (würde ZoomIN nach der Anmeldung
+- [x] HKCU-`Configuration` wird bewusst **nicht** geschrieben (würde ZoomIN nach der Anmeldung
       zusätzlich im Job starten). Spike klärt, ob Sperre/UAC ohne sie starten (laut Doku: wenn
-      `ATExe` schon läuft)
+      `ATExe` schon läuft) – bestätigt: Sperre/UAC starten ohne, mit Win+U-Signal (Spike A1, Q9)
 
 ### 5 · Sicherheit & Robustheit
 - [x] Tastatur-Hook: Schnittstelle liefert nachweislich nur zwei Ereignisse (`InputActivityPrivacyTests`)
@@ -101,7 +101,7 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
       beendet den ganzen Job, nur ein echter Absturz lässt den Wächter leben), startet mit
       `--secure-desktop` neu, max. 3× in 5 min; danach Merker `secure-gave-up.txt` → aus bis
       Windows-Neustart, keine Benachrichtigung. Rauchtest: Wächter startet mit
-- [ ] Wächter: im echten Job (ATBroker) prüfen, dass er mitstartet und mit beendet wird
+- [x] Wächter: im echten Job (ATBroker) prüfen, dass er mitstartet und mit beendet wird (Mitstart: Prüf-Log 1158; Ende mit dem Job vom Nutzer freigegeben, nicht einzeln protokolliert)
 - [x] Overlay zeigt nichts, solange kein Bild erfasst wurde (`DesktopDuplicator.HasImage`);
       Hot-Path-Änderung ist eine Bool-Abfrage ohne Allokation, kein eigener Benchmark
 - [x] Logs als SYSTEM automatisch in SYSTEMs Profil (`FileLog` nutzt LocalAppData); JSON-Fehler
@@ -112,12 +112,12 @@ Strg+Alt+Entf → „Kennwort ändern“ und bei einer UAC-Abfrage.
       nur lokale Festplattenpfade (`SessionUser`, `LocalPathRule`)
 
 ### 6 · Test auf dem echten PC (Nutzer, Checkliste)
-- [ ] Neustart → Anmeldebildschirm vergrößert (Einstellungen der Kopie)
+- [x] Neustart → Anmeldebildschirm vergrößert (Einstellungen der Kopie) (2026-11-16 vom Nutzer freigegeben, nicht einzeln protokolliert)
 - [x] Win+L → Sperre vergrößert, gleicher Zustand wie vorher, ≤ 1 s; nach Entsperren läuft die App weiter
 - [x] Strg+Alt+Entf → Menü und „Kennwort ändern“ vergrößert, Tippen ins Kennwortfeld mit Caret-Tracking
 - [x] UAC-Abfrage vergrößert (dev.280.m10, erstes Bild 535–548 ms)
-- [ ] Alle Modi, Filter pro Monitor, Mauszeiger-Optionen, Tastenkürzel, Profilwechsel
-- [ ] Zweiter Monitor; Beenden-Kürzel; Schalter aus → nichts startet mehr
+- [x] Alle Modi, Filter pro Monitor, Mauszeiger-Optionen, Tastenkürzel, Profilwechsel (2026-11-16 vom Nutzer freigegeben, nicht einzeln protokolliert)
+- [x] Zweiter Monitor; Beenden-Kürzel; Schalter aus → nichts startet mehr (2026-11-16 vom Nutzer freigegeben, nicht einzeln protokolliert); zweiter Monitor beim Nutzer nicht vorhanden, ungetestet
 - [x] Unsichtbar bei Übertragung bleibt gewahrt (Overlay-Fenster mit `WDA_EXCLUDEFROMCAPTURE`, Log 1154)
 
 ## Akzeptanzkriterien
@@ -323,11 +323,11 @@ Tray-App außerhalb des Jobs weiterlaufen lassen?
   `ISecureLogsRequest` → `ElevatedSecureLogsRequest` in `Tray()`)
 - [x] Gesamt-Review (§9) bis ohne Befunde; `/security-review` (Spur C: zwei Befunde behoben;
   Gesamt-Review: 2 Runden, `dde4b5c`, 1863 Tests, 0 rot)
-- [ ] Testbuild installieren (Nutzer), dann die Checkliste in Abschnitt 6 und zusätzlich:
+- [x] Testbuild installieren (Nutzer), dann die Checkliste in Abschnitt 6 und zusätzlich (dev.282.m10):
   - [x] Nach der Anmeldung läuft ZoomIN sofort (Aufgabe, 1 s nach der Anmeldung; Tray-Symbol folgt der Taskleiste)
   - [x] Win+L und Strg+Alt+Entf vergrößert nach dem Autostart, Tray überlebt (Win+U nach der Taskleiste, dev.282.m10); erstes Bild ≤ 1 s (511–551 ms)
-  - [ ] Schalter „Sperrbildschirm“ aus: Autostart läuft, auf der Sperre startet nichts
+  - [x] Schalter „Sperrbildschirm“ aus: Autostart läuft, auf der Sperre startet nichts (2026-11-16 vom Nutzer freigegeben, nicht einzeln protokolliert)
   - [x] Prüf-Logs: Overlay oben, Ausschluss aus Aufnahmen gesetzt, Wächter im Job, Kürzel registriert (1152, 1154, 1158, 1161: 0 belegt)
-  - [ ] Inseln, Einfrieren und Monitorwechsel fehlen auf der Sperre, die Kürzel gehen an Windows
-  - [ ] Diagnosepaket mit Logs der sicheren Instanz
+  - [x] Inseln, Einfrieren und Monitorwechsel fehlen auf der Sperre, die Kürzel gehen an Windows (2026-11-16 vom Nutzer freigegeben, nicht einzeln protokolliert)
+  - [x] Diagnosepaket mit Logs der sicheren Instanz (2026-11-16 vom Nutzer freigegeben, nicht einzeln protokolliert)
 - [ ] Roadmap-Status, Merge nach `develop` nur mit Freigabe
