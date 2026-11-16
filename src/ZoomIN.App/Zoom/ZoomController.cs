@@ -11,13 +11,13 @@ namespace ZoomIN.App.Zoom;
 
 /// <summary>
 /// Starts the engine: shortcuts, mouse wheel and activity hooks, zoom output, focus tracking, the
-/// filter per window, the docked strip reservation, zoom while moving windows (G1) and the hold key of the highlights (E1). The
+/// filter per window, the docked strip reservation, zoom while moving windows (G1), the hold key of the highlights (E1) and zoom off while it is held. The
 /// commands themselves are in <see cref="ZoomCommands"/>, <see cref="WindowFilterCommands"/> and <see cref="HotkeyBindings"/>.
 /// Saving is done by <see cref="SettingsService"/>.
 /// </summary>
 public sealed class ZoomController(
     SettingsService settings, HotkeyBindings hotkeys, ZoomCommands zoom, IZoomOutput output, InputSources inputs,
-    DockedStripSync dockedStrip, WindowDragSync windowDrag, MarkerInput markers,
+    DockedStripSync dockedStrip, WindowDragSync windowDrag, MarkerInput markers, HoldKeyZoom holdKeyZoom,
     ILogger<ZoomController> log, EngineScope scope) : IDisposable
 {
     public ZoomStatus Status => output.Status;
@@ -34,6 +34,7 @@ public sealed class ZoomController(
         inputs.Wheel.Start(settings.Current.WheelModifiers, zoom.ZoomBy);
         inputs.Activity.Start(new PointerActivity(models.Effects, models.Markers));
         markers.Start();
+        holdKeyZoom.Start();
         models.Zoom.Changed += dockedStrip.Update;
         output.Start();
         inputs.Tracking.Start(models.Tracking);
@@ -49,6 +50,7 @@ public sealed class ZoomController(
     public void Dispose()
     {
         settings.Models.Zoom.Changed -= dockedStrip.Update;
+        holdKeyZoom.Dispose();
         markers.Dispose();
     }
 }

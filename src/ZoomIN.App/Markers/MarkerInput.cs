@@ -17,7 +17,6 @@ public sealed class MarkerInput : IDisposable
     private readonly Lock _gate = new();
     private (ShowCondition Crosshair, ShowCondition Caret, ShowCondition Focus) _conditions;
     private bool _started;
-    private bool _hookNeeded;
     private bool _hookRunning;
 
     public MarkerInput(SettingsService settings, IHoldKeySource hook, ILogger<MarkerInput> log)
@@ -53,7 +52,6 @@ public sealed class MarkerInput : IDisposable
         lock (_gate)
         {
             _started = false;
-            _hookNeeded = false;
             _hookRunning = false;
             _hook.Stop();
         }
@@ -100,20 +98,13 @@ public sealed class MarkerInput : IDisposable
 
     private void ApplyHook(bool conditionsChanged)
     {
-        // A hook Windows refused is tried again when a condition changes, not on every slider step.
-        var models = _settings.Models;
-        var needed = MarkerVisibility.NeedsHoldKey(models.Effects.Current.Cursor, models.Tracking.Options);
-        if (needed && !_hookRunning && (!_hookNeeded || conditionsChanged))
+        // The hold key always lifts the zoom to 1× (HoldKeyZoom), so the hook runs all the time, not
+        // only for highlights waiting for it. A hook Windows refused is tried again when a condition
+        // or the key changes, not on every slider step.
+        if (!_hookRunning && conditionsChanged)
         {
             _hookRunning = _hook.Start(Activity);
         }
-        else if (!needed && _hookRunning)
-        {
-            _hook.Stop();
-            _hookRunning = false;
-        }
-
-        _hookNeeded = needed;
     }
 
     private (ShowCondition Crosshair, ShowCondition Caret, ShowCondition Focus) Conditions()

@@ -31,6 +31,12 @@ public sealed class MarkerActivity : IHoldKeyHandler
         _time = time ?? TimeProvider.System;
     }
 
+    /// <summary>
+    /// A hold started, ended or was spoiled by typing (on the hook thread, not for key repeat).
+    /// Handlers must return at once (Windows removes slow hooks).
+    /// </summary>
+    public event Action? HoldChanged;
+
     /// <summary>Shared setting (all profiles); the hook reads it for every key event.</summary>
     public MarkerHoldKey Key
     {
@@ -42,6 +48,7 @@ public sealed class MarkerActivity : IHoldKeyHandler
             {
                 _key = value;
                 Volatile.Write(ref _holdSince, 0);
+                HoldChanged?.Invoke();
             }
         }
     }
@@ -106,16 +113,22 @@ public sealed class MarkerActivity : IHoldKeyHandler
 
         // Nothing for longer than the timeout: the release was missed, this is a new press. The
         // start is written before "seen", so a render frame never pairs an old start with a fresh sign.
+        bool started;
         if (seen != 0 && _time.GetElapsedTime(seen, now) >= MarkerVisibility.HoldTimeout)
         {
             Volatile.Write(ref _holdSince, now);
+            started = true;
         }
         else
         {
-            Interlocked.CompareExchange(ref _holdSince, now, 0);
+            started = Interlocked.CompareExchange(ref _holdSince, now, 0) == 0;
         }
 
         Volatile.Write(ref _holdSeen, now);
+        if (started)
+        {
+            HoldChanged?.Invoke();
+        }
     }
 
     public void HoldKeyUp()
@@ -132,13 +145,19 @@ public sealed class MarkerActivity : IHoldKeyHandler
             ended = Volatile.Read(ref _holdEnded);
         }
         while (Interlocked.CompareExchange(ref _holdEnded, held && ended != Consumed ? now : 0, ended) != ended);
+
+        if (since != 0)
+        {
+            HoldChanged?.Invoke();
+        }
     }
 
     public void OtherKeyDown()
     {
-        if (Volatile.Read(ref _holdSince) != 0)
+        if (Volatile.Read(ref _holdSince) > 0)
         {
             Volatile.Write(ref _holdSince, Spoiled);
+            HoldChanged?.Invoke();
         }
     }
 }

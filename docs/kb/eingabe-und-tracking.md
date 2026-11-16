@@ -701,9 +701,20 @@ an, solange er eingeschaltet ist: Mit beidem aus läuft kein Hook, das Verhalten
   Taste losgelassen wird. Modifier zählen nicht als Tippen: Alt Gr schickt ein linkes Strg mit,
   auch bei Tastenwiederholung, und würde sonst „Alt rechts halten“ abbrechen.
 - Eigener Hook `Platform/Input/Win32HoldKeyHook` (WH_KEYBOARD_LL, eigener Thread), getrennt vom
-  Aktivitäts-Hook, damit beide unabhängig geändert werden können. Er läuft nur, solange eine
-  Markierung auf „Haltetaste“ steht (`App/Markers/MarkerInput`), und lässt jede Taste unverändert
-  durch. Mausbewegung und Tippen kommen aus dem bestehenden Aktivitäts-Hook (`PointerActivity`).
+  Aktivitäts-Hook, damit beide unabhängig geändert werden können. Er läuft seit 2026-11-16
+  **immer** (`App/Markers/MarkerInput`), weil die Haltetaste auch den Zoom ausschaltet (unten), und
+  lässt jede Taste unverändert durch. Mausbewegung und Tippen kommen aus dem bestehenden
+  Aktivitäts-Hook (`PointerActivity`).
+- **Zoom aus, solange die Haltetaste gehalten wird** (Wunsch des Nutzers 2026-11-16, statt
+  Fadenkreuz zum Zielen): Nach denselben 250 ms gleiten alle Monitore auf 1×
+  (`App/Markers/HoldKeyZoom`, vorübergehende Stufe `TemporaryZoomOwner.HoldKey`), Loslassen
+  gleitet zurück zur vorherigen Stufe. So klickt man auf dem unvergrößerten Desktop. Tippen während
+  des Haltens (Umschalt für Großbuchstaben) zählt nicht. Der Hook-Thread stößt nur einen Timer an
+  (`MarkerActivity.HoldChanged`); Setzen und Freigeben laufen auf dem Timer-Thread, der während des
+  Haltens alle 250 ms nachprüft, damit ein verpasstes Loslassen spätestens nach 1,5 s endet.
+  Angedockt: keine Wirkung (vorübergehende Stufen gibt es dort nicht). Eine gleiche Haltetaste für
+  die Achsensperre schaltet beim Halten ebenfalls den Zoom aus. Umschalt + Klick (Mehrfachauswahl)
+  länger als 250 ms schaltet den Zoom ebenso aus – mit Nutzern prüfen. Log 1652/1653.
 - Render-Thread: `MarkerActivity.Sample` (drei `long`: letzte Aktivität, Haltebeginn, letztes Haltesignal; ohne Lock) und `MarkerAlphas` entscheiden je
   Frame. Statt eines veröffentlichten Sichtbarkeits-Snapshots (Plan) rechnet der Render-Thread
   selbst – sonst bräuchte der Wechsel nach 1 s Ruhe einen eigenen Timer-Thread. Der Leerlauf-Pfad

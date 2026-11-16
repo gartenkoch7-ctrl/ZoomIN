@@ -102,6 +102,7 @@ internal static class EngineRegistration
         services.TryAddSingleton<ILocalizer>(_ => AppTexts.CreateLocalizer());
         services.AddSingleton<IHoldKeySource, Win32HoldKeyHook>();
         services.AddSingleton<MarkerInput>();
+        services.AddSingleton<HoldKeyZoom>();
         services.AddSingleton<ITrackingSource, UiaTrackingSource>();
         services.AddSingleton<IWindowFilterSource, Win32WindowFilterSource>();
         services.AddSingleton<IWindowDragSource, Win32WindowDragSource>();

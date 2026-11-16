@@ -1,4 +1,3 @@
-using ZoomIN.Core.Pointer;
 using ZoomIN.Core.Tracking;
 
 namespace ZoomIN.Core.Tests.Tracking;
@@ -67,20 +66,6 @@ public sealed class MarkerVisibilityTests
     public void HoldKey_SpoiledByTyping_StaysHidden()
     {
         Assert.False(MarkerVisibility.IsVisible(ShowCondition.HoldKey, new(Now, -1, Now), Now, Frequency));
-    }
-
-    [Fact]
-    public void NeedsHoldKey_OnlyForSwitchedOnHighlights()
-    {
-        var cursor = PointerStyle.Default with { CrosshairShow = ShowCondition.HoldKey };
-        var tracking = TrackingOptions.Default;
-
-        Assert.False(MarkerVisibility.NeedsHoldKey(cursor, tracking)); // crosshair is off
-        Assert.True(MarkerVisibility.NeedsHoldKey(cursor with { CrosshairEnabled = true }, tracking));
-        Assert.True(MarkerVisibility.NeedsHoldKey(PointerStyle.Default, tracking with { CaretShow = ShowCondition.HoldKey }));
-        Assert.True(MarkerVisibility.NeedsHoldKey(PointerStyle.Default, tracking with { FocusFrameShow = ShowCondition.HoldKey }));
-        Assert.False(MarkerVisibility.NeedsHoldKey(
-            PointerStyle.Default, tracking with { Enabled = false, CaretShow = ShowCondition.HoldKey }));
     }
 
     [Fact]

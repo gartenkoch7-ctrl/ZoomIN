@@ -159,6 +159,30 @@ public sealed class MarkerActivityTests
         Assert.Equal(MarkerHoldKey.LeftCtrl, ((IHoldKeyHandler)activity).Key);
     }
 
+    [Fact]
+    public void HoldChanged_OnStartEndAndTyping_NotOnKeyRepeat()
+    {
+        var activity = new MarkerActivity(_clock);
+        var changes = 0;
+        activity.HoldChanged += () => changes++;
+        _clock.Now = 1000;
+
+        activity.HoldKeyDown();
+        activity.HoldKeyDown(); // key repeat
+        Assert.Equal(1, changes);
+
+        activity.OtherKeyDown(); // typing spoils the hold
+        activity.OtherKeyDown();
+        Assert.Equal(2, changes);
+
+        activity.HoldKeyUp();
+        Assert.Equal(3, changes);
+
+        activity.HoldKeyUp(); // nothing held any more
+        activity.OtherKeyDown();
+        Assert.Equal(3, changes);
+    }
+
     private sealed class ManualClock : TimeProvider
     {
         public const long Frequency = 1000;

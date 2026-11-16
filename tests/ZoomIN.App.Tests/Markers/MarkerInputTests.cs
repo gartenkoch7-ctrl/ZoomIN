@@ -1,37 +1,23 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using ZoomIN.App.Markers;
 using ZoomIN.App.Settings;
-using ZoomIN.Core.Filters;
-using ZoomIN.Core.Overview;
 using ZoomIN.Core.Settings;
 using ZoomIN.Core.Tracking;
-using ZoomIN.Core.WindowDrag;
-using ZoomIN.Core.WindowFilters;
-using ZoomIN.Core.Zoom;
-using ZoomIN.Rendering.RenderLoop;
 
 namespace ZoomIN.App.Tests.Markers;
 
-/// <summary>The hold key hook runs only while a highlight waits for it (E1); tested with a fake hook (ADR-0025).</summary>
+/// <summary>
+/// The hold key hook runs all the time, since holding the key always lifts the zoom to 1×
+/// (<see cref="HoldKeyZoom"/>); tested with a fake hook (ADR-0025).
+/// </summary>
 public sealed class MarkerInputTests
 {
     [Fact]
-    public void FactorySetting_NoHookRuns()
-    {
-        var (input, hook, _) = Create(new AppSettings());
-
-        input.Start();
-
-        Assert.False(hook.Running);
-    }
-
-    [Fact]
-    public void ConditionHoldKey_StartsTheHook_WithTheChosenKey()
+    public void FactorySetting_StartsTheHook_WithTheChosenKey()
     {
         var (input, hook, settings) = Create(new AppSettings { MarkerHoldKey = MarkerHoldKey.LeftCtrl });
-        input.Start();
 
-        settings.Models.Tracking.SetOptions(settings.Models.Tracking.Options with { CaretShow = ShowCondition.HoldKey });
+        input.Start();
 
         Assert.True(hook.Running);
         Assert.Equal(MarkerHoldKey.LeftCtrl, hook.Handler!.Key);
@@ -39,31 +25,16 @@ public sealed class MarkerInputTests
     }
 
     [Fact]
-    public void CrosshairOnHoldKey_FromTheProfile_StartsAtOnce_AndStopsWhenNoLongerNeeded()
+    public void ConditionChanges_KeepTheHookRunning()
     {
         var (input, hook, settings) = Create(new AppSettings { CrosshairEnabled = true, CrosshairShow = ShowCondition.HoldKey });
         input.Start();
-        Assert.True(hook.Running);
 
         var effects = settings.Models.Effects;
         effects.SetCursor(effects.Current.Cursor with { CrosshairShow = ShowCondition.Idle });
 
-        Assert.False(hook.Running);
-    }
-
-    [Fact]
-    public void HoldKeyConditionOnASwitchedOffHighlight_NeedsNoHook()
-    {
-        var (input, hook, _) = Create(new AppSettings
-        {
-            CrosshairShow = ShowCondition.HoldKey, // crosshair off from the factory
-            CaretMarker = false,
-            CaretMarkerShow = ShowCondition.HoldKey,
-        });
-
-        input.Start();
-
-        Assert.False(hook.Running);
+        Assert.True(hook.Running);
+        Assert.Equal(1, hook.Starts);
     }
 
     [Fact]
@@ -111,11 +82,7 @@ public sealed class MarkerInputTests
 
     private static (MarkerInput Input, FakeHoldKeySource Hook, SettingsService Settings) Create(AppSettings initial)
     {
-        var models = new RenderModels(
-            ZoomMapping.Create(initial), EffectsMapping.Create(initial), TrackingMapping.Create(initial),
-            new WindowFilterModel(WindowFilterOptions.Default), new Core.Diagnostics.DebugSnapshots(), new SmartInvertHealth(),
-            new OverviewModel(TimeProvider.System), new ViewCenterRequests());
-        var settings = new SettingsService(initial, models, new NoSettingsStore(), new NoProfiles(), WindowDragMapping.Create(initial, models.Zoom));
+        var settings = MarkerTestSettings.Create(initial);
         var hook = new FakeHoldKeySource();
         return (new MarkerInput(settings, hook, NullLogger<MarkerInput>.Instance), hook, settings);
     }
@@ -141,37 +108,5 @@ public sealed class MarkerInputTests
         public void Stop() => Running = false;
 
         public void Dispose() => Stop();
-    }
-
-    private sealed class NoSettingsStore : ISettingsStore
-    {
-        public AppSettings Load() => new();
-
-        public void Save(AppSettings settings)
-        {
-        }
-    }
-
-    private sealed class NoProfiles : IProfileStore
-    {
-        public IReadOnlyList<string> Names() => [];
-
-        public AppSettings? Load(string name) => null;
-
-        public void Save(string name, AppSettings settings)
-        {
-        }
-
-        public void Delete(string name)
-        {
-        }
-
-        public bool Rename(string oldName, string newName) => false;
-
-        public void Export(string name, string filePath)
-        {
-        }
-
-        public string? Import(string filePath) => null;
     }
 }
