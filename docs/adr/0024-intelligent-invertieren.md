@@ -67,3 +67,16 @@ nachgetragen und sind keine Einstellungen.
   `WindowConstants` ziehen mit.
 - ⚠️ Kein Gerät mit Onboard-Grafik zum Messen; das Budget wird zunächst hochgerechnet.
 - ⚠️ Sichtprüfung durch einen Menschen nötig (Overlay nicht in Screenshots).
+
+## Nachtrag 2026-11-17: Budget zur Laufzeit (M13-Abschluss)
+- Befund: Auf dem Rechner des Nutzers (RTX 3060 Ti) fiel „intelligent“ am 2026-11-16 auf „Farbton
+  erhalten“ zurück: gemessen 1,68 ms, offline sind es 0,05–0,2 ms. Vermutung: Die Grafikkarte taktet im
+  Leerlauf herunter, die Zeitstempel zeigen dann lange Zeiten, ohne dass ein Bild verloren geht. Ein
+  einziger Mittelwert über 1 ms schaltete die Funktion bis zum Neustart der Pipeline ab.
+- Entscheidung (Nutzer): Das Budget zur Laufzeit ist ein **Anteil der Bildzeit** des Monitors –
+  20 % (`SmartBudget`, 3,3 ms bei 60 Hz, 1,4 ms bei 144 Hz; Bildrate aus der Desktop Duplication) –
+  und erst **drei Mittelwerte hintereinander** (je 120 Frames) darüber lösen den Rückfall aus. Die
+  einmalige Messung des Mehraufwands im Magnify-Durchgang entscheidet nicht allein.
+- Das Ziel „≤ 1 ms bei 1440p auf Onboard-Grafik“ bleibt die Auslegungsgrenze für den Shader; belegt
+  ist es durch die Hochrechnung (≈ 0,8–0,9 ms). Die echte Onboard-Messung geht als offener Punkt in
+  die Release-Tests (M8).

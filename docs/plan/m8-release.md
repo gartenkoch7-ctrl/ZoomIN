@@ -39,6 +39,7 @@ funktioniert.
 - [ ] Freigabetest Teams, Zoom/Webex, Discord, Browser (aus M1)
 - [ ] 144 Hz, Win+L, Ruhezustand; Zweitmonitor (aus M1/M3)
 - [ ] 8-h-Dauertest: kein Speicherwachstum, keine Ruckler
+- [ ] Onboard-Grafik (aus M13): intelligentes Invertieren bei 1440p ≤ 1 ms extra GPU, kein Rückfall `budget` (Log 3007)
 - [ ] Sichttests M4–M7, Narrator-Durchgang
 - [ ] `v1.0.0-rc1` getaggt und veröffentlicht → nach den Tests `v1.0.0`
 

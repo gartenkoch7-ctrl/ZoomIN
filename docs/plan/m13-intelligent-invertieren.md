@@ -38,11 +38,12 @@ dem Tag `v1.0.0`.
 - [x] Gedächtnis-Textur für die zeitliche Glättung (~150 ms), unabhängig von der Bildrate
 - [x] Shader: Entscheidung je Pixel aus dem Umgebungsbild (bilinear gelesen, weiche Schwelle),
       Foto-Schutz, Farbton erhalten; nur für Bereiche, deren Palette-Eintrag „intelligent“ ist
-- [ ] Werte abstimmen: Umgebungsgröße, Schwelle und Breite des Übergangs, Foto-Kriterium, Glättung –
-      an Systemsteuerung, Explorer, Browser mit Fotos, Word, Video (Sichtprüfung durch den Nutzer)
+- [x] Werte abstimmen: Umgebungsgröße, Schwelle und Breite des Übergangs, Foto-Kriterium, Glättung –
+      an Systemsteuerung, Explorer, Browser mit Fotos, Word, Video (Sichtprüfung durch den Nutzer;
+      bestätigt dev.113–116.m13, Excel/Word/Foto/Video/Scrollen selbstständig 2026-11-06/07)
 - [x] GPU-Zeit messen (Zeitstempel-Abfragen) auf der RTX bei 1080p, hochrechnen auf 1440p
       Onboard-Grafik; Grenze für den Rückfall festlegen
-- [ ] Ergebnis in `docs/kb/rendering-pipeline.md` und `docs/kb/performance.md`; bei Fehlschlag
+- [x] Ergebnis in `docs/kb/rendering-pipeline.md` und `docs/kb/performance.md`; bei Fehlschlag
       Rücksprache (Plan B: Kachel-Entscheidung ohne Glättung, oder nur Fenster-/Monitorebene)
 
 ### 2 · Core
@@ -52,15 +53,17 @@ dem Tag `v1.0.0`.
       „Farbton erhalten“, Kontrast/Helligkeit weiter für alles
 - [x] Settings: Schalter „Fotos und Videos nicht invertieren“ (ab Werk an); Migration des
       Automatik-Filters (nur alter Werkswert „Invertiert“ → „intelligent“)
-- [ ] Unit-Tests (Palette, Migration, Settings-Rundreise) und Benchmark `0 B`
+- [x] Unit-Tests (Palette, Migration, Settings-Rundreise) und Benchmark `0 B` (`SmartInvertTests`,
+      `AutoFilterMigrationTests`, `SettingsMappingRoundTripTests`; `SmartInvertAllocationTests` und
+      `RenderLayersAllocationTests` messen 0 B)
 
 ### 3 · Rendering
-- [ ] Verkleinerungs-Durchgang und Gedächtnis-Textur je Monitor, beim Start/Resize angelegt,
+- [x] Verkleinerungs-Durchgang und Gedächtnis-Textur je Monitor, beim Start/Resize angelegt,
       keine Allokation im Render-Loop; nur aktiv, wenn ein Bereich oder der Monitor „intelligent“ nutzt
 - [x] Vollbild-Zoom, Lupe und Angedockt: Umgebung in Quell-Koordinaten (Desktop), auch im
       1×-Durchgang außerhalb der Lupe
 - [x] Rückfall auf „Farbton erhalten“, wenn eine GPU-Funktion fehlt oder das Budget gerissen wird
-- [ ] `WDA_EXCLUDEFROMCAPTURE` bleibt; WARP-Shadertests (dunkle Leiste bleibt, helle Fläche
+- [x] `WDA_EXCLUDEFROMCAPTURE` bleibt; WARP-Shadertests (dunkle Leiste bleibt, helle Fläche
       invertiert, Foto bleibt, weicher Übergang, Glättung über Frames)
 
 ### 4 · Telemetrie (ADR-0019)
@@ -145,11 +148,14 @@ dem Tag `v1.0.0`.
       offline: ≤ 1,0 % abweichende Pixel bei 12 px/Frame (vorher 7,4 % durch Nachziehen)
 - [x] Excel (dunkles Design): Tabelle sauber invertiert, Zeilennummern und Zelltext lesbar – geprüft
       2026-11-07 selbstständig (verlustfreie Aufnahme, Offline-Wiedergabe)
-- [ ] Monitorfilter, Lupe und Angedockt verhalten sich gleich; Zoomen kippt keine Fläche
-- [ ] Budget: ≤ 1 ms extra GPU (hochgerechnet ≈ 0,9 ms; der Entwicklungsrechner i7-12700KF hat keine
-      Onboard-Grafik – Messung braucht ein anderes Gerät); Monitor-Hz gehalten
-- [ ] Rückfall greift und ist in Log und Diagnose sichtbar
-- [ ] Render-Loop-Benchmark `0 B`; Architekturtests grün; Telemetrie im Katalog
+- [x] Monitorfilter, Lupe und Angedockt verhalten sich gleich; Zoomen kippt keine Fläche (2026-11-17
+      vom Nutzer freigegeben, dev.283.m13; kein Rückfall 3007 im Log)
+- [x] Budget: ≤ 1 ms extra GPU (hochgerechnet ≈ 0,9 ms; der Entwicklungsrechner i7-12700KF hat keine
+      Onboard-Grafik – Messung braucht ein anderes Gerät); Monitor-Hz gehalten. Entscheidung 2026-11-17:
+      Hochrechnung reicht, echte Onboard-Messung wandert nach M8; Laufzeit-Budget jetzt `SmartBudget`
+- [x] Rückfall greift und ist in Log und Diagnose sichtbar (live 2026-11-16, Log 3007 – fälschlich,
+      deshalb `SmartBudget`; Tests `SmartInvertFallbackTests`, `SmartCostBudgetTests`)
+- [x] Render-Loop-Benchmark `0 B`; Architekturtests grün; Telemetrie im Katalog
 
 ## Offene Fragen / Risiken
 - Review Spike: Das Umfeld (32 px) reicht über Fenstergrenzen. Neben einem dunklen Fenster kann

@@ -25,24 +25,49 @@ public sealed class SmartInvertFallbackTests
     }
 
     [Fact]
-    public void SlowerThanTheBudget_FallsBack_AfterEnoughFrames()
+    public void SlowerThanTheBudget_FallsBack_OnlyAfterSeveralMeansInARow()
+    {
+        var health = new SmartInvertHealth();
+        using var gpu = GpuDevice.CreateWarp();
+        using var layer = SmartInvertLayer.Create(gpu.Device, Size, Size, Monitor, health, NullLogger.Instance);
+        var slow = layer.BudgetMilliseconds * 2;
+        var frames = SampleMean.Count * SmartBudget.Strikes;
+
+        for (var i = 0; i < frames - 1; i++)
+        {
+            layer.AddSample(slow);
+        }
+
+        Assert.True(layer.Active); // a slow phase shorter than the strikes never decides
+        layer.AddSample(slow);
+
+        Assert.False(layer.Active);
+        var fallback = Assert.Single(health.Fallbacks);
+        Assert.Equal("budget", fallback.Reason);
+        Assert.Equal(slow, fallback.Milliseconds, 3);
+    }
+
+    [Fact]
+    public void AFastMeanInBetween_StartsTheCountAgain()
     {
         var health = new SmartInvertHealth();
         using var gpu = GpuDevice.CreateWarp();
         using var layer = SmartInvertLayer.Create(gpu.Device, Size, Size, Monitor, health, NullLogger.Instance);
 
-        for (var i = 0; i < 119; i++)
+        for (var round = 0; round < 4; round++)
         {
-            layer.AddSample(SmartInvertLayer.BudgetMilliseconds * 2);
+            for (var i = 0; i < SampleMean.Count * (SmartBudget.Strikes - 1); i++)
+            {
+                layer.AddSample(layer.BudgetMilliseconds * 2);
+            }
+
+            for (var i = 0; i < SampleMean.Count; i++)
+            {
+                layer.AddSample(layer.BudgetMilliseconds / 2);
+            }
         }
 
-        Assert.True(layer.Active); // one slow frame or a few never decide
-        layer.AddSample(SmartInvertLayer.BudgetMilliseconds * 2);
-
-        Assert.False(layer.Active);
-        var fallback = Assert.Single(health.Fallbacks);
-        Assert.Equal("budget", fallback.Reason);
-        Assert.Equal(SmartInvertLayer.BudgetMilliseconds * 2, fallback.Milliseconds, 3);
+        Assert.True(layer.Active);
     }
 
     [Fact]
@@ -52,9 +77,9 @@ public sealed class SmartInvertFallbackTests
         using var gpu = GpuDevice.CreateWarp();
         using var layer = SmartInvertLayer.Create(gpu.Device, Size, Size, Monitor, health, NullLogger.Instance);
 
-        for (var i = 0; i < 360; i++)
+        for (var i = 0; i < SampleMean.Count * SmartBudget.Strikes * 2; i++)
         {
-            layer.AddSample(SmartInvertLayer.BudgetMilliseconds / 2);
+            layer.AddSample(layer.BudgetMilliseconds / 2);
         }
 
         Assert.True(layer.Active);
