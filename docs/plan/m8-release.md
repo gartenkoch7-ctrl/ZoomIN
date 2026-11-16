@@ -2,7 +2,7 @@
 
 **Ziel:** Eine stabile, gemessene, dokumentierte Version, die man herunterladen und im Alltag
 nutzen kann.
-**Demo:** GitHub-Release mit ZIP und Installer; frische Windows-Installation → installieren →
+**Demo:** GitHub-Release mit signiertem `ZoomIN-Setup.exe` und ZIP (seit M9, vorher ZIP + Inno); frische Windows-Installation → installieren →
 funktioniert.
 **Voraussetzungen:** M7.
 
@@ -34,7 +34,15 @@ funktioniert.
 - [x] Release-Build (`artifacts/publish`) läuft eigenständig: Zoom an < 25 ms, 0 % CPU im
       Leerlauf, Strg+Mausrad, Watchdog (automatisch geprüft)
 - [x] 138 Tests grün, Zeilenregel eingehalten
-- [ ] Installer in CI gebaut und auf frischem Windows 11 installiert/deinstalliert
+- [ ] SignPath eingerichtet (aus M9): Antrag (OSS, [signpath-antrag.md](signpath-antrag.md)) gestellt
+      und bewilligt; Secret `SIGNPATH_API_TOKEN`, Variablen `SIGNPATH_ORGANIZATION_ID`,
+      `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_SIGNING_POLICY_SLUG`; erster signierter Lauf geprüft
+- [ ] SignPath-Zertifikatsname in `TrustedPublishers`, Sperrlisten-Prüfung (`WTD_REVOKE_WHOLECHAIN`) an (aus M9)
+- [ ] `ZoomIN-Setup.exe` aus CI auf frischem Windows 11 und Windows 10: Setup → UIAccess aktiv
+      (Overlay über Ton-/Netzwerk-Menü), Deinstallation entfernt alles außer (auf Wunsch) Einstellungen (aus M9)
+- [ ] Update Ende-zu-Ende mit signiertem Release: Klick in der App, Downgrade, Kanalwechsel,
+      Einstellungen bleiben; Setup-Knopf der ZIP-Fassung startet das Setup (aus M9)
+- [ ] Setup-Assistent per Tastatur und mit NVDA/Sprachausgabe, Kontrastdesign, 200 % Textgröße (aus M9)
 - [ ] Windows-10-VM: Start, Zoom, Einstellungen
 - [ ] Freigabetest Teams, Zoom/Webex, Discord, Browser (aus M1)
 - [ ] 144 Hz, Win+L, Ruhezustand; Zweitmonitor (aus M1/M3)
@@ -44,14 +52,22 @@ funktioniert.
 - [ ] Sichttests M4–M7, Narrator-Durchgang
 - [ ] `v1.0.0-rc1` getaggt und veröffentlicht → nach den Tests `v1.0.0`
 
-## So wird veröffentlicht
+## So wird veröffentlicht (Stand 2026-11-17, Setup aus M9)
+Voraussetzung: SignPath ist eingerichtet (Secret und Variablen im Repo, siehe oben). Ohne
+`SIGNPATH_API_TOKEN` laufen Build und Tests, veröffentlicht wird nichts.
 ```powershell
-git remote add origin https://github.com/OWNER/ZoomIN.git   # einmalig
-git push -u origin main
+git checkout main; git merge --no-ff develop                # nur mit Freigabe
 git tag v1.0.0-rc1
-git push origin v1.0.0-rc1                                  # startet release.yml
+git push origin main v1.0.0-rc1                             # startet release.yml
 ```
-Für `v1.0.0`: `docs/release-notes/v1.0.0.md` anlegen (Tabelle aktualisieren), dann taggen.
+- `release.yml` → `build-release.yml`: Tests, UIAccess-Build, `ZoomIN-Setup.exe`
+  (`publish-setup.ps1`), Signierung beider über SignPath (Freigabe von Hand),
+  `package-release.ps1` (`ZoomIN-<v>-win-x64-uiaccess.zip`, `checksums.txt`), GitHub-Release
+  (Tag mit „-“ = Vorabversion, Text aus `docs/release-notes/<tag>.md`).
+- Die Namen der Assets müssen zu `ReleaseAssets` passen, sonst sieht der Release-Feed den Release
+  nicht (KB [build-und-tooling.md](../kb/build-und-tooling.md#release-assets-und-versionen-adr-0014)).
+- Danach `VERSION` hochsetzen, sonst sortieren neue develop-Builds vor dem Release.
+- Für `v1.0.0`: `docs/release-notes/v1.0.0.md` anlegen (Tabelle aktualisieren), dann taggen.
 
 ## Offene Fragen / Risiken
 - **2026-11-02:** Inno Setup wird durch das eigene Setup aus M9 ersetzt (ADR-0014); der erste
