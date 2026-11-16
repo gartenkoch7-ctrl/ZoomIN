@@ -162,6 +162,7 @@ Umgesetzt (Stand 2026-11-12, Branch `feat/m10-a-autostart`):
   erhöhte Schritt kann den Eintrag schreiben, während die App läuft.
 
 ### Spike A1 durchführen (Nutzer, offen)
+**Ergebnis 2026-11-16: gescheitert** (Instanz bleibt im Job, Tray endet beim Bildschirmwechsel) – Details im Nachtrag von [ADR-0030](../adr/0030-autostart-ueber-erleichterte-bedienung.md), es gilt Q9.
 Voraussetzung: Testbuild dieses Stands installiert, „Mit Windows starten“ an. Prüfen in `regedit`
 (nicht aus einer Agenten-Shell, die sieht ein umgeleitetes HKCU):
 `HKCU\Software\Microsoft\Windows NT\CurrentVersion\Accessibility` → `Configuration` enthält

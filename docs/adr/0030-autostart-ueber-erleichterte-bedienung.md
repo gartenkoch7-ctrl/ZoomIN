@@ -60,7 +60,7 @@ Bedienung (HKCU `…\Accessibility\Configuration`). Das ist auf dem Testrechner 
   Anmeldung starten. Schaltet der Nutzer es dort aus, zeigt die App das beim nächsten Öffnen der
   Seite „Allgemein“ richtig an (der Schalter liest die Liste, keinen eigenen Merker).
 
-## Nachtrag: Spike A1 (offen)
+## Nachtrag: Spike A1 (gescheitert, 2026-11-16)
 Stand 2026-11-12: Kandidat 1 ist gebaut und meldet sein Ergebnis selbst ins Log, die Messung mit dem
 Nutzer steht aus. Ablauf und gesuchte Logzeilen:
 [sichere-desktops.md › Spike A1 durchführen](../kb/sichere-desktops.md#spike-a1-durchführen-nutzer-offen).
@@ -71,4 +71,15 @@ Nutzer steht aus. Ablauf und gesuchte Logzeilen:
 - Ergänzung zu Folge 1 (Umsetzung): Die Liste wird nur genutzt, wenn HKLM `ATs\ZoomIN` existiert;
   sonst bleibt der Run-Eintrag, bis ein erhöhter Schritt der neuen Version ihn geschrieben hat
   (`--apply-update` läuft mit der alten Version).
-- Ergebnis: _offen_ (ja/nein, Job-Limits, Elternprozess, Verhalten bei Win+L, UAC, nach „Beenden“).
+- Ergebnis (2026-11-16, dev.280.m10, Abmelden/Anmelden): **gescheitert** – es gilt Q9.
+  - Windows startet ZoomIN nach der Anmeldung aus der Liste (`Configuration = nvda_nvda_v1,ZoomIN`),
+    ohne Win+U-Signal (Log 2328). Die Job-Instanz meldet `left_job = True` (Ablauf
+    `zoomin.autostart.leave_job`), die neu gestartete Instanz aber 2327 „Still in a job“ mit
+    Job-Limits `0x00000800` (nur `BREAKAWAY_OK`) – der Ausstieg bringt sie nicht aus dem Job.
+  - Innerhalb von 5 s kamen **drei** Job-Instanzen (22:39:03, 22:39:08 zweimal): Windows startet
+    das Hilfsmittel neu, sobald die Job-Instanz endet. Die erste neue Instanz fand weder Tray noch
+    Grafik (Log 2503, 3003) und verschwand.
+  - Beim ersten Bildschirmwechsel danach (UAC) verschwand die Tray-App ohne Logzeile (hartes Ende
+    des Jobs), Sekunden später lief eine neue. Die Tray-App überlebt den Wechsel also nicht.
+  - Nebenbefund: Beim Abmelden startet der Wächter ZoomIN neu (Exit-Code `0x40010004`, Log
+    4002/4003) – er muss das Sitzungsende erkennen.

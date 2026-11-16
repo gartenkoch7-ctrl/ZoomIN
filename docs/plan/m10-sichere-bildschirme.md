@@ -311,10 +311,11 @@ Tray-App außerhalb des Jobs weiterlaufen lassen?
 - [x] Integration nach dem Merge von B: `ServiceRegistration.cs` Zeilen 57 und 108
   `IAutostart` → `AutostartSelector` (sonst nutzen Schalter, Willkommen und Deinstallation weiter
   nur den Run-Eintrag, während die Migration schon in die Liste umzieht); vor dem Testbuild für A1
-- [ ] Spike A1, Ergebnis als Nachtrag in ADR-0030 – Messung mit dem Nutzer offen, Anleitung in
-  [sichere-desktops.md](../kb/sichere-desktops.md#spike-a1-durchführen-nutzer-offen)
-- [ ] Ausweichweg Q9 (`TaskSchedulerAutostart`, geplante Aufgabe bei der Anmeldung): ausstehend,
-  nur falls der Spike scheitert – noch nicht gebaut
+- [x] Spike A1, Ergebnis als Nachtrag in ADR-0030 (2026-11-16: gescheitert – neu gestartete
+  Instanz bleibt im Job, Tray-App endet beim ersten Bildschirmwechsel)
+- [ ] Ausweichweg Q9 (`TaskSchedulerAutostart`, geplante Aufgabe bei der Anmeldung): jetzt fällig,
+  noch nicht gebaut
+- [ ] Wächter: Sitzungsende (Abmelden, Exit-Code `0x40010004`) erkennen, dann nicht neu starten
 - [x] Mergen B → C → A, nach jedem Merge Build und Tests (2026-11-12, `aa01cba`; dazu
   `ISecureLogsRequest` → `ElevatedSecureLogsRequest` in `Tray()`)
 - [x] Gesamt-Review (§9) bis ohne Befunde; `/security-review` (Spur C: zwei Befunde behoben;
