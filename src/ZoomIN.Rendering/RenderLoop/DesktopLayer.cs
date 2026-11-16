@@ -115,9 +115,11 @@ internal sealed class DesktopLayer(
         }
 
         // A few smart windows cost less than a smart monitor: measure again when that case starts.
-        if (monitorSmart && !_probedMonitorSmart)
+        // The budget also asks once when the extra alone broke it (maybe measured at idle clocks).
+        if ((monitorSmart && !_probedMonitorSmart) || smart.ProbeWanted)
         {
-            _probedMonitorSmart = true;
+            _probedMonitorSmart |= monitorSmart;
+            smart.ProbeRestarted();
             probe.Restart();
         }
 

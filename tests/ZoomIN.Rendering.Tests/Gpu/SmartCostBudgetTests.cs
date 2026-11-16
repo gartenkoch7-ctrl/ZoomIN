@@ -27,32 +27,24 @@ public sealed class SmartCostBudgetTests
         var health = new SmartInvertHealth();
         using var gpu = GpuDevice.CreateWarp();
         using var layer = SmartInvertLayer.Create(gpu.Device, Size, Size, Monitor, health, NullLogger.Instance);
+        var budget = layer.BudgetMilliseconds;
 
-        for (var i = 0; i < SampleMean.Count; i++)
-        {
-            layer.AddSample(SmartInvertLayer.BudgetMilliseconds * 0.6);
-        }
-
+        Means(layer, budget * 0.6, SmartBudget.Strikes);
         Assert.True(layer.Active); // the ambient pass alone is within the budget
 
-        layer.SetMagnifyExtra(SmartInvertLayer.BudgetMilliseconds * 0.5);
+        layer.SetMagnifyExtra(budget * 0.5);
+        Means(layer, budget * 0.6, SmartBudget.Strikes);
+        Assert.True(layer.Active); // the extra pushed it over: measured once more first
+        Assert.True(layer.ProbeWanted);
+
+        layer.ProbeRestarted();
+        layer.SetMagnifyExtra(budget * 0.5);
+        Means(layer, budget * 0.6, SmartBudget.Strikes);
 
         Assert.False(layer.Active);
         var fallback = Assert.Single(health.Fallbacks);
         Assert.Equal("budget", fallback.Reason);
-        Assert.Equal(SmartInvertLayer.BudgetMilliseconds * 1.1, fallback.Milliseconds, 3);
-    }
-
-    [Fact]
-    public void MagnifyExtraAlone_OverBudget_FallsBackAtOnce()
-    {
-        var health = new SmartInvertHealth();
-        using var gpu = GpuDevice.CreateWarp();
-        using var layer = SmartInvertLayer.Create(gpu.Device, Size, Size, Monitor, health, NullLogger.Instance);
-
-        layer.SetMagnifyExtra(SmartInvertLayer.BudgetMilliseconds * 1.5);
-
-        Assert.False(layer.Active);
+        Assert.Equal(budget * 1.1, fallback.Milliseconds, 3);
     }
 
     [Fact]
@@ -62,14 +54,81 @@ public sealed class SmartCostBudgetTests
         using var gpu = GpuDevice.CreateWarp();
         using var layer = SmartInvertLayer.Create(gpu.Device, Size, Size, Monitor, health, NullLogger.Instance);
 
-        layer.SetMagnifyExtra(SmartInvertLayer.BudgetMilliseconds * 0.4);
-        for (var i = 0; i < SampleMean.Count; i++)
-        {
-            layer.AddSample(SmartInvertLayer.BudgetMilliseconds * 0.4);
-        }
+        layer.SetMagnifyExtra(layer.BudgetMilliseconds * 0.4);
+        Means(layer, layer.BudgetMilliseconds * 0.4, SmartBudget.Strikes * 2);
 
         Assert.True(layer.Active);
         Assert.Empty(health.Fallbacks);
+    }
+
+    [Fact]
+    public void MagnifyExtraAloneOverBudget_IsMeasuredAgain_BeforeFallingBack()
+    {
+        var health = new SmartInvertHealth();
+        using var gpu = GpuDevice.CreateWarp();
+        using var layer = SmartInvertLayer.Create(gpu.Device, Size, Size, Monitor, health, NullLogger.Instance);
+        var budget = layer.BudgetMilliseconds;
+
+        // A probe at idle clocks: the ambient pass is cheap, the extra alone breaks the budget.
+        layer.SetMagnifyExtra(budget * 1.5);
+        Means(layer, budget * 0.1, SmartBudget.Strikes);
+        Assert.True(layer.Active);
+        Assert.True(layer.ProbeWanted);
+
+        // Measured again at working clocks: it stays smart.
+        layer.ProbeRestarted();
+        layer.SetMagnifyExtra(budget * 0.2);
+        Means(layer, budget * 0.1, SmartBudget.Strikes * 2);
+        Assert.True(layer.Active);
+        Assert.Empty(health.Fallbacks);
+    }
+
+    [Fact]
+    public void MagnifyExtraStillOverBudgetAfterTheRetry_FallsBack()
+    {
+        var health = new SmartInvertHealth();
+        using var gpu = GpuDevice.CreateWarp();
+        using var layer = SmartInvertLayer.Create(gpu.Device, Size, Size, Monitor, health, NullLogger.Instance);
+        var budget = layer.BudgetMilliseconds;
+
+        layer.SetMagnifyExtra(budget * 1.5);
+        Means(layer, budget * 0.1, SmartBudget.Strikes);
+        layer.ProbeRestarted();
+        layer.SetMagnifyExtra(budget * 1.5);
+        Means(layer, budget * 0.1, SmartBudget.Strikes);
+
+        Assert.False(layer.Active);
+        Assert.Equal("budget", Assert.Single(health.Fallbacks).Reason);
+    }
+
+    [Theory]
+    [InlineData(60, 3.333)]
+    [InlineData(144, 1.389)]
+    [InlineData(0, 3.333)] // unknown rate counts as 60 Hz
+    public void Budget_IsAShareOfTheFrameTime(double refreshHz, double milliseconds)
+    {
+        Assert.Equal(milliseconds, SmartBudget.For(refreshHz), 3);
+    }
+
+    [Fact]
+    public void IdleClockSpike_OfTheLiveTest_StaysSmart()
+    {
+        // 2026-11-16 a 3060 Ti at idle clocks measured 1.68 ms once; at 60 Hz that is far from a lost frame.
+        var health = new SmartInvertHealth();
+        using var gpu = GpuDevice.CreateWarp();
+        using var layer = SmartInvertLayer.Create(gpu.Device, Size, Size, Monitor, health, NullLogger.Instance, refreshHz: 60);
+
+        Means(layer, 1.68, SmartBudget.Strikes * 2);
+
+        Assert.True(layer.Active);
+    }
+
+    private static void Means(SmartInvertLayer layer, double milliseconds, int means)
+    {
+        for (var i = 0; i < SampleMean.Count * means; i++)
+        {
+            layer.AddSample(milliseconds);
+        }
     }
 
     [Fact]

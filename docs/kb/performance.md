@@ -93,3 +93,10 @@ Gemessen mit einem Wegwerf-Programm, das `TelemetryHost` in einem frischen Proze
   aber erst beim Einrasten auf exakt 1× (Schwelle 0,05 % in Log-Skala). Optisch endet die
   Bewegung früher; ggf. Schwelle anheben, wenn es sich träge anfühlt.
 - **Leerlauf 0,5 %:** vermutlich der 250-ms-Status-Timer des Diagnosefensters (entfällt mit M7).
+
+## Live-Messung vs. Offline (M13-Abschluss, 2026-11-17)
+- Im Alltag maß ZoomIN auf der RTX 3060 Ti einmal **1,68 ms** für das intelligente Invertieren, offline
+  (`BaselineGpuTimeTests`) sind es 0,05–0,2 ms. Vermutete Ursache: Leerlauf-Takt der Grafikkarte –
+  GPU-Zeitstempel messen Wandzeit, ein heruntergetakteter, aber unausgelasteter Chip wirkt „langsam“.
+- Folge: Laufzeit-Budgets nie als feste Millisekunden aus einer einzelnen Messung ableiten. Für
+  „intelligent“ gilt jetzt ein Anteil der Bildzeit (20 %) über drei Mittelwerte (`SmartBudget`).

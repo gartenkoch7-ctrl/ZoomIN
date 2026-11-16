@@ -176,10 +176,14 @@ Viewport (ein paar Zahlen) und setzt einen Draw-Call ab.
 - **Rückfall (ADR-0024 Nr. 6):** `SmartInvertLayer.Create` legt Umgebungs-Durchgang und
   `GpuStopwatch` an; scheitert das (SharpGen-Fehler) → sofort Rückfall `gpu_feature`. Sonst misst
   `GpuStopwatch` den Umgebungs-Durchgang mit drei Sätzen Zeitstempel-Abfragen, gelesen mit
-  `DoNotFlush` ein paar Frames später (nie warten). Mittel über 120 Frames > 1 ms → Rückfall
-  `budget`. Danach lädt `DesktopLayer` die Palette mit `SmartEntry = NoEntry` hoch und setzt
+  `DoNotFlush` ein paar Frames später (nie warten). Seit 2026-11-17 (`SmartBudget`): Rückfall
+  `budget` erst, wenn drei Mittel über je 120 Frames hintereinander (Umgebung + Magnify-Zusatz) über
+  20 % der Bildzeit liegen (3,3 ms bei 60 Hz; Bildrate aus `DesktopDuplicator.RefreshHz`). Vorher
+  reichte ein Mittel > 1 ms – das löste auf einer RTX 3060 Ti im Leerlauf-Takt fälschlich aus
+  (1,68 ms live gegenüber 0,05–0,2 ms offline). Danach lädt `DesktopLayer` die Palette mit `SmartEntry = NoEntry` hoch und setzt
   kein `MonitorSmart`: Intelligente Bereiche zeigen ihre Matrix, also „Farbton erhalten“. Gemessen
-  wird nur der Umgebungs-Durchgang (der Zusatz im Magnify-Shader ist auf der RTX ~0,015 ms).
+  werden Umgebungs-Durchgang und Magnify-Zusatz (`PassCostProbe`); sprengt der Zusatz allein das Budget,
+  misst ZoomIN ihn einmal neu, bevor es zurückfällt.
   Rückfälle stehen in `SmartInvertHealth` und auf der Diagnose-Seite; nach einem Neuaufbau der
   Pipeline wird neu gemessen.
 - **GPU-Zeit:** siehe `performance.md` (Messprotokoll); Messung mit

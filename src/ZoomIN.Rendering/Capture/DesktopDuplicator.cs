@@ -38,7 +38,12 @@ internal sealed class DesktopDuplicator : IDisposable
             bindFlags: BindFlags.ShaderResource));
         ShaderResource = gpu.Device.CreateShaderResourceView(_copy);
         _duplication = monitor.Output.DuplicateOutput(gpu.Device);
+        var rate = _duplication.Description.ModeDescription.RefreshRate;
+        RefreshHz = rate.Denominator == 0 ? 0 : (double)rate.Numerator / rate.Denominator;
     }
+
+    /// <summary>The monitor's refresh rate when the duplication was made; 0 if Windows did not say.</summary>
+    public double RefreshHz { get; }
 
     /// <summary>Latest desktop image. Keeps the previous image while nothing changes.</summary>
     public ID3D11ShaderResourceView ShaderResource { get; }

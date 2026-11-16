@@ -17,9 +17,6 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// </summary>
 internal sealed class SmartInvertLayer : IDisposable
 {
-    /// <summary>Budget of all smart inversion extra GPU time per frame (ADR-0024: ≤ 1 ms at 1440p on onboard graphics).</summary>
-    public const double BudgetMilliseconds = 1.0;
-
     // Time constant of the smoothing: after 3 τ (~150 ms) a change is 95 % through.
     private const double SmoothingSeconds = 0.05;
 
@@ -48,12 +45,17 @@ internal sealed class SmartInvertLayer : IDisposable
     private double _ambientMean;
     private double _magnifyExtra;
     private bool _settled;
+    private SmartBudget _budget;
+    private bool _probeRetried;
 
     // Decided on a mean of SampleMean.Count frames, so a single slow frame changes nothing.
     private SampleMean _mean;
 
-    public SmartInvertLayer(AmbientPass? pass, GpuStopwatch? stopwatch, string deviceName, SmartInvertHealth health, ILogger log)
+    /// <param name="refreshHz">The monitor's refresh rate; the budget is a share of its frame time.</param>
+    public SmartInvertLayer(
+        AmbientPass? pass, GpuStopwatch? stopwatch, string deviceName, SmartInvertHealth health, ILogger log, double refreshHz = 60)
     {
+        _budget = new SmartBudget(refreshHz);
         _pass = pass;
         _stopwatch = stopwatch;
         _deviceName = deviceName;
@@ -66,6 +68,9 @@ internal sealed class SmartInvertLayer : IDisposable
         }
     }
 
+    /// <summary>Extra GPU time per frame the smart inversion may take on this monitor (<see cref="SmartBudget"/>).</summary>
+    public double BudgetMilliseconds => _budget.Milliseconds;
+
     /// <summary>False after a fall-back: the smart filter then shows "keep hue" on this monitor.</summary>
     public bool Active { get; private set; } = true;
 
@@ -76,18 +81,19 @@ internal sealed class SmartInvertLayer : IDisposable
     public bool MagnifyExtraReported { get; private set; }
 
     /// <summary>Sets up the weights and the timing; without them the layer starts in fall-back.</summary>
-    public static SmartInvertLayer Create(ID3D11Device device, int width, int height, string deviceName, SmartInvertHealth health, ILogger log)
+    public static SmartInvertLayer Create(
+        ID3D11Device device, int width, int height, string deviceName, SmartInvertHealth health, ILogger log, double refreshHz = 60)
     {
         AmbientPass? pass = null;
         try
         {
             pass = new AmbientPass(device, width, height);
-            return new SmartInvertLayer(pass, new GpuStopwatch(device), deviceName, health, log);
+            return new SmartInvertLayer(pass, new GpuStopwatch(device), deviceName, health, log, refreshHz);
         }
         catch (SharpGenException)
         {
             pass?.Dispose();
-            return new SmartInvertLayer(null, null, deviceName, health, log);
+            return new SmartInvertLayer(null, null, deviceName, health, log, refreshHz);
         }
     }
 
@@ -172,19 +178,38 @@ internal sealed class SmartInvertLayer : IDisposable
     /// </summary>
     public void SetMagnifyExtra(double milliseconds)
     {
+        // Counts from the next mean on; if it alone breaks the budget it is measured once more (CheckTotal).
         MagnifyExtraReported = true;
         _magnifyExtra = milliseconds;
-        CheckTotal();
     }
 
-    // The budget covers everything the smart inversion adds: ambient pass plus magnify extra.
+    /// <summary>The magnify extra should be measured again (DesktopLayer restarts its probe once).</summary>
+    public bool ProbeWanted { get; private set; }
+
+    /// <summary>DesktopLayer took <see cref="ProbeWanted"/> and restarted its probe.</summary>
+    public void ProbeRestarted() => ProbeWanted = false;
+
+    // The budget covers everything the smart inversion adds: ambient pass plus magnify extra. The
+    // extra is one measurement per pipeline, so when it alone pushes the total over, it is measured
+    // once more before falling back (it may have run at idle clocks).
     private void CheckTotal()
     {
         var total = _ambientMean + _magnifyExtra;
-        if (Active && total > BudgetMilliseconds)
+        if (!_budget.Exceeded(total) || !Active)
         {
-            FallBack("budget", total);
+            return;
         }
+
+        if (_ambientMean <= BudgetMilliseconds && !_probeRetried)
+        {
+            _probeRetried = true;
+            _magnifyExtra = 0;
+            ProbeWanted = true;
+            _budget.Reset();
+            return;
+        }
+
+        FallBack("budget", total);
     }
 
     public void Dispose()

@@ -53,7 +53,8 @@ internal sealed class RenderResources : IDisposable
                 Highlights = new HighlightLayer(cursorPass, new HighlightMetrics(deviceName));
                 OverviewLayer = new OverviewLayer(cursorPass);
                 Frozen = Own(new FrozenLayer(cursorPass, new StillFrame(Gpu.Device, log), deviceName, log));
-                var smart = Own(SmartInvertLayer.Create(Gpu.Device, Monitor.Width, Monitor.Height, deviceName, health, log));
+                var smart = Own(SmartInvertLayer.Create(
+                    Gpu.Device, Monitor.Width, Monitor.Height, deviceName, health, log, Duplicator.RefreshHz));
                 Desktop = new DesktopLayer(
                     pass, smart, Own(new GpuPassTimer(Gpu.Device, deviceName, "magnify")), Own(new PassCostProbe(Gpu.Device)),
                     Own(new EnhanceCost(Gpu.Device, deviceName)));
