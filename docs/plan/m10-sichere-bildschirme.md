@@ -325,7 +325,7 @@ Tray-App außerhalb des Jobs weiterlaufen lassen?
   - [x] Nach der Anmeldung läuft ZoomIN sofort (Aufgabe, 1 s nach der Anmeldung; Tray-Symbol folgt der Taskleiste)
   - [x] Win+L vergrößert, Tray überlebt (mit Win+U-Trick, Q9); erstes Bild ≤ 1 s (511–551 ms)
   - [ ] Schalter „Sperrbildschirm“ aus: Autostart läuft, auf der Sperre startet nichts
-  - [ ] Prüf-Logs: Overlay oben, Ausschluss aus Aufnahmen gesetzt, Wächter im Job, Kürzel registriert
+  - [x] Prüf-Logs: Overlay oben, Ausschluss aus Aufnahmen gesetzt, Wächter im Job, Kürzel registriert (1152, 1154, 1158, 1161: 0 belegt)
   - [ ] Inseln, Einfrieren und Monitorwechsel fehlen auf der Sperre, die Kürzel gehen an Windows
   - [ ] Diagnosepaket mit Logs der sicheren Instanz
 - [ ] Roadmap-Status, Merge nach `develop` nur mit Freigabe
