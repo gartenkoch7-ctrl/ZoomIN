@@ -28,7 +28,7 @@ internal static class TextsEnglishUpdates
         ["Updates.Result.Installed"] = "{0} is installed. ZoomIN restarts …",
         ["Updates.Result.Declined"] = "Cancelled: the Windows prompt was declined. Nothing was changed.",
         ["Updates.Result.PackageMismatch"] = "The downloaded package is damaged or altered and was discarded.",
-        ["Updates.Result.SignatureRejected"] = "The package is not signed by ZoomIN and was not installed.",
+        ["Updates.Result.SignatureRejected"] = "The package carries a damaged or foreign signature and was not installed.",
         ["Updates.Result.AlreadyActive"] = "This version is already installed.",
         ["Updates.Result.Failed"] = "Installing failed. Details are in the log (Info & status).",
 
@@ -38,13 +38,13 @@ internal static class TextsEnglishUpdates
         ["Uninstall.Failed"] = "ZoomIN was not removed. The Windows prompt was declined or the removal failed.",
 
         ["UiAccess.Title"] = "Zoom is not above all menus",
-        ["UiAccess.Tray"] = "The taskbar, sound, network and Start menus stay visible unmagnified. Open ZoomIN to install the signed version.",
-        ["UiAccess.Banner"] = "This ZoomIN may not draw above the taskbar, quick settings (sound, network, Bluetooth), Start and the notification center – they stay visible unmagnified. Only the signed, installed version can.",
-        ["UiAccess.Install"] = "Install signed version",
+        ["UiAccess.Tray"] = "The taskbar, sound, network and Start menus stay visible unmagnified. Open ZoomIN to install it properly.",
+        ["UiAccess.Banner"] = "This ZoomIN may not draw above the taskbar, quick settings (sound, network, Bluetooth), Start and the notification center – they stay visible unmagnified. Only the version installed with the setup can.",
+        ["UiAccess.Install"] = "Install ZoomIN",
         ["UiAccess.Downloading"] = "Downloading and checking the setup …",
         ["UiAccess.Result.Started"] = "The setup has started. Please confirm the Windows prompt.",
         ["UiAccess.Result.NoRelease"] = "There is no version with a setup in your update channel yet.",
         ["UiAccess.Result.DownloadFailed"] = "The setup could not be downloaded. Please check the internet connection.",
-        ["UiAccess.Result.NotTrusted"] = "The available setup is not publicly signed yet and was not started. This button works once the signature is in place.",
+        ["UiAccess.Result.NotTrusted"] = "The downloaded setup carries a damaged or foreign signature and was not started.",
     };
 }

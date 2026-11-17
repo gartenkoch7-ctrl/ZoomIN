@@ -97,7 +97,7 @@ public sealed class UninstallFlowTests : IDisposable
         Assert.Equal(0, Flow().RemoveElevated(4711));
 
         Assert.Equal(
-            ["end-others 4711", "unregister", "secure-remove", "autostart-tasks", @"schedule-removal C:\Program Files\ZoomIN 4711"],
+            ["end-others 4711", "unregister", "secure-remove", "autostart-tasks", "certificates", @"schedule-removal C:\Program Files\ZoomIN 4711"],
             _fakes.Calls);
     }
 

@@ -2,8 +2,9 @@ name: Build release assets
 
 # Shared by release.yml (tags) and develop.yml (every push to develop), ADR-0014.
 # Builds the portable ZIP and the UIAccess package, lets SignPath sign the UIAccess build and
-# writes checksums.txt. Without SignPath (secret SIGNPATH_API_TOKEN missing) nothing is signed,
-# no package is made and the caller does not publish: an unsigned UIAccess exe never starts.
+# writes checksums.txt. Without SignPath (secret SIGNPATH_API_TOKEN missing) the assets stay
+# unsigned (ADR-0031): the setup signs ZoomIN on each PC. Tags publish them ("ready"); develop
+# builds publish only signed assets ("signed"), so not every push becomes a release.
 on:
   workflow_call:
     inputs:
@@ -11,8 +12,11 @@ on:
         required: true
         type: string
     outputs:
+      ready:
+        description: "'true' when the release assets are complete (signed or not, ADR-0031)."
+        value: ${{ jobs.build.outputs.ready }}
       signed:
-        description: "'true' when the release assets are complete and may be published."
+        description: "'true' when SignPath signed them as well."
         value: ${{ jobs.build.outputs.signed }}
 
 jobs:
@@ -21,6 +25,7 @@ jobs:
     env:
       SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
     outputs:
+      ready: ${{ steps.package.outputs.ready }}
       signed: ${{ steps.package.outputs.signed }}
     steps:
       - uses: actions/checkout@v4
@@ -63,7 +68,7 @@ jobs:
 
       # One signing request for both: the SignPath artifact configuration expects this layout
       # (docs/plan/signpath-antrag.md): uiaccess/ (ZoomIN.exe + our DLLs) and setup/ZoomIN-Setup.exe.
-      # An unsigned setup would make SmartScreen warn and the app's setup button refuse it.
+      # Signed setups avoid the SmartScreen warning; without SignPath they stay unsigned (ADR-0031).
       - name: Stage files for signing
         if: env.SIGNPATH_API_TOKEN != ''
         shell: pwsh
@@ -104,13 +109,16 @@ jobs:
         id: package
         shell: pwsh
         run: |
-          if (-not $env:SIGNPATH_API_TOKEN) {
-            Write-Host '::warning::SignPath not configured - assets built, nothing will be published (ADR-0014).'
-            "signed=false" >> $env:GITHUB_OUTPUT
-            exit 0
+          if ($env:SIGNPATH_API_TOKEN) {
+            ./scripts/package-release.ps1 -Version $env:ZOOMIN_VERSION
+            "signed=true" >> $env:GITHUB_OUTPUT
           }
-          ./scripts/package-release.ps1 -Version $env:ZOOMIN_VERSION
-          "signed=true" >> $env:GITHUB_OUTPUT
+          else {
+            Write-Host '::notice::SignPath not configured - unsigned assets, the setup signs on each PC (ADR-0031).'
+            ./scripts/package-release.ps1 -Version $env:ZOOMIN_VERSION -AllowUnsigned
+            "signed=false" >> $env:GITHUB_OUTPUT
+          }
+          "ready=true" >> $env:GITHUB_OUTPUT
 
       - name: Upload release assets
         uses: actions/upload-artifact@v4

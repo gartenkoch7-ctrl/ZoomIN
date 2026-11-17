@@ -34,10 +34,10 @@ funktioniert.
 - [x] Release-Build (`artifacts/publish`) läuft eigenständig: Zoom an < 25 ms, 0 % CPU im
       Leerlauf, Strg+Mausrad, Watchdog (automatisch geprüft)
 - [x] 138 Tests grün, Zeilenregel eingehalten
-- [ ] SignPath eingerichtet (aus M9): Antrag (OSS, [signpath-antrag.md](signpath-antrag.md)) gestellt
+- [x] ~~SignPath eingerichtet (aus M9)~~ – entfällt (ADR-0031, 2026-11-17: kein gekauftes/beantragtes Zertifikat, das Setup signiert lokal). Früher: Antrag (OSS, [signpath-antrag.md](signpath-antrag.md)) gestellt
       und bewilligt; Secret `SIGNPATH_API_TOKEN`, Variablen `SIGNPATH_ORGANIZATION_ID`,
       `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_SIGNING_POLICY_SLUG`; erster signierter Lauf geprüft
-- [ ] SignPath-Zertifikatsname in `TrustedPublishers`, Sperrlisten-Prüfung (`WTD_REVOKE_WHOLECHAIN`) an (aus M9)
+- [x] ~~SignPath-Zertifikatsname~~ – entfällt (ADR-0031). Früher: SignPath-Zertifikatsname in `TrustedPublishers`, Sperrlisten-Prüfung (`WTD_REVOKE_WHOLECHAIN`) an (aus M9)
 - [ ] `ZoomIN-Setup.exe` aus CI auf frischem Windows 11 und Windows 10: Setup → UIAccess aktiv
       (Overlay über Ton-/Netzwerk-Menü), Deinstallation entfernt alles außer (auf Wunsch) Einstellungen (aus M9)
 - [ ] Update Ende-zu-Ende mit signiertem Release: Klick in der App, Downgrade, Kanalwechsel,
@@ -60,19 +60,19 @@ funktioniert.
   **Vor dem Tag `v1.0.0`** die Tabelle mit den Ergebnissen der Release-Tests oben aktualisieren.
 - M17–M19 (geplant als 1.1–1.3) sind schon in `develop` und damit Teil von 1.0; in den Release-Notes
   als „wenig getestet“ markiert.
-- Offen vor dem Tag: SignPath (ohne Signatur veröffentlicht `release.yml` nichts), Merge
+- Offen vor dem Tag: Merge
   `develop` → `main` (nur mit Freigabe), Release-Tests oben.
 
 ## So wird veröffentlicht (Stand 2026-11-17, Setup aus M9)
-Voraussetzung: SignPath ist eingerichtet (Secret und Variablen im Repo, siehe oben). Ohne
-`SIGNPATH_API_TOKEN` laufen Build und Tests, veröffentlicht wird nichts.
+Kein Zertifikat nötig (ADR-0031): Ohne `SIGNPATH_API_TOKEN` veröffentlicht `release.yml` die Assets
+unsigniert; das Setup signiert ZoomIN auf jedem PC selbst.
 ```powershell
 git checkout main; git merge --no-ff develop                # nur mit Freigabe
 git tag v1.0.0-rc1
 git push origin main v1.0.0-rc1                             # startet release.yml
 ```
 - `release.yml` → `build-release.yml`: Tests, UIAccess-Build, `ZoomIN-Setup.exe`
-  (`publish-setup.ps1`), Signierung beider über SignPath (Freigabe von Hand),
+  (`publish-setup.ps1`), Signierung über SignPath nur, falls eingerichtet (sonst unsigniert),
   `package-release.ps1` (`ZoomIN-<v>-win-x64-uiaccess.zip`, `checksums.txt`), GitHub-Release
   (Tag mit „-“ = Vorabversion, Text aus `docs/release-notes/<tag>.md`).
 - Die Namen der Assets müssen zu `ReleaseAssets` passen, sonst sieht der Release-Feed den Release

@@ -98,7 +98,8 @@ Bei M11 entfernt: volle Pfade in Settings-, Profil-, Backup- und Update-Meldunge
 | `zoomin.update.backup` | app | Einstellungen sichern vor einem Downgrade |
 | `zoomin.update.elevate` | app, setup | Startet den Schritt mit Adminrechten; dessen `zoomin.update.run`/`zoomin.setup.apply` hängt darunter |
 | `zoomin.update.apply` | update, setup | Paket prüfen, entpacken, `current` umschalten (Ergebnis) |
-| `zoomin.update.verify` | update, setup | Signatur der neuen `ZoomIN.exe` (Ergebnis z. B. `UnexpectedPublisher`) |
+| `zoomin.update.verify` | update, setup | Signatur der neuen `ZoomIN.exe` (Ergebnis z. B. `UnexpectedPublisher`; `NotSigned` ist seit ADR-0031 der Normalfall und kein Fehler) |
+| `zoomin.update.sign` | update, setup | Lokales Signieren eines unsignierten Release-Pakets (ADR-0031): Zertifikat anlegen, vertrauen, signieren, Schlüssel löschen; Fehler: `not signed` |
 | `zoomin.update.restart` | app | Neustart nach dem Update; Kind von `zoomin.update.install`, darunter `zoomin.app.start` der neuen Version |
 | `zoomin.setup.launch` | app | Setup herunterladen, prüfen, starten (Ergebnis); das Setup setzt den Trace fort |
 | `zoomin.secure.settings` | secure | Woher die Einstellungen kommen (Tag `zoomin.secure.settings_source`: `user`, `copy`, `default`) |
@@ -324,6 +325,13 @@ ohne Allokation, auch mit dem SDK als Zuhörer (`RenderMetricsTests`).
 | 2606 | Info | Update {Previous} -> {Version} installed |
 | 2607 | Fehler | Installing {Version} failed |
 | 2608 | Info | Update: {Item} kept for now, still in use |
+| 2609 | Info | ZoomIN signed on this PC (certificate {Thumbprint}, key deleted) (ADR-0031, erhöhter Installationsschritt) |
+| 2610 | Fehler | Signing ZoomIN on this PC failed ({Reason}) (`powershell <Exit-Code>`, `key not deleted` – dann wird das Zertifikat nicht vertraut –, oder Ausnahmetyp) |
+| 2611 | Info | Removed {Count} old ZoomIN install certificates (bleiben: die der verbliebenen Versionsordner; nach dem Umschalten oder nach einem Fehler hinter dem Signieren) |
+| 2612 | Warnung | Package {Package} not installed: {Reason} (`not the published release`: Paket passt nicht zur selbst geholten `checksums.txt` → PackageMismatch; `published checksum unavailable: …` oder `not listed …` → Failed; `unexpected checksum address`) |
+| 2613 | Info | Certificate cleanup skipped: {Reason} (`signer unreadable`: ein behaltener Ordner liefert keinen Signierer, dann bleibt alles vertraut; `version folders unreadable`: Installationsordner nicht lesbar) |
+| 2614 | Warnung | Certificate store {Store} not changed: {Reason} (`Root`/`TrustedPublisher`/`My` oder `key`; Aufräumen bei Installation, Update und Deinstallation) |
+| 2615 | Info | Removed {Count} ZoomIN install certificates on uninstall (`Root`, `TrustedPublisher` und `My` zusammen; Einträge in `My` samt Schlüssel) |
 | 2700 | Info | Filter per window watches windows ({Hooks} event hooks) |
 | 2701 | Debug | Window of {Process} measured as {Result} in {DurationMs} ms after {Looks} looks, caption bar {Caption} |
 | 2702 | Warnung | Window events unavailable; the filter per window only follows shortcuts and settings |
