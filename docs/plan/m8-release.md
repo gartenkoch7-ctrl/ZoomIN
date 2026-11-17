@@ -11,7 +11,9 @@ funktioniert.
   `PrivilegesRequired=lowest` → `%LocalAppData%\Programs\ZoomIN`, keine Admin-Rechte)
   → [ADR-0009](../adr/0009-verteilung-zip-und-inno-setup.md)
 - Installer wird **in CI gebaut** (Inno Setup per Chocolatey); lokal entsteht die ZIP
-- Version **1.0.0-rc1**, danach unverändert **1.0.0**, sobald die offenen Nutzertests durch sind
+- ~~Version **1.0.0-rc1**~~ → **2026-11-17 (Nutzer): erst `0.9.0`** als normaler Release (Kanal
+  „Stabil“, kein Release-Kandidat), danach **1.0.0** als Update, sobald die offenen Nutzertests
+  durch sind. 0.9.0 → 1.0.0 prüft damit gleich das Update mit echtem Release.
 - **Keine Beta**; Release-Notes mit ehrlicher Tabelle getestet/ungetestet; Issue-Vorlage
 - **GitHub-Repo-URL später**: Platzhalter `OWNER/ZoomIN` in `README.md` ersetzen; Update-Adresse
   in den Einstellungen eintragen
@@ -28,7 +30,7 @@ funktioniert.
 - **CI/Release:** `.github/workflows/release.yml` – Tag `v*` → Zeilenprüfung, Tests, Publish,
   Installer, GitHub-Release (Tag mit „-“ = Vorabversion, Text aus `docs/release-notes/<tag>.md`).
 - **Doku:** `README.md`, `CONTRIBUTING.md`, `docs/benutzer/handbuch.md` + `manual.md`,
-  `docs/release-notes/v1.0.0-rc1.md`, `.github/ISSUE_TEMPLATE/hardware-bericht.yml`.
+  `docs/release-notes/v0.9.0.md`, `.github/ISSUE_TEMPLATE/hardware-bericht.yml`.
 
 ## Akzeptanzkriterien
 - [x] Release-Build (`artifacts/publish`) läuft eigenständig: Zoom an < 25 ms, 0 % CPU im
@@ -50,13 +52,13 @@ funktioniert.
 - [ ] Onboard-Grafik (aus M13): intelligentes Invertieren bei 1440p ≤ 1 ms extra GPU, kein Rückfall `budget` (Log 3007)
 - [ ] Onboard-Grafik (aus M12): Filter pro Fenster bei 1440p – CPU ≤ 3 %, Bildrate = Monitor-Hz, ≤ 1 Frame Verzögerung, kein Versatz beim Ziehen
 - [ ] Sichttests M4–M7, Narrator-Durchgang
-- [ ] `v1.0.0-rc1` getaggt und veröffentlicht → nach den Tests `v1.0.0`
+- [ ] `v0.9.0` getaggt und veröffentlicht → nach den Tests `v1.0.0`
 
 ## Vorbereitet für 1.0.0 (2026-11-17)
 - `VERSION` = `1.0.0`; Repo `gartenkoch7-ctrl/ZoomIN` ist öffentlich (Release-Feed ohne Anmeldung).
 - `README.md` auf den Stand von 1.0 gebracht (Funktionen bis M19, Setup/ZIP, Kürzel, Datenschutz,
   CI-Badge ohne Platzhalter).
-- Release-Notes: `docs/release-notes/v1.0.0-rc1.md` und `v1.0.0.md` (Tabelle getestet/ungetestet).
+- Release-Notes: `docs/release-notes/v0.9.0.md` und `v1.0.0.md` (Tabelle getestet/ungetestet).
   **Vor dem Tag `v1.0.0`** die Tabelle mit den Ergebnissen der Release-Tests oben aktualisieren.
 - M17–M19 (geplant als 1.1–1.3) sind schon in `develop` und damit Teil von 1.0; in den Release-Notes
   als „wenig getestet“ markiert.
@@ -68,8 +70,8 @@ Kein Zertifikat nötig (ADR-0031): Ohne `SIGNPATH_API_TOKEN` veröffentlicht `re
 unsigniert; das Setup signiert ZoomIN auf jedem PC selbst.
 ```powershell
 git checkout main; git merge --no-ff develop                # nur mit Freigabe
-git tag v1.0.0-rc1
-git push origin main v1.0.0-rc1                             # startet release.yml
+git tag v0.9.0
+git push origin main v0.9.0                                 # startet release.yml
 ```
 - `release.yml` → `build-release.yml`: Tests, UIAccess-Build, `ZoomIN-Setup.exe`
   (`publish-setup.ps1`), Signierung über SignPath nur, falls eingerichtet (sonst unsigniert),
@@ -77,7 +79,8 @@ git push origin main v1.0.0-rc1                             # startet release.ym
   (Tag mit „-“ = Vorabversion, Text aus `docs/release-notes/<tag>.md`).
 - Die Namen der Assets müssen zu `ReleaseAssets` passen, sonst sieht der Release-Feed den Release
   nicht (KB [build-und-tooling.md](../kb/build-und-tooling.md#release-assets-und-versionen-adr-0014)).
-- Danach `VERSION` hochsetzen, sonst sortieren neue develop-Builds vor dem Release.
+- Danach `VERSION` hochsetzen, sonst sortieren neue develop-Builds vor dem Release. Nach `0.9.0`
+  bleibt `VERSION` = `1.0.0`: `1.0.0-dev.N` sortiert schon nach `0.9.0`.
 - Für `v1.0.0`: `docs/release-notes/v1.0.0.md` anlegen (Tabelle aktualisieren), dann taggen.
 
 ## Offene Fragen / Risiken
