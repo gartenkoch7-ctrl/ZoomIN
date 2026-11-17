@@ -65,9 +65,10 @@ public sealed class SetupLauncher
             return SetupLaunch.DownloadFailed;
         }
 
-        // Until the public signature (SignPath) exists, releases carry no setup Windows would trust.
+        // Releases are unsigned (ADR-0031): the downloader already matched the checksum from the
+        // release; only a broken or foreign signature is refused.
         var check = _verifier.Verify(download.Path);
-        if (check != PackageCheck.Ok)
+        if (!SignaturePolicy.Accepts(check))
         {
             _log.SetupNotStarted(release.Version, check.ToString());
             return SetupLaunch.NotTrusted;

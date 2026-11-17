@@ -32,7 +32,9 @@ public sealed record AppVersion(int Major, int Minor, int Patch, string PreRelea
         {
             preRelease = core[(dash + 1)..];
             core = core[..dash];
-            if (preRelease.Length == 0 || preRelease.Split('.').Any(part => part.Length == 0))
+            // SemVer identifiers only: the version ends up in folder names and in the release URL
+            // the elevated step trusts (ADR-0031), so "/", "%", "\" or "?" must never get through.
+            if (preRelease.Length == 0 || preRelease.Split('.').Any(part => part.Length == 0 || !part.All(IsIdentifierChar)))
             {
                 return false;
             }
@@ -72,6 +74,8 @@ public sealed record AppVersion(int Major, int Minor, int Patch, string PreRelea
 
     public override string ToString() =>
         IsPreRelease ? $"{Major}.{Minor}.{Patch}-{PreRelease}" : $"{Major}.{Minor}.{Patch}";
+
+    private static bool IsIdentifierChar(char c) => char.IsAsciiLetterOrDigit(c) || c == '-';
 
     private static bool TryNumber(string text, out int value) =>
         int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out value);

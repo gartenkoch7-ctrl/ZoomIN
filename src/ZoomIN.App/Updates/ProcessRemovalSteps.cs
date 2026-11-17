@@ -5,16 +5,19 @@ using Microsoft.Extensions.Logging;
 using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Lifecycle;
+using ZoomIN.Platform.Updates;
 
 namespace ZoomIN.App.Updates;
 
 /// <summary>The uninstall's process work with real processes, UAC and PowerShell.</summary>
-internal sealed class ProcessRemovalSteps(ILogger<ProcessRemovalSteps> log) : IRemovalSteps
+internal sealed class ProcessRemovalSteps(ILogger<ProcessRemovalSteps> log, ILocalSigner signer) : IRemovalSteps
 {
     // ERROR_CANCELLED: the user said "No" at the administrator prompt.
     private const int ErrorCancelled = 1223;
 
     public void RemoveAutostartTasks() => new AutostartTaskCleanup(log).RemoveAll();
+
+    public void RemoveLocalCertificates() => signer.RemoveAll();
 
     public bool RunElevated()
     {

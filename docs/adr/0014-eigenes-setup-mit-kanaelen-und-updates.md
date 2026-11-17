@@ -1,6 +1,6 @@
 # ADR-0014: Eigenes Setup-Programm mit Kanälen und Ein-Klick-Updates
 
-- **Status:** Angenommen (ersetzt ADR-0009, ergänzt ADR-0012)
+- **Status:** Angenommen (ersetzt ADR-0009, ergänzt ADR-0012); Punkt „Signatur“ ersetzt durch ADR-0031
 - **Datum:** 2026-11-02
 
 ## Kontext

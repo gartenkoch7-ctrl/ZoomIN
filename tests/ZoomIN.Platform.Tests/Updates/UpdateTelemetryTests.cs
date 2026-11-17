@@ -13,6 +13,7 @@ namespace ZoomIN.Platform.Tests.Updates;
 public sealed class UpdateTelemetryTests : IDisposable
 {
     private readonly string _temp = Directory.CreateTempSubdirectory("ZoomIN.Tests.").FullName;
+    private readonly FakeReleaseChecksums _checksums = new();
     private readonly ConcurrentBag<Activity> _finished = [];
     private readonly ActivityListener _listener;
 
@@ -36,7 +37,7 @@ public sealed class UpdateTelemetryTests : IDisposable
     [Fact]
     public void RejectedSignature_MarksApplyAndVerifyFailed()
     {
-        var applier = new UpdateApplier(new Verifier(PackageCheck.UnexpectedPublisher), NullLogger.Instance);
+        var applier = new UpdateApplier(new Verifier(PackageCheck.UnexpectedPublisher), new FakeLocalSigner(), _checksums, NullLogger.Instance);
         var layout = new InstallLayout(Directory.CreateDirectory(Path.Combine(_temp, "ZoomIN")).FullName);
 
         // Own root, so operations of tests running in parallel are not mixed in.
@@ -60,7 +61,7 @@ public sealed class UpdateTelemetryTests : IDisposable
     [Fact]
     public void ActiveVersion_IsASuccessfulOperation()
     {
-        var applier = new UpdateApplier(new Verifier(PackageCheck.Ok), NullLogger.Instance);
+        var applier = new UpdateApplier(new Verifier(PackageCheck.Ok), new FakeLocalSigner(), _checksums, NullLogger.Instance);
         var layout = new InstallLayout(Directory.CreateDirectory(Path.Combine(_temp, "ZoomIN")).FullName);
         Directory.CreateDirectory(layout.VersionFolder(new AppVersion(1, 0, 0)));
 
@@ -82,7 +83,9 @@ public sealed class UpdateTelemetryTests : IDisposable
         File.WriteAllText(Path.Combine(source, InstallLayout.ExecutableName), version);
         var zip = Path.Combine(_temp, $"package-{version}.zip");
         ZipFile.CreateFromDirectory(source, zip);
-        return new UpdateCommand(zip, Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(zip))), parsed);
+        var command = new UpdateCommand(zip, Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(zip))), parsed);
+        _checksums.Publish(command);
+        return command;
     }
 
     private sealed class Verifier(PackageCheck result) : ISignatureVerifier

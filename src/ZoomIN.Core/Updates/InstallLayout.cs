@@ -44,10 +44,21 @@ public sealed record InstallLayout(string Root)
         return true;
     }
 
+    /// <summary>True if this layout is the installation in <paramref name="installRoot"/> (full paths, case ignored).</summary>
+    public bool IsAt(string installRoot) =>
+        Root.Length > 0 &&
+        string.Equals(
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(Root)),
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(installRoot)),
+            StringComparison.OrdinalIgnoreCase);
+
     public static bool TryParseFolder(string folderName, out AppVersion version)
     {
         version = new AppVersion(0, 0, 0);
+        // "app-1.1.0-dev.42.tmp" would parse as pre-release "dev.42.tmp": staging and set-aside
+        // folders are never versions.
         return folderName.StartsWith(VersionPrefix, StringComparison.OrdinalIgnoreCase) &&
+               !folderName.EndsWith(StagingSuffix, StringComparison.OrdinalIgnoreCase) &&
                AppVersion.TryParse(folderName[VersionPrefix.Length..], out version);
     }
 

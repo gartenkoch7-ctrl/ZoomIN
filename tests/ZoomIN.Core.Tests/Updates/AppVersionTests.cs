@@ -10,6 +10,8 @@ public sealed class AppVersionTests
     [InlineData("V1.0.0-rc1", 1, 0, 0, "rc1")]
     [InlineData("v1.1.0-dev.42", 1, 1, 0, "dev.42")]
     [InlineData("1.0.0+abc123", 1, 0, 0, "")]
+    [InlineData("1.0.0-dev.284+e00f53b", 1, 0, 0, "dev.284")]
+    [InlineData("1.0.0-pre-release.1", 1, 0, 0, "pre-release.1")]
     public void ValidTags_AreParsed(string tag, int major, int minor, int patch, string preRelease)
     {
         Assert.True(AppVersion.TryParse(tag, out var version));
@@ -25,6 +27,13 @@ public sealed class AppVersionTests
     [InlineData("1.0.0-")]
     [InlineData("1.0.0-dev..1")]
     [InlineData("latest")]
+    [InlineData("1.0.0-a/b")]
+    [InlineData("1.0.0-a%2F")]
+    [InlineData(@"1.0.0-a\b")]
+    [InlineData("1.0.0-a?b")]
+    [InlineData("1.0.0-a#b")]
+    [InlineData("1.0.0-ä")]
+    [InlineData("1.0.0-x/%2e%2e/evil")]
     public void InvalidTags_AreRejected(string? tag)
     {
         Assert.False(AppVersion.TryParse(tag, out _));

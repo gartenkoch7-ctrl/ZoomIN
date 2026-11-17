@@ -18,6 +18,7 @@ public sealed class UpdateRunnerTests : IDisposable
     private readonly UninstallFakes _fakes = new();
     private readonly UninstallFakes.Registration _registration;
     private readonly FakeVerifier _verifier = new();
+    private readonly PublishedChecksums _checksums = new();
 
     public UpdateRunnerTests()
     {
@@ -66,7 +67,7 @@ public sealed class UpdateRunnerTests : IDisposable
     }
 
     private UpdateRunner Runner() => new(
-        _verifier, _registration, new UninstallFakes.SecureDesktop(_fakes), new UninstallFakes.Install(_fakes),
+        _verifier, new NoSigner(), _checksums, _registration, new UninstallFakes.SecureDesktop(_fakes), new UninstallFakes.Install(_fakes),
         NullLogger<UpdateRunner>.Instance);
 
     private UpdateCommand Package(string version)
@@ -78,7 +79,9 @@ public sealed class UpdateRunnerTests : IDisposable
         File.Delete(zip);
         ZipFile.CreateFromDirectory(source, zip);
         var hash = Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(zip)));
-        return new UpdateCommand(zip, hash, parsed);
+        var command = new UpdateCommand(zip, hash, parsed);
+        _checksums.Published[parsed] = Convert.FromHexString(hash);
+        return command;
     }
 
     private bool CanCreateLinks()
@@ -101,5 +104,27 @@ public sealed class UpdateRunnerTests : IDisposable
         public PackageCheck Result { get; set; } = PackageCheck.Ok;
 
         public PackageCheck Verify(string executablePath) => File.Exists(executablePath) ? Result : PackageCheck.NotSigned;
+    }
+
+    // The fake packages count as signed by ZoomIN; nothing here touches the certificate stores.
+    private sealed class NoSigner : ILocalSigner
+    {
+        public bool Sign(string executablePath) => true;
+
+        public void Prune(IEnumerable<string> keptExecutables)
+        {
+        }
+
+        public void RemoveAll()
+        {
+        }
+    }
+
+    // Every fake package counts as published on GitHub (the elevated step checks it, ADR-0031).
+    private sealed class PublishedChecksums : IReleaseChecksums
+    {
+        public Dictionary<AppVersion, byte[]> Published { get; } = [];
+
+        byte[]? IReleaseChecksums.Published(AppVersion version) => Published.GetValueOrDefault(version);
     }
 }

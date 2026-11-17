@@ -31,18 +31,29 @@
 [Neueste Version](https://github.com/gartenkoch7-ctrl/ZoomIN/releases) – für Windows 10 (Version 2004)
 oder neuer, 64 Bit (x64).
 
-- **`ZoomIN-Setup.exe` (empfohlen, signiert):** Assistent – Sprache, Kanal und
-  Version wählen, einmal Administratorrechte bestätigen. Nur so vergrößert ZoomIN auch über
-  Startmenü, Schnelleinstellungen und auf dem Sperrbildschirm. Updates kommen danach aus ZoomIN heraus.
+- **`ZoomIN-Setup.exe` (empfohlen):** Assistent – Sprache, Kanal und Version wählen, einmal
+  Administratorrechte bestätigen. Nur so vergrößert ZoomIN auch über Startmenü, Schnelleinstellungen
+  und auf dem Sperrbildschirm. Updates kommen danach aus ZoomIN heraus.
 - **Portables ZIP `ZoomIN-<Version>-win-x64.zip`:** entpacken und `ZoomIN.exe` starten, ohne
-  Administratorrechte – aber ohne Zoom über Startmenü, Schnelleinstellungen und Sperrbildschirm. Es ist
-  nicht signiert: Windows SmartScreen kann beim ersten Start warnen („Weitere Informationen“ →
-  „Trotzdem ausführen“).
+  Administratorrechte – aber ohne Zoom über Startmenü, Schnelleinstellungen und Sperrbildschirm.
 - `ZoomIN-<Version>-win-x64-uiaccess.zip` ist das Paket, das Setup und Updates installieren – nicht
   zum Entpacken gedacht, außerhalb von `C:\Program Files` startet es nicht.
 
-Alle Dateien sind in `checksums.txt` mit SHA-256 aufgeführt. Deinstallieren über Windows-Einstellungen
-→ Apps → ZoomIN.
+### Signatur und SmartScreen
+ZoomIN ist kostenlos und hat kein gekauftes Zertifikat. Setup und ZIP sind deshalb **nicht
+signiert**, und Windows SmartScreen warnt beim ersten Start: **„Weitere Informationen“ → „Trotzdem
+ausführen“**.
+
+Damit Windows ZoomIN über Startmenü und Sperrbildschirm zeichnen lässt, braucht es eine Signatur. Die
+erstellt das Setup **auf Ihrem PC**:
+- Es prüft das Paket zuerst mit der SHA-256-Prüfsumme aus `checksums.txt` desselben Releases.
+- Es legt ein eigenes Zertifikat „ZoomIN Local Signing“ an, das nur Programme signieren kann und
+  keine anderen Zertifikate ausstellen darf, und signiert damit `ZoomIN.exe`.
+- Den privaten Schlüssel löscht es sofort wieder – niemand kann damit später etwas anderes signieren.
+- Jedes Update macht das neu; die Deinstallation entfernt die Zertifikate.
+
+Prüfsummen von Hand: `Get-FileHash <Datei> -Algorithm SHA256` mit `checksums.txt` vergleichen.
+Deinstallieren über Windows-Einstellungen → Apps → ZoomIN.
 
 ## Bedienung
 | Kürzel | Aktion |
@@ -95,8 +106,10 @@ Ctrl+Alt+Del and administrator prompts.
   the version list.
 
 **Download:** [latest release](https://github.com/gartenkoch7-ctrl/ZoomIN/releases) –
-`ZoomIN-Setup.exe` (recommended, signed, needs administrator rights once; required for magnifying
-over the Start menu and on the lock screen) or the portable `ZoomIN-<version>-win-x64.zip` (unsigned,
-SmartScreen may warn). The `…-uiaccess.zip` is the package the setup installs – not for unpacking.
+`ZoomIN-Setup.exe` (recommended, needs administrator rights once; required for magnifying over the
+Start menu and on the lock screen) or the portable `ZoomIN-<version>-win-x64.zip`. ZoomIN has no paid
+certificate: setup and ZIP are unsigned and SmartScreen warns ("More info" → "Run anyway"). The setup
+checks the package against `checksums.txt` and signs ZoomIN on your PC with its own certificate
+(code signing only, no CA); the private key is deleted right after signing. The `…-uiaccess.zip` is the package the setup installs – not for unpacking.
 Checksums: `checksums.txt`. Uninstall via Windows Settings → Apps → ZoomIN. See the
 [manual](docs/benutzer/manual.md) and the shortcuts above (Strg = Ctrl, Umschalt = Shift, Bild = Page).

@@ -28,7 +28,7 @@ internal static class TextsGermanUpdates
         ["Updates.Result.Installed"] = "{0} ist installiert. ZoomIN startet neu …",
         ["Updates.Result.Declined"] = "Abgebrochen: Die Windows-Abfrage wurde abgelehnt. Es wurde nichts geändert.",
         ["Updates.Result.PackageMismatch"] = "Das heruntergeladene Paket ist beschädigt oder verändert und wurde verworfen.",
-        ["Updates.Result.SignatureRejected"] = "Das Paket ist nicht von ZoomIN signiert und wurde nicht installiert.",
+        ["Updates.Result.SignatureRejected"] = "Das Paket trägt eine beschädigte oder fremde Signatur und wurde nicht installiert.",
         ["Updates.Result.AlreadyActive"] = "Diese Version ist bereits installiert.",
         ["Updates.Result.Failed"] = "Die Installation ist fehlgeschlagen. Details stehen im Protokoll (Info & Status).",
 
@@ -38,13 +38,13 @@ internal static class TextsGermanUpdates
         ["Uninstall.Failed"] = "ZoomIN wurde nicht entfernt. Die Windows-Abfrage wurde abgelehnt oder die Entfernung ist fehlgeschlagen.",
 
         ["UiAccess.Title"] = "Zoom liegt nicht über allen Menüs",
-        ["UiAccess.Tray"] = "Taskleiste, Ton-, Netzwerk- und Startmenü bleiben unvergrößert sichtbar. Öffne ZoomIN, um die signierte Version zu installieren.",
-        ["UiAccess.Banner"] = "Diese ZoomIN-Version darf nicht über Taskleiste, Schnelleinstellungen (Ton, Netzwerk, Bluetooth), Startmenü und Info-Center zeichnen – sie bleiben unvergrößert sichtbar. Das kann nur die signierte, installierte Version.",
-        ["UiAccess.Install"] = "Signierte Version installieren",
+        ["UiAccess.Tray"] = "Taskleiste, Ton-, Netzwerk- und Startmenü bleiben unvergrößert sichtbar. Öffne ZoomIN, um es richtig zu installieren.",
+        ["UiAccess.Banner"] = "Diese ZoomIN-Version darf nicht über Taskleiste, Schnelleinstellungen (Ton, Netzwerk, Bluetooth), Startmenü und Info-Center zeichnen – sie bleiben unvergrößert sichtbar. Das kann nur die mit dem Setup installierte Version.",
+        ["UiAccess.Install"] = "ZoomIN installieren",
         ["UiAccess.Downloading"] = "Lade das Setup herunter und prüfe es …",
         ["UiAccess.Result.Started"] = "Das Setup wurde gestartet. Bitte die Windows-Abfrage bestätigen.",
         ["UiAccess.Result.NoRelease"] = "Es gibt noch keine Version mit Setup in deinem Update-Kanal.",
         ["UiAccess.Result.DownloadFailed"] = "Das Setup konnte nicht geladen werden. Bitte die Internetverbindung prüfen.",
-        ["UiAccess.Result.NotTrusted"] = "Das verfügbare Setup ist noch nicht öffentlich signiert und wurde nicht gestartet. Sobald die Signatur vorliegt, funktioniert dieser Knopf.",
+        ["UiAccess.Result.NotTrusted"] = "Das heruntergeladene Setup trägt eine beschädigte oder fremde Signatur und wurde nicht gestartet.",
     };
 }

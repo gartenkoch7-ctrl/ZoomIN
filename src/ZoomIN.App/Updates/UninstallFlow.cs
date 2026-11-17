@@ -72,6 +72,7 @@ internal sealed class UninstallFlow(
 
         // Other accounts' tasks would point at the deleted exe and greet every sign-in with an error.
         TryRun(removal.RemoveAutostartTasks);
+        TryRun(removal.RemoveLocalCertificates);
         removal.ScheduleFolderRemoval(layout, waitForProcessId);
         log.RemovalScheduled();
         return 0;
