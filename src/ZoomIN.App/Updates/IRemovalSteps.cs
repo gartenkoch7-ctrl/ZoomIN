@@ -19,6 +19,9 @@ internal interface IRemovalSteps
     /// <summary>Deletes the autostart tasks of all accounts (elevated step only, ADR-0030 Q9).</summary>
     void RemoveAutostartTasks();
 
+    /// <summary>Removes the certificates the install step trusted on this PC (elevated step only, ADR-0031).</summary>
+    void RemoveLocalCertificates();
+
     /// <summary>Deletes the installation folder once this process and <paramref name="waitForProcessId"/> have ended.</summary>
     void ScheduleFolderRemoval(InstallLayout layout, int waitForProcessId);
 }

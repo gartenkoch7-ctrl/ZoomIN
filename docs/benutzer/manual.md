@@ -5,6 +5,9 @@
   steps – language, channel and version, settings, installation, done. It downloads the chosen
   version, checks its checksum and signature and installs it to `C:\Program Files\ZoomIN`. Windows
   asks once for administrator rights.
+- Setup and ZIP are **unsigned** (no paid certificate): Windows SmartScreen warns on first start –
+  "More info" → "Run anyway". The setup then signs ZoomIN on your PC with its own certificate and
+  deletes its key right away.
 - Only the installed copy may magnify **on top of other windows** such as the Start menu or the volume
   and network flyouts, and only it runs on the sign-in and lock screen.
 - Settings in the assistant (all preselected): **Start with Windows**, **Also on the sign-in and lock
@@ -22,7 +25,7 @@
   developer builds – untested, they may have bugs.
 - **Update** or **go back** to an older version: one click, then confirm the Windows prompt. ZoomIN
   restarts afterwards. Before going back, settings and profiles are backed up.
-- A download that is damaged or not signed by ZoomIN is discarded and nothing changes.
+- A download that does not match the release checksum or carries a foreign signature is discarded and nothing changes.
 - With "check for updates regularly" ZoomIN checks at start and once a day and reports a new version
   in the notification area.
 

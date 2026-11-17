@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Composition root, WinUI 3 UI and tray. References Core, Platform and Rendering. -->
   <PropertyGroup>
+    <!-- Elevated steps run this exe (ADR-0031): DOTNET_STARTUP_HOOKS from the user environment must not load code. Debug keeps them for hot reload. -->
+    <StartupHookSupport Condition="'$(Configuration)' == 'Release'">false</StartupHookSupport>
     <OutputType>WinExe</OutputType>
     <TargetFramework>$(ZoomInWindowsTfm)</TargetFramework>
     <TargetPlatformMinVersion>$(ZoomInMinWindows)</TargetPlatformMinVersion>

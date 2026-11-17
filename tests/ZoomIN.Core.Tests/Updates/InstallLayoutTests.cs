@@ -26,6 +26,19 @@ public sealed class InstallLayoutTests
         Assert.False(InstallLayout.TryFromExecutable(exe, out _));
     }
 
+    [Theory]
+    [InlineData(@"C:\Program Files\ZoomIN\current\ZoomIN.exe", true)]
+    [InlineData(@"C:\PROGRAM FILES\zoomin\app-1.0.0\ZoomIN.exe", true)]
+    [InlineData(@"C:\Users\x\AppData\Local\Temp\x\app-1.0.0\ZoomIN.exe", false)]
+    [InlineData(@"C:\Program Files\ZoomIN2\current\ZoomIN.exe", false)]
+    [InlineData(@"C:\Program Files\ZoomIN\..\Evil\current\ZoomIN.exe", false)]
+    public void OnlyTheProgramFilesInstall_IsTheInstallation(string exe, bool expected)
+    {
+        Assert.True(InstallLayout.TryFromExecutable(exe, out var layout));
+
+        Assert.Equal(expected, layout.IsAt(@"C:\Program Files\ZoomIN\"));
+    }
+
     [Fact]
     public void VersionFolder_IsNamedAfterVersion()
     {
@@ -42,6 +55,16 @@ public sealed class InstallLayoutTests
         var remove = InstallLayout.FoldersToRemove(folders, new AppVersion(1, 1, 0), new AppVersion(1, 0, 1));
 
         Assert.Equal(["app-1.0.0", "app-1.2.0.tmp"], remove);
+    }
+
+    [Theory]
+    [InlineData("app-1.1.0-dev.42.tmp")]
+    [InlineData("app-1.0.0-rc1.old.tmp")]
+    [InlineData("app-1.0.0.TMP")]
+    public void StagingAndSetAsideFolders_AreNoVersions(string name)
+    {
+        Assert.False(InstallLayout.TryParseFolder(name, out _));
+        Assert.Equal([name], InstallLayout.FoldersToRemove([name], new AppVersion(1, 1, 0), previous: null));
     }
 
     [Fact]

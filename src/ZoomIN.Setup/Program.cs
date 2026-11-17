@@ -4,6 +4,7 @@ using ZoomIN.Core.Diagnostics;
 using ZoomIN.Core.Updates;
 using ZoomIN.Platform.Diagnostics;
 using ZoomIN.Platform.Folders;
+using ZoomIN.Platform.Updates;
 using ZoomIN.Setup.Install;
 
 namespace ZoomIN.Setup;
@@ -29,7 +30,9 @@ public static class Program
         {
             using var operation = telemetry.StartOperation("zoomin.setup.apply");
             var install = new ElevatedInstall(
-                services.Layout, services.Verifier, services.Registration, services.SecureDesktop, telemetry.Logger<SetupProgramCategory>());
+                services.Layout, services.Verifier, new LocalSigner(telemetry.Logger<LocalSigner>(), TimeProvider.System),
+                new GitHubReleaseChecksums(new MachineTrustHttpClient(), telemetry.Logger<GitHubReleaseChecksums>()), services.Registration, services.SecureDesktop,
+                telemetry.Logger<SetupProgramCategory>());
             return (int)install.Run(command);
         }
 

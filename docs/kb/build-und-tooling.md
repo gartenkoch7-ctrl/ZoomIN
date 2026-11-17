@@ -103,7 +103,15 @@ powershell -ExecutionPolicy Bypass -File scripts/install-uiaccess.ps1  # als Adm
   (N = Anzahl Commits) und sortieren damit **vor** `1.0.0-rc1` und `1.0.0`. Nach einem Release
   `VERSION` hochsetzen, sonst wären neue develop-Builds „älter“ als der Release.
 - Workflows: `build-release.yml` (gemeinsam) ← `release.yml` (Tags) und `develop.yml` (Pushes).
-  Ohne Secret `SIGNPATH_API_TOKEN` laufen Build und Tests, veröffentlicht wird nichts.
+  Ohne Secret `SIGNPATH_API_TOKEN` bleiben die Assets unsigniert (`package-release.ps1 -AllowUnsigned`,
+  ADR-0031): Tags veröffentlichen sie trotzdem (Ausgabe `ready`), develop-Builds nur signiert (`signed`).
+  Das Setup signiert `ZoomIN.exe` dann auf jedem PC selbst (`LocalSigner`; Zertifikat
+  „CN=ZoomIN Local Signing“, nur Codesignatur, kein CA, privater Schlüssel sofort gelöscht). Feldtest
+  2026-11-17: unsigniertes `dev.284` über `ZoomIN-Setup.exe --apply-update` installiert → Signatur
+  `Valid`, Zertifikat in Root/TrustedPublisher ohne Schlüssel, `LocalMachine\My` leer.
+  Seit dem Sicherheitsreview holt der erhöhte Schritt `checksums.txt` selbst (`GitHubReleaseChecksums`):
+  lokal gebaute unsignierte Pakete lassen sich darüber nicht mehr installieren, Testbuilds weiter mit
+  `install-uiaccess.ps1` (Entwicklerzertifikat).
 
 ## Analyzer
 - `AnalysisLevel=latest-recommended` + `TreatWarningsAsErrors`.

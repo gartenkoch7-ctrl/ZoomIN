@@ -11,7 +11,8 @@ namespace ZoomIN.App.Updates;
 /// Program Files; the exit code is the <see cref="UpdateResult"/>.
 /// </summary>
 internal sealed class UpdateRunner(
-    ISignatureVerifier verifier, IInstallRegistration registration, ISecureDesktopInstall secureDesktop, IRunningInstall install,
+    ISignatureVerifier verifier, ILocalSigner signer, IReleaseChecksums checksums, IInstallRegistration registration,
+    ISecureDesktopInstall secureDesktop, IRunningInstall install,
     ILogger<UpdateRunner> log)
 {
     public int Run(UpdateCommand command)
@@ -23,7 +24,7 @@ internal sealed class UpdateRunner(
             return (int)UpdateResult.NotInstalled;
         }
 
-        var result = new UpdateApplier(verifier, log).Apply(layout, command);
+        var result = new UpdateApplier(verifier, signer, checksums, log).Apply(layout, command);
         if (result == UpdateResult.Installed)
         {
             try

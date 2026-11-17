@@ -8,7 +8,8 @@
       ZoomIN-<version>-win-x64-uiaccess.zip   package the setup installs to Program Files
       checksums.txt                           SHA-256 of every release asset (sha256sum format)
     The names must match ZoomIN.Core.Updates.ReleaseAssets, otherwise the release feed skips the
-    release. An unsigned ZoomIN.exe is refused: Windows would not start it with UIAccess.
+    release. Signed by SignPath or locally; with -AllowUnsigned (no public certificate, ADR-0031)
+    the setup signs ZoomIN on each PC, so an unsigned ZoomIN.exe and setup are packaged too.
 .EXAMPLE
     ./scripts/publish.ps1 -Version 1.0.0-dev.42 -UiAccess
     ./scripts/package-release.ps1 -Version 1.0.0-dev.42
@@ -16,10 +17,12 @@
 param(
     [Parameter(Mandatory)][string]$Version,
     [string]$Output = 'artifacts',
-    # Folder with the signed UIAccess build; defaults to publish.ps1's output.
+    # Folder with the UIAccess build (signed if a certificate was available); defaults to publish.ps1's output.
     [string]$Source,
     # Local packaging only: publish-setup.ps1 does not sign; CI gets the setup signed by SignPath.
-    [switch]$AllowUnsignedSetup
+    [switch]$AllowUnsignedSetup,
+    # Release without a public certificate (ADR-0031): ZoomIN.exe and the setup stay unsigned.
+    [switch]$AllowUnsigned
 )
 
 $ErrorActionPreference = 'Stop'
@@ -35,14 +38,18 @@ if (-not (Test-Path $exe)) {
 }
 
 $signature = Get-AuthenticodeSignature $exe
-if ($signature.Status -ne 'Valid') {
+if ($signature.Status -ne 'Valid' -and -not ($AllowUnsigned -and $signature.Status -eq 'NotSigned')) {
     throw "ZoomIN.exe is not validly signed ($($signature.Status)); the package would never start."
 }
 
-# The app's "install signed version" button refuses an unsigned setup (ADR-0017), and SmartScreen warns.
+# Unsigned setups make SmartScreen warn; a broken signature would make every install refuse it.
 $setup = Join-Path $out 'ZoomIN-Setup.exe'
-if ((Test-Path $setup) -and -not $AllowUnsignedSetup -and (Get-AuthenticodeSignature $setup).Status -ne 'Valid') {
-    throw "ZoomIN-Setup.exe is not validly signed. Sign it, or pass -AllowUnsignedSetup for a local package."
+if (Test-Path $setup) {
+    $setupStatus = (Get-AuthenticodeSignature $setup).Status
+    $unsignedAllowed = ($AllowUnsignedSetup -or $AllowUnsigned) -and $setupStatus -eq 'NotSigned'
+    if ($setupStatus -ne 'Valid' -and -not $unsignedAllowed) {
+        throw "ZoomIN-Setup.exe is not validly signed ($setupStatus). Sign it, or pass -AllowUnsigned / -AllowUnsignedSetup for an unsigned one."
+    }
 }
 
 $package = Join-Path $out "ZoomIN-$Version-win-x64-uiaccess.zip"

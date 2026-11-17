@@ -2,6 +2,8 @@
   <!-- Accessible online setup (M9, ADR-0014): WinUI 3 wizard; the same exe runs elevated with the
        apply-update switch for the Program Files part. References Core and Platform only. -->
   <PropertyGroup>
+    <!-- Elevated steps run this exe (ADR-0031): DOTNET_STARTUP_HOOKS from the user environment must not load code. Debug keeps them for hot reload. -->
+    <StartupHookSupport Condition="'$(Configuration)' == 'Release'">false</StartupHookSupport>
     <OutputType>WinExe</OutputType>
     <TargetFramework>$(ZoomInWindowsTfm)</TargetFramework>
     <TargetPlatformMinVersion>$(ZoomInMinWindows)</TargetPlatformMinVersion>

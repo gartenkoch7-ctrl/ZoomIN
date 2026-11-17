@@ -5,6 +5,9 @@
   die Installation – Sprache, Kanal und Version, Einstellungen, Installation, Fertig. Er lädt die
   gewählte Version herunter, prüft Prüfsumme und Signatur und installiert sie nach
   `C:\Program Files\ZoomIN`. Dafür fragt Windows einmal nach Administratorrechten.
+- Setup und ZIP sind **nicht signiert** (kein gekauftes Zertifikat): Windows SmartScreen warnt beim
+  ersten Start – „Weitere Informationen“ → „Trotzdem ausführen“. Das Setup signiert ZoomIN dann auf
+  Ihrem PC mit einem eigenen Zertifikat und löscht dessen Schlüssel sofort wieder.
 - Nur die installierte Fassung darf **über anderen Fenstern** wie dem Startmenü, dem Lautstärke- oder
   Netzwerk-Menü vergrößern, und nur sie läuft auf Anmelde- und Sperrbildschirm.
 - Einstellungen im Assistenten (alle vorausgewählt): **Mit Windows starten**, **Auch auf Anmelde- und
@@ -22,7 +25,7 @@
   Release-Kandidaten und Entwicklerversionen – ungetestet, sie können Fehler haben.
 - **Aktualisieren** oder **Zurückgehen** auf eine ältere Version: ein Klick, dann die Windows-Abfrage
   bestätigen. ZoomIN startet danach neu. Vor dem Zurückgehen werden Einstellungen und Profile gesichert.
-- Ist ein Download beschädigt oder nicht von ZoomIN signiert, wird er verworfen und nichts geändert.
+- Passt ein Download nicht zur Prüfsumme des Releases oder trägt er eine fremde Signatur, wird er verworfen und nichts geändert.
 - Mit „regelmäßig nach Updates suchen“ prüft ZoomIN beim Start und einmal täglich und meldet eine neue
   Version im Infobereich.
 

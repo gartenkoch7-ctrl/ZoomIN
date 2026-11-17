@@ -59,7 +59,7 @@ internal static class SetupTextsGerman
         ["StepState.Done"] = "erledigt",
         ["StepState.Failed"] = "fehlgeschlagen",
         ["Result.PackageMismatch"] = "Das heruntergeladene Paket ist beschädigt oder verändert und wurde verworfen.",
-        ["Result.SignatureRejected"] = "Das Paket ist nicht von ZoomIN signiert und wurde nicht installiert.",
+        ["Result.SignatureRejected"] = "Das Paket trägt eine beschädigte oder fremde Signatur und wurde nicht installiert.",
         ["Result.Declined"] = "Abgebrochen: Die Windows-Abfrage wurde abgelehnt. Es wurde nichts geändert.",
         ["Result.Failed"] = "Die Installation ist fehlgeschlagen. Details stehen in %LocalAppData%\\ZoomIN\\logs.",
 

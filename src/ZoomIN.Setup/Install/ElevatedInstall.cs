@@ -11,7 +11,8 @@ namespace ZoomIN.Setup.Install;
 /// into Program Files\ZoomIN and registers it in Windows "Apps" and the Start menu.
 /// </summary>
 internal sealed class ElevatedInstall(
-    InstallLayout layout, ISignatureVerifier verifier, IInstallRegistration registration, ISecureDesktopInstall secureDesktop, ILogger log)
+    InstallLayout layout, ISignatureVerifier verifier, ILocalSigner signer, IReleaseChecksums checksums, IInstallRegistration registration,
+    ISecureDesktopInstall secureDesktop, ILogger log)
 {
     public UpdateResult Run(UpdateCommand command)
     {
@@ -35,7 +36,7 @@ internal sealed class ElevatedInstall(
             }
         }
 
-        var result = new UpdateApplier(verifier, log).Apply(layout, command);
+        var result = new UpdateApplier(verifier, signer, checksums, log).Apply(layout, command);
         if (result is UpdateResult.Installed or UpdateResult.AlreadyActive)
         {
             try

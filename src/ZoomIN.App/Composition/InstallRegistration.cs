@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using ZoomIN.Core.SecureDesktop;
 using ZoomIN.Core.Shell;
 using ZoomIN.Core.Updates;
@@ -18,6 +20,11 @@ internal static class InstallRegistration
         services.AddSingleton<ISecureDesktopInstall, SystemSecureDesktopInstall>();
         services.AddSingleton<IElevatedStep, ShellElevatedStep>();
         services.AddSingleton<ISignatureVerifier, AuthenticodeVerifier>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<ILocalSigner>(provider =>
+            new LocalSigner(provider.GetRequiredService<ILogger<LocalSigner>>(), provider.GetRequiredService<TimeProvider>()));
+        services.AddSingleton<IReleaseChecksums>(provider =>
+            new GitHubReleaseChecksums(new MachineTrustHttpClient(), provider.GetRequiredService<ILogger<GitHubReleaseChecksums>>()));
         services.AddSingleton<IRunningInstall, ProcessRunningInstall>();
         services.AddSingleton<IMessageDialog, Win32MessageDialog>();
         return services;
