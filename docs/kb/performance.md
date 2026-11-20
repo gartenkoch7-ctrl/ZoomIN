@@ -100,3 +100,6 @@ Gemessen mit einem Wegwerf-Programm, das `TelemetryHost` in einem frischen Proze
   GPU-Zeitstempel messen Wandzeit, ein heruntergetakteter, aber unausgelasteter Chip wirkt „langsam“.
 - Folge: Laufzeit-Budgets nie als feste Millisekunden aus einer einzelnen Messung ableiten. Für
   „intelligent“ gilt jetzt ein Anteil der Bildzeit (20 %) über drei Mittelwerte (`SmartBudget`).
+- 2026-11-20 (ADR-0032): Auch das reichte nicht – auf einem Arbeitsrechner schaltete „intelligent“
+  immer wieder auf „Farbton erhalten“ (ganzer Bildschirm invertiert). Das Budget **schaltet nichts
+  mehr ab**, es meldet nur (Log 3008, Diagnose-Seite). GPU-Zeit taugt als Messwert, nicht als Schalter.

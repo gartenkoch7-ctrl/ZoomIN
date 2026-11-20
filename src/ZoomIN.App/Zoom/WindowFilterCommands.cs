@@ -22,15 +22,40 @@ public sealed class WindowFilterCommands(
     /// </summary>
     public WindowFilterRule? Toggle()
     {
-        var options = windows.Options;
-        if (!options.Enabled || !source.TryGetForeground(out var window))
+        if (!windows.Options.Enabled || !source.TryGetForeground(out var window))
         {
             Toggled?.Invoke(null);
             return null;
         }
 
-        var center = new PhysicalPoint(window.Bounds.X + (window.Bounds.Width / 2), window.Bounds.Y + (window.Bounds.Height / 2));
-        var monitorFiltered = effects.CurrentFor(monitors.MonitorAt(center)).Filter.Enabled;
+        return Toggle(window);
+    }
+
+    /// <summary>
+    /// The window the colour filter shortcut acts on (ADR-0033): the active window, or the one under
+    /// <paramref name="mouse"/> when the active one is the Windows interface (desktop, taskbar).
+    /// </summary>
+    public bool TryGetTarget(PhysicalPoint? mouse, out WindowFilterTarget window) => source.TryGetActive(mouse, out window);
+
+    /// <summary>The monitor that shows most of <paramref name="window"/> (its centre).</summary>
+    public string MonitorOf(WindowFilterTarget window) => monitors.MonitorAt(Center(window.Bounds));
+
+    /// <summary>Switches the filter of <paramref name="window"/>, remembered for app + window class.</summary>
+    public WindowFilterRule Toggle(WindowFilterTarget window)
+    {
+        var monitorFiltered = effects.CurrentFor(MonitorOf(window)).Filter.Enabled;
+        return Apply(window, o => WindowFilterToggle.Next(window.Kind, window.Palette, monitorFiltered, o));
+    }
+
+    /// <summary>
+    /// The colour filter shortcut on a smart monitor (ADR-0033): original colours, or back to
+    /// "Automatic" so the window follows the smart inversion again; remembered for app + window class.
+    /// </summary>
+    public WindowFilterRule ToggleOnSmartMonitor(WindowFilterTarget window) =>
+        Apply(window, o => FilterShortcutTarget.NextRule(window.Kind, window.Palette, o));
+
+    private WindowFilterRule Apply(WindowFilterTarget window, Func<WindowFilterOptions, WindowFilterRule> next)
+    {
         using var operation = Telemetry.Source.StartActivity("zoomin.windowfilter.toggle")?.SetTag("process.name", window.Kind.Process);
 
         // The rule is built inside the update from the options of that moment, so a change on the
@@ -38,12 +63,19 @@ public sealed class WindowFilterCommands(
         WindowFilterRule? rule = null;
         windows.UpdateOptions(o =>
         {
-            rule = WindowFilterToggle.Next(window.Kind, window.Palette, monitorFiltered, o);
+            rule = next(o);
             return o.WithRule(rule);
         });
         operation?.SetTag("zoomin.choice", rule!.Choice.ToString());
 
         Toggled?.Invoke(rule);
-        return rule;
+        return rule!;
     }
+
+    /// <summary>Puts back the rule <paramref name="kind"/> had before a toggle (null: it had none).</summary>
+    public void Restore(WindowKind kind, WindowFilterRule? previous) =>
+        windows.UpdateOptions(o => previous is null ? o.WithoutRule(kind) : o.WithRule(previous));
+
+    private static PhysicalPoint Center(PhysicalRect bounds) =>
+        new(bounds.X + (bounds.Width / 2), bounds.Y + (bounds.Height / 2));
 }

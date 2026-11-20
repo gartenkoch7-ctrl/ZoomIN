@@ -2,23 +2,25 @@ using System.ComponentModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Navigation;
 using ZoomIN.App.ViewModels;
 
-namespace ZoomIN.App.Views.Pages;
+namespace ZoomIN.App.Views.Sections;
 
-public sealed partial class UpdatesPage : Page
+/// <summary>Installed version, channel, automatic check and the version list. Shown on the "General" page.</summary>
+public sealed partial class UpdatesSection : UserControl
 {
-    public UpdatesPage()
+    public UpdatesSection()
     {
         InitializeComponent();
     }
 
     public UpdatesViewModel? Vm { get; private set; }
 
-    protected override async void OnNavigatedTo(NavigationEventArgs e)
+    /// <summary>Called by the hosting page on every navigation to it; fetches the versions while the list is empty.</summary>
+    public async Task LoadAsync(PageServices services)
     {
-        Vm = ((PageServices)e.Parameter).Create<UpdatesViewModel>();
+        Unload();
+        Vm = services.Create<UpdatesViewModel>();
         Vm.PropertyChanged += OnViewModelChanged;
         Bindings.Update();
 
@@ -29,7 +31,8 @@ public sealed partial class UpdatesPage : Page
         }
     }
 
-    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    /// <summary>Called by the hosting page when it is left.</summary>
+    public void Unload()
     {
         if (Vm is not null)
         {
@@ -37,7 +40,7 @@ public sealed partial class UpdatesPage : Page
         }
     }
 
-    // WinUI does not announce LiveSetting changes by itself; the page must raise the event.
+    // WinUI does not announce LiveSetting changes by itself; the control must raise the event.
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(UpdatesViewModel.Status))

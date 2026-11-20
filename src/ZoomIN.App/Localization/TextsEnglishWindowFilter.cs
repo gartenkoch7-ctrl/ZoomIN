@@ -43,6 +43,7 @@ internal static class TextsEnglishWindowFilter
         ["WinFilter.ResetConfirm"] = "Yes, delete all",
         ["WinFilter.Status.On"] = "{0}: {1} – remembered for this window kind.",
         ["WinFilter.Status.Off"] = "{0}: no filter – remembered for this window kind.",
+        ["WinFilter.Status.Auto"] = "{0}: follows the colour filter again – remembered for this window kind.",
         ["WinFilter.Status.Nothing"] = "No window the filter acts on, or “Filter per window” is off.",
         ["Act.WindowFilter"] = "Filter for active window on/off",
         ["HotkeyNone"] = "Not assigned",

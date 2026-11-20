@@ -20,7 +20,7 @@
   das Setup schon alles eingerichtet hat).
 
 ## Updates
-- **Einstellungen → Updates** zeigt die installierte Version und die verfügbaren Versionen.
+- **Einstellungen → Allgemein**, Abschnitt **Updates**, zeigt die installierte Version und die verfügbaren Versionen.
 - **Kanal:** „Stabil“ zeigt nur fertige Versionen. „Experimentell“ zeigt zusätzlich
   Release-Kandidaten und Entwicklerversionen – ungetestet, sie können Fehler haben.
 - **Aktualisieren** oder **Zurückgehen** auf eine ältere Version: ein Klick, dann die Windows-Abfrage
@@ -67,7 +67,7 @@ Im angedockten Streifen kann man nicht klicken – er ist nur Anzeige.
 ## Farben und Mauszeiger
 | Kürzel | Aktion |
 |---|---|
-| Strg+Alt+C | Farbfilter an/aus (wirkt auch ohne Zoom) |
+| Strg+Alt+C | Farbfilter an/aus (wirkt auch ohne Zoom); bei „Invertiert (intelligent)“ siehe unten |
 | Strg+Alt+Umschalt+C | nächster Filter |
 | Strg+Alt+S | Suchhilfe: ein Ring zieht sich auf den Mauszeiger zusammen |
 | Strg+Alt+K | Fadenkreuz an/aus |
@@ -75,6 +75,12 @@ Im angedockten Streifen kann man nicht klicken – er ist nur Anzeige.
 Filter: Invertiert · Invertiert mit Farbton · Graustufen · Graustufen invertiert ·
 Gelb auf Schwarz · Schwarz auf Gelb · Weiß auf Blau. Kontrast und Helligkeit stellen Sie unter
 **Farbfilter** ein, die Glättung unter **Zoom & Modi**.
+
+**Bei „Invertiert (intelligent)“** schaltet Strg+Alt+C nicht den ganzen Bildschirm, sondern nur das
+aktive Fenster (sonst das Fenster unter der Maus): erst Originalfarben, beim nächsten Druck wieder
+intelligent. ZoomIN merkt sich das für diese App (Seite **Filter pro Fenster**). **Zweimal schnell
+drücken** schaltet den Farbfilter des Monitors ganz an oder aus. Das gilt, solange „Filter pro
+Fenster“ an ist; sonst schaltet das Kürzel wie bei jedem Filter den ganzen Monitor.
 
 Mit „Eigener Farbfilter je Monitor“ (standardmäßig an) merkt sich jeder Monitor, ob sein Filter
 an ist und welcher; die Kürzel wirken dann auf den Monitor unter der Maus. Auf der Seite
@@ -99,7 +105,8 @@ Zoom zurück zur Maus. **Strg+Alt+T** schaltet das Folgen an und aus.
 ## Profile
 Ein Profil speichert die Darstellung (Modus, Stufen, Filter, Zeiger, Fokus-Verfolgung).
 Tastenkürzel gelten für alle Profile. **Strg+Alt+P** wechselt zum nächsten Profil. Profile
-lassen sich exportieren und auf einem anderen Rechner importieren.
+lassen sich unter **Einstellungen → Allgemein** anlegen, exportieren und auf einem anderen Rechner
+importieren.
 
 ## Anmelde- und Sperrbildschirm
 - Mit „Auch auf Anmelde- und Sperrbildschirm“ (Einstellungen → Allgemein) vergrößert ZoomIN auch die

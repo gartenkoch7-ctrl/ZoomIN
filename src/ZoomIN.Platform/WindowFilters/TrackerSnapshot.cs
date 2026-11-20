@@ -1,3 +1,4 @@
+using ZoomIN.Core.Viewport;
 using ZoomIN.Core.WindowFilters;
 
 namespace ZoomIN.Platform.WindowFilters;
@@ -28,6 +29,38 @@ internal sealed record TrackerSnapshot(TrackedWindow[] Windows, byte[] Palette)
 
         target = new WindowFilterTarget(Windows[index].Kind, Palette[index], Windows[index].Bounds);
         return true;
+    }
+
+    /// <summary>
+    /// The window the colour filter shortcut acts on (ADR-0033): the active one; only when that is the
+    /// Windows interface (desktop, taskbar) or no listed window, the one under <paramref name="mouse"/>.
+    /// An active window that cannot get a rule gives nothing, never an unrelated app under the mouse.
+    /// </summary>
+    public bool TryFindActive(nint foreground, PhysicalPoint? mouse, out WindowFilterTarget target)
+    {
+        var index = IndexOf(foreground);
+        if (index >= 0 && Windows[index].Role != WindowRole.Shell)
+        {
+            return TryFind(foreground, out target);
+        }
+
+        target = default;
+        return mouse is { } point && TryFindAt(point, out target);
+    }
+
+    /// <summary>Like <see cref="TryFind"/> for the front-most window holding <paramref name="point"/>.</summary>
+    public bool TryFindAt(PhysicalPoint point, out WindowFilterTarget target)
+    {
+        for (var i = 0; i < Windows.Length; i++)
+        {
+            if (RectMath.Contains(Windows[i].Bounds, point))
+            {
+                return TryFind(Windows[i].Handle, out target);
+            }
+        }
+
+        target = default;
+        return false;
     }
 
     /// <summary>App windows and dialogs that can get a rule, each app + class once, in front-to-back order.</summary>

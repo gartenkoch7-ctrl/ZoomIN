@@ -21,7 +21,7 @@ public sealed partial class DebugSnapshotViewModel(DebugSnapshots snapshots, Sma
     // Renderers answer within a frame or two; a paused one (nothing filtered) never answers.
     private static readonly TimeSpan s_answerWait = TimeSpan.FromSeconds(2);
 
-    /// <summary>Whether the smart inversion runs, or why a monitor fell back to "keep hue" (ADR-0024).</summary>
+    /// <summary>Whether the smart inversion runs, why a monitor fell back to "keep hue" (ADR-0024), or that it is slow (ADR-0032).</summary>
     public string SmartInvertStatus { get; } = Describe(smartInvert.Fallbacks);
 
     [ObservableProperty]
@@ -77,7 +77,7 @@ public sealed partial class DebugSnapshotViewModel(DebugSnapshots snapshots, Sma
     private static string Describe(IReadOnlyList<SmartInvertFallback> fallbacks) =>
         fallbacks.Count == 0
             ? Text.Get("SmartInvert.Active")
-            : string.Join(" ", fallbacks.Select(f => f.Reason == "budget"
+            : string.Join(" ", fallbacks.Select(f => !f.ShowsKeepHue
                 ? Text.Format("SmartInvert.Budget", MonitorLabel(f.Monitor), f.Milliseconds.ToString("0.0", CultureInfo.CurrentCulture))
                 : Text.Format("SmartInvert.Feature", MonitorLabel(f.Monitor))));
 

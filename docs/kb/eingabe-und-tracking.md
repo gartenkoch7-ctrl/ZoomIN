@@ -856,3 +856,16 @@ bedienen). Erwartung aus der Technik, Sichtprüfung durch einen Menschen offen:
 
 Apps, die ihr Fenster selbst per `SetWindowPos` verschieben (ohne Systemschleife), melden kein
 MOVESIZESTART und bleiben bekannte Einschränkung (Plan B nur nach Rücksprache).
+
+## Farbfilter-Kürzel bei „intelligent“ (ADR-0033, 2026-11-20)
+- `FilterShortcut` (App) ersetzt beim Farbfilter-Kürzel `ZoomCommands.ToggleFilter`. Zeigt der
+  Monitor des Zielfensters „intelligent“ (`DisplayEffects.IsSmart`) und ist „Filter pro Fenster“ an,
+  schaltet ein Druck nur das Fenster (`WindowFilterCommands.ToggleOnSmartMonitor`, Regel pro App +
+  Fensterklasse: „Kein Filter“ ↔ „Automatisch“). Sonst wie bisher: Monitor unter der Maus.
+- **Zielfenster:** `GetForegroundWindow` über den Schnappschuss des Fenster-Trackers; Popups stehen für
+  ihren Besitzer. Ist der Vordergrund die Windows-Oberfläche (Desktop, Taskleiste), nimmt
+  `TrackerSnapshot.TryFindAt` das vorderste Fenster unter der Maus.
+- **Doppeldruck:** zweiter Druck binnen 400 ms (`FilterShortcutTarget.DoublePress`, Zeit über
+  `TimeProvider`) nimmt die Regel des ersten Drucks zurück (`WindowFilterCommands.Restore`) und schaltet
+  den Monitorfilter. Nur nach einem Fenster-Druck; bei anderen Filtern bleiben zwei Drücke zwei
+  Monitor-Umschaltungen. Kürzel laufen auf einem Thread, daher kein Lock für den ersten Druck.
