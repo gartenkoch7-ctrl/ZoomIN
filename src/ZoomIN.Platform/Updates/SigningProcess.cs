@@ -10,7 +10,10 @@ namespace ZoomIN.Platform.Updates;
 /// </summary>
 internal sealed class SigningProcess : ISigningProcess
 {
-    private static readonly TimeSpan s_timeout = TimeSpan.FromSeconds(60);
+    // Measured on a GitHub Windows runner 2026-11-20: a cold Windows PowerShell took about 35 s to
+    // sign, once more than 60 s (the old limit, CI failed with "powershell -1"). Slow PCs may be as
+    // slow; giving up only withdraws the trust, so waiting longer costs nothing but time.
+    internal static readonly TimeSpan Timeout = TimeSpan.FromMinutes(3);
 
     // PowerShell treats these like ' inside single-quoted strings; each is escaped by doubling it.
     private static readonly char[] s_quotes = ['\'', '‘', '’', '‚', '‛'];
@@ -46,7 +49,7 @@ internal sealed class SigningProcess : ISigningProcess
         }
 
         using var process = Process.Start(start) ?? throw new IOException("PowerShell did not start.");
-        if (process.WaitForExit(s_timeout))
+        if (process.WaitForExit(Timeout))
         {
             return process.ExitCode;
         }
