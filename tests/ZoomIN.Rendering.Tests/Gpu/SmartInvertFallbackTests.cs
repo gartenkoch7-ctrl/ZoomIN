@@ -8,7 +8,7 @@ using ZoomIN.Rendering.RenderLoop;
 
 namespace ZoomIN.Rendering.Tests.Gpu;
 
-/// <summary>ADR-0024 decision 6: without the GPU feature or over budget, smart shows "keep hue".</summary>
+/// <summary>ADR-0024 decision 6: without the GPU feature smart shows "keep hue"; over budget it stays smart (ADR-0032).</summary>
 public sealed class SmartInvertFallbackTests
 {
     private const string Monitor = @"\\.\DISPLAY1";
@@ -21,11 +21,13 @@ public sealed class SmartInvertFallbackTests
         using var layer = new SmartInvertLayer(null, null, Monitor, health, NullLogger.Instance);
 
         Assert.False(layer.Active);
-        Assert.Equal("gpu_feature", Assert.Single(health.Fallbacks).Reason);
+        var fallback = Assert.Single(health.Fallbacks);
+        Assert.Equal(SmartInvertFallback.GpuFeature, fallback.Reason);
+        Assert.True(fallback.ShowsKeepHue);
     }
 
     [Fact]
-    public void SlowerThanTheBudget_FallsBack_OnlyAfterSeveralMeansInARow()
+    public void SlowerThanTheBudget_StaysSmart_AndReportsOnlyAfterSeveralMeansInARow()
     {
         var health = new SmartInvertHealth();
         using var gpu = GpuDevice.CreateWarp();
@@ -38,13 +40,33 @@ public sealed class SmartInvertFallbackTests
             layer.AddSample(slow);
         }
 
-        Assert.True(layer.Active); // a slow phase shorter than the strikes never decides
+        Assert.False(layer.OverBudget); // a slow phase shorter than the strikes never decides
         layer.AddSample(slow);
 
-        Assert.False(layer.Active);
-        var fallback = Assert.Single(health.Fallbacks);
-        Assert.Equal("budget", fallback.Reason);
-        Assert.Equal(slow, fallback.Milliseconds, 3);
+        // ADR-0032: slow is only reported; "keep hue" inverted the whole screen, dark windows too.
+        Assert.True(layer.Active);
+        Assert.True(layer.OverBudget);
+        var report = Assert.Single(health.Fallbacks);
+        Assert.Equal(SmartInvertFallback.Slow, report.Reason);
+        Assert.False(report.ShowsKeepHue);
+        Assert.Equal(slow, report.Milliseconds, 3);
+    }
+
+    [Fact]
+    public void SlowForAWholeSession_NeverFallsBack_AndReportsOnce()
+    {
+        var health = new SmartInvertHealth();
+        using var gpu = GpuDevice.CreateWarp();
+        using var layer = SmartInvertLayer.Create(gpu.Device, Size, Size, Monitor, health, NullLogger.Instance);
+        var slow = layer.BudgetMilliseconds * 2;
+
+        for (var i = 0; i < SampleMean.Count * SmartBudget.Strikes * 10; i++)
+        {
+            layer.AddSample(i < SampleMean.Count * SmartBudget.Strikes ? slow : slow * 2);
+        }
+
+        Assert.True(layer.Active);
+        Assert.Equal(slow, Assert.Single(health.Fallbacks).Milliseconds, 3); // the first report stays
     }
 
     [Fact]
@@ -67,7 +89,8 @@ public sealed class SmartInvertFallbackTests
             }
         }
 
-        Assert.True(layer.Active);
+        Assert.False(layer.OverBudget);
+        Assert.Empty(health.Fallbacks);
     }
 
     [Fact]

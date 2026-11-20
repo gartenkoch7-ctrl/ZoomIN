@@ -12,7 +12,8 @@ namespace ZoomIN.Rendering.RenderLoop;
 /// <summary>
 /// Keeps the smart inversion weights of one monitor up to date (ADR-0024): only while something
 /// on it uses the smart filter, with a time smoothing that does not depend on the frame rate, and
-/// with a fall-back to "keep hue" when the GPU cannot set it up or is too slow (decision 6).
+/// with a fall-back to "keep hue" only when the GPU cannot set it up (decision 6). Being slow is
+/// measured and reported, but never switches it off (ADR-0032).
 /// <see cref="Prepare"/> runs every frame and must not allocate (AGENTS.md 2.3).
 /// </summary>
 internal sealed class SmartInvertLayer : IDisposable
@@ -64,7 +65,7 @@ internal sealed class SmartInvertLayer : IDisposable
         _monitor = new(RenderMetrics.MonitorTag, deviceName);
         if (pass is null)
         {
-            FallBack("gpu_feature", 0);
+            FallBack(SmartInvertFallback.GpuFeature);
         }
     }
 
@@ -189,13 +190,18 @@ internal sealed class SmartInvertLayer : IDisposable
     /// <summary>DesktopLayer took <see cref="ProbeWanted"/> and restarted its probe.</summary>
     public void ProbeRestarted() => ProbeWanted = false;
 
+    /// <summary>The smart inversion took more than its budget on this monitor; it still runs (ADR-0032).</summary>
+    public bool OverBudget { get; private set; }
+
     // The budget covers everything the smart inversion adds: ambient pass plus magnify extra. The
     // extra is one measurement per pipeline, so when it alone pushes the total over, it is measured
-    // once more before falling back (it may have run at idle clocks).
+    // once more before reporting (it may have run at idle clocks).
+    // Over budget only reports: falling back to "keep hue" inverted the whole screen, dark windows
+    // too, for the rest of the pipeline – far worse than a few slower frames (ADR-0032).
     private void CheckTotal()
     {
         var total = _ambientMean + _magnifyExtra;
-        if (!_budget.Exceeded(total) || !Active)
+        if (!_budget.Exceeded(total) || !Active || OverBudget)
         {
             return;
         }
@@ -209,7 +215,10 @@ internal sealed class SmartInvertLayer : IDisposable
             return;
         }
 
-        FallBack("budget", total);
+        // Once per pipeline: a log line, never one per frame (AGENTS.md 2.5).
+        OverBudget = true;
+        _log.SmartInvertOverBudget(_deviceName, total, BudgetMilliseconds);
+        _health.Report(new SmartInvertFallback(_deviceName, SmartInvertFallback.Slow, total));
     }
 
     public void Dispose()
@@ -227,14 +236,14 @@ internal sealed class SmartInvertLayer : IDisposable
     }
 
     // Once per pipeline: a log line, never one per frame (AGENTS.md 2.5).
-    private void FallBack(string reason, double milliseconds)
+    private void FallBack(string reason)
     {
         Active = false;
         _running = false;
 
         // One more frame shows the fall-back even when nothing else changes (M14 step 3).
         Settling = true;
-        _log.SmartInvertFallback(_deviceName, reason, milliseconds);
-        _health.Report(new SmartInvertFallback(_deviceName, reason, milliseconds));
+        _log.SmartInvertFallback(_deviceName, reason, 0);
+        _health.Report(new SmartInvertFallback(_deviceName, reason, 0));
     }
 }

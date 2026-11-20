@@ -44,7 +44,7 @@ internal static class TextsGermanDiagnostics
         ["Diag.CreatedWithoutSecure"] = "Gespeichert: {0} – ohne die Logs von Anmelde- und Sperrbildschirm (Grund in ZoomIN-Info.txt).",
         ["SmartInvert.Title"] = "Invertiert (intelligent)",
         ["SmartInvert.Active"] = "Läuft wie vorgesehen, auf allen Monitoren.",
-        ["SmartInvert.Budget"] = "{0}: Grafik zu langsam ({1} ms je Bild) – zeigt „Invertiert, Farbton erhalten“.",
+        ["SmartInvert.Budget"] = "{0}: Grafik langsam ({1} ms je Bild über dem Richtwert) – bleibt trotzdem intelligent.",
         ["SmartInvert.Feature"] = "{0}: Die Grafik unterstützt es nicht – zeigt „Invertiert, Farbton erhalten“.",
         ["Snapshot.Title"] = "Debug-Schnappschuss",
         ["Snapshot.Desc"] = "Speichert nach 5 Sekunden, was ZoomIN auf jedem Monitor zeichnet: Original, Ergebnis und die Gewichte des intelligenten Invertierens, dazu eine Textdatei. Enthält Bildschirminhalt, bleibt nur auf diesem PC und kommt nie ins Diagnosepaket.",

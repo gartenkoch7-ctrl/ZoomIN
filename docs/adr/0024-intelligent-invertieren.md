@@ -1,6 +1,6 @@
 # ADR-0024: Intelligentes Invertieren im Shader
 
-- **Status:** Angenommen (Umsetzung nach Spike)
+- **Status:** Angenommen (Umsetzung nach Spike); Entscheidung 6, Rückfall `budget`: ersetzt durch [ADR-0032](0032-intelligent-invertieren-ohne-tempo-rueckfall.md)
 - **Datum:** 2026-11-06
 - **Ergänzt:** [ADR-0020](0020-filter-pro-fenster.md) und [ADR-0023](0023-filter-pro-fenster-titelleiste.md)
   (bleiben gültig)
