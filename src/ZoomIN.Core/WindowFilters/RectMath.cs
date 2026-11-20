@@ -23,4 +23,8 @@ public static class RectMath
     }
 
     public static bool IsEmpty(PhysicalRect rect) => rect.Width <= 0 || rect.Height <= 0;
+
+    /// <summary><paramref name="point"/> lies in <paramref name="rect"/> (right and bottom edge excluded).</summary>
+    public static bool Contains(PhysicalRect rect, PhysicalPoint point) =>
+        point.X >= rect.X && point.X < rect.Right && point.Y >= rect.Y && point.Y < rect.Bottom;
 }

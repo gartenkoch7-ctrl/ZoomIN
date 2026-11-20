@@ -1,27 +1,28 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Navigation;
 using Windows.Storage.Pickers;
 using ZoomIN.App.Lifecycle;
 using ZoomIN.App.ViewModels;
 
-namespace ZoomIN.App.Views.Pages;
+namespace ZoomIN.App.Views.Sections;
 
-public sealed partial class ProfilesPage : Page
+/// <summary>Profiles: active profile, list, create, rename, import and export. Shown on the "General" page.</summary>
+public sealed partial class ProfilesSection : UserControl
 {
     private PageServices? _services;
 
-    public ProfilesPage()
+    public ProfilesSection()
     {
         InitializeComponent();
     }
 
     public ProfilesViewModel? Vm { get; private set; }
 
-    protected override void OnNavigatedTo(NavigationEventArgs e)
+    /// <summary>Called by the hosting page on every navigation to it.</summary>
+    public void Load(PageServices services)
     {
-        _services = (PageServices)e.Parameter;
-        Vm = _services.Create<ProfilesViewModel>();
+        _services = services;
+        Vm = services.Create<ProfilesViewModel>();
         Bindings.Update();
     }
 

@@ -4,7 +4,8 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:c="using:ZoomIN.App.Views.Controls"
-    xmlns:loc="using:ZoomIN.App.Localization">
+    xmlns:loc="using:ZoomIN.App.Localization"
+    xmlns:s="using:ZoomIN.App.Views.Sections">
 
     <ScrollViewer>
         <StackPanel MaxWidth="{StaticResource PageMaxWidth}" Style="{StaticResource CardStackStyle}">
@@ -23,6 +24,10 @@
             <c:SettingCard Description="{x:Bind loc:Text.Get('GeneralSecureDesktop.Desc')}" Glyph="&#xE72E;" Header="{x:Bind loc:Text.Get('GeneralSecureDesktop')}">
                 <ToggleSwitch IsEnabled="{x:Bind Vm.SecureDesktopAvailable}" IsOn="{x:Bind Vm.SecureDesktop, Mode=TwoWay}" />
             </c:SettingCard>
+
+            <!-- Profiles and updates were own pages until 0.9.1. -->
+            <s:ProfilesSection x:Name="Profiles" />
+            <s:UpdatesSection x:Name="Updates" />
 
             <!-- Diagnostics (M11, ADR-0019) -->
             <TextBlock Style="{StaticResource GroupHeaderStyle}" Text="{x:Bind loc:Text.Get('Diag.Group')}" />

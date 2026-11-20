@@ -111,7 +111,8 @@ public sealed class HotkeyBindingsTests
             AppTexts.CreateLocalizer(), TimeProvider.System, NullLogger<IslandController>.Instance);
         var visibility = new IslandVisibility(service, new RecordingAnnouncer(), AppTexts.CreateLocalizer(), NullLogger<IslandVisibility>.Instance);
         var bindings = new HotkeyBindings(
-            service, new ProfileService(service, new NoProfiles()), hotkeys, zoom, windowFilter, overview, freeze, monitorSwitch,
+            service, new ProfileService(service, new NoProfiles()), hotkeys, zoom, windowFilter,
+            new FilterShortcut(models.Effects, models.Windows, windowFilter, monitors, new FixedCursor(), TimeProvider.System), overview, freeze, monitorSwitch,
             islands, visibility, NullLogger<HotkeyBindings>.Instance, scope);
         return (bindings, hotkeys, models);
     }
@@ -163,6 +164,12 @@ public sealed class HotkeyBindingsTests
         }
 
         public bool TryGetForeground(out WindowFilterTarget window)
+        {
+            window = default;
+            return false;
+        }
+
+        public bool TryGetActive(ZoomIN.Core.Viewport.PhysicalPoint? mouse, out WindowFilterTarget window)
         {
             window = default;
             return false;

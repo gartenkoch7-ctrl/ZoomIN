@@ -13,7 +13,7 @@ namespace ZoomIN.App.Zoom;
 /// <summary>Which shortcut does what: the gesture → action table, registered with Windows (ADR-0008).</summary>
 public sealed class HotkeyBindings(
     SettingsService settings, ProfileService profiles, IHotkeyService hotkeys, ZoomCommands zoom,
-    WindowFilterCommands windowFilter, OverviewController overview, MonitorFreezeController freeze,
+    WindowFilterCommands windowFilter, FilterShortcut filterShortcut, OverviewController overview, MonitorFreezeController freeze,
     MonitorSwitchController monitorSwitch, IslandController islands, IslandVisibility islandVisibility, ILogger<HotkeyBindings> log,
     EngineScope scope)
 {
@@ -55,7 +55,7 @@ public sealed class HotkeyBindings(
         Add(HotkeyGesture.LensNarrower, () => models.Zoom.ResizeLens(-1, 0), repeat: true);
         Add(HotkeyGesture.LensTaller, () => models.Zoom.ResizeLens(0, 1), repeat: true);
         Add(HotkeyGesture.LensShorter, () => models.Zoom.ResizeLens(0, -1), repeat: true);
-        Add(s.FilterHotkey, zoom.ToggleFilter);
+        Add(s.FilterHotkey, filterShortcut.Press);
         Add(s.NextFilterHotkey, zoom.NextFilter);
         if (models.Effects.Current.Cursor.LocatorTriggers.HasFlag(LocatorTriggers.Hotkey))
         {

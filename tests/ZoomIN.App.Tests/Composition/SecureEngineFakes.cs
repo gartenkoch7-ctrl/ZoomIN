@@ -161,6 +161,12 @@ internal sealed class StartingWindowFilter(StartLog log) : IWindowFilterSource
         return false;
     }
 
+    public bool TryGetActive(ZoomIN.Core.Viewport.PhysicalPoint? mouse, out WindowFilterTarget window)
+    {
+        window = default;
+        return false;
+    }
+
     public IReadOnlyList<WindowKind> OpenKinds() => [];
 
     public void Dispose()

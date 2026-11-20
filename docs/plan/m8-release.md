@@ -49,7 +49,7 @@ funktioniert.
 - [ ] Freigabetest Teams, Zoom/Webex, Discord, Browser (aus M1)
 - [ ] 144 Hz, Win+L, Ruhezustand; Zweitmonitor (aus M1/M3)
 - [ ] 8-h-Dauertest: kein Speicherwachstum, keine Ruckler
-- [ ] Onboard-Grafik (aus M13): intelligentes Invertieren bei 1440p ≤ 1 ms extra GPU, kein Rückfall `budget` (Log 3007)
+- [ ] Onboard-Grafik (aus M13): intelligentes Invertieren bei 1440p ≤ 1 ms extra GPU, kein Hinweis „langsam“ (Log 3008, seit ADR-0032 kein Rückfall mehr)
 - [ ] Onboard-Grafik (aus M12): Filter pro Fenster bei 1440p – CPU ≤ 3 %, Bildrate = Monitor-Hz, ≤ 1 Frame Verzögerung, kein Versatz beim Ziehen
 - [ ] Sichttests M4–M7, Narrator-Durchgang
 - [ ] `v0.9.0` getaggt und veröffentlicht → nach den Tests `v1.0.0`
@@ -82,6 +82,16 @@ git push origin main v0.9.0                                 # startet release.ym
 - Danach `VERSION` hochsetzen, sonst sortieren neue develop-Builds vor dem Release. Nach `0.9.0`
   bleibt `VERSION` = `1.0.0`: `1.0.0-dev.N` sortiert schon nach `0.9.0`.
 - Für `v1.0.0`: `docs/release-notes/v1.0.0.md` anlegen (Tabelle aktualisieren), dann taggen.
+
+## Patch 0.9.1 (2026-11-20)
+- Nutzertest 0.9.0: „intelligent“ fiel auf langsamer Grafik auf „Farbton erhalten“ zurück (ganzer
+  Bildschirm invertiert) → ADR-0032, kein Tempo-Rückfall mehr. Dazu Farbfilter-Kürzel bei
+  „intelligent“ nur für das aktive Fenster, Doppeldruck = ganz an/aus (ADR-0033).
+- Der Release-Lauf `v0.9.0` (und CI auf `main` zur selben Zeit) scheiterte im Schritt „Test“,
+  der develop-Lauf mit gleichem Stand war grün; lokal 5 × Release-Tests grün. Ursache offen
+  (Logs nur angemeldet lesbar) – wahrscheinlich ein zeitabhängiger Test auf dem Runner.
+- Notes: `docs/release-notes/v0.9.1.md`. Veröffentlichen wie oben mit Tag `v0.9.1`; `VERSION`
+  bleibt `1.0.0`.
 
 ## Offene Fragen / Risiken
 - **2026-11-02:** Inno Setup wird durch das eigene Setup aus M9 ersetzt (ADR-0014); der erste

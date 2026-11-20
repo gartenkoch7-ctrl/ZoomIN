@@ -20,7 +20,7 @@
   setup has already set everything up).
 
 ## Updates
-- **Settings → Updates** shows the installed version and the available versions.
+- **Settings → General**, section **Updates**, shows the installed version and the available versions.
 - **Channel:** "Stable" shows finished versions only. "Experimental" adds release candidates and
   developer builds – untested, they may have bugs.
 - **Update** or **go back** to an older version: one click, then confirm the Windows prompt. ZoomIN
@@ -67,7 +67,7 @@ is display-only.
 ## Colours and pointer
 | Shortcut | Action |
 |---|---|
-| Ctrl+Alt+C | Colour filter on/off (also without zoom) |
+| Ctrl+Alt+C | Colour filter on/off (also without zoom); with "Inverted (smart)" see below |
 | Ctrl+Alt+Shift+C | Next filter |
 | Ctrl+Alt+S | Locator: a ring shrinks onto the pointer |
 | Ctrl+Alt+K | Crosshair on/off |
@@ -75,6 +75,12 @@ is display-only.
 Filters: inverted · inverted keeping hue · greyscale · greyscale inverted · yellow on black ·
 black on yellow · white on blue. Contrast and brightness are under **Colour filters**, smoothing
 under **Zoom & modes**.
+
+**With "Inverted (smart)"** Ctrl+Alt+C does not switch the whole screen but only the active window
+(otherwise the window under the mouse): first original colours, with the next press smart again.
+ZoomIN remembers this for that app (page **Filter per window**). **Press twice quickly** to switch
+the monitor's colour filter fully on or off. This applies while "Filter per window" is on; otherwise
+the shortcut switches the whole monitor as with any filter.
 
 With "Separate colour filter per monitor" (on by default) each monitor remembers whether its filter
 is on and which one; the shortcuts then act on the monitor under the mouse. On the **Colour
@@ -98,7 +104,7 @@ the text cursor once it gets close to the edge. Move the mouse and the zoom glid
 ## Profiles
 A profile stores the display (mode, levels, filter, pointer, focus tracking). Shortcuts are
 shared by all profiles. **Ctrl+Alt+P** switches to the next profile. Profiles can be exported
-and imported on another computer.
+and imported on another computer under **Settings → General**.
 
 ## Sign-in and lock screen
 - With "Also on the sign-in and lock screen" (Settings → General) ZoomIN also magnifies the sign-in,

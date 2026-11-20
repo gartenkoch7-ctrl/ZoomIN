@@ -36,7 +36,7 @@ internal static class TextsEnglishDiagnostics
         ["Diag.Export.Invalid"] = "Not a valid address. It starts with http:// or https://.",
         ["SmartInvert.Title"] = "Inverted (smart)",
         ["SmartInvert.Active"] = "Runs as intended on all monitors.",
-        ["SmartInvert.Budget"] = "{0}: graphics too slow ({1} ms per frame) – shows \"Inverted, keep hue\".",
+        ["SmartInvert.Budget"] = "{0}: slow graphics ({1} ms per frame, over the guideline) – stays smart anyway.",
         ["SmartInvert.Feature"] = "{0}: not supported by the graphics – shows \"Inverted, keep hue\".",
         ["Snapshot.Title"] = "Debug snapshot",
         ["Snapshot.Desc"] = "After 5 seconds, saves what ZoomIN draws on each monitor: original, result and the smart inversion weights, plus a text file. Contains screen content, stays on this PC and never goes into the diagnostics package.",

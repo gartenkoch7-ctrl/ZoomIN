@@ -22,7 +22,7 @@ public sealed class SmartCostBudgetTests
     private const int Size = 64;
 
     [Fact]
-    public void AmbientAndMagnifyExtra_TogetherOverBudget_FallBack()
+    public void AmbientAndMagnifyExtra_TogetherOverBudget_AreReported()
     {
         var health = new SmartInvertHealth();
         using var gpu = GpuDevice.CreateWarp();
@@ -30,20 +30,21 @@ public sealed class SmartCostBudgetTests
         var budget = layer.BudgetMilliseconds;
 
         Means(layer, budget * 0.6, SmartBudget.Strikes);
-        Assert.True(layer.Active); // the ambient pass alone is within the budget
+        Assert.False(layer.OverBudget); // the ambient pass alone is within the budget
 
         layer.SetMagnifyExtra(budget * 0.5);
         Means(layer, budget * 0.6, SmartBudget.Strikes);
-        Assert.True(layer.Active); // the extra pushed it over: measured once more first
+        Assert.False(layer.OverBudget); // the extra pushed it over: measured once more first
         Assert.True(layer.ProbeWanted);
 
         layer.ProbeRestarted();
         layer.SetMagnifyExtra(budget * 0.5);
         Means(layer, budget * 0.6, SmartBudget.Strikes);
 
-        Assert.False(layer.Active);
+        Assert.True(layer.Active); // ADR-0032: slow is only reported
+        Assert.True(layer.OverBudget);
         var fallback = Assert.Single(health.Fallbacks);
-        Assert.Equal("budget", fallback.Reason);
+        Assert.Equal(SmartInvertFallback.Slow, fallback.Reason);
         Assert.Equal(budget * 1.1, fallback.Milliseconds, 3);
     }
 
@@ -62,7 +63,7 @@ public sealed class SmartCostBudgetTests
     }
 
     [Fact]
-    public void MagnifyExtraAloneOverBudget_IsMeasuredAgain_BeforeFallingBack()
+    public void MagnifyExtraAloneOverBudget_IsMeasuredAgain_BeforeReporting()
     {
         var health = new SmartInvertHealth();
         using var gpu = GpuDevice.CreateWarp();
@@ -72,19 +73,19 @@ public sealed class SmartCostBudgetTests
         // A probe at idle clocks: the ambient pass is cheap, the extra alone breaks the budget.
         layer.SetMagnifyExtra(budget * 1.5);
         Means(layer, budget * 0.1, SmartBudget.Strikes);
-        Assert.True(layer.Active);
+        Assert.False(layer.OverBudget);
         Assert.True(layer.ProbeWanted);
 
         // Measured again at working clocks: it stays smart.
         layer.ProbeRestarted();
         layer.SetMagnifyExtra(budget * 0.2);
         Means(layer, budget * 0.1, SmartBudget.Strikes * 2);
-        Assert.True(layer.Active);
+        Assert.False(layer.OverBudget);
         Assert.Empty(health.Fallbacks);
     }
 
     [Fact]
-    public void MagnifyExtraStillOverBudgetAfterTheRetry_FallsBack()
+    public void MagnifyExtraStillOverBudgetAfterTheRetry_IsReported_AndStaysSmart()
     {
         var health = new SmartInvertHealth();
         using var gpu = GpuDevice.CreateWarp();
@@ -97,8 +98,9 @@ public sealed class SmartCostBudgetTests
         layer.SetMagnifyExtra(budget * 1.5);
         Means(layer, budget * 0.1, SmartBudget.Strikes);
 
-        Assert.False(layer.Active);
-        Assert.Equal("budget", Assert.Single(health.Fallbacks).Reason);
+        Assert.True(layer.Active);
+        Assert.True(layer.OverBudget);
+        Assert.Equal(SmartInvertFallback.Slow, Assert.Single(health.Fallbacks).Reason);
     }
 
     [Theory]
@@ -120,7 +122,7 @@ public sealed class SmartCostBudgetTests
 
         Means(layer, 1.68, SmartBudget.Strikes * 2);
 
-        Assert.True(layer.Active);
+        Assert.False(layer.OverBudget);
     }
 
     private static void Means(SmartInvertLayer layer, double milliseconds, int means)
