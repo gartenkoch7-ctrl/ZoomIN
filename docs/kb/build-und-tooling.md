@@ -112,6 +112,10 @@ powershell -ExecutionPolicy Bypass -File scripts/install-uiaccess.ps1  # als Adm
   Seit dem Sicherheitsreview holt der erhöhte Schritt `checksums.txt` selbst (`GitHubReleaseChecksums`):
   lokal gebaute unsignierte Pakete lassen sich darüber nicht mehr installieren, Testbuilds weiter mit
   `install-uiaccess.ps1` (Entwicklerzertifikat).
+- **Signierdauer (2026-11-20):** `SigningProcess` (Windows PowerShell, `Set-AuthenticodeSignature`)
+  braucht auf einem GitHub-Windows-Runner ~35 s, einmal über 60 s. Das alte Limit von 60 s ließ CI auf
+  `main` (v0.9.0 und v0.9.1) mit `2610 … (powershell -1)` in `LocalSignerAdminTests` scheitern; der Test
+  läuft nur als Administrator, lokal wird er übersprungen. Limit jetzt 3 min; der Test meldet die Dauer.
 
 ## Analyzer
 - `AnalysisLevel=latest-recommended` + `TreatWarningsAsErrors`.

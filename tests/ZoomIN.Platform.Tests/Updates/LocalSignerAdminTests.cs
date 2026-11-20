@@ -28,7 +28,11 @@ public sealed class LocalSignerAdminTests : IDisposable
             log, TimeProvider.System, new InspectingProcess((t, a, k) => (thumbprint, access, keyName) = (t, a, k)), new LocalCertificateStore(log));
         try
         {
-            Assert.True(signer.Sign(_exe), string.Join(" | ", log.Messages));
+            // The duration goes into the message: on CI runners signing took 35 s to over 60 s (2026-11-20).
+            var started = System.Diagnostics.Stopwatch.StartNew();
+            var signed = signer.Sign(_exe);
+            TestContext.Current.SendDiagnosticMessage($"Signing took {started.Elapsed.TotalSeconds:0.0} s");
+            Assert.True(signed, $"{string.Join(" | ", log.Messages)} after {started.Elapsed.TotalSeconds:0.0} s");
 
             // Only SYSTEM (SY) and Administrators (BA), protected (P): no user account can use the key.
             // The rights show as a mask (0xd01f01ff, measured 2026-11-17), so only the accounts count.
