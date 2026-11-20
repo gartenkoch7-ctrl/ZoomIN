@@ -116,6 +116,7 @@ internal static class EngineRegistration
         // Commands and the engine start (M14 step 10: split out of ZoomController).
         services.AddSingleton<ZoomCommands>();
         services.AddSingleton<WindowFilterCommands>();
+        services.AddSingleton<FilterShortcut>();
         services.AddSingleton<HotkeyBindings>();
         services.AddSingleton<InputSources>();
         services.AddSingleton<DockedStripSync>();

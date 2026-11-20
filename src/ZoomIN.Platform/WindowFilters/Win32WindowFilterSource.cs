@@ -56,6 +56,12 @@ public sealed class Win32WindowFilterSource : IWindowFilterSource
         return _tracker is { } tracker && tracker.Snapshot.TryFind(PInvoke.GetForegroundWindow(), out window);
     }
 
+    public bool TryGetActive(ZoomIN.Core.Viewport.PhysicalPoint? mouse, out WindowFilterTarget window)
+    {
+        window = default;
+        return _tracker is { } tracker && tracker.Snapshot.TryFindActive(PInvoke.GetForegroundWindow(), mouse, out window);
+    }
+
     public IReadOnlyList<WindowKind> OpenKinds() => _tracker?.Snapshot.Kinds() ?? [];
 
     public void Dispose()

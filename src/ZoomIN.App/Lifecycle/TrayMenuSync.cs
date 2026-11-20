@@ -74,6 +74,7 @@ public sealed class TrayMenuSync
     {
         null => Text.Get("WinFilter.Status.Nothing"),
         { Choice: WindowFilterChoice.Filter } => Text.Format("WinFilter.Status.On", rule.Process, _filterNames.Of(rule.Filter, _settings.Models.Effects.Current.Schemes)),
+        { Choice: WindowFilterChoice.Automatic } => Text.Format("WinFilter.Status.Auto", rule.Process),
         _ => Text.Format("WinFilter.Status.Off", rule.Process),
     };
 

@@ -67,7 +67,7 @@ Im angedockten Streifen kann man nicht klicken – er ist nur Anzeige.
 ## Farben und Mauszeiger
 | Kürzel | Aktion |
 |---|---|
-| Strg+Alt+C | Farbfilter an/aus (wirkt auch ohne Zoom) |
+| Strg+Alt+C | Farbfilter an/aus (wirkt auch ohne Zoom); bei „Invertiert (intelligent)“ siehe unten |
 | Strg+Alt+Umschalt+C | nächster Filter |
 | Strg+Alt+S | Suchhilfe: ein Ring zieht sich auf den Mauszeiger zusammen |
 | Strg+Alt+K | Fadenkreuz an/aus |
@@ -75,6 +75,12 @@ Im angedockten Streifen kann man nicht klicken – er ist nur Anzeige.
 Filter: Invertiert · Invertiert mit Farbton · Graustufen · Graustufen invertiert ·
 Gelb auf Schwarz · Schwarz auf Gelb · Weiß auf Blau. Kontrast und Helligkeit stellen Sie unter
 **Farbfilter** ein, die Glättung unter **Zoom & Modi**.
+
+**Bei „Invertiert (intelligent)“** schaltet Strg+Alt+C nicht den ganzen Bildschirm, sondern nur das
+aktive Fenster (sonst das Fenster unter der Maus): erst Originalfarben, beim nächsten Druck wieder
+intelligent. ZoomIN merkt sich das für diese App (Seite **Filter pro Fenster**). **Zweimal schnell
+drücken** schaltet den Farbfilter des Monitors ganz an oder aus. Das gilt, solange „Filter pro
+Fenster“ an ist; sonst schaltet das Kürzel wie bei jedem Filter den ganzen Monitor.
 
 Mit „Eigener Farbfilter je Monitor“ (standardmäßig an) merkt sich jeder Monitor, ob sein Filter
 an ist und welcher; die Kürzel wirken dann auf den Monitor unter der Maus. Auf der Seite

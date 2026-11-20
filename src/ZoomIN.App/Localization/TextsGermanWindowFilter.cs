@@ -43,6 +43,7 @@ internal static class TextsGermanWindowFilter
         ["WinFilter.ResetConfirm"] = "Ja, alle löschen",
         ["WinFilter.Status.On"] = "{0}: {1} – gemerkt für diese Fensterart.",
         ["WinFilter.Status.Off"] = "{0}: kein Filter – gemerkt für diese Fensterart.",
+        ["WinFilter.Status.Auto"] = "{0}: folgt wieder dem Farbfilter – gemerkt für diese Fensterart.",
         ["WinFilter.Status.Nothing"] = "Kein Fenster, auf das der Filter wirkt, oder „Filter pro Fenster“ ist aus.",
         ["Act.WindowFilter"] = "Filter für aktives Fenster an/aus",
         ["HotkeyNone"] = "Nicht belegt",
