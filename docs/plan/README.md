@@ -8,7 +8,7 @@ Jeder Meilenstein endet mit etwas, das man **starten und vorführen** kann.
 
 | # | Meilenstein | Ergebnis (Demo) | Größe | Status |
 |---|---|---|---|---|
-| M0 | [Fundament](m0-fundament.md) | Leere App startet, CI grün, Architekturtests aktiv | S | umgesetzt – CI wartet auf GitHub-Remote |
+| M0 | [Fundament](m0-fundament.md) | Leere App startet, CI grün, Architekturtests aktiv | S | **erledigt** (CI auf GitHub grün seit 2026-11-20) |
 | M1 | [Technischer Durchstich](m1-durchstich.md) | 2× Vollbild-Zoom folgt der Maus, unsichtbar in Teams | L | umgesetzt – Freigabetests, 144 Hz, Win+L offen |
 | M2 | [Flüssiger Zoom & Steuerung](m2-zoom-und-steuerung.md) | Stufenloser animierter Zoom 1–16× per Hotkey/Mausrad | M | umgesetzt – Sichttest offen |
 | M3 | [Multi-Monitor & Robustheit](m3-multi-monitor.md) | Zoom auf jedem Monitor, übersteht Sperren/Umstecken/Treiber-Reset | L | umgesetzt – Zweitmonitor-Test offen |
@@ -16,7 +16,7 @@ Jeder Meilenstein endet mit etwas, das man **starten und vorführen** kann.
 | M5 | [Farbfilter & Hervorhebung](m5-filter-und-hervorhebung.md) | Invertieren, Farbschemata, großer Zeiger, Glättung | M | umgesetzt – Sichttest offen |
 | M6 | [Fokus- & Caret-Tracking](m6-fokus-und-caret.md) | Zoom folgt Tab-Fokus und Textcursor | L | umgesetzt – App-Matrix offen |
 | M7 | [App, Einstellungen & Profile](m7-app-und-einstellungen.md) | Einstellungsfenster, Tray, Profile, Autostart | L | umgesetzt – Sichttest offen |
-| M8 | [Release 1.0](m8-release.md) | Getestete, dokumentierte Version zum Download | M | umgesetzt – Repo, Tag, Abschlusstests offen |
+| M8 | [Release 1.0](m8-release.md) | Getestete, dokumentierte Version zum Download | M | 0.9.2 veröffentlicht (2026-11-20) – Abschlusstests und `v1.0.0` offen |
 | UI | [Neugestaltung & Mauszeiger](ui-neugestaltung.md) | Windows-11-Kartenstil, Übersicht, eigene Mauszeiger-Seite | M | umgesetzt – Sichttest offen |
 | M9 | [Setup & Updates](m9-setup-und-updates.md) | Barrierefreies Online-Setup mit UIAccess, Kanälen, Versionswahl und Ein-Klick-Updates | L | abgeschlossen 2026-11-17 – SignPath, signierter Release und Tests auf frischem Windows in M8 |
 | M10 | [Sichere Bildschirme](m10-sichere-bildschirme.md) | Zoom auf Anmeldung, Sperre, Strg+Alt+Entf und UAC | L | abgeschlossen 2026-11-16, in `develop` (Autostart per geplanter Aufgabe, Q9; zweiter Monitor ungetestet) |

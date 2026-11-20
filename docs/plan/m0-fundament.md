@@ -44,11 +44,11 @@
 
 ### 5. CI
 - [x] Workflow baut und testet die Solution auf `windows-latest`
-- [ ] Badge im README (sobald GitHub-Remote und README existieren)
+- [x] Badge im README (sobald GitHub-Remote und README existieren)
 
 ## Akzeptanzkriterien
 - [x] Clean Clone → `dotnet build` + `dotnet test` grün ohne manuelle Schritte
-- [ ] CI grün (wartet auf GitHub-Remote; lokal mit identischen Befehlen grün)
+- [x] CI grün (wartet auf GitHub-Remote; lokal mit identischen Befehlen grün) – auf GitHub grün seit v0.9.2 (2026-11-20)
 - [x] Architektur-Gegenprobe erfolgreich
 - [x] App startet per `dotnet run --project src/ZoomIN.App`
 

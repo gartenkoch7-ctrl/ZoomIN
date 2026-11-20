@@ -52,7 +52,8 @@ funktioniert.
 - [ ] Onboard-Grafik (aus M13): intelligentes Invertieren bei 1440p ≤ 1 ms extra GPU, kein Hinweis „langsam“ (Log 3008, seit ADR-0032 kein Rückfall mehr)
 - [ ] Onboard-Grafik (aus M12): Filter pro Fenster bei 1440p – CPU ≤ 3 %, Bildrate = Monitor-Hz, ≤ 1 Frame Verzögerung, kein Versatz beim Ziehen
 - [ ] Sichttests M4–M7, Narrator-Durchgang
-- [ ] `v0.9.0` getaggt und veröffentlicht → nach den Tests `v1.0.0`
+- [x] `v0.9.0` getaggt (Release-Lauf scheiterte am Signier-Zeitlimit); `v0.9.1` und `v0.9.2` veröffentlicht (2026-11-20)
+- [ ] Nach den Tests oben `v1.0.0`
 
 ## Vorbereitet für 1.0.0 (2026-11-17)
 - `VERSION` = `1.0.0`; Repo `gartenkoch7-ctrl/ZoomIN` ist öffentlich (Release-Feed ohne Anmeldung).
