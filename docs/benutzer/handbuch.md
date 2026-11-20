@@ -20,7 +20,7 @@
   das Setup schon alles eingerichtet hat).
 
 ## Updates
-- **Einstellungen → Updates** zeigt die installierte Version und die verfügbaren Versionen.
+- **Einstellungen → Allgemein**, Abschnitt **Updates**, zeigt die installierte Version und die verfügbaren Versionen.
 - **Kanal:** „Stabil“ zeigt nur fertige Versionen. „Experimentell“ zeigt zusätzlich
   Release-Kandidaten und Entwicklerversionen – ungetestet, sie können Fehler haben.
 - **Aktualisieren** oder **Zurückgehen** auf eine ältere Version: ein Klick, dann die Windows-Abfrage
@@ -105,7 +105,8 @@ Zoom zurück zur Maus. **Strg+Alt+T** schaltet das Folgen an und aus.
 ## Profile
 Ein Profil speichert die Darstellung (Modus, Stufen, Filter, Zeiger, Fokus-Verfolgung).
 Tastenkürzel gelten für alle Profile. **Strg+Alt+P** wechselt zum nächsten Profil. Profile
-lassen sich exportieren und auf einem anderen Rechner importieren.
+lassen sich unter **Einstellungen → Allgemein** anlegen, exportieren und auf einem anderen Rechner
+importieren.
 
 ## Anmelde- und Sperrbildschirm
 - Mit „Auch auf Anmelde- und Sperrbildschirm“ (Einstellungen → Allgemein) vergrößert ZoomIN auch die

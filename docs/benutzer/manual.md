@@ -20,7 +20,7 @@
   setup has already set everything up).
 
 ## Updates
-- **Settings → Updates** shows the installed version and the available versions.
+- **Settings → General**, section **Updates**, shows the installed version and the available versions.
 - **Channel:** "Stable" shows finished versions only. "Experimental" adds release candidates and
   developer builds – untested, they may have bugs.
 - **Update** or **go back** to an older version: one click, then confirm the Windows prompt. ZoomIN
@@ -104,7 +104,7 @@ the text cursor once it gets close to the edge. Move the mouse and the zoom glid
 ## Profiles
 A profile stores the display (mode, levels, filter, pointer, focus tracking). Shortcuts are
 shared by all profiles. **Ctrl+Alt+P** switches to the next profile. Profiles can be exported
-and imported on another computer.
+and imported on another computer under **Settings → General**.
 
 ## Sign-in and lock screen
 - With "Also on the sign-in and lock screen" (Settings → General) ZoomIN also magnifies the sign-in,

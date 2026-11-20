@@ -147,7 +147,6 @@ internal static class TextsGermanCards
         ["InfoLogsTitle"] = "Protokolle",
         ["ProfilesActive.Desc"] = "Ein Profil speichert Zoom, Modi, Farbfilter, Zeiger und Fokus-Einstellungen.",
         ["ProfilesAll"] = "Alle Profile",
-        ["ProfilesNew"] = "Neues Profil",
         ["ProfilesName.Desc"] = "Speichert die aktuellen Einstellungen unter diesem Namen.",
         ["ProfilesCreateShort"] = "Anlegen",
     };

@@ -147,7 +147,6 @@ internal static class TextsEnglishCards
         ["InfoLogsTitle"] = "Logs",
         ["ProfilesActive.Desc"] = "A profile stores zoom, modes, colour filter, pointer and focus settings.",
         ["ProfilesAll"] = "All profiles",
-        ["ProfilesNew"] = "New profile",
         ["ProfilesName.Desc"] = "Saves the current settings under this name.",
         ["ProfilesCreateShort"] = "Create",
     };
